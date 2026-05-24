@@ -53,7 +53,7 @@ func SetupRoutes(
 
 	// Permissions (read-only, managed via migrations)
 	permGroup := protected.Group("/permissions")
-	permGroup.Get("/", middleware.RequirePermission("roles.read"), permH.List)
+	permGroup.Get("/", middleware.RequirePermission("permissions.read"), permH.List)
 
 	// Menus
 	menusGroup := protected.Group("/menus")
