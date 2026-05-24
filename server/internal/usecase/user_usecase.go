@@ -57,13 +57,10 @@ func (uc *UserUseCase) Create(ctx context.Context, req *domain.CreateUserRequest
 	if req.FullName == "" || req.Email == "" || req.Password == "" {
 		return nil, apierror.BadRequest("full_name, email and password are required")
 	}
-	if len(req.Password) < 8 {
-		return nil, apierror.BadRequest("password must be at least 8 characters")
-	}
 
-	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	hashed, err := hashPassword(req.Password)
 	if err != nil {
-		return nil, apierror.Internal(err)
+		return nil, err
 	}
 
 	user := &domain.User{
@@ -93,6 +90,13 @@ func (uc *UserUseCase) Update(ctx context.Context, id string, req *domain.Update
 	}
 	if req.IsActive != nil {
 		user.IsActive = *req.IsActive
+	}
+	if req.Password != "" {
+		hashed, err := hashPassword(req.Password)
+		if err != nil {
+			return nil, err
+		}
+		user.Password = hashed
 	}
 	if err := uc.userRepo.Update(ctx, user); err != nil {
 		return nil, apierror.Internal(err)
@@ -137,4 +141,15 @@ func (uc *UserUseCase) AssignRole(ctx context.Context, userID string, req *domai
 		return apierror.Internal(err)
 	}
 	return nil
+}
+
+func hashPassword(raw string) (string, error) {
+	if len(raw) < 8 {
+		return "", apierror.BadRequest("password must be at least 8 characters")
+	}
+	hashed, err := bcrypt.GenerateFromPassword([]byte(raw), bcrypt.DefaultCost)
+	if err != nil {
+		return "", apierror.Internal(err)
+	}
+	return string(hashed), nil
 }

@@ -8,6 +8,7 @@ type CreateUserRequest struct {
 
 type UpdateUserRequest struct {
 	FullName string `json:"full_name"`
+	Password string `json:"password"`
 	IsActive *bool  `json:"is_active"`
 }
 

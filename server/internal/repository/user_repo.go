@@ -82,9 +82,9 @@ func (r *UserRepo) Create(ctx context.Context, user *domain.User) error {
 
 func (r *UserRepo) Update(ctx context.Context, user *domain.User) error {
 	_, err := r.db.Pool.Exec(ctx, `
-		UPDATE users SET full_name = $2, is_active = $3, updated_at = NOW()
+		UPDATE users SET full_name = $2, is_active = $3, password = $4, updated_at = NOW()
 		WHERE id = $1`,
-		user.ID, user.FullName, user.IsActive)
+		user.ID, user.FullName, user.IsActive, user.Password)
 	return err
 }
 
