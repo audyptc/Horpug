@@ -1,12 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir \"d:\\\\MyProject\\\\Horpug\")",
-      "Bash(dir \"d:\\\\MyProject\\\\Horpug\\\\client\")",
-      "Bash(dir \"d:\\\\MyProject\\\\Horpug\\\\server\")",
-      "Bash(dir \"d:\\\\MyProject\\\\Horpug\\\\client\\\\src\")",
-      "Bash(dir \"d:\\\\MyProject\\\\Horpug\\\\client\\\\src\\\\components\")",
-      "Bash(dir \"d:\\\\MyProject\\\\Horpug\\\\client\\\\src\\\\lib\")"
+      "Bash(npx tsc *)",
+      "Bash(npm run *)"
     ]
   }
 }
