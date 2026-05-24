@@ -4,7 +4,7 @@ VALUES
         '33333333-3333-3333-3333-333333333001',
         'Administrator',
         'admin@horpug.local',
-        'Admin@123456',
+        '$2a$10$np/a/xuyJ/ozav.f4TU0xueDuUgCRtejuKTCjvjb/u9C31k.loz8u',
         TRUE
     )
 ON CONFLICT (email) DO NOTHING;

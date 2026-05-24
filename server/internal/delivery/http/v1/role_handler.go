@@ -7,86 +7,86 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-type UserHandler struct {
-	users *usecase.UserUseCase
+type RoleHandler struct {
+	roles *usecase.RoleUseCase
 }
 
-func NewUserHandler(users *usecase.UserUseCase) *UserHandler {
-	return &UserHandler{users: users}
+func NewRoleHandler(roles *usecase.RoleUseCase) *RoleHandler {
+	return &RoleHandler{roles: roles}
 }
 
-func (h *UserHandler) List(c fiber.Ctx) error {
-	users, err := h.users.List(c.Context())
+func (h *RoleHandler) List(c fiber.Ctx) error {
+	roles, err := h.roles.List(c.Context())
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false, "message": err.Error(),
 		})
 	}
-	return c.JSON(fiber.Map{"success": true, "data": users})
+	return c.JSON(fiber.Map{"success": true, "data": roles})
 }
 
-func (h *UserHandler) GetByID(c fiber.Ctx) error {
-	user, err := h.users.GetByID(c.Context(), c.Params("id"))
+func (h *RoleHandler) GetByID(c fiber.Ctx) error {
+	role, err := h.roles.GetByID(c.Context(), c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"success": false, "message": err.Error(),
 		})
 	}
-	return c.JSON(fiber.Map{"success": true, "data": user})
+	return c.JSON(fiber.Map{"success": true, "data": role})
 }
 
-func (h *UserHandler) Create(c fiber.Ctx) error {
-	var req domain.CreateUserRequest
+func (h *RoleHandler) Create(c fiber.Ctx) error {
+	var req domain.CreateRoleRequest
 	if err := c.Bind().JSON(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false, "message": "invalid request body",
 		})
 	}
-	user, err := h.users.Create(c.Context(), &req)
+	role, err := h.roles.Create(c.Context(), &req)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false, "message": err.Error(),
 		})
 	}
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"success": true, "data": user})
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"success": true, "data": role})
 }
 
-func (h *UserHandler) Update(c fiber.Ctx) error {
-	var req domain.UpdateUserRequest
+func (h *RoleHandler) Update(c fiber.Ctx) error {
+	var req domain.UpdateRoleRequest
 	if err := c.Bind().JSON(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false, "message": "invalid request body",
 		})
 	}
-	user, err := h.users.Update(c.Context(), c.Params("id"), &req)
+	role, err := h.roles.Update(c.Context(), c.Params("id"), &req)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false, "message": err.Error(),
 		})
 	}
-	return c.JSON(fiber.Map{"success": true, "data": user})
+	return c.JSON(fiber.Map{"success": true, "data": role})
 }
 
-func (h *UserHandler) Delete(c fiber.Ctx) error {
-	if err := h.users.Delete(c.Context(), c.Params("id")); err != nil {
+func (h *RoleHandler) Delete(c fiber.Ctx) error {
+	if err := h.roles.Delete(c.Context(), c.Params("id")); err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"success": false, "message": err.Error(),
 		})
 	}
-	return c.JSON(fiber.Map{"success": true, "message": "user deleted"})
+	return c.JSON(fiber.Map{"success": true, "message": "role deleted"})
 }
 
-func (h *UserHandler) AssignRoles(c fiber.Ctx) error {
-	var req domain.AssignRolesRequest
+func (h *RoleHandler) AssignPermissions(c fiber.Ctx) error {
+	var req domain.AssignPermissionsRequest
 	if err := c.Bind().JSON(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false, "message": "invalid request body",
 		})
 	}
-	if err := h.users.AssignRoles(c.Context(), c.Params("id"), &req); err != nil {
+	if err := h.roles.AssignPermissions(c.Context(), c.Params("id"), &req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false, "message": err.Error(),
 		})
 	}
-	return c.JSON(fiber.Map{"success": true, "message": "roles assigned successfully"})
+	return c.JSON(fiber.Map{"success": true, "message": "permissions assigned successfully"})
 }
