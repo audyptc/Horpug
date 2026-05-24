@@ -84,6 +84,10 @@ func main() {
 	}
 	defer db.Close() // ปิดสายเมื่อแอปพลิเคชันปิดตัวลง
 
+	if err := db.ApplyMigrations(context.Background()); err != nil {
+		log.Fatalf("❌ ไม่สามารถรัน migrations ได้: %v", err)
+	}
+
 	// 4. บูต Fiber App พร้อมตั้งค่าพื้นฐาน
 	app := fiber.New(fiber.Config{
 		AppName: "GoAPI v1.0",
