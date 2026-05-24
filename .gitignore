@@ -1,0 +1,21 @@
+# Environment variables
+# สำคัญมาก: ห้ามเอาไฟล์ที่มี Password หรือ Secret ขึ้น GitHub
+.env
+.env.*
+!.env.example
+!.env.production
+!.env.development
+
+# Binary builds
+# สร้างไฟล์ executable จากคำสั่ง go build
+*.exe
+app
+
+# Logs
+logs
+*.log
+*.lock
+package-lock.json
+
+# Node dependencies
+node_modules
