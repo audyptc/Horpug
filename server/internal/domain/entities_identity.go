@@ -10,16 +10,22 @@ type User struct {
 	IsActive  bool      `json:"is_active"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	Roles     []Role    `json:"roles,omitempty"`
+	Role      *Role     `json:"role,omitempty"`
 }
 
 type Role struct {
-	ID          string       `json:"id"`
-	Name        string       `json:"name"`
-	Description string       `json:"description"`
-	CreatedAt   time.Time    `json:"created_at"`
-	UpdatedAt   time.Time    `json:"updated_at"`
-	Permissions []Permission `json:"permissions,omitempty"`
+	ID              string               `json:"id"`
+	Name            string               `json:"name"`
+	Description     string               `json:"description"`
+	CreatedAt       time.Time            `json:"created_at"`
+	UpdatedAt       time.Time            `json:"updated_at"`
+	MenuPermissions []RoleMenuPermission `json:"menu_permissions,omitempty"`
+}
+
+type RoleMenuPermission struct {
+	MenuID      string       `json:"menu_id"`
+	MenuName    string       `json:"menu_name"`
+	Permissions []Permission `json:"permissions"`
 }
 
 type Permission struct {

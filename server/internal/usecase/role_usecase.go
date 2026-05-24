@@ -2,8 +2,9 @@ package usecase
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
+	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/domain"
 
 	"github.com/google/uuid"
@@ -22,17 +23,16 @@ func NewRoleUseCase(roleRepo domain.RoleRepository, permRepo domain.PermissionRe
 func (uc *RoleUseCase) List(ctx context.Context, limit, offset int) ([]*domain.Role, int, error) {
 	total, err := uc.roleRepo.Count(ctx)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, apierror.Internal(err)
 	}
-
 	roles, err := uc.roleRepo.List(ctx, limit, offset)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, apierror.Internal(err)
 	}
 	for _, r := range roles {
-		r.Permissions, err = uc.roleRepo.GetPermissions(ctx, r.ID)
+		r.MenuPermissions, err = uc.roleRepo.GetMenuPermissions(ctx, r.ID)
 		if err != nil {
-			return nil, 0, err
+			return nil, 0, apierror.Internal(err)
 		}
 	}
 	return roles, total, nil
@@ -41,15 +41,21 @@ func (uc *RoleUseCase) List(ctx context.Context, limit, offset int) ([]*domain.R
 func (uc *RoleUseCase) GetByID(ctx context.Context, id string) (*domain.Role, error) {
 	role, err := uc.roleRepo.FindByID(ctx, id)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, apierror.NotFound(err.Error())
+		}
+		return nil, apierror.Internal(err)
 	}
-	role.Permissions, err = uc.roleRepo.GetPermissions(ctx, id)
-	return role, err
+	role.MenuPermissions, err = uc.roleRepo.GetMenuPermissions(ctx, id)
+	if err != nil {
+		return nil, apierror.Internal(err)
+	}
+	return role, nil
 }
 
 func (uc *RoleUseCase) Create(ctx context.Context, req *domain.CreateRoleRequest) (*domain.Role, error) {
 	if req.Name == "" {
-		return nil, fmt.Errorf("name is required")
+		return nil, apierror.BadRequest("name is required")
 	}
 	role := &domain.Role{
 		ID:          uuid.New().String(),
@@ -57,51 +63,72 @@ func (uc *RoleUseCase) Create(ctx context.Context, req *domain.CreateRoleRequest
 		Description: req.Description,
 	}
 	if err := uc.roleRepo.Create(ctx, role); err != nil {
-		return nil, fmt.Errorf("could not create role: %v", err)
+		return nil, apierror.Internal(err)
 	}
-	role.Permissions = []domain.Permission{}
+	role.MenuPermissions = []domain.RoleMenuPermission{}
 	return role, nil
 }
 
 func (uc *RoleUseCase) Update(ctx context.Context, id string, req *domain.UpdateRoleRequest) (*domain.Role, error) {
 	role, err := uc.roleRepo.FindByID(ctx, id)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, apierror.NotFound(err.Error())
+		}
+		return nil, apierror.Internal(err)
 	}
 	if req.Name != "" {
 		role.Name = req.Name
 	}
 	role.Description = req.Description
 	if err := uc.roleRepo.Update(ctx, role); err != nil {
-		return nil, err
+		return nil, apierror.Internal(err)
 	}
-	role.Permissions, err = uc.roleRepo.GetPermissions(ctx, id)
+	role.MenuPermissions, err = uc.roleRepo.GetMenuPermissions(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, apierror.Internal(err)
 	}
 	return role, nil
 }
 
 func (uc *RoleUseCase) Delete(ctx context.Context, id string) error {
 	if _, err := uc.roleRepo.FindByID(ctx, id); err != nil {
-		return err
+		if errors.Is(err, domain.ErrNotFound) {
+			return apierror.NotFound(err.Error())
+		}
+		return apierror.Internal(err)
 	}
-	return uc.roleRepo.Delete(ctx, id)
+	if err := uc.roleRepo.Delete(ctx, id); err != nil {
+		return apierror.Internal(err)
+	}
+	return nil
 }
 
 func (uc *RoleUseCase) AssignPermissions(ctx context.Context, roleID string, req *domain.AssignPermissionsRequest) error {
 	if _, err := uc.roleRepo.FindByID(ctx, roleID); err != nil {
-		return err
+		if errors.Is(err, domain.ErrNotFound) {
+			return apierror.NotFound(err.Error())
+		}
+		return apierror.Internal(err)
 	}
 	for _, item := range req.Items {
 		if _, err := uc.menuRepo.FindByID(ctx, item.MenuID); err != nil {
-			return fmt.Errorf("menu %s not found", item.MenuID)
+			if errors.Is(err, domain.ErrNotFound) {
+				return apierror.NotFound("menu not found: " + item.MenuID)
+			}
+			return apierror.Internal(err)
 		}
 		for _, permID := range item.PermissionIDs {
 			if _, err := uc.permRepo.FindByID(ctx, permID); err != nil {
-				return fmt.Errorf("permission %s not found", permID)
+				if errors.Is(err, domain.ErrNotFound) {
+					return apierror.NotFound("permission not found: " + permID)
+				}
+				return apierror.Internal(err)
 			}
 		}
 	}
-	return uc.roleRepo.AssignMenuPermissions(ctx, roleID, req.Items)
+	if err := uc.roleRepo.AssignMenuPermissions(ctx, roleID, req.Items); err != nil {
+		return apierror.Internal(err)
+	}
+	return nil
 }

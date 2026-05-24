@@ -4,9 +4,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"time"
 
+	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/domain"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -42,28 +42,28 @@ func NewAuthUseCase(userRepo domain.UserRepository, tokenRepo domain.RefreshToke
 
 func (uc *AuthUseCase) Login(ctx context.Context, req *domain.LoginRequest) (*domain.LoginResponse, error) {
 	if req.Email == "" || req.Password == "" {
-		return nil, fmt.Errorf("email and password are required")
+		return nil, apierror.BadRequest("email and password are required")
 	}
 
 	user, err := uc.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
-		return nil, fmt.Errorf("invalid credentials")
+		return nil, apierror.Unauthorized("invalid credentials")
 	}
 	if !user.IsActive {
-		return nil, fmt.Errorf("account is disabled")
+		return nil, apierror.Forbidden("account is disabled")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		return nil, fmt.Errorf("invalid credentials")
+		return nil, apierror.Unauthorized("invalid credentials")
 	}
 
 	permissions, err := uc.userRepo.GetPermissions(ctx, user.ID)
 	if err != nil {
-		return nil, err
+		return nil, apierror.Internal(err)
 	}
 
 	accessToken, err := uc.generateAccessToken(user, permissions)
 	if err != nil {
-		return nil, err
+		return nil, apierror.Internal(err)
 	}
 
 	rawRefresh := uuid.New().String()
@@ -74,7 +74,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, req *domain.LoginRequest) (*do
 		ExpiresAt: time.Now().Add(refreshTokenDuration),
 	}
 	if err := uc.tokenRepo.Save(ctx, rt); err != nil {
-		return nil, err
+		return nil, apierror.Internal(err)
 	}
 
 	return &domain.LoginResponse{
@@ -86,41 +86,40 @@ func (uc *AuthUseCase) Login(ctx context.Context, req *domain.LoginRequest) (*do
 
 func (uc *AuthUseCase) Refresh(ctx context.Context, rawToken string) (*domain.LoginResponse, error) {
 	if rawToken == "" {
-		return nil, fmt.Errorf("refresh token is required")
+		return nil, apierror.BadRequest("refresh token is required")
 	}
 
 	rt, err := uc.tokenRepo.FindByHash(ctx, hashString(rawToken))
 	if err != nil {
-		return nil, fmt.Errorf("invalid refresh token")
+		return nil, apierror.Unauthorized("invalid refresh token")
 	}
 	if rt.RevokedAt != nil {
-		return nil, fmt.Errorf("refresh token has been revoked")
+		return nil, apierror.Unauthorized("refresh token has been revoked")
 	}
 	if time.Now().After(rt.ExpiresAt) {
-		return nil, fmt.Errorf("refresh token has expired")
+		return nil, apierror.Unauthorized("refresh token has expired")
 	}
 
-	// rotate: revoke old, issue new
 	if err := uc.tokenRepo.Revoke(ctx, hashString(rawToken)); err != nil {
-		return nil, err
+		return nil, apierror.Internal(err)
 	}
 
 	user, err := uc.userRepo.FindByID(ctx, rt.UserID)
 	if err != nil {
-		return nil, err
+		return nil, apierror.Internal(err)
 	}
 	if !user.IsActive {
-		return nil, fmt.Errorf("account is disabled")
+		return nil, apierror.Forbidden("account is disabled")
 	}
 
 	permissions, err := uc.userRepo.GetPermissions(ctx, user.ID)
 	if err != nil {
-		return nil, err
+		return nil, apierror.Internal(err)
 	}
 
 	accessToken, err := uc.generateAccessToken(user, permissions)
 	if err != nil {
-		return nil, err
+		return nil, apierror.Internal(err)
 	}
 
 	rawRefresh := uuid.New().String()
@@ -131,7 +130,7 @@ func (uc *AuthUseCase) Refresh(ctx context.Context, rawToken string) (*domain.Lo
 		ExpiresAt: time.Now().Add(refreshTokenDuration),
 	}
 	if err := uc.tokenRepo.Save(ctx, newRT); err != nil {
-		return nil, err
+		return nil, apierror.Internal(err)
 	}
 
 	return &domain.LoginResponse{
@@ -145,7 +144,6 @@ func (uc *AuthUseCase) Logout(ctx context.Context, rawToken string) error {
 	if rawToken == "" {
 		return nil
 	}
-	// silently ignore "already revoked" errors on logout
 	_ = uc.tokenRepo.Revoke(ctx, hashString(rawToken))
 	return nil
 }
@@ -153,7 +151,7 @@ func (uc *AuthUseCase) Logout(ctx context.Context, rawToken string) error {
 func (uc *AuthUseCase) ValidateAccessToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method")
+			return nil, apierror.Unauthorized("unexpected signing method")
 		}
 		return uc.secretKey, nil
 	})
@@ -162,7 +160,7 @@ func (uc *AuthUseCase) ValidateAccessToken(tokenString string) (*Claims, error) 
 	}
 	claims, ok := token.Claims.(*Claims)
 	if !ok || !token.Valid {
-		return nil, fmt.Errorf("invalid token")
+		return nil, apierror.Unauthorized("invalid token")
 	}
 	return claims, nil
 }

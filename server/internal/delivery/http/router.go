@@ -40,7 +40,7 @@ func SetupRoutes(
 	usersGroup.Get("/:id", middleware.RequirePermission("users.read"), userH.GetByID)
 	usersGroup.Put("/:id", middleware.RequirePermission("users.update"), userH.Update)
 	usersGroup.Delete("/:id", middleware.RequirePermission("users.delete"), userH.Delete)
-	usersGroup.Put("/:id/roles", middleware.RequirePermission("users.update"), userH.AssignRoles)
+	usersGroup.Put("/:id/role", middleware.RequirePermission("users.update"), userH.AssignRole)
 
 	// Roles
 	rolesGroup := protected.Group("/roles")

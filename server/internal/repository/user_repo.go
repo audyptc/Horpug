@@ -25,7 +25,7 @@ func (r *UserRepo) FindByID(ctx context.Context, id string) (*domain.User, error
 		FROM users WHERE id = $1`, id).
 		Scan(&u.ID, &u.FullName, &u.Email, &u.Password, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("user not found")
+		return nil, fmt.Errorf("user not found: %w", domain.ErrNotFound)
 	}
 	return u, err
 }
@@ -37,7 +37,7 @@ func (r *UserRepo) FindByEmail(ctx context.Context, email string) (*domain.User,
 		FROM users WHERE email = $1`, email).
 		Scan(&u.ID, &u.FullName, &u.Email, &u.Password, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("user not found")
+		return nil, fmt.Errorf("user not found: %w", domain.ErrNotFound)
 	}
 	return u, err
 }
@@ -103,30 +103,18 @@ func (r *UserRepo) AssignRole(ctx context.Context, userID string, roleID string)
 	return err
 }
 
-func (r *UserRepo) GetRoles(ctx context.Context, userID string) ([]domain.Role, error) {
-	rows, err := r.db.Pool.Query(ctx, `
+func (r *UserRepo) GetRole(ctx context.Context, userID string) (*domain.Role, error) {
+	role := &domain.Role{}
+	err := r.db.Pool.QueryRow(ctx, `
 		SELECT r.id, r.name, r.description, r.created_at, r.updated_at
 		FROM roles r
 		JOIN user_roles ur ON ur.role_id = r.id
-		WHERE ur.user_id = $1
-		ORDER BY r.name`, userID)
-	if err != nil {
-		return nil, err
+		WHERE ur.user_id = $1`, userID).
+		Scan(&role.ID, &role.Name, &role.Description, &role.CreatedAt, &role.UpdatedAt)
+	if err == pgx.ErrNoRows {
+		return nil, nil
 	}
-	defer rows.Close()
-
-	var roles []domain.Role
-	for rows.Next() {
-		var role domain.Role
-		if err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.CreatedAt, &role.UpdatedAt); err != nil {
-			return nil, err
-		}
-		roles = append(roles, role)
-	}
-	if roles == nil {
-		roles = []domain.Role{}
-	}
-	return roles, rows.Err()
+	return role, err
 }
 
 func (r *UserRepo) GetPermissions(ctx context.Context, userID string) ([]string, error) {

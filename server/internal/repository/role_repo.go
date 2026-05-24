@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"apigofiberhorpug/internal/database"
 	"apigofiberhorpug/internal/domain"
@@ -25,7 +26,7 @@ func (r *RoleRepo) FindByID(ctx context.Context, id string) (*domain.Role, error
 		FROM roles WHERE id = $1`, id).
 		Scan(&role.ID, &role.Name, &role.Description, &role.CreatedAt, &role.UpdatedAt)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("role not found")
+		return nil, fmt.Errorf("role not found: %w", domain.ErrNotFound)
 	}
 	return role, err
 }
@@ -102,34 +103,51 @@ func (r *RoleRepo) AssignMenuPermissions(ctx context.Context, roleID string, ite
 	return tx.Commit(ctx)
 }
 
-func (r *RoleRepo) GetPermissions(ctx context.Context, roleID string) ([]domain.Permission, error) {
+func (r *RoleRepo) GetMenuPermissions(ctx context.Context, roleID string) ([]domain.RoleMenuPermission, error) {
 	rows, err := r.db.Pool.Query(ctx, `
-		SELECT DISTINCT
-			m.id::text || ':' || p.id::text AS id,
-			TRIM(BOTH '/' FROM m.path) || '.' || p.name AS name,
-			m.name || ' - ' || p.description AS description,
-			GREATEST(m.created_at, p.created_at) AS created_at,
-			GREATEST(m.updated_at, p.updated_at) AS updated_at
+		SELECT m.id, m.name, p.id, p.name, p.description, p.created_at, p.updated_at
 		FROM role_menu_permissions rmp
 		JOIN menus m ON m.id = rmp.menu_id
 		JOIN permissions p ON p.id = rmp.permission_id
 		WHERE rmp.role_id = $1
-		ORDER BY name`, roleID)
+		ORDER BY m.name, p.name`, roleID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var perms []domain.Permission
+	menuMap := make(map[string]*domain.RoleMenuPermission)
+	var menuOrder []string
+
 	for rows.Next() {
-		var p domain.Permission
-		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		var menuID, menuName, permID, permName, permDesc string
+		var permCreatedAt, permUpdatedAt time.Time
+		if err := rows.Scan(&menuID, &menuName, &permID, &permName, &permDesc, &permCreatedAt, &permUpdatedAt); err != nil {
 			return nil, err
 		}
-		perms = append(perms, p)
+		if _, exists := menuMap[menuID]; !exists {
+			menuMap[menuID] = &domain.RoleMenuPermission{
+				MenuID:      menuID,
+				MenuName:    menuName,
+				Permissions: []domain.Permission{},
+			}
+			menuOrder = append(menuOrder, menuID)
+		}
+		menuMap[menuID].Permissions = append(menuMap[menuID].Permissions, domain.Permission{
+			ID:          permID,
+			Name:        permName,
+			Description: permDesc,
+			CreatedAt:   permCreatedAt,
+			UpdatedAt:   permUpdatedAt,
+		})
 	}
-	if perms == nil {
-		perms = []domain.Permission{}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
-	return perms, rows.Err()
+
+	result := make([]domain.RoleMenuPermission, 0, len(menuOrder))
+	for _, id := range menuOrder {
+		result = append(result, *menuMap[id])
+	}
+	return result, nil
 }

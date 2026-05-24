@@ -30,10 +30,9 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 	if err := c.Bind().JSON(&req); err != nil {
 		return apierror.BadRequest("invalid request body")
 	}
-
 	resp, err := h.auth.Login(c.Context(), &req)
 	if err != nil {
-		return apierror.Unauthorized(err.Error())
+		return err
 	}
 	return response.OK(c, resp)
 }
@@ -51,10 +50,9 @@ func (h *AuthHandler) Refresh(c fiber.Ctx) error {
 	if err := c.Bind().JSON(&req); err != nil {
 		return apierror.BadRequest("invalid request body")
 	}
-
 	resp, err := h.auth.Refresh(c.Context(), req.RefreshToken)
 	if err != nil {
-		return apierror.Unauthorized(err.Error())
+		return err
 	}
 	return response.OK(c, resp)
 }

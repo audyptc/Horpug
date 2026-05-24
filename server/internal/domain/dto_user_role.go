@@ -11,7 +11,7 @@ type UpdateUserRequest struct {
 	IsActive *bool  `json:"is_active"`
 }
 
-type AssignRolesRequest struct {
+type AssignRoleRequest struct {
 	RoleID string `json:"role_id"`
 }
 

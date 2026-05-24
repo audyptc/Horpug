@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/usecase"
 
@@ -28,10 +27,9 @@ func (h *MenuHandler) List(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-
 	menus, total, err := h.menus.List(c.Context(), perPage, offset)
 	if err != nil {
-		return apierror.Internal(err)
+		return err
 	}
 	return response.Paginated(c, menus, page, perPage, total)
 }
@@ -47,7 +45,7 @@ func (h *MenuHandler) List(c fiber.Ctx) error {
 func (h *MenuHandler) GetByID(c fiber.Ctx) error {
 	menu, err := h.menus.GetByID(c.Context(), c.Params("id"))
 	if err != nil {
-		return apierror.NotFound(err.Error())
+		return err
 	}
 	return response.OK(c, menu)
 }

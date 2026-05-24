@@ -29,10 +29,9 @@ func (h *RoleHandler) List(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-
 	roles, total, err := h.roles.List(c.Context(), perPage, offset)
 	if err != nil {
-		return apierror.Internal(err)
+		return err
 	}
 	return response.Paginated(c, roles, page, perPage, total)
 }
@@ -48,7 +47,7 @@ func (h *RoleHandler) List(c fiber.Ctx) error {
 func (h *RoleHandler) GetByID(c fiber.Ctx) error {
 	role, err := h.roles.GetByID(c.Context(), c.Params("id"))
 	if err != nil {
-		return apierror.NotFound(err.Error())
+		return err
 	}
 	return response.OK(c, role)
 }
@@ -69,7 +68,7 @@ func (h *RoleHandler) Create(c fiber.Ctx) error {
 	}
 	role, err := h.roles.Create(c.Context(), &req)
 	if err != nil {
-		return apierror.BadRequest(err.Error())
+		return err
 	}
 	return response.Created(c, role)
 }
@@ -91,7 +90,7 @@ func (h *RoleHandler) Update(c fiber.Ctx) error {
 	}
 	role, err := h.roles.Update(c.Context(), c.Params("id"), &req)
 	if err != nil {
-		return apierror.BadRequest(err.Error())
+		return err
 	}
 	return response.OK(c, role)
 }
@@ -106,7 +105,7 @@ func (h *RoleHandler) Update(c fiber.Ctx) error {
 // @Router       /roles/{id} [delete]
 func (h *RoleHandler) Delete(c fiber.Ctx) error {
 	if err := h.roles.Delete(c.Context(), c.Params("id")); err != nil {
-		return apierror.NotFound(err.Error())
+		return err
 	}
 	return response.Message(c, "role deleted")
 }
@@ -127,7 +126,7 @@ func (h *RoleHandler) AssignPermissions(c fiber.Ctx) error {
 		return apierror.BadRequest("invalid request body")
 	}
 	if err := h.roles.AssignPermissions(c.Context(), c.Params("id"), &req); err != nil {
-		return apierror.BadRequest(err.Error())
+		return err
 	}
 	return response.Message(c, "permissions assigned successfully")
 }

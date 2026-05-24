@@ -2,8 +2,9 @@ package usecase
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
+	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/domain"
 
 	"github.com/google/uuid"
@@ -22,17 +23,16 @@ func NewUserUseCase(userRepo domain.UserRepository, roleRepo domain.RoleReposito
 func (uc *UserUseCase) List(ctx context.Context, limit, offset int) ([]*domain.User, int, error) {
 	total, err := uc.userRepo.Count(ctx)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, apierror.Internal(err)
 	}
-
 	users, err := uc.userRepo.List(ctx, limit, offset)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, apierror.Internal(err)
 	}
 	for _, u := range users {
-		u.Roles, err = uc.userRepo.GetRoles(ctx, u.ID)
+		u.Role, err = uc.userRepo.GetRole(ctx, u.ID)
 		if err != nil {
-			return nil, 0, err
+			return nil, 0, apierror.Internal(err)
 		}
 	}
 	return users, total, nil
@@ -41,23 +41,29 @@ func (uc *UserUseCase) List(ctx context.Context, limit, offset int) ([]*domain.U
 func (uc *UserUseCase) GetByID(ctx context.Context, id string) (*domain.User, error) {
 	user, err := uc.userRepo.FindByID(ctx, id)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, apierror.NotFound(err.Error())
+		}
+		return nil, apierror.Internal(err)
 	}
-	user.Roles, err = uc.userRepo.GetRoles(ctx, id)
-	return user, err
+	user.Role, err = uc.userRepo.GetRole(ctx, id)
+	if err != nil {
+		return nil, apierror.Internal(err)
+	}
+	return user, nil
 }
 
 func (uc *UserUseCase) Create(ctx context.Context, req *domain.CreateUserRequest) (*domain.User, error) {
 	if req.FullName == "" || req.Email == "" || req.Password == "" {
-		return nil, fmt.Errorf("full_name, email and password are required")
+		return nil, apierror.BadRequest("full_name, email and password are required")
 	}
 	if len(req.Password) < 8 {
-		return nil, fmt.Errorf("password must be at least 8 characters")
+		return nil, apierror.BadRequest("password must be at least 8 characters")
 	}
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, err
+		return nil, apierror.Internal(err)
 	}
 
 	user := &domain.User{
@@ -68,17 +74,19 @@ func (uc *UserUseCase) Create(ctx context.Context, req *domain.CreateUserRequest
 		IsActive: true,
 	}
 	if err := uc.userRepo.Create(ctx, user); err != nil {
-		return nil, fmt.Errorf("could not create user: %v", err)
+		return nil, apierror.Internal(err)
 	}
 	user.Password = ""
-	user.Roles = []domain.Role{}
 	return user, nil
 }
 
 func (uc *UserUseCase) Update(ctx context.Context, id string, req *domain.UpdateUserRequest) (*domain.User, error) {
 	user, err := uc.userRepo.FindByID(ctx, id)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, apierror.NotFound(err.Error())
+		}
+		return nil, apierror.Internal(err)
 	}
 	if req.FullName != "" {
 		user.FullName = req.FullName
@@ -87,31 +95,46 @@ func (uc *UserUseCase) Update(ctx context.Context, id string, req *domain.Update
 		user.IsActive = *req.IsActive
 	}
 	if err := uc.userRepo.Update(ctx, user); err != nil {
-		return nil, err
+		return nil, apierror.Internal(err)
 	}
-	user.Roles, err = uc.userRepo.GetRoles(ctx, id)
+	user.Role, err = uc.userRepo.GetRole(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, apierror.Internal(err)
 	}
 	return user, nil
 }
 
 func (uc *UserUseCase) Delete(ctx context.Context, id string) error {
 	if _, err := uc.userRepo.FindByID(ctx, id); err != nil {
-		return err
+		if errors.Is(err, domain.ErrNotFound) {
+			return apierror.NotFound(err.Error())
+		}
+		return apierror.Internal(err)
 	}
-	return uc.userRepo.Delete(ctx, id)
+	if err := uc.userRepo.Delete(ctx, id); err != nil {
+		return apierror.Internal(err)
+	}
+	return nil
 }
 
-func (uc *UserUseCase) AssignRoles(ctx context.Context, userID string, req *domain.AssignRolesRequest) error {
+func (uc *UserUseCase) AssignRole(ctx context.Context, userID string, req *domain.AssignRoleRequest) error {
 	if _, err := uc.userRepo.FindByID(ctx, userID); err != nil {
-		return err
+		if errors.Is(err, domain.ErrNotFound) {
+			return apierror.NotFound(err.Error())
+		}
+		return apierror.Internal(err)
 	}
 	if req.RoleID == "" {
-		return fmt.Errorf("role_id is required")
+		return apierror.BadRequest("role_id is required")
 	}
 	if _, err := uc.roleRepo.FindByID(ctx, req.RoleID); err != nil {
-		return fmt.Errorf("role %s not found", req.RoleID)
+		if errors.Is(err, domain.ErrNotFound) {
+			return apierror.NotFound("role not found")
+		}
+		return apierror.Internal(err)
 	}
-	return uc.userRepo.AssignRole(ctx, userID, req.RoleID)
+	if err := uc.userRepo.AssignRole(ctx, userID, req.RoleID); err != nil {
+		return apierror.Internal(err)
+	}
+	return nil
 }

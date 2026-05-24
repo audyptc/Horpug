@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/usecase"
 
@@ -28,10 +27,9 @@ func (h *PermissionHandler) List(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-
 	perms, total, err := h.perms.List(c.Context(), perPage, offset)
 	if err != nil {
-		return apierror.Internal(err)
+		return err
 	}
 	return response.Paginated(c, perms, page, perPage, total)
 }

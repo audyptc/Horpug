@@ -2,7 +2,9 @@ package usecase
 
 import (
 	"context"
+	"errors"
 
+	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/domain"
 )
 
@@ -17,15 +19,22 @@ func NewMenuUseCase(menuRepo domain.MenuRepository) *MenuUseCase {
 func (uc *MenuUseCase) List(ctx context.Context, limit, offset int) ([]*domain.Menu, int, error) {
 	total, err := uc.menuRepo.Count(ctx)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, apierror.Internal(err)
 	}
 	menus, err := uc.menuRepo.List(ctx, limit, offset)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, apierror.Internal(err)
 	}
 	return menus, total, nil
 }
 
 func (uc *MenuUseCase) GetByID(ctx context.Context, id string) (*domain.Menu, error) {
-	return uc.menuRepo.FindByID(ctx, id)
+	menu, err := uc.menuRepo.FindByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, apierror.NotFound(err.Error())
+		}
+		return nil, apierror.Internal(err)
+	}
+	return menu, nil
 }

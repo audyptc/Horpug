@@ -29,10 +29,9 @@ func (h *UserHandler) List(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-
 	users, total, err := h.users.List(c.Context(), perPage, offset)
 	if err != nil {
-		return apierror.Internal(err)
+		return err
 	}
 	return response.Paginated(c, users, page, perPage, total)
 }
@@ -48,7 +47,7 @@ func (h *UserHandler) List(c fiber.Ctx) error {
 func (h *UserHandler) GetByID(c fiber.Ctx) error {
 	user, err := h.users.GetByID(c.Context(), c.Params("id"))
 	if err != nil {
-		return apierror.NotFound(err.Error())
+		return err
 	}
 	return response.OK(c, user)
 }
@@ -69,7 +68,7 @@ func (h *UserHandler) Create(c fiber.Ctx) error {
 	}
 	user, err := h.users.Create(c.Context(), &req)
 	if err != nil {
-		return apierror.BadRequest(err.Error())
+		return err
 	}
 	return response.Created(c, user)
 }
@@ -91,7 +90,7 @@ func (h *UserHandler) Update(c fiber.Ctx) error {
 	}
 	user, err := h.users.Update(c.Context(), c.Params("id"), &req)
 	if err != nil {
-		return apierror.BadRequest(err.Error())
+		return err
 	}
 	return response.OK(c, user)
 }
@@ -106,28 +105,28 @@ func (h *UserHandler) Update(c fiber.Ctx) error {
 // @Router       /users/{id} [delete]
 func (h *UserHandler) Delete(c fiber.Ctx) error {
 	if err := h.users.Delete(c.Context(), c.Params("id")); err != nil {
-		return apierror.NotFound(err.Error())
+		return err
 	}
 	return response.Message(c, "user deleted")
 }
 
-// AssignRoles godoc
+// AssignRole godoc
 // @Summary      กำหนดบทบาทให้ผู้ใช้
 // @Tags         users
 // @Security     ApiKeyAuth
 // @Accept       json
 // @Produce      json
 // @Param        id path string true "User ID"
-// @Param        body body domain.AssignRolesRequest true "Role assignment payload"
+// @Param        body body domain.AssignRoleRequest true "Role assignment payload"
 // @Success      200  {object}  map[string]interface{}
-// @Router       /users/{id}/roles [put]
-func (h *UserHandler) AssignRoles(c fiber.Ctx) error {
-	var req domain.AssignRolesRequest
+// @Router       /users/{id}/role [put]
+func (h *UserHandler) AssignRole(c fiber.Ctx) error {
+	var req domain.AssignRoleRequest
 	if err := c.Bind().JSON(&req); err != nil {
 		return apierror.BadRequest("invalid request body")
 	}
-	if err := h.users.AssignRoles(c.Context(), c.Params("id"), &req); err != nil {
-		return apierror.BadRequest(err.Error())
+	if err := h.users.AssignRole(c.Context(), c.Params("id"), &req); err != nil {
+		return err
 	}
 	return response.Message(c, "role assigned successfully")
 }

@@ -11,6 +11,6 @@ type UserRepository interface {
 	Update(ctx context.Context, user *User) error
 	Delete(ctx context.Context, id string) error
 	AssignRole(ctx context.Context, userID string, roleID string) error
-	GetRoles(ctx context.Context, userID string) ([]Role, error)
+	GetRole(ctx context.Context, userID string) (*Role, error)
 	GetPermissions(ctx context.Context, userID string) ([]string, error)
 }
