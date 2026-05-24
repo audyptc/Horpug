@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"apigofiberhorpug/internal/delivery/http/apierror"
+	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/domain"
 	"apigofiberhorpug/internal/usecase"
 
@@ -15,78 +17,117 @@ func NewRoleHandler(roles *usecase.RoleUseCase) *RoleHandler {
 	return &RoleHandler{roles: roles}
 }
 
+// List godoc
+// @Summary      รายชื่อบทบาท
+// @Tags         roles
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {array}  domain.Role
+// @Router       /roles [get]
 func (h *RoleHandler) List(c fiber.Ctx) error {
-	roles, err := h.roles.List(c.Context())
+	page, perPage, offset, err := parsePaginationQuery(c)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"success": false, "message": err.Error(),
-		})
+		return err
 	}
-	return c.JSON(fiber.Map{"success": true, "data": roles})
+
+	roles, total, err := h.roles.List(c.Context(), perPage, offset)
+	if err != nil {
+		return apierror.Internal(err)
+	}
+	return response.Paginated(c, roles, page, perPage, total)
 }
 
+// GetByID godoc
+// @Summary      ดูข้อมูลบทบาทตาม ID
+// @Tags         roles
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Role ID"
+// @Success      200  {object}  domain.Role
+// @Router       /roles/{id} [get]
 func (h *RoleHandler) GetByID(c fiber.Ctx) error {
 	role, err := h.roles.GetByID(c.Context(), c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"success": false, "message": err.Error(),
-		})
+		return apierror.NotFound(err.Error())
 	}
-	return c.JSON(fiber.Map{"success": true, "data": role})
+	return response.OK(c, role)
 }
 
+// Create godoc
+// @Summary      สร้างบทบาท
+// @Tags         roles
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        body body domain.CreateRoleRequest true "Role payload"
+// @Success      201  {object}  domain.Role
+// @Router       /roles [post]
 func (h *RoleHandler) Create(c fiber.Ctx) error {
 	var req domain.CreateRoleRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false, "message": "invalid request body",
-		})
+		return apierror.BadRequest("invalid request body")
 	}
 	role, err := h.roles.Create(c.Context(), &req)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false, "message": err.Error(),
-		})
+		return apierror.BadRequest(err.Error())
 	}
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"success": true, "data": role})
+	return response.Created(c, role)
 }
 
+// Update godoc
+// @Summary      แก้ไขบทบาท
+// @Tags         roles
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Role ID"
+// @Param        body body domain.UpdateRoleRequest true "Role payload"
+// @Success      200  {object}  domain.Role
+// @Router       /roles/{id} [put]
 func (h *RoleHandler) Update(c fiber.Ctx) error {
 	var req domain.UpdateRoleRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false, "message": "invalid request body",
-		})
+		return apierror.BadRequest("invalid request body")
 	}
 	role, err := h.roles.Update(c.Context(), c.Params("id"), &req)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false, "message": err.Error(),
-		})
+		return apierror.BadRequest(err.Error())
 	}
-	return c.JSON(fiber.Map{"success": true, "data": role})
+	return response.OK(c, role)
 }
 
+// Delete godoc
+// @Summary      ลบบทบาท
+// @Tags         roles
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Role ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /roles/{id} [delete]
 func (h *RoleHandler) Delete(c fiber.Ctx) error {
 	if err := h.roles.Delete(c.Context(), c.Params("id")); err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"success": false, "message": err.Error(),
-		})
+		return apierror.NotFound(err.Error())
 	}
-	return c.JSON(fiber.Map{"success": true, "message": "role deleted"})
+	return response.Message(c, "role deleted")
 }
 
+// AssignPermissions godoc
+// @Summary      กำหนดสิทธิ์ให้บทบาท
+// @Tags         roles
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Role ID"
+// @Param        body body domain.AssignPermissionsRequest true "Permission IDs"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /roles/{id}/permissions [put]
 func (h *RoleHandler) AssignPermissions(c fiber.Ctx) error {
 	var req domain.AssignPermissionsRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false, "message": "invalid request body",
-		})
+		return apierror.BadRequest("invalid request body")
 	}
 	if err := h.roles.AssignPermissions(c.Context(), c.Params("id"), &req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false, "message": err.Error(),
-		})
+		return apierror.BadRequest(err.Error())
 	}
-	return c.JSON(fiber.Map{"success": true, "message": "permissions assigned successfully"})
+	return response.Message(c, "permissions assigned successfully")
 }

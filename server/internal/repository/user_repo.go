@@ -42,10 +42,11 @@ func (r *UserRepo) FindByEmail(ctx context.Context, email string) (*domain.User,
 	return u, err
 }
 
-func (r *UserRepo) List(ctx context.Context) ([]*domain.User, error) {
+func (r *UserRepo) List(ctx context.Context, limit, offset int) ([]*domain.User, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, full_name, email, is_active, created_at, updated_at
-		FROM users ORDER BY created_at DESC`)
+		FROM users ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -63,6 +64,12 @@ func (r *UserRepo) List(ctx context.Context) ([]*domain.User, error) {
 		users = []*domain.User{}
 	}
 	return users, nil
+}
+
+func (r *UserRepo) Count(ctx context.Context) (int, error) {
+	var total int
+	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&total)
+	return total, err
 }
 
 func (r *UserRepo) Create(ctx context.Context, user *domain.User) error {

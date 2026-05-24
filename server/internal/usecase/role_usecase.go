@@ -18,18 +18,23 @@ func NewRoleUseCase(roleRepo domain.RoleRepository, permRepo domain.PermissionRe
 	return &RoleUseCase{roleRepo: roleRepo, permRepo: permRepo}
 }
 
-func (uc *RoleUseCase) List(ctx context.Context) ([]*domain.Role, error) {
-	roles, err := uc.roleRepo.List(ctx)
+func (uc *RoleUseCase) List(ctx context.Context, limit, offset int) ([]*domain.Role, int, error) {
+	total, err := uc.roleRepo.Count(ctx)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+
+	roles, err := uc.roleRepo.List(ctx, limit, offset)
+	if err != nil {
+		return nil, 0, err
 	}
 	for _, r := range roles {
 		r.Permissions, err = uc.roleRepo.GetPermissions(ctx, r.ID)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 	}
-	return roles, nil
+	return roles, total, nil
 }
 
 func (uc *RoleUseCase) GetByID(ctx context.Context, id string) (*domain.Role, error) {

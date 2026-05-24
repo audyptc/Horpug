@@ -30,10 +30,11 @@ func (r *RoleRepo) FindByID(ctx context.Context, id string) (*domain.Role, error
 	return role, err
 }
 
-func (r *RoleRepo) List(ctx context.Context) ([]*domain.Role, error) {
+func (r *RoleRepo) List(ctx context.Context, limit, offset int) ([]*domain.Role, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, name, description, created_at, updated_at
-		FROM roles ORDER BY name`)
+		FROM roles ORDER BY name
+		LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -51,6 +52,12 @@ func (r *RoleRepo) List(ctx context.Context) ([]*domain.Role, error) {
 		roles = []*domain.Role{}
 	}
 	return roles, nil
+}
+
+func (r *RoleRepo) Count(ctx context.Context) (int, error) {
+	var total int
+	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM roles`).Scan(&total)
+	return total, err
 }
 
 func (r *RoleRepo) Create(ctx context.Context, role *domain.Role) error {

@@ -3,6 +3,7 @@ package middleware
 import (
 	"strings"
 
+	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/usecase"
 
 	"github.com/gofiber/fiber/v3"
@@ -12,18 +13,12 @@ func RequireAuth(auth *usecase.AuthUseCase) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		header := c.Get("Authorization")
 		if !strings.HasPrefix(header, "Bearer ") {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"success": false,
-				"message": "missing or invalid authorization header",
-			})
+			return apierror.Unauthorized("missing or invalid authorization header")
 		}
 
 		claims, err := auth.ValidateAccessToken(strings.TrimPrefix(header, "Bearer "))
 		if err != nil {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"success": false,
-				"message": "invalid or expired token",
-			})
+			return apierror.Unauthorized("invalid or expired token")
 		}
 
 		c.Locals("user_id", claims.UserID)
@@ -41,9 +36,6 @@ func RequirePermission(permission string) fiber.Handler {
 				return c.Next()
 			}
 		}
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"success": false,
-			"message": "insufficient permissions",
-		})
+		return apierror.Forbidden("insufficient permissions")
 	}
 }

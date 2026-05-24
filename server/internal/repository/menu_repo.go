@@ -30,10 +30,11 @@ func (r *MenuRepo) FindByID(ctx context.Context, id string) (*domain.Menu, error
 	return m, err
 }
 
-func (r *MenuRepo) List(ctx context.Context) ([]*domain.Menu, error) {
+func (r *MenuRepo) List(ctx context.Context, limit, offset int) ([]*domain.Menu, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, name, path, created_at, updated_at
-		FROM menus ORDER BY created_at DESC`)
+		FROM menus ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -51,4 +52,10 @@ func (r *MenuRepo) List(ctx context.Context) ([]*domain.Menu, error) {
 		menus = []*domain.Menu{}
 	}
 	return menus, nil
+}
+
+func (r *MenuRepo) Count(ctx context.Context) (int, error) {
+	var total int
+	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM menus`).Scan(&total)
+	return total, err
 }

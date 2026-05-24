@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"apigofiberhorpug/internal/delivery/http/apierror"
+	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/usecase"
 
 	"github.com/gofiber/fiber/v3"
@@ -14,22 +16,38 @@ func NewMenuHandler(menus *usecase.MenuUseCase) *MenuHandler {
 	return &MenuHandler{menus: menus}
 }
 
+// List godoc
+// @Summary      รายการเมนู
+// @Tags         menus
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {array}  domain.Menu
+// @Router       /menus [get]
 func (h *MenuHandler) List(c fiber.Ctx) error {
-	menus, err := h.menus.List(c.Context())
+	page, perPage, offset, err := parsePaginationQuery(c)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"success": false, "message": err.Error(),
-		})
+		return err
 	}
-	return c.JSON(fiber.Map{"success": true, "data": menus})
+
+	menus, total, err := h.menus.List(c.Context(), perPage, offset)
+	if err != nil {
+		return apierror.Internal(err)
+	}
+	return response.Paginated(c, menus, page, perPage, total)
 }
 
+// GetByID godoc
+// @Summary      ดูเมนูตาม ID
+// @Tags         menus
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Menu ID"
+// @Success      200  {object}  domain.Menu
+// @Router       /menus/{id} [get]
 func (h *MenuHandler) GetByID(c fiber.Ctx) error {
 	menu, err := h.menus.GetByID(c.Context(), c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"success": false, "message": err.Error(),
-		})
+		return apierror.NotFound(err.Error())
 	}
-	return c.JSON(fiber.Map{"success": true, "data": menu})
+	return response.OK(c, menu)
 }

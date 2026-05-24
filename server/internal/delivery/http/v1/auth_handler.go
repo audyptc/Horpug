@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"apigofiberhorpug/internal/delivery/http/apierror"
+	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/domain"
 	"apigofiberhorpug/internal/usecase"
 
@@ -26,44 +28,50 @@ func NewAuthHandler(auth *usecase.AuthUseCase) *AuthHandler {
 func (h *AuthHandler) Login(c fiber.Ctx) error {
 	var req domain.LoginRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false, "message": "invalid request body",
-		})
+		return apierror.BadRequest("invalid request body")
 	}
 
 	resp, err := h.auth.Login(c.Context(), &req)
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"success": false, "message": err.Error(),
-		})
+		return apierror.Unauthorized(err.Error())
 	}
-	return c.JSON(fiber.Map{"success": true, "data": resp})
+	return response.OK(c, resp)
 }
 
+// Refresh godoc
+// @Summary      ต่ออายุโทเค็น
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body body domain.RefreshRequest true "Refresh Token"
+// @Success      200  {object}  domain.LoginResponse
+// @Router       /auth/refresh [post]
 func (h *AuthHandler) Refresh(c fiber.Ctx) error {
 	var req domain.RefreshRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false, "message": "invalid request body",
-		})
+		return apierror.BadRequest("invalid request body")
 	}
 
 	resp, err := h.auth.Refresh(c.Context(), req.RefreshToken)
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"success": false, "message": err.Error(),
-		})
+		return apierror.Unauthorized(err.Error())
 	}
-	return c.JSON(fiber.Map{"success": true, "data": resp})
+	return response.OK(c, resp)
 }
 
+// Logout godoc
+// @Summary      ออกจากระบบ
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body body domain.LogoutRequest true "Refresh Token"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /auth/logout [post]
 func (h *AuthHandler) Logout(c fiber.Ctx) error {
 	var req domain.LogoutRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false, "message": "invalid request body",
-		})
+		return apierror.BadRequest("invalid request body")
 	}
 	_ = h.auth.Logout(c.Context(), req.RefreshToken)
-	return c.JSON(fiber.Map{"success": true, "message": "logged out successfully"})
+	return response.Message(c, "logged out successfully")
 }

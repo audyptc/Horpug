@@ -18,10 +18,11 @@ func NewPermissionRepo(db *database.DB) *PermissionRepo {
 	return &PermissionRepo{db: db}
 }
 
-func (r *PermissionRepo) List(ctx context.Context) ([]*domain.Permission, error) {
+func (r *PermissionRepo) List(ctx context.Context, limit, offset int) ([]*domain.Permission, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, name, description, created_at, updated_at
-		FROM permissions ORDER BY name`)
+		FROM permissions ORDER BY name
+		LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -39,6 +40,12 @@ func (r *PermissionRepo) List(ctx context.Context) ([]*domain.Permission, error)
 		perms = []*domain.Permission{}
 	}
 	return perms, nil
+}
+
+func (r *PermissionRepo) Count(ctx context.Context) (int, error) {
+	var total int
+	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM permissions`).Scan(&total)
+	return total, err
 }
 
 func (r *PermissionRepo) FindByID(ctx context.Context, id string) (*domain.Permission, error) {

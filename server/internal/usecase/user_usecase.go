@@ -19,18 +19,23 @@ func NewUserUseCase(userRepo domain.UserRepository, roleRepo domain.RoleReposito
 	return &UserUseCase{userRepo: userRepo, roleRepo: roleRepo}
 }
 
-func (uc *UserUseCase) List(ctx context.Context) ([]*domain.User, error) {
-	users, err := uc.userRepo.List(ctx)
+func (uc *UserUseCase) List(ctx context.Context, limit, offset int) ([]*domain.User, int, error) {
+	total, err := uc.userRepo.Count(ctx)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+
+	users, err := uc.userRepo.List(ctx, limit, offset)
+	if err != nil {
+		return nil, 0, err
 	}
 	for _, u := range users {
 		u.Roles, err = uc.userRepo.GetRoles(ctx, u.ID)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 	}
-	return users, nil
+	return users, total, nil
 }
 
 func (uc *UserUseCase) GetByID(ctx context.Context, id string) (*domain.User, error) {

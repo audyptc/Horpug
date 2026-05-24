@@ -15,6 +15,12 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/recover"
 )
 
+// @title  API
+// @BasePath /api/v1
+// @schemes http https
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -46,9 +52,19 @@ func main() {
 	menuUC := usecase.NewMenuUseCase(menuRepo)
 
 	// HTTP Server
-	app := fiber.New(fiber.Config{AppName: "Horpug API v1.0"})
+	app := fiber.New(fiber.Config{
+		AppName:      "Horpug API v1.0",
+		ErrorHandler: deliveryhttp.ErrorHandler,
+	})
 	app.Use(logger.New())
 	app.Use(recover.New())
+
+	app.Get("/", func(c fiber.Ctx) error {
+		return c.Redirect().To("/docs")
+	})
+	app.Get("/swagger", func(c fiber.Ctx) error {
+		return c.Redirect().To("/docs")
+	})
 
 	app.Get("/health", func(c fiber.Ctx) error {
 		if err := db.Pool.Ping(context.Background()); err != nil {

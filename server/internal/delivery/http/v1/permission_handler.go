@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"apigofiberhorpug/internal/delivery/http/apierror"
+	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/usecase"
 
 	"github.com/gofiber/fiber/v3"
@@ -14,12 +16,22 @@ func NewPermissionHandler(perms *usecase.PermissionUseCase) *PermissionHandler {
 	return &PermissionHandler{perms: perms}
 }
 
+// List godoc
+// @Summary      รายชื่อสิทธิ์
+// @Tags         permissions
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {array}  domain.Permission
+// @Router       /permissions [get]
 func (h *PermissionHandler) List(c fiber.Ctx) error {
-	perms, err := h.perms.List(c.Context())
+	page, perPage, offset, err := parsePaginationQuery(c)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"success": false, "message": err.Error(),
-		})
+		return err
 	}
-	return c.JSON(fiber.Map{"success": true, "data": perms})
+
+	perms, total, err := h.perms.List(c.Context(), perPage, offset)
+	if err != nil {
+		return apierror.Internal(err)
+	}
+	return response.Paginated(c, perms, page, perPage, total)
 }
