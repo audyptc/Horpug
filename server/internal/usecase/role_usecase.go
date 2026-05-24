@@ -74,7 +74,10 @@ func (uc *RoleUseCase) Update(ctx context.Context, id string, req *domain.Update
 	if err := uc.roleRepo.Update(ctx, role); err != nil {
 		return nil, err
 	}
-	role.Permissions, _ = uc.roleRepo.GetPermissions(ctx, id)
+	role.Permissions, err = uc.roleRepo.GetPermissions(ctx, id)
+	if err != nil {
+		return nil, err
+	}
 	return role, nil
 }
 

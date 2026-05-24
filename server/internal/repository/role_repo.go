@@ -51,7 +51,7 @@ func (r *RoleRepo) List(ctx context.Context, limit, offset int) ([]*domain.Role,
 	if roles == nil {
 		roles = []*domain.Role{}
 	}
-	return roles, nil
+	return roles, rows.Err()
 }
 
 func (r *RoleRepo) Count(ctx context.Context) (int, error) {
@@ -123,5 +123,5 @@ func (r *RoleRepo) GetPermissions(ctx context.Context, roleID string) ([]domain.
 	if perms == nil {
 		perms = []domain.Permission{}
 	}
-	return perms, nil
+	return perms, rows.Err()
 }

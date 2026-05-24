@@ -63,7 +63,7 @@ func (r *UserRepo) List(ctx context.Context, limit, offset int) ([]*domain.User,
 	if users == nil {
 		users = []*domain.User{}
 	}
-	return users, nil
+	return users, rows.Err()
 }
 
 func (r *UserRepo) Count(ctx context.Context) (int, error) {
@@ -136,7 +136,7 @@ func (r *UserRepo) GetRoles(ctx context.Context, userID string) ([]domain.Role, 
 	if roles == nil {
 		roles = []domain.Role{}
 	}
-	return roles, nil
+	return roles, rows.Err()
 }
 
 func (r *UserRepo) GetPermissions(ctx context.Context, userID string) ([]string, error) {
@@ -163,5 +163,5 @@ func (r *UserRepo) GetPermissions(ctx context.Context, userID string) ([]string,
 	if permissions == nil {
 		permissions = []string{}
 	}
-	return permissions, nil
+	return permissions, rows.Err()
 }

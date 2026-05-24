@@ -51,7 +51,7 @@ func (r *MenuRepo) List(ctx context.Context, limit, offset int) ([]*domain.Menu,
 	if menus == nil {
 		menus = []*domain.Menu{}
 	}
-	return menus, nil
+	return menus, rows.Err()
 }
 
 func (r *MenuRepo) Count(ctx context.Context) (int, error) {

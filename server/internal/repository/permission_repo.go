@@ -39,7 +39,7 @@ func (r *PermissionRepo) List(ctx context.Context, limit, offset int) ([]*domain
 	if perms == nil {
 		perms = []*domain.Permission{}
 	}
-	return perms, nil
+	return perms, rows.Err()
 }
 
 func (r *PermissionRepo) Count(ctx context.Context) (int, error) {

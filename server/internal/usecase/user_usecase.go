@@ -89,7 +89,10 @@ func (uc *UserUseCase) Update(ctx context.Context, id string, req *domain.Update
 	if err := uc.userRepo.Update(ctx, user); err != nil {
 		return nil, err
 	}
-	user.Roles, _ = uc.userRepo.GetRoles(ctx, id)
+	user.Roles, err = uc.userRepo.GetRoles(ctx, id)
+	if err != nil {
+		return nil, err
+	}
 	return user, nil
 }
 
