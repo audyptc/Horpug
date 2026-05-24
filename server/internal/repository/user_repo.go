@@ -93,24 +93,14 @@ func (r *UserRepo) Delete(ctx context.Context, id string) error {
 	return err
 }
 
-func (r *UserRepo) AssignRoles(ctx context.Context, userID string, roleIDs []string) error {
-	tx, err := r.db.Pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx)
-
-	if _, err := tx.Exec(ctx, `DELETE FROM user_roles WHERE user_id = $1`, userID); err != nil {
-		return err
-	}
-	for _, roleID := range roleIDs {
-		if _, err := tx.Exec(ctx,
-			`INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-			userID, roleID); err != nil {
-			return err
-		}
-	}
-	return tx.Commit(ctx)
+func (r *UserRepo) AssignRole(ctx context.Context, userID string, roleID string) error {
+	_, err := r.db.Pool.Exec(ctx, `
+		INSERT INTO user_roles (user_id, role_id)
+		VALUES ($1, $2)
+		ON CONFLICT (user_id)
+		DO UPDATE SET role_id = EXCLUDED.role_id, created_at = NOW()`,
+		userID, roleID)
+	return err
 }
 
 func (r *UserRepo) GetRoles(ctx context.Context, userID string) ([]domain.Role, error) {
@@ -141,12 +131,13 @@ func (r *UserRepo) GetRoles(ctx context.Context, userID string) ([]domain.Role, 
 
 func (r *UserRepo) GetPermissions(ctx context.Context, userID string) ([]string, error) {
 	rows, err := r.db.Pool.Query(ctx, `
-		SELECT DISTINCT p.name
-		FROM permissions p
-		JOIN role_permissions rp ON rp.permission_id = p.id
-		JOIN user_roles ur ON ur.role_id = rp.role_id
+		SELECT DISTINCT TRIM(BOTH '/' FROM m.path) || '.' || p.name AS permission_name
+		FROM role_menu_permissions rmp
+		JOIN menus m ON m.id = rmp.menu_id
+		JOIN permissions p ON p.id = rmp.permission_id
+		JOIN user_roles ur ON ur.role_id = rmp.role_id
 		WHERE ur.user_id = $1
-		ORDER BY p.name`, userID)
+		ORDER BY permission_name`, userID)
 	if err != nil {
 		return nil, err
 	}

@@ -12,10 +12,11 @@ import (
 type RoleUseCase struct {
 	roleRepo domain.RoleRepository
 	permRepo domain.PermissionRepository
+	menuRepo domain.MenuRepository
 }
 
-func NewRoleUseCase(roleRepo domain.RoleRepository, permRepo domain.PermissionRepository) *RoleUseCase {
-	return &RoleUseCase{roleRepo: roleRepo, permRepo: permRepo}
+func NewRoleUseCase(roleRepo domain.RoleRepository, permRepo domain.PermissionRepository, menuRepo domain.MenuRepository) *RoleUseCase {
+	return &RoleUseCase{roleRepo: roleRepo, permRepo: permRepo, menuRepo: menuRepo}
 }
 
 func (uc *RoleUseCase) List(ctx context.Context, limit, offset int) ([]*domain.Role, int, error) {
@@ -92,10 +93,15 @@ func (uc *RoleUseCase) AssignPermissions(ctx context.Context, roleID string, req
 	if _, err := uc.roleRepo.FindByID(ctx, roleID); err != nil {
 		return err
 	}
-	for _, permID := range req.PermissionIDs {
-		if _, err := uc.permRepo.FindByID(ctx, permID); err != nil {
-			return fmt.Errorf("permission %s not found", permID)
+	for _, item := range req.Items {
+		if _, err := uc.menuRepo.FindByID(ctx, item.MenuID); err != nil {
+			return fmt.Errorf("menu %s not found", item.MenuID)
+		}
+		for _, permID := range item.PermissionIDs {
+			if _, err := uc.permRepo.FindByID(ctx, permID); err != nil {
+				return fmt.Errorf("permission %s not found", permID)
+			}
 		}
 	}
-	return uc.roleRepo.AssignPermissions(ctx, roleID, req.PermissionIDs)
+	return uc.roleRepo.AssignMenuPermissions(ctx, roleID, req.Items)
 }

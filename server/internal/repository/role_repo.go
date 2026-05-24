@@ -80,21 +80,23 @@ func (r *RoleRepo) Delete(ctx context.Context, id string) error {
 	return err
 }
 
-func (r *RoleRepo) AssignPermissions(ctx context.Context, roleID string, permissionIDs []string) error {
+func (r *RoleRepo) AssignMenuPermissions(ctx context.Context, roleID string, items []domain.RoleMenuPermissionItem) error {
 	tx, err := r.db.Pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
 
-	if _, err := tx.Exec(ctx, `DELETE FROM role_permissions WHERE role_id = $1`, roleID); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM role_menu_permissions WHERE role_id = $1`, roleID); err != nil {
 		return err
 	}
-	for _, permID := range permissionIDs {
-		if _, err := tx.Exec(ctx,
-			`INSERT INTO role_permissions (role_id, permission_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-			roleID, permID); err != nil {
-			return err
+	for _, item := range items {
+		for _, permID := range item.PermissionIDs {
+			if _, err := tx.Exec(ctx,
+				`INSERT INTO role_menu_permissions (role_id, menu_id, permission_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+				roleID, item.MenuID, permID); err != nil {
+				return err
+			}
 		}
 	}
 	return tx.Commit(ctx)
@@ -102,11 +104,17 @@ func (r *RoleRepo) AssignPermissions(ctx context.Context, roleID string, permiss
 
 func (r *RoleRepo) GetPermissions(ctx context.Context, roleID string) ([]domain.Permission, error) {
 	rows, err := r.db.Pool.Query(ctx, `
-		SELECT p.id, p.name, p.description, p.created_at, p.updated_at
-		FROM permissions p
-		JOIN role_permissions rp ON rp.permission_id = p.id
-		WHERE rp.role_id = $1
-		ORDER BY p.name`, roleID)
+		SELECT DISTINCT
+			m.id::text || ':' || p.id::text AS id,
+			TRIM(BOTH '/' FROM m.path) || '.' || p.name AS name,
+			m.name || ' - ' || p.description AS description,
+			GREATEST(m.created_at, p.created_at) AS created_at,
+			GREATEST(m.updated_at, p.updated_at) AS updated_at
+		FROM role_menu_permissions rmp
+		JOIN menus m ON m.id = rmp.menu_id
+		JOIN permissions p ON p.id = rmp.permission_id
+		WHERE rmp.role_id = $1
+		ORDER BY name`, roleID)
 	if err != nil {
 		return nil, err
 	}

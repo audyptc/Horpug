@@ -15,4 +15,4 @@ VALUES
         '33333333-3333-3333-3333-333333333001',
         '11111111-1111-1111-1111-111111111001'
     )
-ON CONFLICT (user_id, role_id) DO NOTHING;
+ON CONFLICT (user_id) DO UPDATE SET role_id = EXCLUDED.role_id, created_at = NOW();

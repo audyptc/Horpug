@@ -9,6 +9,6 @@ type RoleRepository interface {
 	Create(ctx context.Context, role *Role) error
 	Update(ctx context.Context, role *Role) error
 	Delete(ctx context.Context, id string) error
-	AssignPermissions(ctx context.Context, roleID string, permissionIDs []string) error
+	AssignMenuPermissions(ctx context.Context, roleID string, items []RoleMenuPermissionItem) error
 	GetPermissions(ctx context.Context, roleID string) ([]Permission, error)
 }

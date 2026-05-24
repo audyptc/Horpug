@@ -12,7 +12,7 @@ type UpdateUserRequest struct {
 }
 
 type AssignRolesRequest struct {
-	RoleIDs []string `json:"role_ids"`
+	RoleID string `json:"role_id"`
 }
 
 type CreateRoleRequest struct {
@@ -25,6 +25,11 @@ type UpdateRoleRequest struct {
 	Description string `json:"description"`
 }
 
-type AssignPermissionsRequest struct {
+type RoleMenuPermissionItem struct {
+	MenuID        string   `json:"menu_id"`
 	PermissionIDs []string `json:"permission_ids"`
+}
+
+type AssignPermissionsRequest struct {
+	Items []RoleMenuPermissionItem `json:"items"`
 }

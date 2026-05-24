@@ -5,10 +5,9 @@ import (
 	"log"
 
 	"apigofiberhorpug/config"
+	"apigofiberhorpug/internal/bootstrap"
 	"apigofiberhorpug/internal/database"
 	deliveryhttp "apigofiberhorpug/internal/delivery/http"
-	"apigofiberhorpug/internal/repository"
-	"apigofiberhorpug/internal/usecase"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/logger"
@@ -37,19 +36,7 @@ func main() {
 		log.Fatalf("❌ ไม่สามารถรัน migrations ได้: %v", err)
 	}
 
-	// Repositories
-	userRepo := repository.NewUserRepo(db)
-	roleRepo := repository.NewRoleRepo(db)
-	permRepo := repository.NewPermissionRepo(db)
-	tokenRepo := repository.NewTokenRepo(db)
-	menuRepo := repository.NewMenuRepo(db)
-
-	// Use Cases
-	authUC := usecase.NewAuthUseCase(userRepo, tokenRepo, cfg.SecretKey)
-	userUC := usecase.NewUserUseCase(userRepo, roleRepo)
-	roleUC := usecase.NewRoleUseCase(roleRepo, permRepo)
-	permUC := usecase.NewPermissionUseCase(permRepo)
-	menuUC := usecase.NewMenuUseCase(menuRepo)
+	container := bootstrap.NewContainer(db, cfg.SecretKey)
 
 	// HTTP Server
 	app := fiber.New(fiber.Config{
@@ -76,7 +63,7 @@ func main() {
 	})
 
 	setupScalarDocs(app)
-	deliveryhttp.SetupRoutes(app, authUC, userUC, roleUC, permUC, menuUC)
+	deliveryhttp.SetupRoutes(app, container.AuthUC, container.UserUC, container.RoleUC, container.PermUC, container.MenuUC)
 
 	log.Printf("🚀 เซิร์ฟเวอร์พร้อมทำงานแล้วที่พอร์ต %s", cfg.AppPort)
 	if err := app.Listen(":" + cfg.AppPort); err != nil {

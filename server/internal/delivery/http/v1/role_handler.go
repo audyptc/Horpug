@@ -118,7 +118,7 @@ func (h *RoleHandler) Delete(c fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Param        id path string true "Role ID"
-// @Param        body body domain.AssignPermissionsRequest true "Permission IDs"
+// @Param        body body domain.AssignPermissionsRequest true "Menu-permission assignment payload"
 // @Success      200  {object}  map[string]interface{}
 // @Router       /roles/{id}/permissions [put]
 func (h *RoleHandler) AssignPermissions(c fiber.Ctx) error {

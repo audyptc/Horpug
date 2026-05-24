@@ -107,10 +107,11 @@ func (uc *UserUseCase) AssignRoles(ctx context.Context, userID string, req *doma
 	if _, err := uc.userRepo.FindByID(ctx, userID); err != nil {
 		return err
 	}
-	for _, roleID := range req.RoleIDs {
-		if _, err := uc.roleRepo.FindByID(ctx, roleID); err != nil {
-			return fmt.Errorf("role %s not found", roleID)
-		}
+	if req.RoleID == "" {
+		return fmt.Errorf("role_id is required")
 	}
-	return uc.userRepo.AssignRoles(ctx, userID, req.RoleIDs)
+	if _, err := uc.roleRepo.FindByID(ctx, req.RoleID); err != nil {
+		return fmt.Errorf("role %s not found", req.RoleID)
+	}
+	return uc.userRepo.AssignRole(ctx, userID, req.RoleID)
 }

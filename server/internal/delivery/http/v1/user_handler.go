@@ -118,7 +118,7 @@ func (h *UserHandler) Delete(c fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Param        id path string true "User ID"
-// @Param        body body domain.AssignRolesRequest true "Role IDs"
+// @Param        body body domain.AssignRolesRequest true "Role assignment payload"
 // @Success      200  {object}  map[string]interface{}
 // @Router       /users/{id}/roles [put]
 func (h *UserHandler) AssignRoles(c fiber.Ctx) error {
@@ -129,5 +129,5 @@ func (h *UserHandler) AssignRoles(c fiber.Ctx) error {
 	if err := h.users.AssignRoles(c.Context(), c.Params("id"), &req); err != nil {
 		return apierror.BadRequest(err.Error())
 	}
-	return response.Message(c, "roles assigned successfully")
+	return response.Message(c, "role assigned successfully")
 }
