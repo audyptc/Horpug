@@ -45,7 +45,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     <header className="h-16 border-b bg-background flex items-center px-4 gap-4 shrink-0">
       {/* Mobile menu button */}
       <Button variant="ghost" size="icon" className="md:hidden" onClick={onMenuClick}>
-        <Menu className="w-5 h-5" />
+        <Menu className="w-6 h-6" />
       </Button>
 
       {/* Search */}
@@ -62,14 +62,14 @@ export function Header({ onMenuClick }: HeaderProps) {
       <div className="flex items-center gap-2 ml-auto">
         {/* Dark mode toggle */}
         <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
-          {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          {theme === 'dark' ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
         </Button>
 
         {/* Language switcher */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative">
-              <Globe className="w-5 h-5" />
+              <Globe className="w-6 h-6" />
               <span className="absolute -bottom-0.5 -right-0.5 text-[9px] font-bold bg-primary text-primary-foreground rounded px-0.5 leading-tight">
                 {i18n.language === 'th' ? 'TH' : 'EN'}
               </span>
@@ -100,7 +100,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative">
-              <Bell className="w-5 h-5" />
+              <Bell className="w-6 h-6" />
               <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]">
                 3
               </Badge>
@@ -122,7 +122,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
-              <UserCircle className="w-5 h-5" />
+              <UserCircle className="w-6 h-6" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
