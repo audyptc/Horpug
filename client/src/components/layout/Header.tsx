@@ -1,8 +1,9 @@
 import { Bell, Search, Menu, Globe, Sun, Moon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -12,18 +13,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { mockUsers } from '@/data/mockUsers'
 import { useTheme } from '@/lib/theme'
+import { useAuth } from '@/context/AuthContext'
 
 interface HeaderProps {
   onMenuClick?: () => void
 }
 
-const currentUser = mockUsers[0]
-
 export function Header({ onMenuClick }: HeaderProps) {
   const { t, i18n } = useTranslation()
   const { theme, toggleTheme } = useTheme()
+  const { logout } = useAuth()
+  const navigate = useNavigate()
+
+  async function handleSignOut() {
+    await logout()
+    navigate('/login', { replace: true })
+  }
 
   const toggleLang = (lang: string) => {
     i18n.changeLanguage(lang)
@@ -118,17 +124,8 @@ export function Header({ onMenuClick }: HeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-2 px-2">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={currentUser.avatar} alt={currentUser.name} />
-                <AvatarFallback>
-                  {currentUser.name.split(' ').map((n) => n[0]).join('')}
-                </AvatarFallback>
+                <AvatarFallback>U</AvatarFallback>
               </Avatar>
-              <div className="text-left hidden md:block">
-                <p className="text-sm font-medium leading-none">{currentUser.name}</p>
-                <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                  {currentUser.role}
-                </p>
-              </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
@@ -137,7 +134,9 @@ export function Header({ onMenuClick }: HeaderProps) {
             <DropdownMenuItem>{t('header.profile')}</DropdownMenuItem>
             <DropdownMenuItem>{t('header.settings')}</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">{t('header.signOut')}</DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive" onClick={handleSignOut}>
+              {t('header.signOut')}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

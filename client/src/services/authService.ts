@@ -1,0 +1,13 @@
+import api from '@/lib/axios'
+import type { ApiResponse, LoginResponse } from '@/types/api'
+
+export const authService = {
+  async login(email: string, password: string): Promise<LoginResponse> {
+    const { data } = await api.post<ApiResponse<LoginResponse>>('/auth/login', { email, password })
+    return data.data
+  },
+
+  async logout(refreshToken: string): Promise<void> {
+    await api.post('/auth/logout', { refresh_token: refreshToken })
+  },
+}

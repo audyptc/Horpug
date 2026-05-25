@@ -11,6 +11,7 @@ import (
 	deliveryhttp "apigofiberhorpug/internal/delivery/http"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 )
@@ -49,6 +50,11 @@ func main() {
 		AppName:      "Horpug API v1.0",
 		ErrorHandler: deliveryhttp.ErrorHandler,
 	})
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: []string{"http://localhost:5173", "http://localhost:3000"},
+		AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+	}))
 	app.Use(logger.New())
 	app.Use(recover.New())
 
