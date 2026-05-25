@@ -5,6 +5,7 @@ import "context"
 type RoleRepository interface {
 	FindByID(ctx context.Context, id string) (*Role, error)
 	List(ctx context.Context, limit, offset int) ([]*Role, error)
+	ListActive(ctx context.Context) ([]*Role, error)
 	Count(ctx context.Context) (int, error)
 	Create(ctx context.Context, role *Role) error
 	Update(ctx context.Context, role *Role) error

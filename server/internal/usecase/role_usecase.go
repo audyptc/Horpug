@@ -38,6 +38,14 @@ func (uc *RoleUseCase) List(ctx context.Context, limit, offset int) ([]*domain.R
 	return roles, total, nil
 }
 
+func (uc *RoleUseCase) ListActive(ctx context.Context) ([]*domain.Role, error) {
+	roles, err := uc.roleRepo.ListActive(ctx)
+	if err != nil {
+		return nil, apierror.Internal(err)
+	}
+	return roles, nil
+}
+
 func (uc *RoleUseCase) GetByID(ctx context.Context, id string) (*domain.Role, error) {
 	role, err := uc.roleRepo.FindByID(ctx, id)
 	if err != nil {
@@ -57,10 +65,15 @@ func (uc *RoleUseCase) Create(ctx context.Context, req *domain.CreateRoleRequest
 	if req.Name == "" {
 		return nil, apierror.BadRequest("name is required")
 	}
+	isActive := true
+	if req.IsActive != nil {
+		isActive = *req.IsActive
+	}
 	role := &domain.Role{
 		ID:          uuid.New().String(),
 		Name:        req.Name,
 		Description: req.Description,
+		IsActive:    isActive,
 	}
 	if err := uc.roleRepo.Create(ctx, role); err != nil {
 		return nil, apierror.Internal(err)
@@ -81,6 +94,9 @@ func (uc *RoleUseCase) Update(ctx context.Context, id string, req *domain.Update
 		role.Name = req.Name
 	}
 	role.Description = req.Description
+	if req.IsActive != nil {
+		role.IsActive = *req.IsActive
+	}
 	if err := uc.roleRepo.Update(ctx, role); err != nil {
 		return nil, apierror.Internal(err)
 	}

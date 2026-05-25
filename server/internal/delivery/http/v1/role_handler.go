@@ -36,6 +36,21 @@ func (h *RoleHandler) List(c fiber.Ctx) error {
 	return response.Paginated(c, roles, page, perPage, total)
 }
 
+// ListActive godoc
+// @Summary      รายชื่อบทบาทที่เปิดใช้งาน
+// @Tags         roles
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {array}  domain.Role
+// @Router       /roles/active [get]
+func (h *RoleHandler) ListActive(c fiber.Ctx) error {
+	roles, err := h.roles.ListActive(c.Context())
+	if err != nil {
+		return err
+	}
+	return response.OK(c, roles)
+}
+
 // GetByID godoc
 // @Summary      ดูข้อมูลบทบาทตาม ID
 // @Tags         roles

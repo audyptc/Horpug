@@ -19,11 +19,13 @@ type AssignRoleRequest struct {
 type CreateRoleRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	IsActive    *bool  `json:"is_active"`
 }
 
 type UpdateRoleRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	IsActive    *bool  `json:"is_active"`
 }
 
 type RoleMenuPermissionItem struct {

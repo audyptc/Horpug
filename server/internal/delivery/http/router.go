@@ -45,6 +45,7 @@ func SetupRoutes(
 	// Roles
 	rolesGroup := protected.Group("/roles")
 	rolesGroup.Get("/", middleware.RequirePermission("roles.read"), roleH.List)
+	rolesGroup.Get("/active", middleware.RequirePermission("roles.read"), roleH.ListActive)
 	rolesGroup.Post("/", middleware.RequirePermission("roles.create"), roleH.Create)
 	rolesGroup.Get("/:id", middleware.RequirePermission("roles.read"), roleH.GetByID)
 	rolesGroup.Put("/:id", middleware.RequirePermission("roles.update"), roleH.Update)

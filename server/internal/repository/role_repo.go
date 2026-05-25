@@ -22,9 +22,9 @@ func NewRoleRepo(db *database.DB) *RoleRepo {
 func (r *RoleRepo) FindByID(ctx context.Context, id string) (*domain.Role, error) {
 	role := &domain.Role{}
 	err := r.db.Pool.QueryRow(ctx, `
-		SELECT id, name, description, created_at, updated_at
+		SELECT id, name, description, is_active, created_at, updated_at
 		FROM roles WHERE id = $1`, id).
-		Scan(&role.ID, &role.Name, &role.Description, &role.CreatedAt, &role.UpdatedAt)
+		Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.CreatedAt, &role.UpdatedAt)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("role not found: %w", domain.ErrNotFound)
 	}
@@ -33,7 +33,7 @@ func (r *RoleRepo) FindByID(ctx context.Context, id string) (*domain.Role, error
 
 func (r *RoleRepo) List(ctx context.Context, limit, offset int) ([]*domain.Role, error) {
 	rows, err := r.db.Pool.Query(ctx, `
-		SELECT id, name, description, created_at, updated_at
+		SELECT id, name, description, is_active, created_at, updated_at
 		FROM roles ORDER BY name
 		LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
@@ -44,7 +44,30 @@ func (r *RoleRepo) List(ctx context.Context, limit, offset int) ([]*domain.Role,
 	var roles []*domain.Role
 	for rows.Next() {
 		role := &domain.Role{}
-		if err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.CreatedAt, &role.UpdatedAt); err != nil {
+		if err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.CreatedAt, &role.UpdatedAt); err != nil {
+			return nil, err
+		}
+		roles = append(roles, role)
+	}
+	if roles == nil {
+		roles = []*domain.Role{}
+	}
+	return roles, rows.Err()
+}
+
+func (r *RoleRepo) ListActive(ctx context.Context) ([]*domain.Role, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT id, name, description, is_active, created_at, updated_at
+		FROM roles WHERE is_active = TRUE ORDER BY name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var roles []*domain.Role
+	for rows.Next() {
+		role := &domain.Role{}
+		if err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.CreatedAt, &role.UpdatedAt); err != nil {
 			return nil, err
 		}
 		roles = append(roles, role)
@@ -63,16 +86,16 @@ func (r *RoleRepo) Count(ctx context.Context) (int, error) {
 
 func (r *RoleRepo) Create(ctx context.Context, role *domain.Role) error {
 	_, err := r.db.Pool.Exec(ctx, `
-		INSERT INTO roles (id, name, description) VALUES ($1, $2, $3)`,
-		role.ID, role.Name, role.Description)
+		INSERT INTO roles (id, name, description, is_active) VALUES ($1, $2, $3, $4)`,
+		role.ID, role.Name, role.Description, role.IsActive)
 	return err
 }
 
 func (r *RoleRepo) Update(ctx context.Context, role *domain.Role) error {
 	_, err := r.db.Pool.Exec(ctx, `
-		UPDATE roles SET name = $2, description = $3, updated_at = NOW()
+		UPDATE roles SET name = $2, description = $3, is_active = $4, updated_at = NOW()
 		WHERE id = $1`,
-		role.ID, role.Name, role.Description)
+		role.ID, role.Name, role.Description, role.IsActive)
 	return err
 }
 
