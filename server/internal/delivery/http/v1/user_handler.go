@@ -5,6 +5,7 @@ import (
 	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/domain"
 	"apigofiberhorpug/internal/usecase"
+	"apigofiberhorpug/internal/validator"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -66,6 +67,9 @@ func (h *UserHandler) Create(c fiber.Ctx) error {
 	if err := c.Bind().JSON(&req); err != nil {
 		return apierror.BadRequest("invalid request body")
 	}
+	if err := validator.CreateUserRequest(&req); err != nil {
+		return err
+	}
 	user, err := h.users.Create(c.Context(), &req)
 	if err != nil {
 		return err
@@ -124,6 +128,9 @@ func (h *UserHandler) AssignRole(c fiber.Ctx) error {
 	var req domain.AssignRoleRequest
 	if err := c.Bind().JSON(&req); err != nil {
 		return apierror.BadRequest("invalid request body")
+	}
+	if err := validator.AssignRoleRequest(&req); err != nil {
+		return err
 	}
 	if err := h.users.AssignRole(c.Context(), c.Params("id"), &req); err != nil {
 		return err

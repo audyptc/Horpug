@@ -62,9 +62,6 @@ func (uc *RoleUseCase) GetByID(ctx context.Context, id string) (*domain.Role, er
 }
 
 func (uc *RoleUseCase) Create(ctx context.Context, req *domain.CreateRoleRequest) (*domain.Role, error) {
-	if req.Name == "" {
-		return nil, apierror.BadRequest("name is required")
-	}
 	isActive := true
 	if req.IsActive != nil {
 		isActive = *req.IsActive

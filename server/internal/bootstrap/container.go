@@ -5,7 +5,6 @@ import (
 	"apigofiberhorpug/internal/usecase"
 )
 
-// Container holds wired application use cases.
 type Container struct {
 	AuthUC *usecase.AuthUseCase
 	UserUC *usecase.UserUseCase
@@ -14,15 +13,13 @@ type Container struct {
 	MenuUC *usecase.MenuUseCase
 }
 
-// NewContainer builds repositories and use cases in one place.
 func NewContainer(db *database.DB, secretKey string) *Container {
 	repos := newRepositories(db)
-
 	return &Container{
-		AuthUC: buildAuthUseCase(repos, secretKey),
-		UserUC: buildUserUseCase(repos),
-		RoleUC: buildRoleUseCase(repos),
-		PermUC: buildPermissionUseCase(repos),
-		MenuUC: buildMenuUseCase(repos),
+		AuthUC: usecase.NewAuthUseCase(repos.user, repos.token, secretKey),
+		UserUC: usecase.NewUserUseCase(repos.user, repos.role),
+		RoleUC: usecase.NewRoleUseCase(repos.role, repos.perm, repos.menu),
+		PermUC: usecase.NewPermissionUseCase(repos.perm),
+		MenuUC: usecase.NewMenuUseCase(repos.menu),
 	}
 }

@@ -54,10 +54,6 @@ func (uc *UserUseCase) GetByID(ctx context.Context, id string) (*domain.User, er
 }
 
 func (uc *UserUseCase) Create(ctx context.Context, req *domain.CreateUserRequest) (*domain.User, error) {
-	if req.FullName == "" || req.Email == "" || req.Password == "" {
-		return nil, apierror.BadRequest("full_name, email and password are required")
-	}
-
 	hashed, err := hashPassword(req.Password)
 	if err != nil {
 		return nil, err
@@ -127,9 +123,6 @@ func (uc *UserUseCase) AssignRole(ctx context.Context, userID string, req *domai
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)
-	}
-	if req.RoleID == "" {
-		return apierror.BadRequest("role_id is required")
 	}
 	if _, err := uc.roleRepo.FindByID(ctx, req.RoleID); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {

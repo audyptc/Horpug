@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/url"
 	"strings"
 	"time"
@@ -40,7 +40,7 @@ func ConnectPostgres(databaseURL string) (*DB, error) {
 		}
 	}
 
-	log.Println("🐘 เชื่อมต่อ PostgreSQL สำเร็จเรียบร้อยแล้ว!")
+	slog.Info("เชื่อมต่อ PostgreSQL สำเร็จ")
 	return &DB{Pool: pool}, nil
 }
 
@@ -98,14 +98,14 @@ func createDatabaseIfMissing(ctx context.Context, databaseURL string) error {
 		}
 
 		if strings.Contains(strings.ToLower(err.Error()), "already exists") {
-			log.Printf("ℹ️  database %s มีอยู่แล้ว", dbName)
+			slog.Info("database มีอยู่แล้ว", "name", dbName)
 			return nil
 		}
 
 		return fmt.Errorf("ไม่สามารถสร้างฐานข้อมูล %s ได้: %v", dbName, err)
 	}
 
-	log.Printf("✅ สร้างฐานข้อมูล %s เรียบร้อยแล้ว", dbName)
+	slog.Info("สร้างฐานข้อมูลสำเร็จ", "name", dbName)
 	return nil
 }
 

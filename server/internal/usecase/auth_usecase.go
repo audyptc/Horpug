@@ -41,10 +41,6 @@ func NewAuthUseCase(userRepo domain.UserRepository, tokenRepo domain.RefreshToke
 }
 
 func (uc *AuthUseCase) Login(ctx context.Context, req *domain.LoginRequest) (*domain.LoginResponse, error) {
-	if req.Email == "" || req.Password == "" {
-		return nil, apierror.BadRequest("email and password are required")
-	}
-
 	user, err := uc.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, apierror.Unauthorized("invalid credentials")
@@ -85,10 +81,6 @@ func (uc *AuthUseCase) Login(ctx context.Context, req *domain.LoginRequest) (*do
 }
 
 func (uc *AuthUseCase) Refresh(ctx context.Context, rawToken string) (*domain.LoginResponse, error) {
-	if rawToken == "" {
-		return nil, apierror.BadRequest("refresh token is required")
-	}
-
 	rt, err := uc.tokenRepo.FindByHash(ctx, hashString(rawToken))
 	if err != nil {
 		return nil, apierror.Unauthorized("invalid refresh token")

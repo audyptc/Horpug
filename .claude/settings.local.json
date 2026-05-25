@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(del internal\\\\domain\\\\entities_identity.go internal\\\\domain\\\\dto_auth.go internal\\\\domain\\\\dto_user_role.go internal\\\\domain\\\\repository_user.go internal\\\\domain\\\\repository_role.go internal\\\\domain\\\\repository_permission.go internal\\\\domain\\\\repository_token.go internal\\\\domain\\\\repository_menu.go)"
     ]
   }
 }

@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
+	"os"
 
 	"apigofiberhorpug/config"
 	"apigofiberhorpug/internal/bootstrap"
@@ -21,19 +22,24 @@ import (
 // @in header
 // @name Authorization
 func main() {
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})))
+
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("❌ โหลด config ไม่สำเร็จ: %v", err)
+		slog.Error("โหลด config ไม่สำเร็จ", "error", err)
+		os.Exit(1)
 	}
 
 	db, err := database.ConnectPostgres(cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("❌ เชื่อมต่อฐานข้อมูลไม่สำเร็จ: %v", err)
+		slog.Error("เชื่อมต่อฐานข้อมูลไม่สำเร็จ", "error", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
 	if err := db.ApplyMigrations(context.Background()); err != nil {
-		log.Fatalf("❌ ไม่สามารถรัน migrations ได้: %v", err)
+		slog.Error("ไม่สามารถรัน migrations ได้", "error", err)
+		os.Exit(1)
 	}
 
 	container := bootstrap.NewContainer(db, cfg.SecretKey)
@@ -65,9 +71,10 @@ func main() {
 	setupScalarDocs(app)
 	deliveryhttp.SetupRoutes(app, container.AuthUC, container.UserUC, container.RoleUC, container.PermUC, container.MenuUC)
 
-	log.Printf("🚀 เซิร์ฟเวอร์พร้อมทำงานแล้วที่พอร์ต %s", cfg.AppPort)
+	slog.Info("เซิร์ฟเวอร์พร้อมทำงาน", "port", cfg.AppPort)
 	if err := app.Listen(":" + cfg.AppPort); err != nil {
-		log.Fatalf("❌ ไม่สามารถเปิดเซิร์ฟเวอร์ได้: %v", err)
+		slog.Error("ไม่สามารถเปิดเซิร์ฟเวอร์ได้", "error", err)
+		os.Exit(1)
 	}
 }
 
