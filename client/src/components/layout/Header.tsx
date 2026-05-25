@@ -1,9 +1,8 @@
-import { Bell, Search, Menu, Globe, Sun, Moon } from 'lucide-react'
+import { Bell, Search, Menu, Globe, Sun, Moon, UserCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -122,10 +121,8 @@ export function Header({ onMenuClick }: HeaderProps) {
         {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-2 px-2">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback>U</AvatarFallback>
-              </Avatar>
+            <Button variant="ghost" size="icon">
+              <UserCircle className="w-5 h-5" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">

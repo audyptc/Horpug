@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import * as XLSX from 'xlsx'
 import {
   Search,
   Plus,
@@ -10,6 +11,11 @@ import {
   UserCog,
   SearchX,
   RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Download,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -46,6 +52,8 @@ import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
 
 type StatusFilter = 'all' | 'active' | 'inactive'
+
+const PER_PAGE_OPTIONS = [10, 20, 50] as const
 
 const statusVariant: Record<'active' | 'inactive', 'success' | 'secondary'> = {
   active: 'success',
@@ -84,19 +92,26 @@ export function Users() {
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState<number>(20)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<ApiUser | null>(null)
   const [deletingUser, setDeletingUser] = useState<ApiUser | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = useCallback(async (p: number, pp: number) => {
     setLoading(true)
     setError('')
     try {
-      const resp = await userService.list(1, 100)
+      const resp = await userService.list(p, pp)
       setUsers(resp.data)
+      setTotal(resp.meta.total)
+      setTotalPages(resp.meta.total_pages)
     } catch {
       setError(t('users.loadError'))
     } finally {
@@ -105,15 +120,42 @@ export function Users() {
   }, [t])
 
   useEffect(() => {
-    fetchUsers()
+    fetchUsers(page, perPage)
+  }, [fetchUsers, page, perPage])
+
+  useEffect(() => {
     roleService.listActive().then(setRoles).catch(() => {})
-  }, [fetchUsers])
+  }, [])
+
+  function handlePerPageChange(value: string) {
+    setPerPage(Number(value))
+    setPage(1)
+  }
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      const resp = await userService.list(1, 9999)
+      const rows = resp.data.map((u) => ({
+        [t('users.exportColName')]: u.full_name,
+        [t('users.exportColEmail')]: u.email,
+        [t('users.exportColRole')]: u.role?.name ?? '',
+        [t('users.exportColStatus')]: u.is_active ? t('users.statuses.active') : t('users.statuses.inactive'),
+        [t('users.exportColCreated')]: u.created_at ? new Date(u.created_at).toLocaleDateString() : '',
+      }))
+      const ws = XLSX.utils.json_to_sheet(rows)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, t('users.title'))
+      XLSX.writeFile(wb, `users_${new Date().toISOString().slice(0, 10)}.xlsx`)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
-      const name = u.full_name.toLowerCase()
       const matchSearch =
-        name.includes(search.toLowerCase()) ||
+        u.full_name.toLowerCase().includes(search.toLowerCase()) ||
         u.email.toLowerCase().includes(search.toLowerCase())
       const matchRole =
         roleFilter === 'all' || u.role?.name.toLowerCase() === roleFilter.toLowerCase()
@@ -153,14 +195,11 @@ export function Users() {
         }
         if (form.password) payload.password = form.password
 
-        const updated = await userService.update(editingUser.id, payload)
+        await userService.update(editingUser.id, payload)
 
         if (form.role_id && form.role_id !== editingUser.role?.id) {
           await userService.assignRole(editingUser.id, { role_id: form.role_id })
-          updated.role = roles.find((r) => r.id === form.role_id)
         }
-
-        setUsers((prev) => prev.map((u) => (u.id === editingUser.id ? updated : u)))
       } else {
         if (!form.password) return
         const created = await userService.create({
@@ -171,12 +210,10 @@ export function Users() {
 
         if (form.role_id) {
           await userService.assignRole(created.id, { role_id: form.role_id })
-          created.role = roles.find((r) => r.id === form.role_id)
         }
-
-        setUsers((prev) => [created, ...prev])
       }
       setDialogOpen(false)
+      await fetchUsers(page, perPage)
     } catch {
       // error handled silently; server validation will show in console
     } finally {
@@ -188,7 +225,10 @@ export function Users() {
     if (!deletingUser) return
     try {
       await userService.delete(deletingUser.id)
-      setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id))
+      // ถ้าลบ record สุดท้ายใน page ปัจจุบัน ให้ถอยไปหน้าก่อน
+      const newPage = users.length === 1 && page > 1 ? page - 1 : page
+      setPage(newPage)
+      await fetchUsers(newPage, perPage)
     } catch {
       // ignore
     } finally {
@@ -203,11 +243,11 @@ export function Users() {
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">{t('users.title')}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {t('users.subtitle_other', { count: filtered.length, total: users.length })}
+            {t('users.subtitle_other', { count: filtered.length, total })}
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
-          <Button variant="outline" size="icon" onClick={fetchUsers} disabled={loading}>
+          <Button variant="outline" size="icon" onClick={() => fetchUsers(page, perPage)} disabled={loading}>
             <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
           </Button>
           <Button onClick={openCreate} className="gap-2">
@@ -223,54 +263,58 @@ export function Users() {
         </div>
       )}
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder={t('users.searchPlaceholder')}
-                className="pl-9"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder={t('users.allRoles')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('users.allRoles')}</SelectItem>
-                {roles.map((r) => (
-                  <SelectItem key={r.id} value={r.name.toLowerCase()}>
-                    {r.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={statusFilter}
-              onValueChange={(v) => setStatusFilter(v as StatusFilter)}
-            >
-              <SelectTrigger className="w-full sm:w-36">
-                <SelectValue placeholder={t('users.allStatus')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('users.allStatus')}</SelectItem>
-                <SelectItem value="active">{t('users.statuses.active')}</SelectItem>
-                <SelectItem value="inactive">{t('users.statuses.inactive')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Table */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('users.userList')}</CardTitle>
-          <CardDescription>{t('users.userListDesc')}</CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <CardTitle>{t('users.userList')}</CardTitle>
+              <CardDescription>{t('users.userListDesc')}</CardDescription>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder={t('users.searchPlaceholder')}
+                  className="pl-9 w-full sm:w-56"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-full sm:w-36">
+                  <SelectValue placeholder={t('users.allRoles')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('users.allRoles')}</SelectItem>
+                  {roles.map((r) => (
+                    <SelectItem key={r.id} value={r.name.toLowerCase()}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={statusFilter}
+                onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+              >
+                <SelectTrigger className="w-full sm:w-32">
+                  <SelectValue placeholder={t('users.allStatus')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('users.allStatus')}</SelectItem>
+                  <SelectItem value="active">{t('users.statuses.active')}</SelectItem>
+                  <SelectItem value="inactive">{t('users.statuses.inactive')}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" onClick={handleExport} disabled={exporting} className="gap-2 shrink-0">
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">
+                  {exporting ? t('users.exporting') : t('users.exportExcel')}
+                </span>
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -428,6 +472,81 @@ export function Users() {
                   </div>
                 ))}
               </div>
+
+              {/* Pagination bar */}
+              {!loading && total > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t text-sm text-muted-foreground">
+                  <span className="shrink-0">
+                    {t('users.showing', {
+                      from: (page - 1) * perPage + 1,
+                      to: Math.min(page * perPage, total),
+                      total,
+                    })}
+                  </span>
+
+                  <div className="flex items-center gap-4">
+                    {/* Per-page selector */}
+                    <div className="flex items-center gap-2">
+                      <span className="hidden sm:inline shrink-0">{t('users.perPage')}</span>
+                      <Select value={String(perPage)} onValueChange={handlePerPageChange}>
+                        <SelectTrigger className="h-8 w-16">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PER_PAGE_OPTIONS.map((n) => (
+                            <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Page info */}
+                    <span className="shrink-0">
+                      {t('users.page')} {page} {t('users.of')} {totalPages}
+                    </span>
+
+                    {/* Nav buttons */}
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setPage(1)}
+                        disabled={page === 1}
+                      >
+                        <ChevronsLeft className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setPage((p) => p - 1)}
+                        disabled={page === 1}
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setPage((p) => p + 1)}
+                        disabled={page >= totalPages}
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setPage(totalPages)}
+                        disabled={page >= totalPages}
+                      >
+                        <ChevronsRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </CardContent>
