@@ -28,6 +28,7 @@ export function Layout() {
         <Sidebar
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed((c) => !c)}
+          onMobileClose={() => setMobileSidebarOpen(false)}
         />
       </div>
 

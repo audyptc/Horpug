@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { mockUsers } from '@/data/mockUsers'
+import { TrendingUp, Clock, Eye, Users, BarChart3 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
 const signups = [3, 5, 2, 7, 4, 8]
@@ -22,11 +24,46 @@ export function Analytics() {
     viewer: 'bg-slate-400',
   }
 
+  const roleTextColors: Record<string, string> = {
+    admin: 'text-violet-500',
+    manager: 'text-blue-500',
+    editor: 'text-amber-500',
+    viewer: 'text-slate-400',
+  }
+
   const summaryCards = [
-    { label: t('analytics.avgSession'), value: '24m 18s', sub: t('analytics.perUser') },
-    { label: t('analytics.pageViews'), value: '1,284', sub: t('analytics.thisMonth') },
-    { label: t('analytics.retention'), value: '76%', sub: t('analytics.monthlyActive') },
-    { label: t('analytics.growthRate'), value: '+12.5%', sub: t('analytics.vsLastMonth') },
+    {
+      label: t('analytics.avgSession'),
+      value: '24m 18s',
+      sub: t('analytics.perUser'),
+      icon: Clock,
+      color: 'text-violet-500',
+      bg: 'bg-violet-500/10',
+    },
+    {
+      label: t('analytics.pageViews'),
+      value: '1,284',
+      sub: t('analytics.thisMonth'),
+      icon: Eye,
+      color: 'text-blue-500',
+      bg: 'bg-blue-500/10',
+    },
+    {
+      label: t('analytics.retention'),
+      value: '76%',
+      sub: t('analytics.monthlyActive'),
+      icon: Users,
+      color: 'text-emerald-500',
+      bg: 'bg-emerald-500/10',
+    },
+    {
+      label: t('analytics.growthRate'),
+      value: '+12.5%',
+      sub: t('analytics.vsLastMonth'),
+      icon: TrendingUp,
+      color: 'text-amber-500',
+      bg: 'bg-amber-500/10',
+    },
   ]
 
   return (
@@ -36,23 +73,49 @@ export function Analytics() {
         <p className="text-muted-foreground text-sm mt-1">{t('analytics.subtitle')}</p>
       </div>
 
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {summaryCards.map((item) => {
+          const Icon = item.icon
+          return (
+            <Card key={item.label} className="hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <p className="text-sm font-medium text-muted-foreground leading-snug">{item.label}</p>
+                <div className={cn('p-2 rounded-lg shrink-0', item.bg)}>
+                  <Icon className={cn('w-4 h-4', item.color)} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{item.value}</p>
+                <p className="text-xs text-muted-foreground mt-1">{item.sub}</p>
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Bar chart */}
         <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>{t('analytics.monthlySignups')}</CardTitle>
-            <CardDescription>{t('analytics.monthlySignupsDesc')}</CardDescription>
+          <CardHeader className="flex flex-row items-center gap-3 pb-4">
+            <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+              <BarChart3 className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle>{t('analytics.monthlySignups')}</CardTitle>
+              <CardDescription>{t('analytics.monthlySignupsDesc')}</CardDescription>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="flex items-end gap-3 h-48">
+            <div className="flex items-end gap-3 h-52 px-2">
               {signups.map((val, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">{val}</span>
+                  <span className="text-xs font-semibold text-muted-foreground">{val}</span>
                   <div
-                    className="w-full rounded-t-md bg-primary/80 hover:bg-primary transition-colors"
-                    style={{ height: `${(val / maxSignup) * 100}%` }}
+                    className="w-full rounded-t-lg bg-primary/70 hover:bg-primary transition-colors cursor-pointer"
+                    style={{ height: `${Math.max((val / maxSignup) * 100, 8)}%` }}
                   />
-                  <span className="text-xs text-muted-foreground">{months[i]}</span>
+                  <span className="text-xs font-medium text-muted-foreground">{months[i]}</span>
                 </div>
               ))}
             </div>
@@ -61,7 +124,7 @@ export function Analytics() {
 
         {/* Role breakdown */}
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-4">
             <CardTitle>{t('analytics.roleDistribution')}</CardTitle>
             <CardDescription>{t('analytics.roleDistributionDesc')}</CardDescription>
           </CardHeader>
@@ -70,19 +133,19 @@ export function Analytics() {
               <div key={role} className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2.5 h-2.5 rounded-full ${roleColors[role]}`} />
-                    <span className="text-sm">{t(`users.roles.${role}`)}</span>
+                    <div className={cn('w-2.5 h-2.5 rounded-full', roleColors[role])} />
+                    <span className="text-sm font-medium">{t(`users.roles.${role}`)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">{count}</Badge>
-                    <span className="text-xs text-muted-foreground w-8 text-right">
+                    <span className={cn('text-xs font-semibold w-8 text-right', roleTextColors[role])}>
                       {Math.round((count / mockUsers.length) * 100)}%
                     </span>
                   </div>
                 </div>
-                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${roleColors[role]}`}
+                    className={cn('h-full rounded-full transition-all', roleColors[role])}
                     style={{ width: `${(count / mockUsers.length) * 100}%` }}
                   />
                 </div>
@@ -90,19 +153,6 @@ export function Analytics() {
             ))}
           </CardContent>
         </Card>
-      </div>
-
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {summaryCards.map((item) => (
-          <Card key={item.label}>
-            <CardContent className="pt-6">
-              <p className="text-2xl font-bold">{item.value}</p>
-              <p className="text-sm font-medium mt-1">{item.label}</p>
-              <p className="text-xs text-muted-foreground">{item.sub}</p>
-            </CardContent>
-          </Card>
-        ))}
       </div>
     </div>
   )

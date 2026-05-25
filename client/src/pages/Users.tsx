@@ -8,6 +8,7 @@ import {
   Trash2,
   ShieldCheck,
   UserCog,
+  SearchX,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -284,7 +285,21 @@ export function Users() {
               </tbody>
             </table>
             {filtered.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">{t('users.noUsers')}</div>
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
+                <div className="p-4 rounded-full bg-muted">
+                  <SearchX className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-medium">{t('users.noUsers')}</p>
+                {(search || roleFilter !== 'all' || statusFilter !== 'all') && (
+                  <button
+                    type="button"
+                    onClick={() => { setSearch(''); setRoleFilter('all'); setStatusFilter('all') }}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    {t('users.clearFilters')}
+                  </button>
+                )}
+              </div>
             )}
           </div>
 

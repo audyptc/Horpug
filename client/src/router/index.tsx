@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { Layout } from '@/components/layout/Layout'
 import { Dashboard } from '@/pages/Dashboard'
 import { Users } from '@/pages/Users'
@@ -13,11 +13,17 @@ export const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { index: true, element: <Dashboard /> },
-      { path: 'users', element: <Users /> },
       { path: 'analytics', element: <Analytics /> },
       { path: 'notifications', element: <Placeholder title="Notifications" /> },
-      { path: 'roles', element: <Placeholder title="Roles & Permissions" /> },
-      { path: 'settings', element: <Settings /> },
+      {
+        path: 'settings',
+        children: [
+          { index: true, element: <Navigate to="general" replace /> },
+          { path: 'general', element: <Settings /> },
+          { path: 'roles', element: <Placeholder title="Roles & Permissions" /> },
+          { path: 'users', element: <Users /> },
+        ],
+      },
     ],
   },
   { path: '*', element: <NotFound /> },

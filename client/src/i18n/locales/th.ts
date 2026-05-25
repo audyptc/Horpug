@@ -66,6 +66,7 @@ export default {
     colJoined: 'วันที่เข้าร่วม',
     colActions: 'การดำเนินการ',
     noUsers: 'ไม่พบผู้ใช้ที่ตรงกับเงื่อนไขการค้นหา',
+    clearFilters: 'ล้างตัวกรอง',
     createUser: 'สร้างผู้ใช้',
     editUser: 'แก้ไขผู้ใช้',
     editDesc: 'อัปเดตข้อมูลผู้ใช้งาน',

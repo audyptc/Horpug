@@ -66,6 +66,7 @@ export default {
     colJoined: 'Joined',
     colActions: 'Actions',
     noUsers: 'No users found matching your filters.',
+    clearFilters: 'Clear filters',
     createUser: 'Create User',
     editUser: 'Edit User',
     editDesc: 'Update user information.',

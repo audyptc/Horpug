@@ -73,7 +73,8 @@ export function Dashboard() {
           const isPositive = stat.change > 0
           const isZero = stat.change === 0
           return (
-            <Card key={stat.title} className="hover:shadow-md transition-shadow">
+            <Card key={stat.title} className="hover:shadow-md transition-shadow overflow-hidden">
+              <div className={cn('h-1 w-full', stat.bg.replace('/10', ''))} />
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {stat.title}

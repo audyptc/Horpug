@@ -1,4 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   LayoutDashboard,
@@ -9,29 +10,71 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  X,
   Zap,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 
+interface SubNavItem {
+  label: string
+  to: string
+  icon: React.ElementType
+}
+
+interface NavItem {
+  label: string
+  icon: React.ElementType
+  to: string
+  children?: SubNavItem[]
+}
+
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
+  onMobileClose?: () => void
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
   const { t } = useTranslation()
   const location = useLocation()
 
-  const navItems = [
+  const navItems: NavItem[] = [
     { label: t('nav.dashboard'), icon: LayoutDashboard, to: '/' },
-    { label: t('nav.users'), icon: Users, to: '/users' },
     { label: t('nav.analytics'), icon: BarChart3, to: '/analytics' },
     { label: t('nav.notifications'), icon: Bell, to: '/notifications' },
-    { label: t('nav.roles'), icon: ShieldCheck, to: '/roles' },
-    { label: t('nav.settings'), icon: Settings, to: '/settings' },
+    {
+      label: t('nav.settings'),
+      icon: Settings,
+      to: '/settings',
+      children: [
+        { label: 'ทั่วไป', icon: SlidersHorizontal, to: '/settings/general' },
+        { label: t('nav.roles'), icon: ShieldCheck, to: '/settings/roles' },
+        { label: t('nav.users'), icon: Users, to: '/settings/users' },
+      ],
+    },
   ]
+
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
+    const initial = new Set<string>()
+    navItems.forEach((item) => {
+      if (item.children && location.pathname.startsWith(item.to)) {
+        initial.add(item.to)
+      }
+    })
+    return initial
+  })
+
+  function toggleGroup(to: string) {
+    setOpenGroups((prev) => {
+      const next = new Set(prev)
+      next.has(to) ? next.delete(to) : next.add(to)
+      return next
+    })
+  }
 
   return (
     <aside
@@ -42,7 +85,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     >
       {/* Logo */}
       <div className="flex items-center h-16 px-4 border-b border-sidebar-border shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-sidebar-primary shrink-0">
             <Zap className="w-4 h-4 text-sidebar-primary-foreground" />
           </div>
@@ -50,30 +93,92 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             Horpug
           </span>
         </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onMobileClose}
+          className="md:hidden text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground shrink-0"
+        >
+          <X className="w-4 h-4" />
+        </Button>
       </div>
 
       {/* Nav */}
       <ScrollArea className="flex-1 py-4">
         <nav className="px-2 space-y-1">
-          {navItems.map(({ label, icon: Icon, to }) => {
+          {navItems.map(({ label, icon: Icon, to, children }) => {
             const isActive =
               to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)
+            const hasChildren = children && children.length > 0
+
+            const isOpen = hasChildren ? openGroups.has(to) : false
+
             return (
-              <NavLink
-                key={to}
-                to={to}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                  collapsed && 'md:justify-center md:px-2'
+              <div key={to}>
+                {hasChildren ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(to)}
+                    className={cn(
+                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                      collapsed && 'md:justify-center md:px-2'
+                    )}
+                    title={collapsed ? label : undefined}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span className={cn('truncate flex-1 text-left', collapsed && 'md:hidden')}>{label}</span>
+                    <ChevronDown
+                      className={cn(
+                        'w-3.5 h-3.5 shrink-0 transition-transform md:block hidden',
+                        isOpen && 'rotate-180'
+                      )}
+                    />
+                  </button>
+                ) : (
+                  <NavLink
+                    to={to}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                      collapsed && 'md:justify-center md:px-2'
+                    )}
+                    title={collapsed ? label : undefined}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span className={cn('truncate', collapsed && 'md:hidden')}>{label}</span>
+                  </NavLink>
                 )}
-                title={collapsed ? label : undefined}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span className={cn('truncate', collapsed && 'md:hidden')}>{label}</span>
-              </NavLink>
+
+                {/* Submenu */}
+                {hasChildren && isOpen && (
+                  <div className={cn('mt-1 space-y-0.5', collapsed ? 'md:hidden' : 'ml-3')}>
+                    {children.map((child) => {
+                      const isChildActive = location.pathname === child.to || location.pathname.startsWith(child.to)
+                      const ChildIcon = child.icon
+                      return (
+                        <NavLink
+                          key={child.to}
+                          to={child.to}
+                          className={cn(
+                            'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                            isChildActive
+                              ? 'bg-sidebar-primary/20 text-sidebar-primary-foreground'
+                              : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                          )}
+                        >
+                          <ChildIcon className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{child.label}</span>
+                        </NavLink>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             )
           })}
         </nav>
