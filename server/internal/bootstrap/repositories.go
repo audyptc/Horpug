@@ -15,6 +15,7 @@ type repositories struct {
 	tenant       *repository.TenantRepo
 	contract     *repository.ContractRepo
 	meterReading *repository.MeterReadingRepo
+	bill         *repository.BillRepo
 }
 
 func newRepositories(db *database.DB) repositories {
@@ -28,5 +29,6 @@ func newRepositories(db *database.DB) repositories {
 		tenant:       repository.NewTenantRepo(db),
 		contract:     repository.NewContractRepo(db),
 		meterReading: repository.NewMeterReadingRepo(db),
+		bill:         repository.NewBillRepo(db),
 	}
 }

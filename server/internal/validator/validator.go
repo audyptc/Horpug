@@ -82,6 +82,19 @@ func CreateRoomRequest(req *domain.CreateRoomRequest) error {
 	return nil
 }
 
+func CreateBillRequest(req *domain.CreateBillRequest) error {
+	if req.ContractID == "" {
+		return apierror.BadRequest("contract_id is required")
+	}
+	if req.BillingMonth.IsZero() {
+		return apierror.BadRequest("billing_month is required")
+	}
+	if req.RentAmount < 0 {
+		return apierror.BadRequest("rent_amount must be >= 0")
+	}
+	return nil
+}
+
 func CreateMeterReadingRequest(req *domain.CreateMeterReadingRequest) error {
 	if req.RoomID == "" {
 		return apierror.BadRequest("room_id is required")

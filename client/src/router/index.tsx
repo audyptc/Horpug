@@ -9,6 +9,7 @@ import { Rooms } from '@/pages/Rooms'
 import { Tenants } from '@/pages/Tenants'
 import { Contracts } from '@/pages/Contracts'
 import { MeterReadings } from '@/pages/MeterReadings'
+import { Bills } from '@/pages/Bills'
 import { NotFound } from '@/pages/NotFound'
 import { Login } from '@/pages/Login'
 import { useAuth } from '@/context/AuthContext'
@@ -42,6 +43,7 @@ export const router = createBrowserRouter([
           { path: 'tenants', element: <Tenants /> },
           { path: 'contracts', element: <Contracts /> },
           { path: 'meters', element: <MeterReadings /> },
+          { path: 'bills', element: <Bills /> },
           { path: 'analytics', element: <Analytics /> },
           {
             path: 'settings',
