@@ -81,3 +81,22 @@ func CreateRoomRequest(req *domain.CreateRoomRequest) error {
 	}
 	return nil
 }
+
+func CreateMeterReadingRequest(req *domain.CreateMeterReadingRequest) error {
+	if req.RoomID == "" {
+		return apierror.BadRequest("room_id is required")
+	}
+	if req.MeterType != domain.MeterTypeElectric && req.MeterType != domain.MeterTypeWater {
+		return apierror.BadRequest("meter_type must be 'electric' or 'water'")
+	}
+	if req.ReadingDate.IsZero() {
+		return apierror.BadRequest("reading_date is required")
+	}
+	if req.CurrentReading < req.PreviousReading {
+		return apierror.BadRequest("current_reading must be >= previous_reading")
+	}
+	if req.UnitPrice <= 0 {
+		return apierror.BadRequest("unit_price must be greater than 0")
+	}
+	return nil
+}

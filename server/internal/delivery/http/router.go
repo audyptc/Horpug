@@ -18,6 +18,7 @@ func SetupRoutes(
 	rooms *usecase.RoomUseCase,
 	tenants *usecase.TenantUseCase,
 	contracts *usecase.ContractUseCase,
+	meters *usecase.MeterReadingUseCase,
 ) {
 	authH := v1.NewAuthHandler(auth)
 	userH := v1.NewUserHandler(users)
@@ -27,6 +28,7 @@ func SetupRoutes(
 	roomH := v1.NewRoomHandler(rooms)
 	tenantH := v1.NewTenantHandler(tenants)
 	contractH := v1.NewContractHandler(contracts)
+	meterH := v1.NewMeterReadingHandler(meters)
 
 	api := app.Group("/api/v1")
 
@@ -90,4 +92,12 @@ func SetupRoutes(
 	contractsGroup.Get("/:id", middleware.RequirePermission("contracts.read"), contractH.GetByID)
 	contractsGroup.Put("/:id", middleware.RequirePermission("contracts.update"), contractH.Update)
 	contractsGroup.Delete("/:id", middleware.RequirePermission("contracts.delete"), contractH.Delete)
+
+	// Meter Readings
+	metersGroup := protected.Group("/meters")
+	metersGroup.Get("/", middleware.RequirePermission("meters.read"), meterH.List)
+	metersGroup.Post("/", middleware.RequirePermission("meters.create"), meterH.Create)
+	metersGroup.Get("/:id", middleware.RequirePermission("meters.read"), meterH.GetByID)
+	metersGroup.Put("/:id", middleware.RequirePermission("meters.update"), meterH.Update)
+	metersGroup.Delete("/:id", middleware.RequirePermission("meters.delete"), meterH.Delete)
 }

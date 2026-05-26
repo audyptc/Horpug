@@ -6,25 +6,27 @@ import (
 )
 
 type repositories struct {
-	user     *repository.UserRepo
-	role     *repository.RoleRepo
-	perm     *repository.PermissionRepo
-	token    *repository.TokenRepo
-	menu     *repository.MenuRepo
-	room     *repository.RoomRepo
-	tenant   *repository.TenantRepo
-	contract *repository.ContractRepo
+	user         *repository.UserRepo
+	role         *repository.RoleRepo
+	perm         *repository.PermissionRepo
+	token        *repository.TokenRepo
+	menu         *repository.MenuRepo
+	room         *repository.RoomRepo
+	tenant       *repository.TenantRepo
+	contract     *repository.ContractRepo
+	meterReading *repository.MeterReadingRepo
 }
 
 func newRepositories(db *database.DB) repositories {
 	return repositories{
-		user:     repository.NewUserRepo(db),
-		role:     repository.NewRoleRepo(db),
-		perm:     repository.NewPermissionRepo(db),
-		token:    repository.NewTokenRepo(db),
-		menu:     repository.NewMenuRepo(db),
-		room:     repository.NewRoomRepo(db),
-		tenant:   repository.NewTenantRepo(db),
-		contract: repository.NewContractRepo(db),
+		user:         repository.NewUserRepo(db),
+		role:         repository.NewRoleRepo(db),
+		perm:         repository.NewPermissionRepo(db),
+		token:        repository.NewTokenRepo(db),
+		menu:         repository.NewMenuRepo(db),
+		room:         repository.NewRoomRepo(db),
+		tenant:       repository.NewTenantRepo(db),
+		contract:     repository.NewContractRepo(db),
+		meterReading: repository.NewMeterReadingRepo(db),
 	}
 }

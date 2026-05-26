@@ -10,6 +10,7 @@ import {
   BedDouble,
   UserRound,
   FileText,
+  Gauge,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -49,6 +50,7 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
     { label: t('nav.rooms'), icon: BedDouble, to: '/rooms' },
     { label: t('nav.tenants'), icon: UserRound, to: '/tenants' },
     { label: t('nav.contracts'), icon: FileText, to: '/contracts' },
+    { label: t('nav.meters'), icon: Gauge, to: '/meters' },
     { label: t('nav.analytics'), icon: BarChart3, to: '/analytics' },
     {
       label: t('nav.settings'),
