@@ -6,16 +6,17 @@ import (
 )
 
 type Container struct {
-	AuthUC        *usecase.AuthUseCase
-	UserUC        *usecase.UserUseCase
-	RoleUC        *usecase.RoleUseCase
-	PermUC        *usecase.PermissionUseCase
-	MenuUC        *usecase.MenuUseCase
-	RoomUC        *usecase.RoomUseCase
-	TenantUC      *usecase.TenantUseCase
-	ContractUC    *usecase.ContractUseCase
+	AuthUC         *usecase.AuthUseCase
+	UserUC         *usecase.UserUseCase
+	RoleUC         *usecase.RoleUseCase
+	PermUC         *usecase.PermissionUseCase
+	MenuUC         *usecase.MenuUseCase
+	RoomUC         *usecase.RoomUseCase
+	TenantUC       *usecase.TenantUseCase
+	ContractUC     *usecase.ContractUseCase
 	MeterReadingUC *usecase.MeterReadingUseCase
 	BillUC         *usecase.BillUseCase
+	DashboardUC    *usecase.DashboardUseCase
 }
 
 func NewContainer(db *database.DB, secretKey string) *Container {
@@ -31,5 +32,6 @@ func NewContainer(db *database.DB, secretKey string) *Container {
 		ContractUC:     usecase.NewContractUseCase(repos.contract, repos.room, repos.tenant),
 		MeterReadingUC: usecase.NewMeterReadingUseCase(repos.meterReading, repos.room),
 		BillUC:         usecase.NewBillUseCase(repos.bill, repos.contract),
+		DashboardUC:    usecase.NewDashboardUseCase(repos.dashboard),
 	}
 }

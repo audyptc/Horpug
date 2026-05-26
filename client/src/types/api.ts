@@ -231,6 +231,22 @@ export interface ApiBill {
   room_number: string
 }
 
+export interface ApiDashboardSummary {
+  total_rooms: number
+  occupied_rooms: number
+  available_rooms: number
+  maintenance_rooms: number
+  occupancy_rate: number
+  total_tenants: number
+  active_contracts: number
+  expiring_contracts: number
+  unpaid_bills: number
+  overdue_bills: number
+  unpaid_amount: number
+  overdue_amount: number
+  revenue_this_month: number
+}
+
 export interface CreateBillPayload {
   contract_id: string
   billing_month: string

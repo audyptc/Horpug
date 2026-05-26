@@ -20,6 +20,7 @@ func SetupRoutes(
 	contracts *usecase.ContractUseCase,
 	meters *usecase.MeterReadingUseCase,
 	bills *usecase.BillUseCase,
+	dashboard *usecase.DashboardUseCase,
 ) {
 	authH := v1.NewAuthHandler(auth)
 	userH := v1.NewUserHandler(users)
@@ -31,6 +32,7 @@ func SetupRoutes(
 	contractH := v1.NewContractHandler(contracts)
 	meterH := v1.NewMeterReadingHandler(meters)
 	billH := v1.NewBillHandler(bills)
+	dashboardH := v1.NewDashboardHandler(dashboard)
 
 	api := app.Group("/api/v1")
 
@@ -110,4 +112,7 @@ func SetupRoutes(
 	billsGroup.Get("/:id", middleware.RequirePermission("bills.read"), billH.GetByID)
 	billsGroup.Put("/:id", middleware.RequirePermission("bills.update"), billH.Update)
 	billsGroup.Delete("/:id", middleware.RequirePermission("bills.delete"), billH.Delete)
+
+	// Dashboard
+	protected.Get("/dashboard/summary", dashboardH.Summary)
 }
