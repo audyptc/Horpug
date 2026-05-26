@@ -11,6 +11,7 @@ type repositories struct {
 	perm  *repository.PermissionRepo
 	token *repository.TokenRepo
 	menu  *repository.MenuRepo
+	room  *repository.RoomRepo
 }
 
 func newRepositories(db *database.DB) repositories {
@@ -20,5 +21,6 @@ func newRepositories(db *database.DB) repositories {
 		perm:  repository.NewPermissionRepo(db),
 		token: repository.NewTokenRepo(db),
 		menu:  repository.NewMenuRepo(db),
+		room:  repository.NewRoomRepo(db),
 	}
 }

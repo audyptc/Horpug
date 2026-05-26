@@ -1,7 +1,9 @@
+import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { mockUsers } from '@/data/mockUsers'
+import { userService } from '@/services/userService'
+import type { ApiUser } from '@/types/api'
 import { TrendingUp, Clock, Eye, Users, BarChart3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -9,61 +11,45 @@ const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
 const signups = [3, 5, 2, 7, 4, 8]
 const maxSignup = Math.max(...signups)
 
+const roleColors: Record<string, string> = {
+  admin: 'bg-violet-500',
+  manager: 'bg-blue-500',
+  editor: 'bg-amber-500',
+  viewer: 'bg-slate-400',
+}
+
+const roleTextColors: Record<string, string> = {
+  admin: 'text-violet-500',
+  manager: 'text-blue-500',
+  editor: 'text-amber-500',
+  viewer: 'text-slate-400',
+}
+
 export function Analytics() {
   const { t } = useTranslation()
+  const [users, setUsers] = useState<ApiUser[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const byRole = mockUsers.reduce<Record<string, number>>((acc, u) => {
-    acc[u.role] = (acc[u.role] ?? 0) + 1
-    return acc
-  }, {})
+  useEffect(() => {
+    userService.list(1, 9999)
+      .then((resp) => setUsers(resp.data))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
 
-  const roleColors: Record<string, string> = {
-    admin: 'bg-violet-500',
-    manager: 'bg-blue-500',
-    editor: 'bg-amber-500',
-    viewer: 'bg-slate-400',
-  }
-
-  const roleTextColors: Record<string, string> = {
-    admin: 'text-violet-500',
-    manager: 'text-blue-500',
-    editor: 'text-amber-500',
-    viewer: 'text-slate-400',
-  }
+  const byRole = useMemo(() => {
+    return users.reduce<Record<string, number>>((acc, u) => {
+      const name = u.role?.name.toLowerCase() ?? 'unassigned'
+      acc[name] = (acc[name] ?? 0) + 1
+      return acc
+    }, {})
+  }, [users])
 
   const summaryCards = [
-    {
-      label: t('analytics.avgSession'),
-      value: '24m 18s',
-      sub: t('analytics.perUser'),
-      icon: Clock,
-      color: 'text-violet-500',
-      bg: 'bg-violet-500/10',
-    },
-    {
-      label: t('analytics.pageViews'),
-      value: '1,284',
-      sub: t('analytics.thisMonth'),
-      icon: Eye,
-      color: 'text-blue-500',
-      bg: 'bg-blue-500/10',
-    },
-    {
-      label: t('analytics.retention'),
-      value: '76%',
-      sub: t('analytics.monthlyActive'),
-      icon: Users,
-      color: 'text-emerald-500',
-      bg: 'bg-emerald-500/10',
-    },
-    {
-      label: t('analytics.growthRate'),
-      value: '+12.5%',
-      sub: t('analytics.vsLastMonth'),
-      icon: TrendingUp,
-      color: 'text-amber-500',
-      bg: 'bg-amber-500/10',
-    },
+    { label: t('analytics.avgSession'), value: '24m 18s', sub: t('analytics.perUser'), icon: Clock, color: 'text-violet-500', bg: 'bg-violet-500/10' },
+    { label: t('analytics.pageViews'), value: '1,284', sub: t('analytics.thisMonth'), icon: Eye, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: t('analytics.retention'), value: '76%', sub: t('analytics.monthlyActive'), icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { label: t('analytics.growthRate'), value: '+12.5%', sub: t('analytics.vsLastMonth'), icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-500/10' },
   ]
 
   return (
@@ -129,28 +115,36 @@ export function Analytics() {
             <CardDescription>{t('analytics.roleDistributionDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {Object.entries(byRole).map(([role, count]) => (
-              <div key={role} className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={cn('w-2.5 h-2.5 rounded-full', roleColors[role])} />
-                    <span className="text-sm font-medium">{t(`users.roles.${role}`)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{count}</Badge>
-                    <span className={cn('text-xs font-semibold w-8 text-right', roleTextColors[role])}>
-                      {Math.round((count / mockUsers.length) * 100)}%
-                    </span>
-                  </div>
-                </div>
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className={cn('h-full rounded-full transition-all', roleColors[role])}
-                    style={{ width: `${(count / mockUsers.length) * 100}%` }}
-                  />
-                </div>
+            {loading ? (
+              <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                {t('common.loading')}
               </div>
-            ))}
+            ) : (
+              Object.entries(byRole).map(([role, count]) => (
+                <div key={role} className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={cn('w-2.5 h-2.5 rounded-full', roleColors[role] ?? 'bg-slate-400')} />
+                      <span className="text-sm font-medium capitalize">
+                        {t(`users.roles.${role}`, { defaultValue: role })}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">{count}</Badge>
+                      <span className={cn('text-xs font-semibold w-8 text-right', roleTextColors[role] ?? 'text-slate-400')}>
+                        {users.length > 0 ? Math.round((count / users.length) * 100) : 0}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={cn('h-full rounded-full transition-all', roleColors[role] ?? 'bg-slate-400')}
+                      style={{ width: users.length > 0 ? `${(count / users.length) * 100}%` : '0%' }}
+                    />
+                  </div>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>

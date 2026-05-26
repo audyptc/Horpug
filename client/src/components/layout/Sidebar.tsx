@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   BarChart3,
   Bell,
+  BedDouble,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -51,9 +52,10 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
       icon: Settings,
       to: '/settings',
       children: [
-        { label: 'ทั่วไป', icon: SlidersHorizontal, to: '/settings/general' },
+        { label: t('nav.rooms'), icon: BedDouble, to: '/settings/rooms' },
         { label: t('nav.roles'), icon: ShieldCheck, to: '/settings/roles' },
         { label: t('nav.users'), icon: Users, to: '/settings/users' },
+        { label: 'ทั่วไป', icon: SlidersHorizontal, to: '/settings/general' },
       ],
     },
   ]

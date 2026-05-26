@@ -4,6 +4,8 @@ import { Dashboard } from '@/pages/Dashboard'
 import { Users } from '@/pages/Users'
 import { Analytics } from '@/pages/Analytics'
 import { Settings } from '@/pages/Settings'
+import { Roles } from '@/pages/Roles'
+import { Rooms } from '@/pages/Rooms'
 import { Placeholder } from '@/pages/Placeholder'
 import { NotFound } from '@/pages/NotFound'
 import { Login } from '@/pages/Login'
@@ -39,9 +41,10 @@ export const router = createBrowserRouter([
           {
             path: 'settings',
             children: [
-              { index: true, element: <Navigate to="general" replace /> },
+              { index: true, element: <Navigate to="rooms" replace /> },
+              { path: 'rooms', element: <Rooms /> },
               { path: 'general', element: <Settings /> },
-              { path: 'roles', element: <Placeholder title="Roles & Permissions" /> },
+              { path: 'roles', element: <Roles /> },
               { path: 'users', element: <Users /> },
             ],
           },

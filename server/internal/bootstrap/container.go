@@ -11,6 +11,7 @@ type Container struct {
 	RoleUC *usecase.RoleUseCase
 	PermUC *usecase.PermissionUseCase
 	MenuUC *usecase.MenuUseCase
+	RoomUC *usecase.RoomUseCase
 }
 
 func NewContainer(db *database.DB, secretKey string) *Container {
@@ -21,5 +22,6 @@ func NewContainer(db *database.DB, secretKey string) *Container {
 		RoleUC: usecase.NewRoleUseCase(repos.role, repos.perm, repos.menu),
 		PermUC: usecase.NewPermissionUseCase(repos.perm),
 		MenuUC: usecase.NewMenuUseCase(repos.menu),
+		RoomUC: usecase.NewRoomUseCase(repos.room),
 	}
 }

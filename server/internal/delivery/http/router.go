@@ -15,12 +15,14 @@ func SetupRoutes(
 	roles *usecase.RoleUseCase,
 	perms *usecase.PermissionUseCase,
 	menus *usecase.MenuUseCase,
+	rooms *usecase.RoomUseCase,
 ) {
 	authH := v1.NewAuthHandler(auth)
 	userH := v1.NewUserHandler(users)
 	roleH := v1.NewRoleHandler(roles)
 	permH := v1.NewPermissionHandler(perms)
 	menuH := v1.NewMenuHandler(menus)
+	roomH := v1.NewRoomHandler(rooms)
 
 	api := app.Group("/api/v1")
 
@@ -60,4 +62,12 @@ func SetupRoutes(
 	menusGroup := protected.Group("/menus")
 	menusGroup.Get("/", middleware.RequirePermission("menus.read"), menuH.List)
 	menusGroup.Get("/:id", middleware.RequirePermission("menus.read"), menuH.GetByID)
+
+	// Rooms
+	roomsGroup := protected.Group("/rooms")
+	roomsGroup.Get("/", middleware.RequirePermission("rooms.read"), roomH.List)
+	roomsGroup.Post("/", middleware.RequirePermission("rooms.create"), roomH.Create)
+	roomsGroup.Get("/:id", middleware.RequirePermission("rooms.read"), roomH.GetByID)
+	roomsGroup.Put("/:id", middleware.RequirePermission("rooms.update"), roomH.Update)
+	roomsGroup.Delete("/:id", middleware.RequirePermission("rooms.delete"), roomH.Delete)
 }

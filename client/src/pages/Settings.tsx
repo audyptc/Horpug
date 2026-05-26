@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, Bell, Palette, Sun, Moon, User2, Camera, KeyRound } from 'lucide-react'
 import { useTheme, SIDEBAR_COLORS } from '@/lib/theme'
@@ -15,24 +15,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { mockUsers } from '@/data/mockUsers'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { useAuth } from '@/context/AuthContext'
+import { userService } from '@/services/userService'
+import type { ApiUser } from '@/types/api'
 import { cn } from '@/lib/utils'
 
-const currentUser = mockUsers[0]
+function getAvatar(name: string) {
+  return `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(name)}`
+}
 
 export function Settings() {
   const { t, i18n } = useTranslation()
   const { theme, setTheme, sidebarColor, setSidebarColor } = useTheme()
+  const { userId } = useAuth()
   const [saved, setSaved] = useState(false)
   const [activeSection, setActiveSection] = useState('profile')
-  const [profile, setProfile] = useState({
-    name: currentUser.name,
-    email: currentUser.email,
-    phone: currentUser.phone ?? '',
-    department: currentUser.department,
-  })
+  const [currentUser, setCurrentUser] = useState<ApiUser | null>(null)
+  const [profile, setProfile] = useState({ name: '', email: '' })
   const [notifs, setNotifs] = useState({ newUsers: true, security: true, updates: false })
+
+  useEffect(() => {
+    if (!userId) return
+    userService.getById(userId).then((user) => {
+      setCurrentUser(user)
+      setProfile({ name: user.full_name, email: user.email })
+    }).catch(() => {})
+  }, [userId])
 
   function handleSave() {
     setSaved(true)
@@ -56,6 +65,8 @@ export function Settings() {
     { key: 'security' as const, label: t('settings.notif.security'), desc: t('settings.notif.securityDesc') },
     { key: 'updates' as const, label: t('settings.notif.updates'), desc: t('settings.notif.updatesDesc') },
   ]
+
+  const avatarName = currentUser?.full_name ?? profile.name ?? '?'
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -105,9 +116,9 @@ export function Settings() {
               <div className="flex items-end justify-between">
                 <div className="relative">
                   <Avatar className="h-20 w-20 ring-4 ring-background shadow-md">
-                    <AvatarImage src={currentUser.avatar} />
+                    <AvatarImage src={avatarName !== '?' ? getAvatar(avatarName) : undefined} />
                     <AvatarFallback className="text-lg">
-                      {currentUser.name.split(' ').map((n) => n[0]).join('')}
+                      {avatarName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                     </AvatarFallback>
                   </Avatar>
                   <button
@@ -117,9 +128,11 @@ export function Settings() {
                     <Camera className="w-3 h-3 text-muted-foreground" />
                   </button>
                 </div>
-                <Badge variant="secondary" className="capitalize mb-1">
-                  {t(`users.roles.${currentUser.role}`)}
-                </Badge>
+                {currentUser?.role && (
+                  <Badge variant="secondary" className="capitalize mb-1">
+                    {t(`users.roles.${currentUser.role.name.toLowerCase()}`, { defaultValue: currentUser.role.name })}
+                  </Badge>
+                )}
               </div>
               <div className="mt-3">
                 <CardTitle className="text-base">{t('settings.profile')}</CardTitle>
@@ -142,20 +155,6 @@ export function Settings() {
                     type="email"
                     value={profile.email}
                     onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>{t('settings.phone')}</Label>
-                  <Input
-                    value={profile.phone}
-                    onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>{t('settings.department')}</Label>
-                  <Input
-                    value={profile.department}
-                    onChange={(e) => setProfile((p) => ({ ...p, department: e.target.value }))}
                   />
                 </div>
               </div>

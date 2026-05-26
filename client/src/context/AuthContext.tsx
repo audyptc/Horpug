@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
 import { authService } from '@/services/authService'
+import { decodeJwt } from '@/lib/utils'
 
 interface AuthState {
   accessToken: string | null
@@ -7,6 +8,7 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
+  userId: string | null
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
 }
@@ -17,11 +19,19 @@ function getStoredToken() {
   return localStorage.getItem('access_token')
 }
 
+function getUserIdFromToken(token: string | null): string | null {
+  if (!token) return null
+  const payload = decodeJwt(token)
+  return (payload?.user_id as string) ?? null
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     accessToken: getStoredToken(),
     isAuthenticated: !!getStoredToken(),
   })
+
+  const userId = useMemo(() => getUserIdFromToken(state.accessToken), [state.accessToken])
 
   const login = useCallback(async (email: string, password: string) => {
     const resp = await authService.login(email, password)
@@ -45,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={{ ...state, userId, login, logout }}>
       {children}
     </AuthContext.Provider>
   )
