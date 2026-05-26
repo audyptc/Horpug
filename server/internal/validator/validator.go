@@ -40,6 +40,35 @@ func CreateRoleRequest(req *domain.CreateRoleRequest) error {
 	return nil
 }
 
+func CreateTenantRequest(req *domain.CreateTenantRequest) error {
+	if req.FirstName == "" || req.LastName == "" {
+		return apierror.BadRequest("first_name and last_name are required")
+	}
+	if req.Phone == "" {
+		return apierror.BadRequest("phone is required")
+	}
+	if req.IDCard == "" {
+		return apierror.BadRequest("id_card is required")
+	}
+	return nil
+}
+
+func CreateContractRequest(req *domain.CreateContractRequest) error {
+	if req.TenantID == "" {
+		return apierror.BadRequest("tenant_id is required")
+	}
+	if req.RoomID == "" {
+		return apierror.BadRequest("room_id is required")
+	}
+	if req.StartDate.IsZero() {
+		return apierror.BadRequest("start_date is required")
+	}
+	if req.RentPrice <= 0 {
+		return apierror.BadRequest("rent_price must be greater than 0")
+	}
+	return nil
+}
+
 func CreateRoomRequest(req *domain.CreateRoomRequest) error {
 	if req.RoomNumber == "" {
 		return apierror.BadRequest("room_number is required")

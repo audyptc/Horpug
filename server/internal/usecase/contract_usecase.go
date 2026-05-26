@@ -1,0 +1,154 @@
+package usecase
+
+import (
+	"context"
+	"errors"
+
+	"apigofiberhorpug/internal/delivery/http/apierror"
+	"apigofiberhorpug/internal/domain"
+
+	"github.com/google/uuid"
+)
+
+type ContractUseCase struct {
+	contractRepo domain.ContractRepository
+	roomRepo     domain.RoomRepository
+	tenantRepo   domain.TenantRepository
+}
+
+func NewContractUseCase(
+	contractRepo domain.ContractRepository,
+	roomRepo domain.RoomRepository,
+	tenantRepo domain.TenantRepository,
+) *ContractUseCase {
+	return &ContractUseCase{contractRepo: contractRepo, roomRepo: roomRepo, tenantRepo: tenantRepo}
+}
+
+func (uc *ContractUseCase) List(ctx context.Context, limit, offset int) ([]*domain.ContractDetail, int, error) {
+	total, err := uc.contractRepo.Count(ctx)
+	if err != nil {
+		return nil, 0, apierror.Internal(err)
+	}
+	list, err := uc.contractRepo.List(ctx, limit, offset)
+	if err != nil {
+		return nil, 0, apierror.Internal(err)
+	}
+	return list, total, nil
+}
+
+func (uc *ContractUseCase) GetByID(ctx context.Context, id string) (*domain.ContractDetail, error) {
+	d, err := uc.contractRepo.FindDetailByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, apierror.NotFound(err.Error())
+		}
+		return nil, apierror.Internal(err)
+	}
+	return d, nil
+}
+
+func (uc *ContractUseCase) Create(ctx context.Context, req *domain.CreateContractRequest) (*domain.ContractDetail, error) {
+	if _, err := uc.tenantRepo.FindByID(ctx, req.TenantID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, apierror.NotFound("tenant not found")
+		}
+		return nil, apierror.Internal(err)
+	}
+
+	room, err := uc.roomRepo.FindByID(ctx, req.RoomID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, apierror.NotFound("room not found")
+		}
+		return nil, apierror.Internal(err)
+	}
+	if room.Status != "available" {
+		return nil, apierror.BadRequest("room is not available")
+	}
+
+	c := &domain.Contract{
+		ID:        uuid.New().String(),
+		TenantID:  req.TenantID,
+		RoomID:    req.RoomID,
+		StartDate: req.StartDate,
+		EndDate:   req.EndDate,
+		RentPrice: req.RentPrice,
+		Deposit:   req.Deposit,
+		Status:    domain.ContractStatusActive,
+		Note:      req.Note,
+	}
+	if err := uc.contractRepo.Create(ctx, c); err != nil {
+		return nil, apierror.Internal(err)
+	}
+
+	room.Status = "occupied"
+	if err := uc.roomRepo.Update(ctx, room); err != nil {
+		return nil, apierror.Internal(err)
+	}
+
+	return uc.contractRepo.FindDetailByID(ctx, c.ID)
+}
+
+func (uc *ContractUseCase) Update(ctx context.Context, id string, req *domain.UpdateContractRequest) (*domain.ContractDetail, error) {
+	c, err := uc.contractRepo.FindByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, apierror.NotFound(err.Error())
+		}
+		return nil, apierror.Internal(err)
+	}
+
+	prevStatus := c.Status
+
+	c.EndDate = req.EndDate
+	if req.RentPrice > 0 {
+		c.RentPrice = req.RentPrice
+	}
+	if req.Deposit >= 0 {
+		c.Deposit = req.Deposit
+	}
+	if req.Status != "" {
+		c.Status = req.Status
+	}
+	c.Note = req.Note
+
+	if err := uc.contractRepo.Update(ctx, c); err != nil {
+		return nil, apierror.Internal(err)
+	}
+
+	// When contract moves from active -> terminated/expired, free the room
+	if prevStatus == domain.ContractStatusActive &&
+		(c.Status == domain.ContractStatusTerminated || c.Status == domain.ContractStatusExpired) {
+		room, err := uc.roomRepo.FindByID(ctx, c.RoomID)
+		if err == nil {
+			room.Status = "available"
+			_ = uc.roomRepo.Update(ctx, room)
+		}
+	}
+
+	return uc.contractRepo.FindDetailByID(ctx, id)
+}
+
+func (uc *ContractUseCase) Delete(ctx context.Context, id string) error {
+	c, err := uc.contractRepo.FindByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return apierror.NotFound(err.Error())
+		}
+		return apierror.Internal(err)
+	}
+
+	if err := uc.contractRepo.Delete(ctx, id); err != nil {
+		return apierror.Internal(err)
+	}
+
+	// Free the room if contract was active
+	if c.Status == domain.ContractStatusActive {
+		room, err := uc.roomRepo.FindByID(ctx, c.RoomID)
+		if err == nil {
+			room.Status = "available"
+			_ = uc.roomRepo.Update(ctx, room)
+		}
+	}
+	return nil
+}

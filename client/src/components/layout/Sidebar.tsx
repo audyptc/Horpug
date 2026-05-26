@@ -7,8 +7,9 @@ import {
   Settings,
   ShieldCheck,
   BarChart3,
-  Bell,
   BedDouble,
+  UserRound,
+  FileText,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -45,16 +46,17 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
 
   const navItems: NavItem[] = [
     { label: t('nav.dashboard'), icon: LayoutDashboard, to: '/' },
+    { label: t('nav.rooms'), icon: BedDouble, to: '/rooms' },
+    { label: t('nav.tenants'), icon: UserRound, to: '/tenants' },
+    { label: t('nav.contracts'), icon: FileText, to: '/contracts' },
     { label: t('nav.analytics'), icon: BarChart3, to: '/analytics' },
-    { label: t('nav.notifications'), icon: Bell, to: '/notifications' },
     {
       label: t('nav.settings'),
       icon: Settings,
       to: '/settings',
       children: [
-        { label: t('nav.rooms'), icon: BedDouble, to: '/settings/rooms' },
-        { label: t('nav.roles'), icon: ShieldCheck, to: '/settings/roles' },
         { label: t('nav.users'), icon: Users, to: '/settings/users' },
+        { label: t('nav.roles'), icon: ShieldCheck, to: '/settings/roles' },
         { label: 'ทั่วไป', icon: SlidersHorizontal, to: '/settings/general' },
       ],
     },

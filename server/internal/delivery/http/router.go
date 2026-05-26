@@ -16,6 +16,8 @@ func SetupRoutes(
 	perms *usecase.PermissionUseCase,
 	menus *usecase.MenuUseCase,
 	rooms *usecase.RoomUseCase,
+	tenants *usecase.TenantUseCase,
+	contracts *usecase.ContractUseCase,
 ) {
 	authH := v1.NewAuthHandler(auth)
 	userH := v1.NewUserHandler(users)
@@ -23,6 +25,8 @@ func SetupRoutes(
 	permH := v1.NewPermissionHandler(perms)
 	menuH := v1.NewMenuHandler(menus)
 	roomH := v1.NewRoomHandler(rooms)
+	tenantH := v1.NewTenantHandler(tenants)
+	contractH := v1.NewContractHandler(contracts)
 
 	api := app.Group("/api/v1")
 
@@ -70,4 +74,20 @@ func SetupRoutes(
 	roomsGroup.Get("/:id", middleware.RequirePermission("rooms.read"), roomH.GetByID)
 	roomsGroup.Put("/:id", middleware.RequirePermission("rooms.update"), roomH.Update)
 	roomsGroup.Delete("/:id", middleware.RequirePermission("rooms.delete"), roomH.Delete)
+
+	// Tenants
+	tenantsGroup := protected.Group("/tenants")
+	tenantsGroup.Get("/", middleware.RequirePermission("tenants.read"), tenantH.List)
+	tenantsGroup.Post("/", middleware.RequirePermission("tenants.create"), tenantH.Create)
+	tenantsGroup.Get("/:id", middleware.RequirePermission("tenants.read"), tenantH.GetByID)
+	tenantsGroup.Put("/:id", middleware.RequirePermission("tenants.update"), tenantH.Update)
+	tenantsGroup.Delete("/:id", middleware.RequirePermission("tenants.delete"), tenantH.Delete)
+
+	// Contracts
+	contractsGroup := protected.Group("/contracts")
+	contractsGroup.Get("/", middleware.RequirePermission("contracts.read"), contractH.List)
+	contractsGroup.Post("/", middleware.RequirePermission("contracts.create"), contractH.Create)
+	contractsGroup.Get("/:id", middleware.RequirePermission("contracts.read"), contractH.GetByID)
+	contractsGroup.Put("/:id", middleware.RequirePermission("contracts.update"), contractH.Update)
+	contractsGroup.Delete("/:id", middleware.RequirePermission("contracts.delete"), contractH.Delete)
 }

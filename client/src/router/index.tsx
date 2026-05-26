@@ -6,7 +6,8 @@ import { Analytics } from '@/pages/Analytics'
 import { Settings } from '@/pages/Settings'
 import { Roles } from '@/pages/Roles'
 import { Rooms } from '@/pages/Rooms'
-import { Placeholder } from '@/pages/Placeholder'
+import { Tenants } from '@/pages/Tenants'
+import { Contracts } from '@/pages/Contracts'
 import { NotFound } from '@/pages/NotFound'
 import { Login } from '@/pages/Login'
 import { useAuth } from '@/context/AuthContext'
@@ -36,16 +37,17 @@ export const router = createBrowserRouter([
         element: <Layout />,
         children: [
           { index: true, element: <Dashboard /> },
+          { path: 'rooms', element: <Rooms /> },
+          { path: 'tenants', element: <Tenants /> },
+          { path: 'contracts', element: <Contracts /> },
           { path: 'analytics', element: <Analytics /> },
-          { path: 'notifications', element: <Placeholder title="Notifications" /> },
           {
             path: 'settings',
             children: [
-              { index: true, element: <Navigate to="rooms" replace /> },
-              { path: 'rooms', element: <Rooms /> },
-              { path: 'general', element: <Settings /> },
-              { path: 'roles', element: <Roles /> },
+              { index: true, element: <Navigate to="users" replace /> },
               { path: 'users', element: <Users /> },
+              { path: 'roles', element: <Roles /> },
+              { path: 'general', element: <Settings /> },
             ],
           },
         ],
