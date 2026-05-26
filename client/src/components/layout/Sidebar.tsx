@@ -136,11 +136,11 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
                     )}
                     title={collapsed ? label : undefined}
                   >
-                    <Icon className="w-4 h-4 shrink-0" />
+                    <Icon className="w-5 h-5 shrink-0" />
                     <span className={cn('truncate flex-1 text-left', collapsed && 'md:hidden')}>{label}</span>
                     <ChevronDown
                       className={cn(
-                        'w-3.5 h-3.5 shrink-0 transition-transform md:block hidden',
+                        'w-4 h-4 shrink-0 transition-transform md:block hidden',
                         isOpen && 'rotate-180'
                       )}
                     />
@@ -157,7 +157,7 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
                     )}
                     title={collapsed ? label : undefined}
                   >
-                    <Icon className="w-4 h-4 shrink-0" />
+                    <Icon className="w-5 h-5 shrink-0" />
                     <span className={cn('truncate', collapsed && 'md:hidden')}>{label}</span>
                   </NavLink>
                 )}
@@ -179,7 +179,7 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
                               : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                           )}
                         >
-                          <ChildIcon className="w-3.5 h-3.5 shrink-0" />
+                          <ChildIcon className="w-4 h-4 shrink-0" />
                           <span className="truncate">{child.label}</span>
                         </NavLink>
                       )

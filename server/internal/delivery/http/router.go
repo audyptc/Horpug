@@ -21,6 +21,7 @@ func SetupRoutes(
 	meters *usecase.MeterReadingUseCase,
 	bills *usecase.BillUseCase,
 	dashboard *usecase.DashboardUseCase,
+	analytics *usecase.AnalyticsUseCase,
 ) {
 	authH := v1.NewAuthHandler(auth)
 	userH := v1.NewUserHandler(users)
@@ -33,6 +34,7 @@ func SetupRoutes(
 	meterH := v1.NewMeterReadingHandler(meters)
 	billH := v1.NewBillHandler(bills)
 	dashboardH := v1.NewDashboardHandler(dashboard)
+	analyticsH := v1.NewAnalyticsHandler(analytics)
 
 	api := app.Group("/api/v1")
 
@@ -115,4 +117,7 @@ func SetupRoutes(
 
 	// Dashboard
 	protected.Get("/dashboard/summary", dashboardH.Summary)
+
+	// Analytics
+	protected.Get("/analytics/summary", analyticsH.Summary)
 }

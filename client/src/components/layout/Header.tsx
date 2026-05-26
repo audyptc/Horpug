@@ -45,7 +45,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     <header className="h-16 border-b bg-background flex items-center px-4 gap-4 shrink-0">
       {/* Mobile menu button */}
       <Button variant="ghost" size="icon" className="md:hidden" onClick={onMenuClick}>
-        <Menu className="w-8 h-8" />
+        <Menu className="w-10 h-10" />
       </Button>
 
       {/* Search */}
@@ -61,15 +61,15 @@ export function Header({ onMenuClick }: HeaderProps) {
 
       <div className="flex items-center gap-2 ml-auto">
         {/* Dark mode toggle */}
-        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
-          {theme === 'dark' ? <Sun className="w-8 h-8" /> : <Moon className="w-8 h-8" />}
+        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className="h-11 w-11 [&_svg]:size-6">
+          {theme === 'dark' ? <Sun /> : <Moon />}
         </Button>
 
         {/* Language switcher */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
-              <Globe className="w-8 h-8" />
+            <Button variant="ghost" size="icon" className="relative h-11 w-11 [&_svg]:size-6">
+              <Globe />
               <span className="absolute -bottom-0.5 -right-0.5 text-[9px] font-bold bg-primary text-primary-foreground rounded px-0.5 leading-tight">
                 {i18n.language === 'th' ? 'TH' : 'EN'}
               </span>
@@ -99,8 +99,8 @@ export function Header({ onMenuClick }: HeaderProps) {
         {/* Notifications */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="w-8 h-8" />
+            <Button variant="ghost" size="icon" className="relative h-11 w-11 [&_svg]:size-6">
+              <Bell />
               <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]">
                 3
               </Badge>
@@ -121,8 +121,8 @@ export function Header({ onMenuClick }: HeaderProps) {
         {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <UserCircle className="w-8 h-8" />
+            <Button variant="ghost" size="icon" className="h-11 w-11 [&_svg]:size-6">
+              <UserCircle />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">

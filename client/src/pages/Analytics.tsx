@@ -1,55 +1,72 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { userService } from '@/services/userService'
-import type { ApiUser } from '@/types/api'
-import { TrendingUp, Clock, Eye, Users, BarChart3 } from 'lucide-react'
+import { analyticsService } from '@/services/analyticsService'
+import type { ApiAnalyticsSummary } from '@/types/api'
+import { TrendingUp, Banknote, BarChart3, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
-const signups = [3, 5, 2, 7, 4, 8]
-const maxSignup = Math.max(...signups)
-
-const roleColors: Record<string, string> = {
-  admin: 'bg-violet-500',
-  manager: 'bg-blue-500',
-  editor: 'bg-amber-500',
-  viewer: 'bg-slate-400',
+function formatBaht(v: number) {
+  return new Intl.NumberFormat('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v)
 }
 
-const roleTextColors: Record<string, string> = {
-  admin: 'text-violet-500',
-  manager: 'text-blue-500',
-  editor: 'text-amber-500',
-  viewer: 'text-slate-400',
+function shortMonth(yyyyMM: string) {
+  const [year, month] = yyyyMM.split('-')
+  const d = new Date(Number(year), Number(month) - 1, 1)
+  return d.toLocaleString('default', { month: 'short' })
 }
 
 export function Analytics() {
   const { t } = useTranslation()
-  const [users, setUsers] = useState<ApiUser[]>([])
+  const [data, setData] = useState<ApiAnalyticsSummary | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    userService.list(1, 9999)
-      .then((resp) => setUsers(resp.data))
+    analyticsService.summary(12)
+      .then(setData)
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
-  const byRole = useMemo(() => {
-    return users.reduce<Record<string, number>>((acc, u) => {
-      const name = u.role?.name.toLowerCase() ?? 'unassigned'
-      acc[name] = (acc[name] ?? 0) + 1
-      return acc
-    }, {})
-  }, [users])
+  const maxRevenue = data ? Math.max(...data.monthly_revenue.map((m) => m.revenue), 1) : 1
+  const maxTenants = data ? Math.max(...data.monthly_tenants.map((m) => m.count), 1) : 1
+  const totalBills = data
+    ? data.bill_status.unpaid + data.bill_status.paid + data.bill_status.overdue
+    : 0
 
   const summaryCards = [
-    { label: t('analytics.avgSession'), value: '24m 18s', sub: t('analytics.perUser'), icon: Clock, color: 'text-violet-500', bg: 'bg-violet-500/10' },
-    { label: t('analytics.pageViews'), value: '1,284', sub: t('analytics.thisMonth'), icon: Eye, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { label: t('analytics.retention'), value: '76%', sub: t('analytics.monthlyActive'), icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { label: t('analytics.growthRate'), value: '+12.5%', sub: t('analytics.vsLastMonth'), icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+    {
+      label: t('analytics.totalRevenue'),
+      value: loading ? '—' : `฿${formatBaht(data?.total_revenue ?? 0)}`,
+      sub: t('analytics.last12Months'),
+      icon: Banknote,
+      color: 'text-emerald-500',
+      bg: 'bg-emerald-500/10',
+    },
+    {
+      label: t('analytics.avgMonthly'),
+      value: loading ? '—' : `฿${formatBaht(data?.avg_monthly ?? 0)}`,
+      sub: t('analytics.perMonth'),
+      icon: TrendingUp,
+      color: 'text-blue-500',
+      bg: 'bg-blue-500/10',
+    },
+    {
+      label: t('analytics.paidBills'),
+      value: loading ? '—' : data?.bill_status.paid ?? 0,
+      sub: loading ? '' : t('analytics.ofTotal', { total: totalBills }),
+      icon: BarChart3,
+      color: 'text-violet-500',
+      bg: 'bg-violet-500/10',
+    },
+    {
+      label: t('analytics.newTenants'),
+      value: loading ? '—' : data?.monthly_tenants.reduce((s, m) => s + m.count, 0) ?? 0,
+      sub: t('analytics.last12Months'),
+      icon: Users,
+      color: 'text-amber-500',
+      bg: 'bg-amber-500/10',
+    },
   ]
 
   return (
@@ -81,38 +98,51 @@ export function Analytics() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Bar chart */}
+        {/* Monthly revenue bar chart */}
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center gap-3 pb-4">
             <div className="p-2 rounded-lg bg-primary/10 shrink-0">
               <BarChart3 className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <CardTitle>{t('analytics.monthlySignups')}</CardTitle>
-              <CardDescription>{t('analytics.monthlySignupsDesc')}</CardDescription>
+              <CardTitle>{t('analytics.monthlyRevenue')}</CardTitle>
+              <CardDescription>{t('analytics.monthlyRevenueDesc')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex items-end gap-3 h-52 px-2">
-              {signups.map((val, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                  <span className="text-xs font-semibold text-muted-foreground">{val}</span>
-                  <div
-                    className="w-full rounded-t-lg bg-primary/70 hover:bg-primary transition-colors cursor-pointer"
-                    style={{ height: `${Math.max((val / maxSignup) * 100, 8)}%` }}
-                  />
-                  <span className="text-xs font-medium text-muted-foreground">{months[i]}</span>
-                </div>
-              ))}
-            </div>
+            {loading ? (
+              <div className="flex items-center justify-center h-52 text-sm text-muted-foreground">
+                {t('common.loading')}
+              </div>
+            ) : (
+              <div className="flex items-end gap-2 h-52 px-1">
+                {(data?.monthly_revenue ?? []).map((m) => (
+                  <div key={m.month} className="flex-1 flex flex-col items-center gap-1.5">
+                    {m.revenue > 0 && (
+                      <span className="text-[10px] font-medium text-muted-foreground">
+                        {formatBaht(m.revenue)}
+                      </span>
+                    )}
+                    <div
+                      className="w-full rounded-t-md bg-primary/70 hover:bg-primary transition-colors cursor-default"
+                      style={{ height: `${Math.max((m.revenue / maxRevenue) * 100, m.revenue > 0 ? 4 : 0)}%` }}
+                      title={`฿${formatBaht(m.revenue)}`}
+                    />
+                    <span className="text-[10px] font-medium text-muted-foreground">
+                      {shortMonth(m.month)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Role breakdown */}
+        {/* Bill status breakdown */}
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle>{t('analytics.roleDistribution')}</CardTitle>
-            <CardDescription>{t('analytics.roleDistributionDesc')}</CardDescription>
+            <CardTitle>{t('analytics.billStatus')}</CardTitle>
+            <CardDescription>{t('analytics.billStatusDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {loading ? (
@@ -120,34 +150,76 @@ export function Analytics() {
                 {t('common.loading')}
               </div>
             ) : (
-              Object.entries(byRole).map(([role, count]) => (
-                <div key={role} className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className={cn('w-2.5 h-2.5 rounded-full', roleColors[role] ?? 'bg-slate-400')} />
-                      <span className="text-sm font-medium capitalize">
-                        {t(`users.roles.${role}`, { defaultValue: role })}
-                      </span>
+              <>
+                {[
+                  { key: 'paid', label: t('analytics.statusPaid'), count: data?.bill_status.paid ?? 0, color: 'bg-emerald-500', text: 'text-emerald-500' },
+                  { key: 'unpaid', label: t('analytics.statusUnpaid'), count: data?.bill_status.unpaid ?? 0, color: 'bg-amber-500', text: 'text-amber-500' },
+                  { key: 'overdue', label: t('analytics.statusOverdue'), count: data?.bill_status.overdue ?? 0, color: 'bg-rose-500', text: 'text-rose-500' },
+                ].map((item) => (
+                  <div key={item.key} className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={cn('w-2.5 h-2.5 rounded-full', item.color)} />
+                        <span className="text-sm font-medium">{item.label}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={cn('text-xs font-semibold', item.text)}>{item.count}</span>
+                        <span className="text-xs text-muted-foreground w-8 text-right">
+                          {totalBills > 0 ? Math.round((item.count / totalBills) * 100) : 0}%
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{count}</Badge>
-                      <span className={cn('text-xs font-semibold w-8 text-right', roleTextColors[role] ?? 'text-slate-400')}>
-                        {users.length > 0 ? Math.round((count / users.length) * 100) : 0}%
-                      </span>
+                    <div className="h-2 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={cn('h-full rounded-full transition-all', item.color)}
+                        style={{ width: totalBills > 0 ? `${(item.count / totalBills) * 100}%` : '0%' }}
+                      />
                     </div>
                   </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className={cn('h-full rounded-full transition-all', roleColors[role] ?? 'bg-slate-400')}
-                      style={{ width: users.length > 0 ? `${(count / users.length) * 100}%` : '0%' }}
-                    />
-                  </div>
-                </div>
-              ))
+                ))}
+              </>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Monthly new tenants */}
+      <Card>
+        <CardHeader className="flex flex-row items-center gap-3 pb-4">
+          <div className="p-2 rounded-lg bg-amber-500/10 shrink-0">
+            <Users className="w-4 h-4 text-amber-500" />
+          </div>
+          <div>
+            <CardTitle>{t('analytics.monthlyTenants')}</CardTitle>
+            <CardDescription>{t('analytics.monthlyTenantsDesc')}</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
+              {t('common.loading')}
+            </div>
+          ) : (
+            <div className="flex items-end gap-2 h-32 px-1">
+              {(data?.monthly_tenants ?? []).map((m) => (
+                <div key={m.month} className="flex-1 flex flex-col items-center gap-1.5">
+                  {m.count > 0 && (
+                    <span className="text-[10px] font-medium text-muted-foreground">{m.count}</span>
+                  )}
+                  <div
+                    className="w-full rounded-t-md bg-amber-500/70 hover:bg-amber-500 transition-colors cursor-default"
+                    style={{ height: `${Math.max((m.count / maxTenants) * 100, m.count > 0 ? 6 : 0)}%` }}
+                    title={`${m.count} tenants`}
+                  />
+                  <span className="text-[10px] font-medium text-muted-foreground">
+                    {shortMonth(m.month)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

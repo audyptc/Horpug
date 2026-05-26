@@ -17,6 +17,7 @@ type repositories struct {
 	meterReading *repository.MeterReadingRepo
 	bill         *repository.BillRepo
 	dashboard    *repository.DashboardRepo
+	analytics    *repository.AnalyticsRepo
 }
 
 func newRepositories(db *database.DB) repositories {
@@ -32,5 +33,6 @@ func newRepositories(db *database.DB) repositories {
 		meterReading: repository.NewMeterReadingRepo(db),
 		bill:         repository.NewBillRepo(db),
 		dashboard:    repository.NewDashboardRepo(db),
+		analytics:    repository.NewAnalyticsRepo(db),
 	}
 }

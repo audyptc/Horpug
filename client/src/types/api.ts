@@ -231,6 +231,30 @@ export interface ApiBill {
   room_number: string
 }
 
+export interface MonthlyRevenue {
+  month: string
+  revenue: number
+}
+
+export interface MonthlyCount {
+  month: string
+  count: number
+}
+
+export interface BillStatusCount {
+  unpaid: number
+  paid: number
+  overdue: number
+}
+
+export interface ApiAnalyticsSummary {
+  monthly_revenue: MonthlyRevenue[]
+  monthly_tenants: MonthlyCount[]
+  bill_status: BillStatusCount
+  total_revenue: number
+  avg_monthly: number
+}
+
 export interface ApiDashboardSummary {
   total_rooms: number
   occupied_rooms: number
