@@ -41,6 +41,13 @@ export default {
     roles: 'สิทธิ์การใช้งาน',
     settings: 'ตั้งค่า',
     collapse: 'ย่อเมนู',
+    groups: {
+      rooms: 'ห้องพัก',
+      finance: 'การเงิน',
+      services: 'บริการ',
+      reports: 'รายงาน',
+      settings: 'ตั้งค่า',
+    },
   },
   header: {
     searchPlaceholder: 'ค้นหา...',

@@ -41,6 +41,13 @@ export default {
     roles: 'Roles',
     settings: 'Settings',
     collapse: 'Collapse',
+    groups: {
+      rooms: 'Room Management',
+      finance: 'Finance',
+      services: 'Services',
+      reports: 'Reports',
+      settings: 'Settings',
+    },
   },
   header: {
     searchPlaceholder: 'Search...',
