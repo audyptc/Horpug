@@ -75,7 +75,7 @@ func main() {
 	})
 
 	setupScalarDocs(app)
-	deliveryhttp.SetupRoutes(app, container.AuthUC, container.UserUC, container.RoleUC, container.PermUC, container.MenuUC, container.RoomUC, container.TenantUC, container.ContractUC, container.MeterReadingUC, container.BillUC, container.DashboardUC, container.AnalyticsUC, container.ExpenseUC)
+	deliveryhttp.SetupRoutes(app, container.AuthUC, container.UserUC, container.RoleUC, container.PermUC, container.MenuUC, container.RoomUC, container.TenantUC, container.ContractUC, container.MeterReadingUC, container.BillUC, container.DashboardUC, container.AnalyticsUC, container.ExpenseUC, container.MaintenanceUC)
 
 	slog.Info("เซิร์ฟเวอร์พร้อมทำงาน", "port", cfg.AppPort)
 	if err := app.Listen(":" + cfg.AppPort); err != nil {
