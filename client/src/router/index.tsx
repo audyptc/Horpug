@@ -15,6 +15,7 @@ import { MaintenanceRequests } from '@/pages/MaintenanceRequests'
 import { Payments } from '@/pages/Payments'
 import { Announcements } from '@/pages/Announcements'
 import { Reports } from '@/pages/Reports'
+import { Parking } from '@/pages/Parking'
 import { NotFound } from '@/pages/NotFound'
 import { Login } from '@/pages/Login'
 import { useAuth } from '@/context/AuthContext'
@@ -53,6 +54,7 @@ export const router = createBrowserRouter([
           { path: 'maintenance', element: <MaintenanceRequests /> },
           { path: 'payments', element: <Payments /> },
           { path: 'announcements', element: <Announcements /> },
+          { path: 'parking', element: <Parking /> },
           { path: 'analytics', element: <Analytics /> },
           { path: 'reports', element: <Reports /> },
           {
