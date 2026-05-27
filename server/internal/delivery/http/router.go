@@ -26,6 +26,7 @@ func SetupRoutes(
 	maintenance *usecase.MaintenanceRequestUseCase,
 	payments *usecase.PaymentUseCase,
 	announcements *usecase.AnnouncementUseCase,
+	reports *usecase.ReportUseCase,
 ) {
 	authH := v1.NewAuthHandler(auth)
 	userH := v1.NewUserHandler(users)
@@ -43,6 +44,7 @@ func SetupRoutes(
 	maintenanceH := v1.NewMaintenanceRequestHandler(maintenance)
 	paymentH := v1.NewPaymentHandler(payments)
 	announcementH := v1.NewAnnouncementHandler(announcements)
+	reportH := v1.NewReportHandler(reports)
 
 	api := app.Group("/api/v1")
 
@@ -160,4 +162,10 @@ func SetupRoutes(
 	announcementsGroup.Get("/:id", middleware.RequirePermission("announcements.read"), announcementH.GetByID)
 	announcementsGroup.Put("/:id", middleware.RequirePermission("announcements.update"), announcementH.Update)
 	announcementsGroup.Delete("/:id", middleware.RequirePermission("announcements.delete"), announcementH.Delete)
+
+	// Reports
+	reportsGroup := protected.Group("/reports")
+	reportsGroup.Get("/income", middleware.RequirePermission("reports.read"), reportH.Income)
+	reportsGroup.Get("/expenses", middleware.RequirePermission("reports.read"), reportH.Expenses)
+	reportsGroup.Get("/occupancy", middleware.RequirePermission("reports.read"), reportH.Occupancy)
 }

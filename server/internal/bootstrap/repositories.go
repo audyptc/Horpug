@@ -22,6 +22,7 @@ type repositories struct {
 	maintenance  *repository.MaintenanceRequestRepo
 	payment      *repository.PaymentRepo
 	announcement *repository.AnnouncementRepo
+	report       *repository.ReportRepo
 }
 
 func newRepositories(db *database.DB) repositories {
@@ -42,5 +43,6 @@ func newRepositories(db *database.DB) repositories {
 		maintenance:  repository.NewMaintenanceRequestRepo(db),
 		payment:      repository.NewPaymentRepo(db),
 		announcement: repository.NewAnnouncementRepo(db),
+		report:       repository.NewReportRepo(db),
 	}
 }
