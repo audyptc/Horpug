@@ -12,6 +12,7 @@ import { MeterReadings } from '@/pages/MeterReadings'
 import { Bills } from '@/pages/Bills'
 import { Expenses } from '@/pages/Expenses'
 import { MaintenanceRequests } from '@/pages/MaintenanceRequests'
+import { Payments } from '@/pages/Payments'
 import { NotFound } from '@/pages/NotFound'
 import { Login } from '@/pages/Login'
 import { useAuth } from '@/context/AuthContext'
@@ -48,6 +49,7 @@ export const router = createBrowserRouter([
           { path: 'bills', element: <Bills /> },
           { path: 'expenses', element: <Expenses /> },
           { path: 'maintenance', element: <MaintenanceRequests /> },
+          { path: 'payments', element: <Payments /> },
           { path: 'analytics', element: <Analytics /> },
           {
             path: 'settings',

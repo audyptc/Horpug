@@ -20,6 +20,7 @@ type repositories struct {
 	analytics    *repository.AnalyticsRepo
 	expense      *repository.ExpenseRepo
 	maintenance  *repository.MaintenanceRequestRepo
+	payment      *repository.PaymentRepo
 }
 
 func newRepositories(db *database.DB) repositories {
@@ -38,5 +39,6 @@ func newRepositories(db *database.DB) repositories {
 		analytics:    repository.NewAnalyticsRepo(db),
 		expense:      repository.NewExpenseRepo(db),
 		maintenance:  repository.NewMaintenanceRequestRepo(db),
+		payment:      repository.NewPaymentRepo(db),
 	}
 }

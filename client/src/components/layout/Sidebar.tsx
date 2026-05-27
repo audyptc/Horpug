@@ -14,6 +14,7 @@ import {
   Receipt,
   Wallet,
   Wrench,
+  HandCoins,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -57,6 +58,7 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
     { label: t('nav.bills'), icon: Receipt, to: '/bills' },
     { label: t('nav.expenses'), icon: Wallet, to: '/expenses' },
     { label: t('nav.maintenance'), icon: Wrench, to: '/maintenance' },
+    { label: t('nav.payments'), icon: HandCoins, to: '/payments' },
     { label: t('nav.analytics'), icon: BarChart3, to: '/analytics' },
     {
       label: t('nav.settings'),

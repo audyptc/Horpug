@@ -203,6 +203,45 @@ func UpdateMaintenanceRequestRequest(req *domain.UpdateMaintenanceRequestRequest
 	return nil
 }
 
+func CreatePaymentRequest(req *domain.CreatePaymentRequest) error {
+	validMethods := map[domain.PaymentMethod]bool{
+		domain.PaymentMethodCash:     true,
+		domain.PaymentMethodTransfer: true,
+		domain.PaymentMethodQR:       true,
+	}
+	if req.BillID == "" {
+		return apierror.BadRequest("bill_id is required")
+	}
+	if req.Amount <= 0 {
+		return apierror.BadRequest("amount must be greater than 0")
+	}
+	if !validMethods[req.Method] {
+		return apierror.BadRequest("method must be one of: cash, transfer, qr")
+	}
+	if req.PaymentDate.IsZero() {
+		return apierror.BadRequest("payment_date is required")
+	}
+	return nil
+}
+
+func UpdatePaymentRequest(req *domain.UpdatePaymentRequest) error {
+	validMethods := map[domain.PaymentMethod]bool{
+		domain.PaymentMethodCash:     true,
+		domain.PaymentMethodTransfer: true,
+		domain.PaymentMethodQR:       true,
+	}
+	if req.Amount <= 0 {
+		return apierror.BadRequest("amount must be greater than 0")
+	}
+	if !validMethods[req.Method] {
+		return apierror.BadRequest("method must be one of: cash, transfer, qr")
+	}
+	if req.PaymentDate.IsZero() {
+		return apierror.BadRequest("payment_date is required")
+	}
+	return nil
+}
+
 func CreateMeterReadingRequest(req *domain.CreateMeterReadingRequest) error {
 	if req.RoomID == "" {
 		return apierror.BadRequest("room_id is required")

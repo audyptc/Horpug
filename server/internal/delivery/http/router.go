@@ -24,6 +24,7 @@ func SetupRoutes(
 	analytics *usecase.AnalyticsUseCase,
 	expenses *usecase.ExpenseUseCase,
 	maintenance *usecase.MaintenanceRequestUseCase,
+	payments *usecase.PaymentUseCase,
 ) {
 	authH := v1.NewAuthHandler(auth)
 	userH := v1.NewUserHandler(users)
@@ -39,6 +40,7 @@ func SetupRoutes(
 	analyticsH := v1.NewAnalyticsHandler(analytics)
 	expenseH := v1.NewExpenseHandler(expenses)
 	maintenanceH := v1.NewMaintenanceRequestHandler(maintenance)
+	paymentH := v1.NewPaymentHandler(payments)
 
 	api := app.Group("/api/v1")
 
@@ -140,4 +142,12 @@ func SetupRoutes(
 	expensesGroup.Get("/:id", middleware.RequirePermission("expenses.read"), expenseH.GetByID)
 	expensesGroup.Put("/:id", middleware.RequirePermission("expenses.update"), expenseH.Update)
 	expensesGroup.Delete("/:id", middleware.RequirePermission("expenses.delete"), expenseH.Delete)
+
+	// Payments
+	paymentsGroup := protected.Group("/payments")
+	paymentsGroup.Get("/", middleware.RequirePermission("payments.read"), paymentH.List)
+	paymentsGroup.Post("/", middleware.RequirePermission("payments.create"), paymentH.Create)
+	paymentsGroup.Get("/:id", middleware.RequirePermission("payments.read"), paymentH.GetByID)
+	paymentsGroup.Put("/:id", middleware.RequirePermission("payments.update"), paymentH.Update)
+	paymentsGroup.Delete("/:id", middleware.RequirePermission("payments.delete"), paymentH.Delete)
 }
