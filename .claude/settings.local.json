@@ -12,7 +12,11 @@
       "PowerShell(Get-ChildItem -Path \"d:\\\\MyProject\\\\Horpug\\\\client\\\\src\\\\router\" | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Directory\"}else{\"File\"}}} | Format-Table -AutoSize)",
       "PowerShell(Get-ChildItem -Path \"d:\\\\MyProject\\\\Horpug\\\\client\\\\src\\\\components\" | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Directory\"}else{\"File\"}}} | Format-Table -AutoSize)",
       "PowerShell(Get-ChildItem -Path \"d:\\\\MyProject\\\\Horpug\\\\client\\\\src\\\\components\\\\layout\" | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Directory\"}else{\"File\"}}} | Format-Table -AutoSize)",
-      "PowerShell(Get-ChildItem \"d:\\\\MyProject\\\\Horpug\\\\server\\\\internal\\\\delivery\\\\http\\\\v1\" | Where-Object {$_.Extension -eq '.go'} | Select-Object Name)"
+      "PowerShell(Get-ChildItem \"d:\\\\MyProject\\\\Horpug\\\\server\\\\internal\\\\delivery\\\\http\\\\v1\" | Where-Object {$_.Extension -eq '.go'} | Select-Object Name)",
+      "PowerShell(Get-ChildItem -Path \"d:\\\\MyProject\\\\Horpug\" -Recurse -Force | Select-Object FullName | ForEach-Object { $_.FullName } | Sort-Object)",
+      "PowerShell(head -200)",
+      "PowerShell(Get-ChildItem -Path \"d:\\\\MyProject\\\\Horpug\" -Directory | ForEach-Object { Write-Output $_.Name })",
+      "PowerShell(Get-ChildItem -Path \"d:\\\\MyProject\\\\Horpug\\\\server\" -File | Select-Object Name | ForEach-Object { $_.Name } | Sort-Object)"
     ]
   }
 }

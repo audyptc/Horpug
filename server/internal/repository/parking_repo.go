@@ -10,12 +10,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type ParkingSlotRepo struct {
+type ParkingRepo struct {
 	db *database.DB
 }
 
-func NewParkingSlotRepo(db *database.DB) *ParkingSlotRepo {
-	return &ParkingSlotRepo{db: db}
+func NewParkingRepo(db *database.DB) *ParkingRepo {
+	return &ParkingRepo{db: db}
 }
 
 func scanParkingSlot(row pgx.Row) (*domain.ParkingSlot, error) {
@@ -39,7 +39,7 @@ const selectParkingSlot = `
 	FROM parking_slots ps
 	LEFT JOIN tenants t ON t.id = ps.tenant_id`
 
-func (r *ParkingSlotRepo) FindByID(ctx context.Context, id string) (*domain.ParkingSlot, error) {
+func (r *ParkingRepo) FindByID(ctx context.Context, id string) (*domain.ParkingSlot, error) {
 	row := r.db.Pool.QueryRow(ctx, selectParkingSlot+` WHERE ps.id = $1`, id)
 	p, err := scanParkingSlot(row)
 	if err == pgx.ErrNoRows {
@@ -48,7 +48,7 @@ func (r *ParkingSlotRepo) FindByID(ctx context.Context, id string) (*domain.Park
 	return p, err
 }
 
-func (r *ParkingSlotRepo) List(ctx context.Context, limit, offset int) ([]*domain.ParkingSlot, error) {
+func (r *ParkingRepo) List(ctx context.Context, limit, offset int) ([]*domain.ParkingSlot, error) {
 	rows, err := r.db.Pool.Query(ctx, selectParkingSlot+`
 		ORDER BY ps.slot_number ASC
 		LIMIT $1 OFFSET $2`, limit, offset)
@@ -71,13 +71,13 @@ func (r *ParkingSlotRepo) List(ctx context.Context, limit, offset int) ([]*domai
 	return list, rows.Err()
 }
 
-func (r *ParkingSlotRepo) Count(ctx context.Context) (int, error) {
+func (r *ParkingRepo) Count(ctx context.Context) (int, error) {
 	var total int
 	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM parking_slots`).Scan(&total)
 	return total, err
 }
 
-func (r *ParkingSlotRepo) Create(ctx context.Context, p *domain.ParkingSlot) error {
+func (r *ParkingRepo) Create(ctx context.Context, p *domain.ParkingSlot) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		INSERT INTO parking_slots (id, slot_number, vehicle_type, status, tenant_id, license_plate, monthly_fee, start_date, note)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
@@ -86,7 +86,7 @@ func (r *ParkingSlotRepo) Create(ctx context.Context, p *domain.ParkingSlot) err
 	return err
 }
 
-func (r *ParkingSlotRepo) Update(ctx context.Context, p *domain.ParkingSlot) error {
+func (r *ParkingRepo) Update(ctx context.Context, p *domain.ParkingSlot) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		UPDATE parking_slots
 		SET slot_number=$2, vehicle_type=$3, status=$4, tenant_id=$5,
@@ -97,7 +97,7 @@ func (r *ParkingSlotRepo) Update(ctx context.Context, p *domain.ParkingSlot) err
 	return err
 }
 
-func (r *ParkingSlotRepo) Delete(ctx context.Context, id string) error {
+func (r *ParkingRepo) Delete(ctx context.Context, id string) error {
 	_, err := r.db.Pool.Exec(ctx, `DELETE FROM parking_slots WHERE id = $1`, id)
 	return err
 }

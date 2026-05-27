@@ -1,7 +1,8 @@
-package v1
+﻿package v1
 
 import (
 	"apigofiberhorpug/internal/delivery/http/apierror"
+	"apigofiberhorpug/internal/delivery/http/httputil"
 	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/domain"
 	"apigofiberhorpug/internal/usecase"
@@ -19,7 +20,7 @@ func NewMeterReadingHandler(meters *usecase.MeterReadingUseCase) *MeterReadingHa
 }
 
 func (h *MeterReadingHandler) List(c fiber.Ctx) error {
-	page, perPage, offset, err := parsePaginationQuery(c)
+	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-package v1
+package httputil
 
 import (
 	"strconv"
@@ -9,14 +9,14 @@ import (
 )
 
 const (
-	defaultPage    = 1
-	defaultPerPage = 10
-	maxPerPage     = 100
+	DefaultPage    = 1
+	DefaultPerPage = 10
+	MaxPerPage     = 100
 )
 
-func parsePaginationQuery(c fiber.Ctx) (page, perPage, offset int, err error) {
-	page = defaultPage
-	perPage = defaultPerPage
+func ParsePaginationQuery(c fiber.Ctx) (page, perPage, offset int, err error) {
+	page = DefaultPage
+	perPage = DefaultPerPage
 
 	if rawPage := c.Query("page"); rawPage != "" {
 		page, err = strconv.Atoi(rawPage)
@@ -32,8 +32,8 @@ func parsePaginationQuery(c fiber.Ctx) (page, perPage, offset int, err error) {
 		}
 	}
 
-	if perPage > maxPerPage {
-		perPage = maxPerPage
+	if perPage > MaxPerPage {
+		perPage = MaxPerPage
 	}
 
 	offset = (page - 1) * perPage

@@ -23,7 +23,7 @@ type repositories struct {
 	payment      *repository.PaymentRepo
 	announcement *repository.AnnouncementRepo
 	report       *repository.ReportRepo
-	parking      *repository.ParkingSlotRepo
+	parking      *repository.ParkingRepo
 	parcel       *repository.ParcelRepo
 	document     *repository.DocumentRepo
 }
@@ -47,7 +47,7 @@ func newRepositories(db *database.DB) repositories {
 		payment:      repository.NewPaymentRepo(db),
 		announcement: repository.NewAnnouncementRepo(db),
 		report:       repository.NewReportRepo(db),
-		parking:      repository.NewParkingSlotRepo(db),
+		parking:      repository.NewParkingRepo(db),
 		parcel:       repository.NewParcelRepo(db),
 		document:     repository.NewDocumentRepo(db),
 	}

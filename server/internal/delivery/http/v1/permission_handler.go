@@ -1,6 +1,7 @@
-package v1
+﻿package v1
 
 import (
+	"apigofiberhorpug/internal/delivery/http/httputil"
 	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/usecase"
 
@@ -23,7 +24,7 @@ func NewPermissionHandler(perms *usecase.PermissionUseCase) *PermissionHandler {
 // @Success      200  {array}  domain.Permission
 // @Router       /permissions [get]
 func (h *PermissionHandler) List(c fiber.Ctx) error {
-	page, perPage, offset, err := parsePaginationQuery(c)
+	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
 	if err != nil {
 		return err
 	}

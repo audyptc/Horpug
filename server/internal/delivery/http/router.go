@@ -1,56 +1,34 @@
 package http
 
 import (
+	"apigofiberhorpug/internal/bootstrap"
 	"apigofiberhorpug/internal/delivery/http/middleware"
 	v1 "apigofiberhorpug/internal/delivery/http/v1"
-	"apigofiberhorpug/internal/usecase"
 
 	"github.com/gofiber/fiber/v3"
 )
 
-func SetupRoutes(
-	app *fiber.App,
-	auth *usecase.AuthUseCase,
-	users *usecase.UserUseCase,
-	roles *usecase.RoleUseCase,
-	perms *usecase.PermissionUseCase,
-	menus *usecase.MenuUseCase,
-	rooms *usecase.RoomUseCase,
-	tenants *usecase.TenantUseCase,
-	contracts *usecase.ContractUseCase,
-	meters *usecase.MeterReadingUseCase,
-	bills *usecase.BillUseCase,
-	dashboard *usecase.DashboardUseCase,
-	analytics *usecase.AnalyticsUseCase,
-	expenses *usecase.ExpenseUseCase,
-	maintenance *usecase.MaintenanceRequestUseCase,
-	payments *usecase.PaymentUseCase,
-	announcements *usecase.AnnouncementUseCase,
-	reports *usecase.ReportUseCase,
-	parking *usecase.ParkingUseCase,
-	parcels *usecase.ParcelUseCase,
-	documents *usecase.DocumentUseCase,
-) {
-	authH := v1.NewAuthHandler(auth)
-	userH := v1.NewUserHandler(users)
-	roleH := v1.NewRoleHandler(roles)
-	permH := v1.NewPermissionHandler(perms)
-	menuH := v1.NewMenuHandler(menus)
-	roomH := v1.NewRoomHandler(rooms)
-	tenantH := v1.NewTenantHandler(tenants)
-	contractH := v1.NewContractHandler(contracts)
-	meterH := v1.NewMeterReadingHandler(meters)
-	billH := v1.NewBillHandler(bills)
-	dashboardH := v1.NewDashboardHandler(dashboard)
-	analyticsH := v1.NewAnalyticsHandler(analytics)
-	expenseH := v1.NewExpenseHandler(expenses)
-	maintenanceH := v1.NewMaintenanceRequestHandler(maintenance)
-	paymentH := v1.NewPaymentHandler(payments)
-	announcementH := v1.NewAnnouncementHandler(announcements)
-	reportH := v1.NewReportHandler(reports)
-	parkingH := v1.NewParkingHandler(parking)
-	parcelH := v1.NewParcelHandler(parcels)
-	documentH := v1.NewDocumentHandler(documents)
+func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
+	authH := v1.NewAuthHandler(c.AuthUC)
+	userH := v1.NewUserHandler(c.UserUC)
+	roleH := v1.NewRoleHandler(c.RoleUC)
+	permH := v1.NewPermissionHandler(c.PermUC)
+	menuH := v1.NewMenuHandler(c.MenuUC)
+	roomH := v1.NewRoomHandler(c.RoomUC)
+	tenantH := v1.NewTenantHandler(c.TenantUC)
+	contractH := v1.NewContractHandler(c.ContractUC)
+	meterH := v1.NewMeterReadingHandler(c.MeterReadingUC)
+	billH := v1.NewBillHandler(c.BillUC)
+	dashboardH := v1.NewDashboardHandler(c.DashboardUC)
+	analyticsH := v1.NewAnalyticsHandler(c.AnalyticsUC)
+	expenseH := v1.NewExpenseHandler(c.ExpenseUC)
+	maintenanceH := v1.NewMaintenanceRequestHandler(c.MaintenanceUC)
+	paymentH := v1.NewPaymentHandler(c.PaymentUC)
+	announcementH := v1.NewAnnouncementHandler(c.AnnouncementUC)
+	reportH := v1.NewReportHandler(c.ReportUC)
+	parkingH := v1.NewParkingHandler(c.ParkingUC)
+	parcelH := v1.NewParcelHandler(c.ParcelUC)
+	documentH := v1.NewDocumentHandler(c.DocumentUC)
 
 	api := app.Group("/api/v1")
 
@@ -61,7 +39,7 @@ func SetupRoutes(
 	authGroup.Post("/logout", authH.Logout)
 
 	// Protected: all routes below require a valid JWT
-	protected := api.Group("", middleware.RequireAuth(auth))
+	protected := api.Group("", middleware.RequireAuth(c.AuthUC))
 
 	// Users
 	usersGroup := protected.Group("/users")
