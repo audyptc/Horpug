@@ -42,8 +42,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { meterReadingService } from '@/services/meterReadingService'
-import { roomService } from '@/services/roomService'
+import { meterReadingService } from '@/features/meters/meterReadingService'
+import { roomService } from '@/features/rooms/roomService'
 import type { ApiMeterReading, ApiRoom, MeterType } from '@/types/api'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'

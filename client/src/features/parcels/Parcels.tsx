@@ -40,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { parcelService } from '@/services/parcelService'
+import { parcelService } from '@/features/parcels/parcelService'
 import type { ApiParcel, ParcelStatus } from '@/types/api'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'

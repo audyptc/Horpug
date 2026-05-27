@@ -43,7 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { paymentService } from '@/services/paymentService'
+import { paymentService } from '@/features/payments/paymentService'
 import type { ApiPayment, PaymentMethod } from '@/types/api'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'

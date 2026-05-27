@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { dashboardService } from '@/services/dashboardService'
+import { dashboardService } from '@/features/dashboard/dashboardService'
 import type { ApiDashboardSummary } from '@/types/api'
 import { cn } from '@/lib/utils'
 

@@ -40,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { expenseService } from '@/services/expenseService'
+import { expenseService } from '@/features/expenses/expenseService'
 import type { ApiExpense, ExpenseCategory } from '@/types/api'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'

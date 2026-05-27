@@ -45,8 +45,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { userService } from '@/services/userService'
-import { roleService } from '@/services/roleService'
+import { userService } from '@/features/users/userService'
+import { roleService } from '@/features/roles/roleService'
 import type { ApiUser, ApiRole } from '@/types/api'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'

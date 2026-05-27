@@ -41,7 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { announcementService } from '@/services/announcementService'
+import { announcementService } from '@/features/announcements/announcementService'
 import type { ApiAnnouncement, AnnouncementType } from '@/types/api'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'

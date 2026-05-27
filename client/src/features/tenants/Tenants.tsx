@@ -39,7 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { tenantService } from '@/services/tenantService'
+import { tenantService } from '@/features/tenants/tenantService'
 import type { ApiTenant } from '@/types/api'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'

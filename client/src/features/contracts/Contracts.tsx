@@ -40,9 +40,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { contractService } from '@/services/contractService'
-import { tenantService } from '@/services/tenantService'
-import { roomService } from '@/services/roomService'
+import { contractService } from '@/features/contracts/contractService'
+import { tenantService } from '@/features/tenants/tenantService'
+import { roomService } from '@/features/rooms/roomService'
 import type { ApiContract, ApiTenant, ApiRoom, ContractStatus } from '@/types/api'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'

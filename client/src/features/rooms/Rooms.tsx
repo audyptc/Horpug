@@ -41,7 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { roomService } from '@/services/roomService'
+import { roomService } from '@/features/rooms/roomService'
 import type { ApiRoom, RoomStatus, RoomType } from '@/types/api'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'

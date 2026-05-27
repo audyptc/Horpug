@@ -22,11 +22,11 @@ import {
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Pagination } from '@/components/shared/Pagination'
 import { ErrorBanner } from '@/components/shared/ErrorBanner'
-import { BillTable } from '@/components/bills/BillTable'
-import { BillDialog, type BillFormState } from '@/components/bills/BillDialog'
+import { BillTable } from '@/features/billing/components/BillTable'
+import { BillDialog, type BillFormState } from '@/features/billing/components/BillDialog'
 import { usePaginatedList } from '@/hooks/usePaginatedList'
-import { billService } from '@/services/billService'
-import { contractService } from '@/services/contractService'
+import { billService } from '@/features/billing/billService'
+import { contractService } from '@/features/contracts/contractService'
 import type { ApiBill, ApiContract } from '@/types/api'
 
 const EMPTY_FORM: BillFormState = {

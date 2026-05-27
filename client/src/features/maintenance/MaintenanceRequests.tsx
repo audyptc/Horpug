@@ -40,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { maintenanceService } from '@/services/maintenanceService'
+import { maintenanceService } from '@/features/maintenance/maintenanceService'
 import type { ApiMaintenanceRequest, MaintenanceStatus, MaintenancePriority } from '@/types/api'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'

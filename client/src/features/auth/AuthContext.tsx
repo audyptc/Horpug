@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
-import { authService } from '@/services/authService'
+import { authService } from '@/features/auth/authService'
 import { decodeJwt } from '@/lib/utils'
 
 interface AuthState {

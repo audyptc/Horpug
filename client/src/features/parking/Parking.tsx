@@ -40,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { parkingService } from '@/services/parkingService'
+import { parkingService } from '@/features/parking/parkingService'
 import type { ApiParkingSlot, ParkingStatus, VehicleType } from '@/types/api'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'

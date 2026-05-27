@@ -16,8 +16,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { useAuth } from '@/context/AuthContext'
-import { userService } from '@/services/userService'
+import { useAuth } from '@/features/auth/AuthContext'
+import { userService } from '@/features/users/userService'
 import type { ApiUser } from '@/types/api'
 import { cn } from '@/lib/utils'
 
