@@ -1,3 +1,5 @@
+export * from './api'
+
 export interface Activity {
   id: string
   user: string

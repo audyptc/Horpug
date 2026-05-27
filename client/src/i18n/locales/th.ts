@@ -13,6 +13,12 @@ export default {
     confirm: 'ยืนยัน',
     back: 'กลับหน้าหลัก',
     underDev: 'ส่วนนี้อยู่ระหว่างการพัฒนา กรุณาตรวจสอบใหม่อีกครั้ง',
+    pagination: {
+      showing: 'แสดง {{from}}-{{to}} จาก {{total}} รายการ',
+      perPage: 'ต่อหน้า',
+      page: 'หน้า',
+      of: 'จาก',
+    },
   },
   nav: {
     dashboard: 'แดชบอร์ด',

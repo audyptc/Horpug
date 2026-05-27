@@ -13,6 +13,12 @@ export default {
     confirm: 'Confirm',
     back: 'Back to Dashboard',
     underDev: 'This section is under development. Check back soon.',
+    pagination: {
+      showing: 'Showing {{from}}-{{to}} of {{total}}',
+      perPage: 'Per page',
+      page: 'Page',
+      of: 'of',
+    },
   },
   nav: {
     dashboard: 'Dashboard',
