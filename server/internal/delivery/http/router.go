@@ -22,6 +22,7 @@ func SetupRoutes(
 	bills *usecase.BillUseCase,
 	dashboard *usecase.DashboardUseCase,
 	analytics *usecase.AnalyticsUseCase,
+	expenses *usecase.ExpenseUseCase,
 ) {
 	authH := v1.NewAuthHandler(auth)
 	userH := v1.NewUserHandler(users)
@@ -35,6 +36,7 @@ func SetupRoutes(
 	billH := v1.NewBillHandler(bills)
 	dashboardH := v1.NewDashboardHandler(dashboard)
 	analyticsH := v1.NewAnalyticsHandler(analytics)
+	expenseH := v1.NewExpenseHandler(expenses)
 
 	api := app.Group("/api/v1")
 
@@ -120,4 +122,12 @@ func SetupRoutes(
 
 	// Analytics
 	protected.Get("/analytics/summary", analyticsH.Summary)
+
+	// Expenses
+	expensesGroup := protected.Group("/expenses")
+	expensesGroup.Get("/", middleware.RequirePermission("expenses.read"), expenseH.List)
+	expensesGroup.Post("/", middleware.RequirePermission("expenses.create"), expenseH.Create)
+	expensesGroup.Get("/:id", middleware.RequirePermission("expenses.read"), expenseH.GetByID)
+	expensesGroup.Put("/:id", middleware.RequirePermission("expenses.update"), expenseH.Update)
+	expensesGroup.Delete("/:id", middleware.RequirePermission("expenses.delete"), expenseH.Delete)
 }

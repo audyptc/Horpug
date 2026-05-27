@@ -18,6 +18,7 @@ type Container struct {
 	BillUC         *usecase.BillUseCase
 	DashboardUC    *usecase.DashboardUseCase
 	AnalyticsUC    *usecase.AnalyticsUseCase
+	ExpenseUC      *usecase.ExpenseUseCase
 }
 
 func NewContainer(db *database.DB, secretKey string) *Container {
@@ -35,5 +36,6 @@ func NewContainer(db *database.DB, secretKey string) *Container {
 		BillUC:         usecase.NewBillUseCase(repos.bill, repos.contract),
 		DashboardUC:    usecase.NewDashboardUseCase(repos.dashboard),
 		AnalyticsUC:    usecase.NewAnalyticsUseCase(repos.analytics),
+		ExpenseUC:      usecase.NewExpenseUseCase(repos.expense),
 	}
 }

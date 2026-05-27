@@ -12,6 +12,7 @@ import {
   FileText,
   Gauge,
   Receipt,
+  Wallet,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -53,6 +54,7 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
     { label: t('nav.contracts'), icon: FileText, to: '/contracts' },
     { label: t('nav.meters'), icon: Gauge, to: '/meters' },
     { label: t('nav.bills'), icon: Receipt, to: '/bills' },
+    { label: t('nav.expenses'), icon: Wallet, to: '/expenses' },
     { label: t('nav.analytics'), icon: BarChart3, to: '/analytics' },
     {
       label: t('nav.settings'),
