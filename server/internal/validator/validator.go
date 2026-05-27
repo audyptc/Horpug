@@ -242,6 +242,50 @@ func UpdatePaymentRequest(req *domain.UpdatePaymentRequest) error {
 	return nil
 }
 
+func CreateAnnouncementRequest(req *domain.CreateAnnouncementRequest) error {
+	validTypes := map[domain.AnnouncementType]bool{
+		domain.AnnouncementTypeGeneral:     true,
+		domain.AnnouncementTypeMaintenance: true,
+		domain.AnnouncementTypePayment:     true,
+		domain.AnnouncementTypeEmergency:   true,
+	}
+	if req.Title == "" {
+		return apierror.BadRequest("title is required")
+	}
+	if req.Content == "" {
+		return apierror.BadRequest("content is required")
+	}
+	if !validTypes[req.Type] {
+		return apierror.BadRequest("type must be one of: general, maintenance, payment, emergency")
+	}
+	if req.PublishedAt.IsZero() {
+		return apierror.BadRequest("published_at is required")
+	}
+	return nil
+}
+
+func UpdateAnnouncementRequest(req *domain.UpdateAnnouncementRequest) error {
+	validTypes := map[domain.AnnouncementType]bool{
+		domain.AnnouncementTypeGeneral:     true,
+		domain.AnnouncementTypeMaintenance: true,
+		domain.AnnouncementTypePayment:     true,
+		domain.AnnouncementTypeEmergency:   true,
+	}
+	if req.Title == "" {
+		return apierror.BadRequest("title is required")
+	}
+	if req.Content == "" {
+		return apierror.BadRequest("content is required")
+	}
+	if !validTypes[req.Type] {
+		return apierror.BadRequest("type must be one of: general, maintenance, payment, emergency")
+	}
+	if req.PublishedAt.IsZero() {
+		return apierror.BadRequest("published_at is required")
+	}
+	return nil
+}
+
 func CreateMeterReadingRequest(req *domain.CreateMeterReadingRequest) error {
 	if req.RoomID == "" {
 		return apierror.BadRequest("room_id is required")
