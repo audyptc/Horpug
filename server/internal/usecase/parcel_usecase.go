@@ -1,0 +1,95 @@
+package usecase
+
+import (
+	"context"
+	"errors"
+
+	"apigofiberhorpug/internal/delivery/http/apierror"
+	"apigofiberhorpug/internal/domain"
+
+	"github.com/google/uuid"
+)
+
+type ParcelUseCase struct {
+	repo domain.ParcelRepository
+}
+
+func NewParcelUseCase(repo domain.ParcelRepository) *ParcelUseCase {
+	return &ParcelUseCase{repo: repo}
+}
+
+func (uc *ParcelUseCase) List(ctx context.Context, limit, offset int) ([]*domain.Parcel, int, error) {
+	total, err := uc.repo.Count(ctx)
+	if err != nil {
+		return nil, 0, apierror.Internal(err)
+	}
+	list, err := uc.repo.List(ctx, limit, offset)
+	if err != nil {
+		return nil, 0, apierror.Internal(err)
+	}
+	return list, total, nil
+}
+
+func (uc *ParcelUseCase) GetByID(ctx context.Context, id string) (*domain.Parcel, error) {
+	p, err := uc.repo.FindByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, apierror.NotFound(err.Error())
+		}
+		return nil, apierror.Internal(err)
+	}
+	return p, nil
+}
+
+func (uc *ParcelUseCase) Create(ctx context.Context, req *domain.CreateParcelRequest) (*domain.Parcel, error) {
+	p := &domain.Parcel{
+		ID:             uuid.New().String(),
+		TrackingNumber: req.TrackingNumber,
+		RecipientName:  req.RecipientName,
+		RoomNumber:     req.RoomNumber,
+		Status:         req.Status,
+		ReceivedDate:   req.ReceivedDate,
+		PickedUpDate:   req.PickedUpDate,
+		Note:           req.Note,
+	}
+	if err := uc.repo.Create(ctx, p); err != nil {
+		return nil, apierror.Internal(err)
+	}
+	return uc.repo.FindByID(ctx, p.ID)
+}
+
+func (uc *ParcelUseCase) Update(ctx context.Context, id string, req *domain.UpdateParcelRequest) (*domain.Parcel, error) {
+	p, err := uc.repo.FindByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, apierror.NotFound(err.Error())
+		}
+		return nil, apierror.Internal(err)
+	}
+
+	p.TrackingNumber = req.TrackingNumber
+	p.RecipientName = req.RecipientName
+	p.RoomNumber = req.RoomNumber
+	p.Status = req.Status
+	p.ReceivedDate = req.ReceivedDate
+	p.PickedUpDate = req.PickedUpDate
+	p.Note = req.Note
+
+	if err := uc.repo.Update(ctx, p); err != nil {
+		return nil, apierror.Internal(err)
+	}
+	return uc.repo.FindByID(ctx, id)
+}
+
+func (uc *ParcelUseCase) Delete(ctx context.Context, id string) error {
+	if _, err := uc.repo.FindByID(ctx, id); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return apierror.NotFound(err.Error())
+		}
+		return apierror.Internal(err)
+	}
+	if err := uc.repo.Delete(ctx, id); err != nil {
+		return apierror.Internal(err)
+	}
+	return nil
+}

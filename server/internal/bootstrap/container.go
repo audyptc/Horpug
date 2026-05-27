@@ -24,6 +24,7 @@ type Container struct {
 	AnnouncementUC *usecase.AnnouncementUseCase
 	ReportUC       *usecase.ReportUseCase
 	ParkingUC      *usecase.ParkingUseCase
+	ParcelUC       *usecase.ParcelUseCase
 }
 
 func NewContainer(db *database.DB, secretKey string) *Container {
@@ -47,5 +48,6 @@ func NewContainer(db *database.DB, secretKey string) *Container {
 		AnnouncementUC: usecase.NewAnnouncementUseCase(repos.announcement),
 		ReportUC:       usecase.NewReportUseCase(repos.report),
 		ParkingUC:      usecase.NewParkingUseCase(repos.parking),
+		ParcelUC:       usecase.NewParcelUseCase(repos.parcel),
 	}
 }

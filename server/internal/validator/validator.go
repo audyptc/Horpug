@@ -334,6 +334,40 @@ func UpdateParkingSlotRequest(req *domain.UpdateParkingSlotRequest) error {
 	return nil
 }
 
+func CreateParcelRequest(req *domain.CreateParcelRequest) error {
+	validStatuses := map[domain.ParcelStatus]bool{
+		domain.ParcelStatusPending:  true,
+		domain.ParcelStatusPickedUp: true,
+	}
+	if req.RecipientName == "" {
+		return apierror.BadRequest("recipient_name is required")
+	}
+	if req.ReceivedDate.IsZero() {
+		return apierror.BadRequest("received_date is required")
+	}
+	if !validStatuses[req.Status] {
+		return apierror.BadRequest("status must be one of: pending, picked_up")
+	}
+	return nil
+}
+
+func UpdateParcelRequest(req *domain.UpdateParcelRequest) error {
+	validStatuses := map[domain.ParcelStatus]bool{
+		domain.ParcelStatusPending:  true,
+		domain.ParcelStatusPickedUp: true,
+	}
+	if req.RecipientName == "" {
+		return apierror.BadRequest("recipient_name is required")
+	}
+	if req.ReceivedDate.IsZero() {
+		return apierror.BadRequest("received_date is required")
+	}
+	if !validStatuses[req.Status] {
+		return apierror.BadRequest("status must be one of: pending, picked_up")
+	}
+	return nil
+}
+
 func CreateMeterReadingRequest(req *domain.CreateMeterReadingRequest) error {
 	if req.RoomID == "" {
 		return apierror.BadRequest("room_id is required")
