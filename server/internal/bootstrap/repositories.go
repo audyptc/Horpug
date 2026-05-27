@@ -25,6 +25,7 @@ type repositories struct {
 	report       *repository.ReportRepo
 	parking      *repository.ParkingSlotRepo
 	parcel       *repository.ParcelRepo
+	document     *repository.DocumentRepo
 }
 
 func newRepositories(db *database.DB) repositories {
@@ -48,5 +49,6 @@ func newRepositories(db *database.DB) repositories {
 		report:       repository.NewReportRepo(db),
 		parking:      repository.NewParkingSlotRepo(db),
 		parcel:       repository.NewParcelRepo(db),
+		document:     repository.NewDocumentRepo(db),
 	}
 }

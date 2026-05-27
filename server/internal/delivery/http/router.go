@@ -29,6 +29,7 @@ func SetupRoutes(
 	reports *usecase.ReportUseCase,
 	parking *usecase.ParkingUseCase,
 	parcels *usecase.ParcelUseCase,
+	documents *usecase.DocumentUseCase,
 ) {
 	authH := v1.NewAuthHandler(auth)
 	userH := v1.NewUserHandler(users)
@@ -49,6 +50,7 @@ func SetupRoutes(
 	reportH := v1.NewReportHandler(reports)
 	parkingH := v1.NewParkingHandler(parking)
 	parcelH := v1.NewParcelHandler(parcels)
+	documentH := v1.NewDocumentHandler(documents)
 
 	api := app.Group("/api/v1")
 
@@ -188,4 +190,12 @@ func SetupRoutes(
 	parcelsGroup.Get("/:id", middleware.RequirePermission("parcels.read"), parcelH.GetByID)
 	parcelsGroup.Put("/:id", middleware.RequirePermission("parcels.update"), parcelH.Update)
 	parcelsGroup.Delete("/:id", middleware.RequirePermission("parcels.delete"), parcelH.Delete)
+
+	// Documents
+	documentsGroup := protected.Group("/documents")
+	documentsGroup.Get("/", middleware.RequirePermission("documents.read"), documentH.List)
+	documentsGroup.Post("/", middleware.RequirePermission("documents.create"), documentH.Create)
+	documentsGroup.Get("/:id", middleware.RequirePermission("documents.read"), documentH.GetByID)
+	documentsGroup.Put("/:id", middleware.RequirePermission("documents.update"), documentH.Update)
+	documentsGroup.Delete("/:id", middleware.RequirePermission("documents.delete"), documentH.Delete)
 }

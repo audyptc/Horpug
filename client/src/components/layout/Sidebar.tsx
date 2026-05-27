@@ -19,6 +19,7 @@ import {
   FileBarChart2,
   Car,
   Package,
+  FolderOpen,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -66,6 +67,7 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
     { label: t('nav.announcements'), icon: Megaphone, to: '/announcements' },
     { label: t('nav.parking'), icon: Car, to: '/parking' },
     { label: t('nav.parcels'), icon: Package, to: '/parcels' },
+    { label: t('nav.documents'), icon: FolderOpen, to: '/documents' },
     { label: t('nav.analytics'), icon: BarChart3, to: '/analytics' },
     { label: t('nav.reports'), icon: FileBarChart2, to: '/reports' },
     {

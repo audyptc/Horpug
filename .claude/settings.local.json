@@ -11,7 +11,8 @@
       "PowerShell(Get-ChildItem -Path \"d:\\\\MyProject\\\\Horpug\\\\client\\\\src\\\\pages\" | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Directory\"}else{\"File\"}}} | Format-Table -AutoSize)",
       "PowerShell(Get-ChildItem -Path \"d:\\\\MyProject\\\\Horpug\\\\client\\\\src\\\\router\" | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Directory\"}else{\"File\"}}} | Format-Table -AutoSize)",
       "PowerShell(Get-ChildItem -Path \"d:\\\\MyProject\\\\Horpug\\\\client\\\\src\\\\components\" | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Directory\"}else{\"File\"}}} | Format-Table -AutoSize)",
-      "PowerShell(Get-ChildItem -Path \"d:\\\\MyProject\\\\Horpug\\\\client\\\\src\\\\components\\\\layout\" | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Directory\"}else{\"File\"}}} | Format-Table -AutoSize)"
+      "PowerShell(Get-ChildItem -Path \"d:\\\\MyProject\\\\Horpug\\\\client\\\\src\\\\components\\\\layout\" | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Directory\"}else{\"File\"}}} | Format-Table -AutoSize)",
+      "PowerShell(Get-ChildItem \"d:\\\\MyProject\\\\Horpug\\\\server\\\\internal\\\\delivery\\\\http\\\\v1\" | Where-Object {$_.Extension -eq '.go'} | Select-Object Name)"
     ]
   }
 }
