@@ -56,9 +56,8 @@ export default {
     profile: 'Profile',
     settings: 'Settings',
     signOut: 'Sign out',
-    notif1: 'New user Siriporn Mahachai joined',
-    notif2: 'Natthida account was suspended',
-    notif3: 'Monthly report is ready',
+    notifOverdue: 'Room {{room}} - {{name}} overdue {{days}} day(s) (฿{{amount}})',
+    notifNoAlerts: 'No pending notifications',
   },
   dashboard: {
     title: 'Dashboard',

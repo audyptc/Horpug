@@ -17,7 +17,8 @@
       "PowerShell(head -200)",
       "PowerShell(Get-ChildItem -Path \"d:\\\\MyProject\\\\Horpug\" -Directory | ForEach-Object { Write-Output $_.Name })",
       "PowerShell(Get-ChildItem -Path \"d:\\\\MyProject\\\\Horpug\\\\server\" -File | Select-Object Name | ForEach-Object { $_.Name } | Sort-Object)",
-      "PowerShell(Get-ChildItem \"d:\\\\MyProject\\\\Horpug\\\\client\\\\src\\\\pages\" | Select-Object Name, @{N='KB';E={[math]::Round\\($_.Length/1KB,1\\)}} | Sort-Object KB -Descending | Format-Table -AutoSize)"
+      "PowerShell(Get-ChildItem \"d:\\\\MyProject\\\\Horpug\\\\client\\\\src\\\\pages\" | Select-Object Name, @{N='KB';E={[math]::Round\\($_.Length/1KB,1\\)}} | Sort-Object KB -Descending | Format-Table -AutoSize)",
+      "Bash(xargs grep -l \"notification\\\\|notif\")"
     ]
   }
 }

@@ -26,6 +26,7 @@ type repositories struct {
 	parking      *repository.ParkingRepo
 	parcel       *repository.ParcelRepo
 	document     *repository.DocumentRepo
+	notification *repository.NotificationRepo
 }
 
 func newRepositories(db *database.DB) repositories {
@@ -50,5 +51,6 @@ func newRepositories(db *database.DB) repositories {
 		parking:      repository.NewParkingRepo(db),
 		parcel:       repository.NewParcelRepo(db),
 		document:     repository.NewDocumentRepo(db),
+		notification: repository.NewNotificationRepo(db),
 	}
 }

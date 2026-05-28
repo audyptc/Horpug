@@ -24,9 +24,10 @@ type Container struct {
 	PaymentUC      *usecase.PaymentUseCase
 	AnnouncementUC *usecase.AnnouncementUseCase
 	ReportUC       *usecase.ReportUseCase
-	ParkingUC      *usecase.ParkingUseCase
-	ParcelUC       *usecase.ParcelUseCase
-	DocumentUC     *usecase.DocumentUseCase
+	ParkingUC       *usecase.ParkingUseCase
+	ParcelUC        *usecase.ParcelUseCase
+	DocumentUC      *usecase.DocumentUseCase
+	NotificationUC  *usecase.NotificationUseCase
 }
 
 func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refreshTokenDuration time.Duration) *Container {
@@ -52,5 +53,6 @@ func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refres
 		ParkingUC:      usecase.NewParkingUseCase(repos.parking),
 		ParcelUC:       usecase.NewParcelUseCase(repos.parcel),
 		DocumentUC:     usecase.NewDocumentUseCase(repos.document),
+		NotificationUC: usecase.NewNotificationUseCase(repos.notification),
 	}
 }

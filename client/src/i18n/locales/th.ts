@@ -56,9 +56,8 @@ export default {
     profile: 'โปรไฟล์',
     settings: 'ตั้งค่า',
     signOut: 'ออกจากระบบ',
-    notif1: 'ผู้ใช้ใหม่ ศิริพร มหาชัย เข้าร่วมระบบแล้ว',
-    notif2: 'บัญชี ณัฐธิดา ถูกระงับการใช้งาน',
-    notif3: 'รายงานประจำเดือนพร้อมแล้ว',
+    notifOverdue: 'ห้อง {{room}} - {{name}} ค้างชำระ {{days}} วัน (฿{{amount}})',
+    notifNoAlerts: 'ไม่มีการแจ้งเตือน',
   },
   dashboard: {
     title: 'แดชบอร์ด',

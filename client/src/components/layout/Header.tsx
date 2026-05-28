@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useTheme } from '@/lib/theme'
 import { useAuth } from '@/features/auth/AuthContext'
+import { useNotifications } from '@/features/notifications/useNotifications'
 
 interface HeaderProps {
   onMenuClick?: () => void
@@ -24,6 +25,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   const { theme, toggleTheme } = useTheme()
   const { logout } = useAuth()
   const navigate = useNavigate()
+  const notifications = useNotifications()
 
   async function handleSignOut() {
     await logout()
@@ -34,12 +36,6 @@ export function Header({ onMenuClick }: HeaderProps) {
     i18n.changeLanguage(lang)
     localStorage.setItem('lang', lang)
   }
-
-  const notifs = [
-    { msg: t('header.notif1'), time: '5m ago' },
-    { msg: t('header.notif2'), time: '2h ago' },
-    { msg: t('header.notif3'), time: '1d ago' },
-  ]
 
   return (
     <header className="h-16 border-b bg-background flex items-center px-4 gap-4 shrink-0">
@@ -101,20 +97,39 @@ export function Header({ onMenuClick }: HeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative h-11 w-11 [&_svg]:size-6">
               <Bell />
-              <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]">
-                3
-              </Badge>
+              {notifications.length > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]">
+                  {notifications.length}
+                </Badge>
+              )}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-72 sm:w-80">
             <DropdownMenuLabel>{t('header.notifications')}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {notifs.map((n, i) => (
-              <DropdownMenuItem key={i} className="flex flex-col items-start gap-1 py-3">
-                <span className="text-sm">{n.msg}</span>
-                <span className="text-xs text-muted-foreground">{n.time}</span>
+            {notifications.length === 0 ? (
+              <DropdownMenuItem className="py-3 text-sm text-muted-foreground justify-center">
+                {t('header.notifNoAlerts')}
               </DropdownMenuItem>
-            ))}
+            ) : (
+              notifications.map((n) => (
+                <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-1 py-3">
+                  <span className="text-sm">
+                    {t('header.notifOverdue', {
+                      room: n.room_number,
+                      name: n.tenant_name,
+                      days: n.days_overdue,
+                      amount: n.total_amount.toLocaleString(),
+                    })}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {n.days_overdue > 0
+                      ? `${n.days_overdue}d overdue`
+                      : 'Due today'}
+                  </span>
+                </DropdownMenuItem>
+              ))
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 

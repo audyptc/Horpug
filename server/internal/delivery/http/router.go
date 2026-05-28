@@ -33,6 +33,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
 	parkingH := v1.NewParkingHandler(c.ParkingUC)
 	parcelH := v1.NewParcelHandler(c.ParcelUC)
 	documentH := v1.NewDocumentHandler(c.DocumentUC)
+	notificationH := v1.NewNotificationHandler(c.NotificationUC)
 
 	api := app.Group("/api/v1")
 
@@ -191,4 +192,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
 	documentsGroup.Get("/:id", middleware.RequirePermission("documents.read"), documentH.GetByID)
 	documentsGroup.Put("/:id", middleware.RequirePermission("documents.update"), documentH.Update)
 	documentsGroup.Delete("/:id", middleware.RequirePermission("documents.delete"), documentH.Delete)
+
+	// Notifications
+	protected.Get("/notifications", notificationH.List)
 }
