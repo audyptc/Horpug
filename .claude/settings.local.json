@@ -20,7 +20,8 @@
       "PowerShell(Get-ChildItem \"d:\\\\MyProject\\\\Horpug\\\\client\\\\src\\\\pages\" | Select-Object Name, @{N='KB';E={[math]::Round\\($_.Length/1KB,1\\)}} | Sort-Object KB -Descending | Format-Table -AutoSize)",
       "Bash(xargs grep -l \"notification\\\\|notif\")",
       "Bash(Get-ChildItem -Path \"d:\\\\MyProject\\\\Horpug\" -Force)",
-      "Bash(Select-Object Name, PSIsContainer)"
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(Remove-Item \"d:\\\\MyProject\\\\Horpug\\\\server\\\\internal\\\\database\\\\migrations\\\\*.sql\")"
     ]
   }
 }
