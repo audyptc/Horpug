@@ -112,23 +112,38 @@ export function Header({ onMenuClick }: HeaderProps) {
                 {t('header.notifNoAlerts')}
               </DropdownMenuItem>
             ) : (
-              notifications.map((n) => (
-                <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-1 py-3">
-                  <span className="text-sm">
-                    {t('header.notifOverdue', {
-                      room: n.room_number,
-                      name: n.tenant_name,
-                      days: n.days_overdue,
-                      amount: n.total_amount.toLocaleString(),
-                    })}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {n.days_overdue > 0
-                      ? `${n.days_overdue}d overdue`
-                      : 'Due today'}
-                  </span>
-                </DropdownMenuItem>
-              ))
+              notifications.map((n) => {
+                let msg = ''
+                let sub = ''
+                if (n.type === 'overdue_bill') {
+                  msg = t('header.notifOverdue', {
+                    room: n.room_number,
+                    name: n.tenant_name,
+                    days: n.days_overdue,
+                    amount: (n.total_amount ?? 0).toLocaleString(),
+                  })
+                  sub = `${n.days_overdue}d overdue`
+                } else if (n.type === 'expiring_contract') {
+                  msg = t('header.notifExpiring', {
+                    room: n.room_number,
+                    name: n.tenant_name,
+                    days: n.days_remaining,
+                  })
+                  sub = `${n.days_remaining}d remaining`
+                } else {
+                  msg = t('header.notifMaintenance', {
+                    room: n.room_number,
+                    title: n.title,
+                  })
+                  sub = n.priority ?? ''
+                }
+                return (
+                  <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-1 py-3">
+                    <span className="text-sm">{msg}</span>
+                    <span className="text-xs text-muted-foreground">{sub}</span>
+                  </DropdownMenuItem>
+                )
+              })
             )}
           </DropdownMenuContent>
         </DropdownMenu>

@@ -3,12 +3,14 @@ import type { ApiResponse } from '@/types/api'
 
 export interface NotificationItem {
   id: string
-  type: 'overdue_bill'
-  tenant_name: string
+  type: 'overdue_bill' | 'expiring_contract' | 'open_maintenance'
+  tenant_name?: string
   room_number: string
-  total_amount: number
-  days_overdue: number
-  bill_id: string
+  total_amount?: number
+  days_overdue?: number
+  days_remaining?: number
+  title?: string
+  priority?: string
   created_at: string
 }
 

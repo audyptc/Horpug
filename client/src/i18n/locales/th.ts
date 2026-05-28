@@ -57,6 +57,8 @@ export default {
     settings: 'ตั้งค่า',
     signOut: 'ออกจากระบบ',
     notifOverdue: 'ห้อง {{room}} - {{name}} ค้างชำระ {{days}} วัน (฿{{amount}})',
+    notifExpiring: 'ห้อง {{room}} - {{name}} สัญญาหมดใน {{days}} วัน',
+    notifMaintenance: 'ห้อง {{room}} - {{title}}',
     notifNoAlerts: 'ไม่มีการแจ้งเตือน',
   },
   dashboard: {

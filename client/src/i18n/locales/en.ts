@@ -57,6 +57,8 @@ export default {
     settings: 'Settings',
     signOut: 'Sign out',
     notifOverdue: 'Room {{room}} - {{name}} overdue {{days}} day(s) (฿{{amount}})',
+    notifExpiring: 'Room {{room}} - {{name}} contract expires in {{days}} day(s)',
+    notifMaintenance: 'Room {{room}} - {{title}}',
     notifNoAlerts: 'No pending notifications',
   },
   dashboard: {
