@@ -15,6 +15,7 @@ import { MaintenanceRequests } from '@/features/maintenance/MaintenanceRequests'
 import { Payments } from '@/features/payments/Payments'
 import { Announcements } from '@/features/announcements/Announcements'
 import { Reports } from '@/features/reports/Reports'
+import { ActivityLogs } from '@/features/activity-logs/ActivityLogs'
 import { Parking } from '@/features/parking/Parking'
 import { Parcels } from '@/features/parcels/Parcels'
 import { Documents } from '@/features/documents/Documents'
@@ -61,6 +62,7 @@ export const router = createBrowserRouter([
           { path: 'documents', element: <Documents /> },
           { path: 'analytics', element: <Analytics /> },
           { path: 'reports', element: <Reports /> },
+          { path: 'activity-logs', element: <ActivityLogs /> },
           {
             path: 'settings',
             children: [

@@ -30,6 +30,7 @@ import {
   Banknote,
   Bell,
   TrendingUp,
+  History,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -105,6 +106,7 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
       items: [
         { label: t('nav.analytics'), icon: BarChart3, to: '/analytics' },
         { label: t('nav.reports'), icon: FileBarChart2, to: '/reports' },
+        { label: t('nav.activityLogs'), icon: History, to: '/activity-logs' },
       ],
     },
     {
