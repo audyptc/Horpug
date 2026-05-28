@@ -1,10 +1,10 @@
-import api from '@/lib/axios'
+﻿import api from '@/lib/axios'
 import type {
   ApiPaginatedResponse,
   ApiDocument,
   CreateDocumentPayload,
   UpdateDocumentPayload,
-} from '@/types/api'
+} from '@/types'
 
 export const documentService = {
   list(page: number, perPage: number) {

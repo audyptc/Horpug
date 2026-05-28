@@ -18,7 +18,7 @@ import { Reports } from '@/features/reports/Reports'
 import { Parking } from '@/features/parking/Parking'
 import { Parcels } from '@/features/parcels/Parcels'
 import { Documents } from '@/features/documents/Documents'
-import { NotFound } from '@/pages/NotFound'
+import { NotFound } from '@/components/shared/NotFound'
 import { Login } from '@/features/auth/Login'
 import { useAuth } from '@/features/auth/AuthContext'
 

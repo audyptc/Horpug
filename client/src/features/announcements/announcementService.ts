@@ -1,5 +1,5 @@
-import api from '@/lib/axios'
-import type { ApiAnnouncement, ApiPaginatedResponse, CreateAnnouncementPayload, UpdateAnnouncementPayload } from '@/types/api'
+﻿import api from '@/lib/axios'
+import type { ApiAnnouncement, ApiPaginatedResponse, CreateAnnouncementPayload, UpdateAnnouncementPayload } from '@/types'
 
 export const announcementService = {
   list(page: number, perPage: number) {

@@ -1,11 +1,11 @@
-import api from '@/lib/axios'
+﻿import api from '@/lib/axios'
 import type {
   ApiPaginatedResponse,
   ApiResponse,
   ApiRole,
   CreateRolePayload,
   UpdateRolePayload,
-} from '@/types/api'
+} from '@/types'
 
 export const roleService = {
   async list(page = 1, perPage = 20): Promise<ApiPaginatedResponse<ApiRole>> {

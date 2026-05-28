@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { reportService } from '@/features/reports/reportService'
-import type { ApiIncomeReport, ApiExpenseReport, ApiOccupancyReport } from '@/types/api'
+import type { ApiIncomeReport, ApiExpenseReport, ApiOccupancyReport } from '@/types'
 import { Banknote, TrendingDown, BedDouble, FileBarChart2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 

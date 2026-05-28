@@ -1,5 +1,5 @@
-import api from '@/lib/axios'
-import type { ApiResponse, LoginResponse } from '@/types/api'
+﻿import api from '@/lib/axios'
+import type { ApiResponse, LoginResponse } from '@/types'
 
 export const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {

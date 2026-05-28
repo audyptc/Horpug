@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse } from '@/types/api'
+import type { ApiResponse } from '@/types'
 
 export interface SearchTenant {
   id: string

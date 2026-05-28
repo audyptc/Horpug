@@ -1,11 +1,11 @@
-import api from '@/lib/axios'
+﻿import api from '@/lib/axios'
 import type {
   ApiPaginatedResponse,
   ApiResponse,
   ApiContract,
   CreateContractPayload,
   UpdateContractPayload,
-} from '@/types/api'
+} from '@/types'
 
 export const contractService = {
   async list(page = 1, perPage = 20): Promise<ApiPaginatedResponse<ApiContract>> {

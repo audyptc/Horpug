@@ -1,10 +1,10 @@
-import api from '@/lib/axios'
+﻿import api from '@/lib/axios'
 import type {
   ApiPaginatedResponse,
   ApiParkingSlot,
   CreateParkingSlotPayload,
   UpdateParkingSlotPayload,
-} from '@/types/api'
+} from '@/types'
 
 export const parkingService = {
   list(page: number, perPage: number) {

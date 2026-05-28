@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from 'react'
-import type { PaginationMeta } from '@/types/common'
+﻿import { useState, useCallback, useEffect } from 'react'
+import type { PaginationMeta } from '@/types'
 
 type FetchFn<T> = (page: number, perPage: number) => Promise<{ data: T[]; meta: PaginationMeta }>
 

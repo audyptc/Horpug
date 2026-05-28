@@ -1,5 +1,5 @@
-import api from '@/lib/axios'
-import type { ApiResponse, ApiIncomeReport, ApiExpenseReport, ApiOccupancyReport } from '@/types/api'
+﻿import api from '@/lib/axios'
+import type { ApiResponse, ApiIncomeReport, ApiExpenseReport, ApiOccupancyReport } from '@/types'
 
 export const reportService = {
   async income(from: string, to: string): Promise<ApiIncomeReport> {

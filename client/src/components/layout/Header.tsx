@@ -15,8 +15,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useTheme } from '@/lib/theme'
 import { useAuth } from '@/features/auth/AuthContext'
-import { useNotifications } from '@/features/notifications/useNotifications'
-import { SearchDialog } from '@/features/search/SearchDialog'
+import { useNotifications } from '@/hooks/useNotifications'
+import { SearchDialog } from '@/components/shared/search/SearchDialog'
 
 interface HeaderProps {
   onMenuClick?: () => void

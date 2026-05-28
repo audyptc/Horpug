@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+﻿import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Search,
@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { parkingService } from '@/features/parking/parkingService'
-import type { ApiParkingSlot, ParkingStatus, VehicleType } from '@/types/api'
+import type { ApiParkingSlot, ParkingStatus, VehicleType } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
 

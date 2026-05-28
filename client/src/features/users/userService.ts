@@ -1,4 +1,4 @@
-import api from '@/lib/axios'
+﻿import api from '@/lib/axios'
 import type {
   ApiResponse,
   ApiPaginatedResponse,
@@ -6,7 +6,7 @@ import type {
   CreateUserPayload,
   UpdateUserPayload,
   AssignRolePayload,
-} from '@/types/api'
+} from '@/types'
 
 export const userService = {
   async list(page = 1, perPage = 20): Promise<ApiPaginatedResponse<ApiUser>> {

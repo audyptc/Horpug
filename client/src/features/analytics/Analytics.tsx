@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { analyticsService } from '@/features/analytics/analyticsService'
-import type { ApiAnalyticsSummary } from '@/types/api'
+import type { ApiAnalyticsSummary } from '@/types'
 import { TrendingUp, Banknote, BarChart3, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 

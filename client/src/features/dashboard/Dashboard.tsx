@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Home, Users, FileText, AlertCircle, CheckCircle2,
@@ -7,7 +7,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { dashboardService } from '@/features/dashboard/dashboardService'
-import type { ApiDashboardSummary } from '@/types/api'
+import type { ApiDashboardSummary } from '@/types'
 import { cn } from '@/lib/utils'
 
 function formatBaht(amount: number) {

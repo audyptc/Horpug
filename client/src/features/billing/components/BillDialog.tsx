@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+﻿import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { ApiBill, ApiContract, BillStatus } from '@/types/api'
+import type { ApiBill, ApiContract, BillStatus } from '@/types'
 
 export type BillFormState = {
   contract_id: string

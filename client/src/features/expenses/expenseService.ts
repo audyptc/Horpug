@@ -1,11 +1,11 @@
-import api from '@/lib/axios'
+﻿import api from '@/lib/axios'
 import type {
   ApiPaginatedResponse,
   ApiResponse,
   ApiExpense,
   CreateExpensePayload,
   UpdateExpensePayload,
-} from '@/types/api'
+} from '@/types'
 
 export const expenseService = {
   async list(page = 1, perPage = 20): Promise<ApiPaginatedResponse<ApiExpense>> {

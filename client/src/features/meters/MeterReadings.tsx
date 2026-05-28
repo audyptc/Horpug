@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+﻿import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Search,
@@ -44,7 +44,7 @@ import {
 } from '@/components/ui/select'
 import { meterReadingService } from '@/features/meters/meterReadingService'
 import { roomService } from '@/features/rooms/roomService'
-import type { ApiMeterReading, ApiRoom, MeterType } from '@/types/api'
+import type { ApiMeterReading, ApiRoom, MeterType } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
 

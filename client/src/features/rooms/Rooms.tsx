@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+﻿import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Search,
@@ -42,7 +42,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { roomService } from '@/features/rooms/roomService'
-import type { ApiRoom, RoomStatus, RoomType } from '@/types/api'
+import type { ApiRoom, RoomStatus, RoomType } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
 

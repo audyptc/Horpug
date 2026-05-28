@@ -1,5 +1,5 @@
-import api from '@/lib/axios'
-import type { ApiPaginatedResponse, ApiPayment, CreatePaymentPayload, UpdatePaymentPayload } from '@/types/api'
+﻿import api from '@/lib/axios'
+import type { ApiPaginatedResponse, ApiPayment, CreatePaymentPayload, UpdatePaymentPayload } from '@/types'
 
 export const paymentService = {
   list(page: number, perPage: number) {

@@ -1,10 +1,10 @@
-import api from '@/lib/axios'
+﻿import api from '@/lib/axios'
 import type {
   ApiPaginatedResponse,
   ApiParcel,
   CreateParcelPayload,
   UpdateParcelPayload,
-} from '@/types/api'
+} from '@/types'
 
 export const parcelService = {
   list(page: number, perPage: number) {

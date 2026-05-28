@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+﻿import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -27,7 +27,7 @@ import { BillDialog, type BillFormState } from '@/features/billing/components/Bi
 import { usePaginatedList } from '@/hooks/usePaginatedList'
 import { billService } from '@/features/billing/billService'
 import { contractService } from '@/features/contracts/contractService'
-import type { ApiBill, ApiContract } from '@/types/api'
+import type { ApiBill, ApiContract } from '@/types'
 
 const EMPTY_FORM: BillFormState = {
   contract_id: '',

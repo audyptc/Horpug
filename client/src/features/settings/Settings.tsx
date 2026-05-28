@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, Bell, Palette, Sun, Moon, User2, Camera, KeyRound } from 'lucide-react'
 import { useTheme, SIDEBAR_COLORS } from '@/lib/theme'
@@ -18,7 +18,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useAuth } from '@/features/auth/AuthContext'
 import { userService } from '@/features/users/userService'
-import type { ApiUser } from '@/types/api'
+import type { ApiUser } from '@/types'
 import { cn } from '@/lib/utils'
 
 function getAvatar(name: string) {
