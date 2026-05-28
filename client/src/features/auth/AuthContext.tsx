@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from 'react'
 import { authService } from '@/features/auth/authService'
 import { decodeJwt } from '@/lib/utils'
+import { SESSION_TIMEOUT_MS, IDLE_TIMEOUT_MS } from '@/lib/authConstants'
 
 interface AuthState {
   accessToken: string | null
@@ -15,24 +16,16 @@ interface AuthContextValue extends AuthState {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+const ACCESS_TOKEN_KEY = 'access_token'
 const ACCESS_TOKEN_EXPIRES_AT_KEY = 'access_token_expires_at'
 const LAST_ACTIVITY_AT_KEY = 'last_activity_at'
-const SESSION_TIMEOUT_HOURS = Number(import.meta.env.VITE_SESSION_TIMEOUT_HOURS ?? '6')
-const SESSION_TIMEOUT_MS = Number.isFinite(SESSION_TIMEOUT_HOURS) && SESSION_TIMEOUT_HOURS > 0
-  ? SESSION_TIMEOUT_HOURS * 60 * 60 * 1000
-  : 6 * 60 * 60 * 1000
-const IDLE_TIMEOUT_HOURS = Number(import.meta.env.VITE_IDLE_TIMEOUT_HOURS ?? '1')
-const IDLE_TIMEOUT_MS = Number.isFinite(IDLE_TIMEOUT_HOURS) && IDLE_TIMEOUT_HOURS > 0
-  ? IDLE_TIMEOUT_HOURS * 60 * 60 * 1000
-  : 60 * 60 * 1000
 
 function getStoredToken() {
-  return localStorage.getItem('access_token')
+  return localStorage.getItem(ACCESS_TOKEN_KEY)
 }
 
 function clearStoredAuth() {
-  localStorage.removeItem('access_token')
-  localStorage.removeItem('refresh_token')
+  localStorage.removeItem(ACCESS_TOKEN_KEY)
   localStorage.removeItem(ACCESS_TOKEN_EXPIRES_AT_KEY)
   localStorage.removeItem(LAST_ACTIVITY_AT_KEY)
 }
@@ -50,7 +43,7 @@ function getLastActivityAtMs(): number | null {
 
 function isIdleExpired(): boolean {
   const lastActivityAt = getLastActivityAtMs()
-  if (!lastActivityAt) return false
+  if (!lastActivityAt) return true  // Fix 3: ถ้าไม่มีค่าให้ถือว่า expired
   return Date.now() - lastActivityAt >= IDLE_TIMEOUT_MS
 }
 
@@ -112,21 +105,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const resp = await authService.login(email, password)
-    localStorage.setItem('access_token', resp.access_token)
-    localStorage.setItem('refresh_token', resp.refresh_token)
+    // Fix 1: refresh_token ถูก set เป็น HttpOnly cookie โดย server แล้ว ไม่ต้อง store ใน localStorage
+    localStorage.setItem(ACCESS_TOKEN_KEY, resp.access_token)
     setStoredExpiresAt(resp.expires_in)
     touchLastActivity()
     setState({ accessToken: resp.access_token, isAuthenticated: true })
   }, [])
 
   const logout = useCallback(async () => {
-    const refreshToken = localStorage.getItem('refresh_token')
-    if (refreshToken) {
-      try {
-        await authService.logout(refreshToken)
-      } catch {
-        // ignore
-      }
+    // Fix 1: server อ่าน refresh_token จาก cookie โดยตรง ไม่ต้องส่งใน body
+    try {
+      await authService.logout()
+    } catch {
+      // ignore
     }
     clearStoredAuth()
     setState({ accessToken: null, isAuthenticated: false })
@@ -151,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     touchLastActivity()
 
     const checkSessionExpiry = () => {
-      const token = localStorage.getItem('access_token')
+      const token = localStorage.getItem(ACCESS_TOKEN_KEY)
       if (!token || isExpired(token) || isIdleExpired()) {
         clearStoredAuth()
         setState({ accessToken: null, isAuthenticated: false })

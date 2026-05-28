@@ -1,11 +1,15 @@
 package http
 
 import (
+	"time"
+
 	"apigofiberhorpug/internal/bootstrap"
+	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/delivery/http/middleware"
 	v1 "apigofiberhorpug/internal/delivery/http/v1"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/limiter"
 )
 
 func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
@@ -32,9 +36,20 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
 
 	api := app.Group("/api/v1")
 
+	loginLimiter := limiter.New(limiter.Config{
+		Max:        10,
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c fiber.Ctx) error {
+			return apierror.TooManyRequests("too many login attempts, please try again later")
+		},
+	})
+
 	// Public: auth
 	authGroup := api.Group("/auth")
-	authGroup.Post("/login", authH.Login)
+	authGroup.Post("/login", loginLimiter, authH.Login)
 	authGroup.Post("/refresh", authH.Refresh)
 	authGroup.Post("/logout", authH.Logout)
 

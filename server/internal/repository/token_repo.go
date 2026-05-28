@@ -50,3 +50,10 @@ func (r *TokenRepo) Revoke(ctx context.Context, hash string) error {
 	}
 	return nil
 }
+
+func (r *TokenRepo) RevokeAllForUser(ctx context.Context, userID string) error {
+	_, err := r.db.Pool.Exec(ctx, `
+		UPDATE refresh_tokens SET revoked_at = NOW(), updated_at = NOW()
+		WHERE user_id = $1 AND revoked_at IS NULL`, userID)
+	return err
+}

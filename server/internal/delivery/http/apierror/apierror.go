@@ -47,6 +47,10 @@ func NotFound(message string) error {
 	return New(fiber.StatusNotFound, message)
 }
 
+func TooManyRequests(message string) error {
+	return New(fiber.StatusTooManyRequests, message)
+}
+
 func Internal(err error) error {
 	return Wrap(fiber.StatusInternalServerError, "internal server error", err)
 }

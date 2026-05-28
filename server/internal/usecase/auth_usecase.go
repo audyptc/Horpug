@@ -102,6 +102,9 @@ func (uc *AuthUseCase) Refresh(ctx context.Context, rawToken string) (*domain.Lo
 		return nil, apierror.Unauthorized("invalid refresh token")
 	}
 	if rt.RevokedAt != nil {
+		// Fix 5: token ที่ถูก revoke แล้วถูกนำมาใช้ซ้ำ หมายความว่า token อาจถูกขโมย
+		// revoke ทุก session ของ user นี้ทันที
+		_ = uc.tokenRepo.RevokeAllForUser(ctx, rt.UserID)
 		return nil, apierror.Unauthorized("refresh token has been revoked")
 	}
 	if time.Now().After(rt.ExpiresAt) {
@@ -154,6 +157,10 @@ func (uc *AuthUseCase) Logout(ctx context.Context, rawToken string) error {
 	}
 	_ = uc.tokenRepo.Revoke(ctx, hashString(rawToken))
 	return nil
+}
+
+func (uc *AuthUseCase) RefreshMaxAge() int {
+	return int(uc.refreshTokenDuration.Seconds())
 }
 
 func (uc *AuthUseCase) ValidateAccessToken(tokenString string) (*Claims, error) {
