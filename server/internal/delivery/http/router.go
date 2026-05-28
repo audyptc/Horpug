@@ -14,20 +14,20 @@ import (
 
 func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
 	authH := v1.NewAuthHandler(c.AuthUC)
-	userH := v1.NewUserHandler(c.UserUC)
-	roleH := v1.NewRoleHandler(c.RoleUC)
+	userH := v1.NewUserHandler(c.UserUC, c.ActivityLogUC)
+	roleH := v1.NewRoleHandler(c.RoleUC, c.ActivityLogUC)
 	permH := v1.NewPermissionHandler(c.PermUC)
 	menuH := v1.NewMenuHandler(c.MenuUC)
 	roomH := v1.NewRoomHandler(c.RoomUC)
 	tenantH := v1.NewTenantHandler(c.TenantUC)
-	contractH := v1.NewContractHandler(c.ContractUC)
+	contractH := v1.NewContractHandler(c.ContractUC, c.ActivityLogUC)
 	meterH := v1.NewMeterReadingHandler(c.MeterReadingUC)
 	billH := v1.NewBillHandler(c.BillUC)
 	dashboardH := v1.NewDashboardHandler(c.DashboardUC)
 	analyticsH := v1.NewAnalyticsHandler(c.AnalyticsUC)
 	expenseH := v1.NewExpenseHandler(c.ExpenseUC)
 	maintenanceH := v1.NewMaintenanceRequestHandler(c.MaintenanceUC)
-	paymentH := v1.NewPaymentHandler(c.PaymentUC)
+	paymentH := v1.NewPaymentHandler(c.PaymentUC, c.ActivityLogUC)
 	announcementH := v1.NewAnnouncementHandler(c.AnnouncementUC)
 	reportH := v1.NewReportHandler(c.ReportUC)
 	parkingH := v1.NewParkingHandler(c.ParkingUC)
@@ -35,6 +35,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
 	documentH := v1.NewDocumentHandler(c.DocumentUC)
 	notificationH := v1.NewNotificationHandler(c.NotificationUC)
 	searchH := v1.NewSearchHandler(c.SearchUC)
+	activityLogH := v1.NewActivityLogHandler(c.ActivityLogUC)
 
 	api := app.Group("/api/v1")
 
@@ -199,4 +200,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
 
 	// Search
 	protected.Get("/search", searchH.Global)
+
+	// Activity Logs
+	protected.Get("/activity-logs", middleware.RequirePermission("activity-logs.read"), activityLogH.List)
 }

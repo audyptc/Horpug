@@ -28,6 +28,7 @@ type repositories struct {
 	document     *repository.DocumentRepo
 	notification *repository.NotificationRepo
 	search       *repository.SearchRepo
+	activityLog  *repository.ActivityLogRepo
 }
 
 func newRepositories(db *database.DB) repositories {
@@ -54,5 +55,6 @@ func newRepositories(db *database.DB) repositories {
 		document:     repository.NewDocumentRepo(db),
 		notification: repository.NewNotificationRepo(db),
 		search:       repository.NewSearchRepo(db),
+		activityLog:  repository.NewActivityLogRepo(db),
 	}
 }

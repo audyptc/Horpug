@@ -1,4 +1,4 @@
-﻿package v1
+package v1
 
 import (
 	"apigofiberhorpug/internal/delivery/http/apierror"
@@ -12,11 +12,12 @@ import (
 )
 
 type RoleHandler struct {
-	roles *usecase.RoleUseCase
+	roles       *usecase.RoleUseCase
+	activityLog *usecase.ActivityLogUseCase
 }
 
-func NewRoleHandler(roles *usecase.RoleUseCase) *RoleHandler {
-	return &RoleHandler{roles: roles}
+func NewRoleHandler(roles *usecase.RoleUseCase, activityLog *usecase.ActivityLogUseCase) *RoleHandler {
+	return &RoleHandler{roles: roles, activityLog: activityLog}
 }
 
 // List godoc
@@ -90,6 +91,8 @@ func (h *RoleHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityCreate, "role", role.ID, role)
 	return response.Created(c, role)
 }
 
@@ -112,6 +115,8 @@ func (h *RoleHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "role", role.ID, role)
 	return response.OK(c, role)
 }
 
@@ -124,9 +129,12 @@ func (h *RoleHandler) Update(c fiber.Ctx) error {
 // @Success      200  {object}  map[string]interface{}
 // @Router       /roles/{id} [delete]
 func (h *RoleHandler) Delete(c fiber.Ctx) error {
-	if err := h.roles.Delete(c.Context(), c.Params("id")); err != nil {
+	id := c.Params("id")
+	if err := h.roles.Delete(c.Context(), id); err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityDelete, "role", id, nil)
 	return response.Message(c, "role deleted")
 }
 
@@ -145,8 +153,11 @@ func (h *RoleHandler) AssignPermissions(c fiber.Ctx) error {
 	if err := c.Bind().JSON(&req); err != nil {
 		return apierror.BadRequest("invalid request body")
 	}
-	if err := h.roles.AssignPermissions(c.Context(), c.Params("id"), &req); err != nil {
+	id := c.Params("id")
+	if err := h.roles.AssignPermissions(c.Context(), id, &req); err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "role_permissions", id, &req)
 	return response.Message(c, "permissions assigned successfully")
 }

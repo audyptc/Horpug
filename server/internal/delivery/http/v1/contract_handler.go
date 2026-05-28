@@ -1,4 +1,4 @@
-﻿package v1
+package v1
 
 import (
 	"apigofiberhorpug/internal/delivery/http/apierror"
@@ -12,11 +12,12 @@ import (
 )
 
 type ContractHandler struct {
-	contracts *usecase.ContractUseCase
+	contracts   *usecase.ContractUseCase
+	activityLog *usecase.ActivityLogUseCase
 }
 
-func NewContractHandler(contracts *usecase.ContractUseCase) *ContractHandler {
-	return &ContractHandler{contracts: contracts}
+func NewContractHandler(contracts *usecase.ContractUseCase, activityLog *usecase.ActivityLogUseCase) *ContractHandler {
+	return &ContractHandler{contracts: contracts, activityLog: activityLog}
 }
 
 func (h *ContractHandler) List(c fiber.Ctx) error {
@@ -51,6 +52,8 @@ func (h *ContractHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityCreate, "contract", d.ID, d)
 	return response.Created(c, d)
 }
 
@@ -63,12 +66,17 @@ func (h *ContractHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "contract", d.ID, d)
 	return response.OK(c, d)
 }
 
 func (h *ContractHandler) Delete(c fiber.Ctx) error {
-	if err := h.contracts.Delete(c.Context(), c.Params("id")); err != nil {
+	id := c.Params("id")
+	if err := h.contracts.Delete(c.Context(), id); err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityDelete, "contract", id, nil)
 	return response.Message(c, "contract deleted")
 }

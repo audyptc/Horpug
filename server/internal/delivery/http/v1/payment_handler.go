@@ -1,4 +1,4 @@
-﻿package v1
+package v1
 
 import (
 	"apigofiberhorpug/internal/delivery/http/apierror"
@@ -12,11 +12,12 @@ import (
 )
 
 type PaymentHandler struct {
-	payment *usecase.PaymentUseCase
+	payment     *usecase.PaymentUseCase
+	activityLog *usecase.ActivityLogUseCase
 }
 
-func NewPaymentHandler(payment *usecase.PaymentUseCase) *PaymentHandler {
-	return &PaymentHandler{payment: payment}
+func NewPaymentHandler(payment *usecase.PaymentUseCase, activityLog *usecase.ActivityLogUseCase) *PaymentHandler {
+	return &PaymentHandler{payment: payment, activityLog: activityLog}
 }
 
 func (h *PaymentHandler) List(c fiber.Ctx) error {
@@ -51,6 +52,8 @@ func (h *PaymentHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityCreate, "payment", p.ID, p)
 	return response.Created(c, p)
 }
 
@@ -66,12 +69,17 @@ func (h *PaymentHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "payment", p.ID, p)
 	return response.OK(c, p)
 }
 
 func (h *PaymentHandler) Delete(c fiber.Ctx) error {
-	if err := h.payment.Delete(c.Context(), c.Params("id")); err != nil {
+	id := c.Params("id")
+	if err := h.payment.Delete(c.Context(), id); err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityDelete, "payment", id, nil)
 	return response.Message(c, "payment deleted")
 }

@@ -1,4 +1,4 @@
-﻿package v1
+package v1
 
 import (
 	"apigofiberhorpug/internal/delivery/http/apierror"
@@ -12,11 +12,12 @@ import (
 )
 
 type UserHandler struct {
-	users *usecase.UserUseCase
+	users       *usecase.UserUseCase
+	activityLog *usecase.ActivityLogUseCase
 }
 
-func NewUserHandler(users *usecase.UserUseCase) *UserHandler {
-	return &UserHandler{users: users}
+func NewUserHandler(users *usecase.UserUseCase, activityLog *usecase.ActivityLogUseCase) *UserHandler {
+	return &UserHandler{users: users, activityLog: activityLog}
 }
 
 // List godoc
@@ -75,6 +76,8 @@ func (h *UserHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityCreate, "user", user.ID, user)
 	return response.Created(c, user)
 }
 
@@ -97,6 +100,8 @@ func (h *UserHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "user", user.ID, user)
 	return response.OK(c, user)
 }
 
@@ -109,9 +114,12 @@ func (h *UserHandler) Update(c fiber.Ctx) error {
 // @Success      200  {object}  map[string]interface{}
 // @Router       /users/{id} [delete]
 func (h *UserHandler) Delete(c fiber.Ctx) error {
-	if err := h.users.Delete(c.Context(), c.Params("id")); err != nil {
+	id := c.Params("id")
+	if err := h.users.Delete(c.Context(), id); err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityDelete, "user", id, nil)
 	return response.Message(c, "user deleted")
 }
 
@@ -133,8 +141,11 @@ func (h *UserHandler) AssignRole(c fiber.Ctx) error {
 	if err := validator.AssignRoleRequest(&req); err != nil {
 		return err
 	}
-	if err := h.users.AssignRole(c.Context(), c.Params("id"), &req); err != nil {
+	id := c.Params("id")
+	if err := h.users.AssignRole(c.Context(), id, &req); err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "user_role", id, &req)
 	return response.Message(c, "role assigned successfully")
 }
