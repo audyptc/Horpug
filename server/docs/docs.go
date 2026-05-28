@@ -265,6 +265,33 @@ const docTemplate = `{
                 }
             }
         },
+        "/roles/active": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "roles"
+                ],
+                "summary": "รายชื่อบทบาทที่เปิดใช้งาน",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.Role"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/roles/{id}": {
             "get": {
                 "security": [
@@ -399,7 +426,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Permission IDs",
+                        "description": "Menu-permission assignment payload",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -590,7 +617,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/{id}/roles": {
+        "/users/{id}/role": {
             "put": {
                 "security": [
                     {
@@ -616,12 +643,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Role IDs",
+                        "description": "Role assignment payload",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.AssignRolesRequest"
+                            "$ref": "#/definitions/domain.AssignRoleRequest"
                         }
                     }
                 ],
@@ -641,22 +668,19 @@ const docTemplate = `{
         "domain.AssignPermissionsRequest": {
             "type": "object",
             "properties": {
-                "permission_ids": {
+                "items": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "$ref": "#/definitions/domain.RoleMenuPermissionItem"
                     }
                 }
             }
         },
-        "domain.AssignRolesRequest": {
+        "domain.AssignRoleRequest": {
             "type": "object",
             "properties": {
-                "role_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "role_id": {
+                    "type": "string"
                 }
             }
         },
@@ -665,6 +689,9 @@ const docTemplate = `{
             "properties": {
                 "description": {
                     "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "string"
@@ -778,7 +805,30 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "menu_permissions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.RoleMenuPermission"
+                    }
+                },
                 "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.RoleMenuPermission": {
+            "type": "object",
+            "properties": {
+                "menu_id": {
+                    "type": "string"
+                },
+                "menu_name": {
                     "type": "string"
                 },
                 "permissions": {
@@ -786,9 +836,20 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/domain.Permission"
                     }
-                },
-                "updated_at": {
+                }
+            }
+        },
+        "domain.RoleMenuPermissionItem": {
+            "type": "object",
+            "properties": {
+                "menu_id": {
                     "type": "string"
+                },
+                "permission_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -797,6 +858,9 @@ const docTemplate = `{
             "properties": {
                 "description": {
                     "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "string"
@@ -811,6 +875,9 @@ const docTemplate = `{
                 },
                 "is_active": {
                     "type": "boolean"
+                },
+                "password": {
+                    "type": "string"
                 }
             }
         },
@@ -832,11 +899,8 @@ const docTemplate = `{
                 "is_active": {
                     "type": "boolean"
                 },
-                "roles": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/domain.Role"
-                    }
+                "role": {
+                    "$ref": "#/definitions/domain.Role"
                 },
                 "updated_at": {
                     "type": "string"

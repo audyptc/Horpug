@@ -2,22 +2,22 @@ basePath: /api/v1
 definitions:
   domain.AssignPermissionsRequest:
     properties:
-      permission_ids:
+      items:
         items:
-          type: string
+          $ref: '#/definitions/domain.RoleMenuPermissionItem'
         type: array
     type: object
-  domain.AssignRolesRequest:
+  domain.AssignRoleRequest:
     properties:
-      role_ids:
-        items:
-          type: string
-        type: array
+      role_id:
+        type: string
     type: object
   domain.CreateRoleRequest:
     properties:
       description:
         type: string
+      is_active:
+        type: boolean
       name:
         type: string
     type: object
@@ -90,19 +90,43 @@ definitions:
         type: string
       id:
         type: string
+      is_active:
+        type: boolean
+      menu_permissions:
+        items:
+          $ref: '#/definitions/domain.RoleMenuPermission'
+        type: array
       name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  domain.RoleMenuPermission:
+    properties:
+      menu_id:
+        type: string
+      menu_name:
         type: string
       permissions:
         items:
           $ref: '#/definitions/domain.Permission'
         type: array
-      updated_at:
+    type: object
+  domain.RoleMenuPermissionItem:
+    properties:
+      menu_id:
         type: string
+      permission_ids:
+        items:
+          type: string
+        type: array
     type: object
   domain.UpdateRoleRequest:
     properties:
       description:
         type: string
+      is_active:
+        type: boolean
       name:
         type: string
     type: object
@@ -112,6 +136,8 @@ definitions:
         type: string
       is_active:
         type: boolean
+      password:
+        type: string
     type: object
   domain.User:
     properties:
@@ -125,10 +151,8 @@ definitions:
         type: string
       is_active:
         type: boolean
-      roles:
-        items:
-          $ref: '#/definitions/domain.Role'
-        type: array
+      role:
+        $ref: '#/definitions/domain.Role'
       updated_at:
         type: string
     type: object
@@ -367,7 +391,7 @@ paths:
         name: id
         required: true
         type: string
-      - description: Permission IDs
+      - description: Menu-permission assignment payload
         in: body
         name: body
         required: true
@@ -384,6 +408,22 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: กำหนดสิทธิ์ให้บทบาท
+      tags:
+      - roles
+  /roles/active:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Role'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายชื่อบทบาทที่เปิดใช้งาน
       tags:
       - roles
   /users:
@@ -491,7 +531,7 @@ paths:
       summary: แก้ไขผู้ใช้
       tags:
       - users
-  /users/{id}/roles:
+  /users/{id}/role:
     put:
       consumes:
       - application/json
@@ -501,12 +541,12 @@ paths:
         name: id
         required: true
         type: string
-      - description: Role IDs
+      - description: Role assignment payload
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/domain.AssignRolesRequest'
+          $ref: '#/definitions/domain.AssignRoleRequest'
       produces:
       - application/json
       responses:
