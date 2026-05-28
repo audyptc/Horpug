@@ -1,6 +1,21 @@
 import axios from 'axios'
 
 const BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:3003') + '/api/v1'
+const ACCESS_TOKEN_EXPIRES_AT_KEY = 'access_token_expires_at'
+const SESSION_TIMEOUT_HOURS = Number(import.meta.env.VITE_SESSION_TIMEOUT_HOURS ?? '6')
+const SESSION_TIMEOUT_MS = Number.isFinite(SESSION_TIMEOUT_HOURS) && SESSION_TIMEOUT_HOURS > 0
+  ? SESSION_TIMEOUT_HOURS * 60 * 60 * 1000
+  : 6 * 60 * 60 * 1000
+
+function setAccessTokenExpiresAt(expiresInSeconds: number | undefined) {
+  if (!Number.isFinite(expiresInSeconds) || !expiresInSeconds || expiresInSeconds <= 0) {
+    return
+  }
+
+  const apiExpiresAt = Date.now() + expiresInSeconds * 1000
+  const clientTimeoutAt = Date.now() + SESSION_TIMEOUT_MS
+  localStorage.setItem(ACCESS_TOKEN_EXPIRES_AT_KEY, String(Math.min(apiExpiresAt, clientTimeoutAt)))
+}
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -33,6 +48,7 @@ api.interceptors.response.use(
     const refreshToken = localStorage.getItem('refresh_token')
     if (!refreshToken) {
       localStorage.removeItem('access_token')
+      localStorage.removeItem(ACCESS_TOKEN_EXPIRES_AT_KEY)
       window.location.href = '/login'
       return Promise.reject(err)
     }
@@ -56,6 +72,7 @@ api.interceptors.response.use(
       const newToken = data.data.access_token
       localStorage.setItem('access_token', newToken)
       localStorage.setItem('refresh_token', data.data.refresh_token)
+      setAccessTokenExpiresAt(Number(data.data.expires_in))
       api.defaults.headers.common.Authorization = `Bearer ${newToken}`
       processQueue(null, newToken)
       original.headers.Authorization = `Bearer ${newToken}`
@@ -64,6 +81,7 @@ api.interceptors.response.use(
       processQueue(refreshErr, null)
       localStorage.removeItem('access_token')
       localStorage.removeItem('refresh_token')
+      localStorage.removeItem(ACCESS_TOKEN_EXPIRES_AT_KEY)
       window.location.href = '/login'
       return Promise.reject(refreshErr)
     } finally {
