@@ -6,6 +6,15 @@
 [Client] -> Fiber Router / Handlers -> Usecase -> Repository -> PostgreSQL
 ```
 
+## Auth Token Config
+
+รองรับการตั้งค่าอายุ token ผ่าน environment variables:
+
+- `ACCESS_TOKEN_TTL` ค่า default `15m`
+- `REFRESH_TOKEN_TTL` ค่า default `168h`
+
+รูปแบบค่าตาม Go duration เช่น `30s`, `15m`, `1h`, `24h`.
+
 ## Project Structure
 
 ```text

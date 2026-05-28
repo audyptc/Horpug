@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	accessTokenDuration  = 15 * time.Minute
-	refreshTokenDuration = 7 * 24 * time.Hour
+	defaultAccessTokenDuration  = 15 * time.Minute
+	defaultRefreshTokenDuration = 7 * 24 * time.Hour
 )
 
 type Claims struct {
@@ -27,16 +27,32 @@ type Claims struct {
 }
 
 type AuthUseCase struct {
-	userRepo  domain.UserRepository
-	tokenRepo domain.RefreshTokenRepository
-	secretKey []byte
+	userRepo             domain.UserRepository
+	tokenRepo            domain.RefreshTokenRepository
+	secretKey            []byte
+	accessTokenDuration  time.Duration
+	refreshTokenDuration time.Duration
 }
 
-func NewAuthUseCase(userRepo domain.UserRepository, tokenRepo domain.RefreshTokenRepository, secretKey string) *AuthUseCase {
+func NewAuthUseCase(
+	userRepo domain.UserRepository,
+	tokenRepo domain.RefreshTokenRepository,
+	secretKey string,
+	accessTokenDuration, refreshTokenDuration time.Duration,
+) *AuthUseCase {
+	if accessTokenDuration <= 0 {
+		accessTokenDuration = defaultAccessTokenDuration
+	}
+	if refreshTokenDuration <= 0 {
+		refreshTokenDuration = defaultRefreshTokenDuration
+	}
+
 	return &AuthUseCase{
-		userRepo:  userRepo,
-		tokenRepo: tokenRepo,
-		secretKey: []byte(secretKey),
+		userRepo:             userRepo,
+		tokenRepo:            tokenRepo,
+		secretKey:            []byte(secretKey),
+		accessTokenDuration:  accessTokenDuration,
+		refreshTokenDuration: refreshTokenDuration,
 	}
 }
 
@@ -67,7 +83,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, req *domain.LoginRequest) (*do
 		ID:        uuid.New().String(),
 		UserID:    user.ID,
 		TokenHash: hashString(rawRefresh),
-		ExpiresAt: time.Now().Add(refreshTokenDuration),
+		ExpiresAt: time.Now().Add(uc.refreshTokenDuration),
 	}
 	if err := uc.tokenRepo.Save(ctx, rt); err != nil {
 		return nil, apierror.Internal(err)
@@ -76,7 +92,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, req *domain.LoginRequest) (*do
 	return &domain.LoginResponse{
 		AccessToken:  accessToken,
 		RefreshToken: rawRefresh,
-		ExpiresIn:    int64(accessTokenDuration.Seconds()),
+		ExpiresIn:    int64(uc.accessTokenDuration.Seconds()),
 	}, nil
 }
 
@@ -119,7 +135,7 @@ func (uc *AuthUseCase) Refresh(ctx context.Context, rawToken string) (*domain.Lo
 		ID:        uuid.New().String(),
 		UserID:    user.ID,
 		TokenHash: hashString(rawRefresh),
-		ExpiresAt: time.Now().Add(refreshTokenDuration),
+		ExpiresAt: time.Now().Add(uc.refreshTokenDuration),
 	}
 	if err := uc.tokenRepo.Save(ctx, newRT); err != nil {
 		return nil, apierror.Internal(err)
@@ -128,7 +144,7 @@ func (uc *AuthUseCase) Refresh(ctx context.Context, rawToken string) (*domain.Lo
 	return &domain.LoginResponse{
 		AccessToken:  accessToken,
 		RefreshToken: rawRefresh,
-		ExpiresIn:    int64(accessTokenDuration.Seconds()),
+		ExpiresIn:    int64(uc.accessTokenDuration.Seconds()),
 	}, nil
 }
 
@@ -163,7 +179,7 @@ func (uc *AuthUseCase) generateAccessToken(user *domain.User, permissions []stri
 		Email:       user.Email,
 		Permissions: permissions,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(accessTokenDuration)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(uc.accessTokenDuration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}

@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"apigofiberhorpug/internal/database"
 	"apigofiberhorpug/internal/usecase"
+	"time"
 )
 
 type Container struct {
@@ -28,10 +29,10 @@ type Container struct {
 	DocumentUC     *usecase.DocumentUseCase
 }
 
-func NewContainer(db *database.DB, secretKey string) *Container {
+func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refreshTokenDuration time.Duration) *Container {
 	repos := newRepositories(db)
 	return &Container{
-		AuthUC:         usecase.NewAuthUseCase(repos.user, repos.token, secretKey),
+		AuthUC:         usecase.NewAuthUseCase(repos.user, repos.token, secretKey, accessTokenDuration, refreshTokenDuration),
 		UserUC:         usecase.NewUserUseCase(repos.user, repos.role),
 		RoleUC:         usecase.NewRoleUseCase(repos.role, repos.perm, repos.menu),
 		PermUC:         usecase.NewPermissionUseCase(repos.perm),

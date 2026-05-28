@@ -43,7 +43,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	container := bootstrap.NewContainer(db, cfg.SecretKey)
+	container := bootstrap.NewContainer(db, cfg.SecretKey, cfg.AccessTokenDuration, cfg.RefreshTokenDuration)
 
 	// HTTP Server
 	app := fiber.New(fiber.Config{
@@ -83,4 +83,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-

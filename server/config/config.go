@@ -5,14 +5,17 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"time"
 
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	AppPort     string
-	SecretKey   string
-	DatabaseURL string
+	AppPort              string
+	SecretKey            string
+	DatabaseURL          string
+	AccessTokenDuration  time.Duration
+	RefreshTokenDuration time.Duration
 }
 
 func Load() (*Config, error) {
@@ -35,6 +38,16 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("APP_SECRETKEY ต้องระบุใน .env")
 	}
 
+	accessTokenDuration, err := durationOrDefault("ACCESS_TOKEN_TTL", 15*time.Minute)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshTokenDuration, err := durationOrDefault("REFRESH_TOKEN_TTL", 7*24*time.Hour)
+	if err != nil {
+		return nil, err
+	}
+
 	dbURL := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		strOrDefault("DB_USERNAME", "postgres"),
@@ -46,9 +59,11 @@ func Load() (*Config, error) {
 	)
 
 	return &Config{
-		AppPort:     strOrDefault("APP_PORT", "8080"),
-		SecretKey:   secretKey,
-		DatabaseURL: dbURL,
+		AppPort:              strOrDefault("APP_PORT", "8080"),
+		SecretKey:            secretKey,
+		DatabaseURL:          dbURL,
+		AccessTokenDuration:  accessTokenDuration,
+		RefreshTokenDuration: refreshTokenDuration,
 	}, nil
 }
 
@@ -57,4 +72,19 @@ func strOrDefault(key, def string) string {
 		return v
 	}
 	return def
+}
+
+func durationOrDefault(key string, def time.Duration) (time.Duration, error) {
+	v := viper.GetString(key)
+	if v == "" {
+		return def, nil
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		return 0, fmt.Errorf("%s ต้องเป็น duration ที่ถูกต้อง เช่น 15m, 1h, 168h", key)
+	}
+	if d <= 0 {
+		return 0, fmt.Errorf("%s ต้องมีค่ามากกว่า 0", key)
+	}
+	return d, nil
 }
