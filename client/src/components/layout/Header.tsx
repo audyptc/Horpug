@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Bell, Search, Menu, Globe, Sun, Moon, UserCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -15,6 +16,7 @@ import {
 import { useTheme } from '@/lib/theme'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useNotifications } from '@/features/notifications/useNotifications'
+import { SearchDialog } from '@/features/search/SearchDialog'
 
 interface HeaderProps {
   onMenuClick?: () => void
@@ -26,6 +28,18 @@ export function Header({ onMenuClick }: HeaderProps) {
   const { logout } = useAuth()
   const navigate = useNavigate()
   const notifications = useNotifications()
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'k' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   async function handleSignOut() {
     await logout()
@@ -49,9 +63,16 @@ export function Header({ onMenuClick }: HeaderProps) {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           placeholder={t('header.searchPlaceholder')}
-          className="pl-9 bg-muted/40 border-0 focus-visible:ring-1"
+          className="pl-9 bg-muted/40 border-0 focus-visible:ring-1 cursor-pointer"
+          readOnly
+          onClick={() => setSearchOpen(true)}
         />
+        <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:inline-flex h-5 items-center gap-0.5 rounded border bg-muted px-1.5 text-[10px] text-muted-foreground pointer-events-none">
+          Ctrl K
+        </kbd>
       </div>
+
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
 
       <div className="flex-1 md:hidden" />
 

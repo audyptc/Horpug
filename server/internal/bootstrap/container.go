@@ -28,6 +28,7 @@ type Container struct {
 	ParcelUC        *usecase.ParcelUseCase
 	DocumentUC      *usecase.DocumentUseCase
 	NotificationUC  *usecase.NotificationUseCase
+	SearchUC        *usecase.SearchUseCase
 }
 
 func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refreshTokenDuration time.Duration) *Container {
@@ -54,5 +55,6 @@ func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refres
 		ParcelUC:       usecase.NewParcelUseCase(repos.parcel),
 		DocumentUC:     usecase.NewDocumentUseCase(repos.document),
 		NotificationUC: usecase.NewNotificationUseCase(repos.notification),
+		SearchUC:       usecase.NewSearchUseCase(repos.search),
 	}
 }

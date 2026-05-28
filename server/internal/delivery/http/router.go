@@ -34,6 +34,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
 	parcelH := v1.NewParcelHandler(c.ParcelUC)
 	documentH := v1.NewDocumentHandler(c.DocumentUC)
 	notificationH := v1.NewNotificationHandler(c.NotificationUC)
+	searchH := v1.NewSearchHandler(c.SearchUC)
 
 	api := app.Group("/api/v1")
 
@@ -195,4 +196,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
 
 	// Notifications
 	protected.Get("/notifications", notificationH.List)
+
+	// Search
+	protected.Get("/search", searchH.Global)
 }
