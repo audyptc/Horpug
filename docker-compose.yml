@@ -1,10 +1,10 @@
 services:
   db:
-    image: postgres:17-alpine
+    image: postgres:17-alpine3.22
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
       POSTGRES_DB: ${DB_NAME:-phorpug}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -17,28 +17,41 @@ services:
   backend:
     build: ./server
     restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       db:
         condition: service_healthy
     environment:
       APP_PORT: ${APP_PORT:-3003}
-      APP_SECRETKEY: ${APP_SECRETKEY}
+      APP_SECRETKEY: ${APP_SECRETKEY:?APP_SECRETKEY is required}
       ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-6h}
       REFRESH_TOKEN_TTL: ${REFRESH_TOKEN_TTL:-6h}
       DB_HOST: db
       DB_PORT: 5432
       DB_USERNAME: ${DB_USERNAME:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-password}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
       DB_NAME: ${DB_NAME:-phorpug}
       DB_SSLMODE: disable
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${APP_PORT:-3003}/health >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   frontend:
     build: ./client
     restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
     ports:
-      - "80:80"
+      - "80:8080"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   postgres_data:
