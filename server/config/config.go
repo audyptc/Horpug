@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -16,6 +17,7 @@ type Config struct {
 	DatabaseURL          string
 	AccessTokenDuration  time.Duration
 	RefreshTokenDuration time.Duration
+	CORSOrigins          []string
 }
 
 func Load() (*Config, error) {
@@ -64,7 +66,22 @@ func Load() (*Config, error) {
 		DatabaseURL:          dbURL,
 		AccessTokenDuration:  accessTokenDuration,
 		RefreshTokenDuration: refreshTokenDuration,
+		CORSOrigins:          corsOrigins("CORS_ORIGINS", "http://localhost,http://localhost:5173,http://localhost:3000"),
 	}, nil
+}
+
+func corsOrigins(key, def string) []string {
+	v := viper.GetString(key)
+	if v == "" {
+		v = def
+	}
+	var result []string
+	for _, s := range strings.Split(v, ",") {
+		if s = strings.TrimSpace(s); s != "" {
+			result = append(result, s)
+		}
+	}
+	return result
 }
 
 func strOrDefault(key, def string) string {

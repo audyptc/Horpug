@@ -104,7 +104,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
               <TenantSection tenants={results?.tenants ?? []} t={t} onSelect={() => goTo('/tenants')} />
               <RoomSection rooms={results?.rooms ?? []} t={t} onSelect={() => goTo('/rooms')} />
               <BillSection bills={results?.bills ?? []} t={t} lang={i18n.language} onSelect={() => goTo('/bills')} />
-              <ContractSection contracts={results?.contracts ?? []} t={t} lang={i18n.language} onSelect={() => goTo('/contracts')} />
+              <ContractSection contracts={results?.contracts ?? []} t={t} onSelect={() => goTo('/contracts')} />
             </div>
           )}
         </ScrollArea>
@@ -114,7 +114,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
 }
 
 interface SectionProps<T> {
-  t: (key: string) => string
+  t: (key: string, options?: Record<string, unknown>) => string
   onSelect: () => void
   items?: T[]
 }
@@ -200,8 +200,8 @@ function BillSection({
 }
 
 function ContractSection({
-  contracts, t, lang, onSelect,
-}: SectionProps<SearchContract> & { contracts: SearchContract[]; lang: string }) {
+  contracts, t, onSelect,
+}: SectionProps<SearchContract> & { contracts: SearchContract[] }) {
   if (contracts.length === 0) return null
   return (
     <div>

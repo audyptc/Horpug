@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { SESSION_TIMEOUT_MS } from '@/lib/authConstants'
 
-const BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:3003') + '/api/v1'
+const BASE_URL = (import.meta.env.VITE_API_URL ?? '') + '/api/v1'
 const ACCESS_TOKEN_EXPIRES_AT_KEY = 'access_token_expires_at'
 
 function setAccessTokenExpiresAt(expiresInSeconds: number | undefined) {
