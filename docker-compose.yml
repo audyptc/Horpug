@@ -25,17 +25,17 @@ services:
           memory: 256M
 
   pgbouncer:
-    image: bitnami/pgbouncer:1
+    image: edoburu/pgbouncer:latest
     environment:
-      POSTGRESQL_HOST: postgres
-      POSTGRESQL_PORT: 5432
-      POSTGRESQL_DATABASE: phorpug
-      POSTGRESQL_USERNAME: postgres
-      POSTGRESQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required - copy .env.example to .env}
-      PGBOUNCER_DATABASE: phorpug
-      PGBOUNCER_POOL_MODE: transaction
-      PGBOUNCER_MAX_CLIENT_CONN: 200
-      PGBOUNCER_DEFAULT_POOL_SIZE: 20
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: phorpug
+      DB_USER: postgres
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required - copy .env.example to .env}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 200
+      DEFAULT_POOL_SIZE: 20
+      AUTH_TYPE: scram-sha-256
     depends_on:
       postgres:
         condition: service_healthy

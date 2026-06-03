@@ -61,6 +61,7 @@ docker compose down -v
 # build เฉพาะ service ที่เปลี่ยน
 docker compose build --no-cache frontend
 docker compose build --no-cache backend
+docker compose build --no-cache backend frontend
 
 # รีสตาร์ท
 docker compose up -d
