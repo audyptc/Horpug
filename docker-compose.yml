@@ -4,11 +4,9 @@ services:
     environment:
       POSTGRES_DB: phorpug
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: My!Passw0rdPostG7
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d phorpug"]
       interval: 10s
@@ -24,7 +22,7 @@ services:
       args:
         VITE_API_URL: ""
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:80/ >/dev/null || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -45,10 +43,10 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USERNAME: postgres
-      DB_PASSWORD: My!Passw0rdPostG7
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_NAME: phorpug
       DB_SSLMODE: disable
-      CORS_ORIGINS: http://localhost
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health >/dev/null || exit 1"]
       interval: 15s
@@ -56,6 +54,7 @@ services:
       retries: 5
       start_period: 20s
     restart: always
+    # To scale: docker compose up --scale backend=3
 
   nginx:
     image: nginx:stable-alpine
