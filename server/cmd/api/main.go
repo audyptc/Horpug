@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"apigofiberhorpug/config"
 	"apigofiberhorpug/internal/bootstrap"
@@ -77,6 +79,12 @@ func main() {
 
 	setupScalarDocs(app)
 	deliveryhttp.SetupRoutes(app, container)
+
+	go func() {
+		time.Sleep(200 * time.Millisecond)
+		fmt.Printf("\n\x1b[1;32m➜\x1b[0m  \x1b[1mScalar UI:\x1b[0m  \x1b[36mhttp://localhost:%s/docs\x1b[0m\n", cfg.AppPort)
+		fmt.Printf("\x1b[1;32m➜\x1b[0m  \x1b[1mSwagger UI:\x1b[0m \x1b[36mhttp://localhost:%s/swagger\x1b[0m\n\n", cfg.AppPort)
+	}()
 
 	slog.Info("เซิร์ฟเวอร์พร้อมทำงาน", "port", cfg.AppPort)
 	if err := app.Listen(":" + cfg.AppPort); err != nil {
