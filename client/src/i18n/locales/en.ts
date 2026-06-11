@@ -272,6 +272,7 @@ export default {
     deleteConfirm: 'Are you sure you want to delete room',
     deleteWarning: 'This action cannot be undone.',
     loadError: 'Failed to load rooms.',
+    saveError: 'Failed to save room.',
     types: {
       standard: 'Standard',
       deluxe: 'Deluxe',

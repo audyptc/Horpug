@@ -47,6 +47,10 @@ func NotFound(message string) error {
 	return New(fiber.StatusNotFound, message)
 }
 
+func Conflict(message string) error {
+	return New(fiber.StatusConflict, message)
+}
+
 func TooManyRequests(message string) error {
 	return New(fiber.StatusTooManyRequests, message)
 }

@@ -58,6 +58,9 @@ func (uc *RoomUseCase) Create(ctx context.Context, req *domain.CreateRoomRequest
 		room.Status = "available"
 	}
 	if err := uc.roomRepo.Create(ctx, room); err != nil {
+		if errors.Is(err, domain.ErrDuplicate) {
+			return nil, apierror.Conflict("ห้องหมายเลขนี้มีอยู่แล้ว")
+		}
 		return nil, apierror.Internal(err)
 	}
 	return room, nil
@@ -88,6 +91,9 @@ func (uc *RoomUseCase) Update(ctx context.Context, id string, req *domain.Update
 	}
 	room.Description = req.Description
 	if err := uc.roomRepo.Update(ctx, room); err != nil {
+		if errors.Is(err, domain.ErrDuplicate) {
+			return nil, apierror.Conflict("ห้องหมายเลขนี้มีอยู่แล้ว")
+		}
 		return nil, apierror.Internal(err)
 	}
 	return room, nil

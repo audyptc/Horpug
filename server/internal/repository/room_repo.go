@@ -2,12 +2,14 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"apigofiberhorpug/internal/database"
 	"apigofiberhorpug/internal/domain"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type RoomRepo struct {
@@ -68,6 +70,12 @@ func (r *RoomRepo) Create(ctx context.Context, room *domain.Room) error {
 		INSERT INTO rooms (id, room_number, floor, type, status, rent_price, description)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		room.ID, room.RoomNumber, room.Floor, room.Type, room.Status, room.RentPrice, room.Description)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return fmt.Errorf("room number already exists: %w", domain.ErrDuplicate)
+		}
+	}
 	return err
 }
 
@@ -77,6 +85,12 @@ func (r *RoomRepo) Update(ctx context.Context, room *domain.Room) error {
 		SET room_number = $2, floor = $3, type = $4, status = $5, rent_price = $6, description = $7, updated_at = NOW()
 		WHERE id = $1`,
 		room.ID, room.RoomNumber, room.Floor, room.Type, room.Status, room.RentPrice, room.Description)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return fmt.Errorf("room number already exists: %w", domain.ErrDuplicate)
+		}
+	}
 	return err
 }
 

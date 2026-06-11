@@ -76,6 +76,7 @@ export function Rooms() {
   const [deletingRoom, setDeletingRoom] = useState<ApiRoom | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const fetchRooms = useCallback(async (p: number, pp: number) => {
     setLoading(true)
@@ -117,6 +118,7 @@ export function Rooms() {
   function openCreate() {
     setEditingRoom(null)
     setForm(emptyForm)
+    setSaveError('')
     setDialogOpen(true)
   }
 
@@ -130,12 +132,14 @@ export function Rooms() {
       rent_price: room.rent_price,
       description: room.description,
     })
+    setSaveError('')
     setDialogOpen(true)
   }
 
   async function handleSave() {
     if (!form.room_number || form.floor <= 0 || form.rent_price <= 0) return
     setSaving(true)
+    setSaveError('')
     try {
       if (editingRoom) {
         await roomService.update(editingRoom.id, form)
@@ -144,8 +148,11 @@ export function Rooms() {
       }
       setDialogOpen(false)
       await fetchRooms(page, perPage)
-    } catch {
-      // error handled silently
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        t('rooms.saveError')
+      setSaveError(msg)
     } finally {
       setSaving(false)
     }
@@ -432,6 +439,7 @@ export function Rooms() {
         onFormChange={setForm}
         onSave={handleSave}
         saving={saving}
+        error={saveError}
       />
 
       <RoomDeleteDialog

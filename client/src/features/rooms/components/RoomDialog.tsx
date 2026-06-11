@@ -38,6 +38,7 @@ type Props = {
   onFormChange: (form: RoomForm) => void
   onSave: () => void
   saving: boolean
+  error?: string
 }
 
 export function RoomDialog({
@@ -48,6 +49,7 @@ export function RoomDialog({
   onFormChange,
   onSave,
   saving,
+  error,
 }: Props) {
   const { t } = useTranslation()
   const [roomTypes, setRoomTypes] = useState<ApiRoomType[]>([])
@@ -72,6 +74,11 @@ export function RoomDialog({
             {editingRoom ? t('rooms.editDesc') : t('rooms.createDesc')}
           </DialogDescription>
         </DialogHeader>
+        {error && (
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </div>
+        )}
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">

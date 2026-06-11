@@ -232,6 +232,7 @@ export default {
     deleteConfirm: 'คุณแน่ใจหรือไม่ว่าต้องการลบห้อง',
     deleteWarning: 'การดำเนินการนี้ไม่สามารถยกเลิกได้',
     loadError: 'ไม่สามารถโหลดข้อมูลห้องพักได้',
+    saveError: 'ไม่สามารถบันทึกข้อมูลได้',
     types: {
       standard: 'ธรรมดา',
       deluxe: 'ดีลักซ์',
