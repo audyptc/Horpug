@@ -53,10 +53,12 @@ func (uc *ElectricMeterUseCase) Create(ctx context.Context, req *domain.CreateEl
 	m := &domain.ElectricMeter{
 		ID:              uuid.New().String(),
 		RoomID:          req.RoomID,
+		BillingType:     req.BillingType,
 		ReadingDate:     req.ReadingDate,
 		PreviousReading: req.PreviousReading,
 		CurrentReading:  req.CurrentReading,
 		UnitPrice:       req.UnitPrice,
+		FlatAmount:      req.FlatAmount,
 		Note:            req.Note,
 	}
 	if err := uc.repo.Create(ctx, m); err != nil {
@@ -77,11 +79,11 @@ func (uc *ElectricMeterUseCase) Update(ctx context.Context, id string, req *doma
 	if !req.ReadingDate.IsZero() {
 		m.ReadingDate = req.ReadingDate
 	}
+	m.BillingType = req.BillingType
 	m.PreviousReading = req.PreviousReading
 	m.CurrentReading = req.CurrentReading
-	if req.UnitPrice > 0 {
-		m.UnitPrice = req.UnitPrice
-	}
+	m.UnitPrice = req.UnitPrice
+	m.FlatAmount = req.FlatAmount
 	m.Note = req.Note
 
 	if err := uc.repo.Update(ctx, m); err != nil {

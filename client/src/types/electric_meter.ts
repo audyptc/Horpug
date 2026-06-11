@@ -1,11 +1,15 @@
+export type ElectricBillingType = 'meter' | 'flat'
+
 export interface ApiElectricMeter {
   id: string
   room_id: string
+  billing_type: ElectricBillingType
   reading_date: string
   previous_reading: number
-  current_reading: number
-  unit_price: number
-  unit_used: number
+  current_reading: number | null
+  unit_price: number | null
+  flat_amount: number | null
+  unit_used: number | null
   total_amount: number
   note: string
   created_at: string
@@ -15,17 +19,21 @@ export interface ApiElectricMeter {
 
 export interface CreateElectricMeterPayload {
   room_id: string
+  billing_type: ElectricBillingType
   reading_date: string
-  previous_reading: number
-  current_reading: number
-  unit_price: number
+  previous_reading?: number
+  current_reading?: number
+  unit_price?: number
+  flat_amount?: number
   note: string
 }
 
 export interface UpdateElectricMeterPayload {
+  billing_type?: ElectricBillingType
   reading_date?: string
   previous_reading?: number
   current_reading?: number
   unit_price?: number
+  flat_amount?: number
   note?: string
 }

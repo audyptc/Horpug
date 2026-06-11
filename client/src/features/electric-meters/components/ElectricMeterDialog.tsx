@@ -18,14 +18,17 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { DatePicker } from '@/components/ui/date-picker'
-import type { ApiElectricMeter, ApiRoom } from '@/types'
+import { cn } from '@/lib/utils'
+import type { ApiElectricMeter, ApiRoom, ElectricBillingType } from '@/types'
 
 export type ElectricMeterForm = {
   room_id: string
+  billing_type: ElectricBillingType
   reading_date: string
   previous_reading: string
   current_reading: string
   unit_price: string
+  flat_amount: string
   note: string
 }
 
@@ -42,20 +45,20 @@ type Props = {
 
 export function ElectricMeterDialog({ open, onOpenChange, editing, form, onFormChange, onSave, saving, rooms }: Props) {
   const { t } = useTranslation()
+  const isMeter = form.billing_type === 'meter'
 
-  const unitUsed =
-    form.current_reading && form.previous_reading
-      ? Number(form.current_reading) - Number(form.previous_reading)
-      : null
-  const totalAmount = unitUsed !== null && form.unit_price ? unitUsed * Number(form.unit_price) : null
+  const unitUsed = isMeter && form.current_reading && form.previous_reading
+    ? Number(form.current_reading) - Number(form.previous_reading)
+    : null
+  const totalAmount = isMeter
+    ? (unitUsed !== null && form.unit_price ? unitUsed * Number(form.unit_price) : null)
+    : (form.flat_amount ? Number(form.flat_amount) : null)
 
-  const isSaveDisabled =
-    saving ||
-    !form.room_id ||
-    !form.reading_date ||
-    !form.current_reading ||
-    !form.unit_price ||
-    Number(form.current_reading) < Number(form.previous_reading)
+  const isSaveDisabled = saving || !form.room_id || !form.reading_date || (
+    isMeter
+      ? (!form.current_reading || !form.unit_price || Number(form.current_reading) < Number(form.previous_reading))
+      : !form.flat_amount
+  )
 
   function set(patch: Partial<ElectricMeterForm>) {
     onFormChange({ ...form, ...patch })
@@ -83,41 +86,71 @@ export function ElectricMeterDialog({ open, onOpenChange, editing, form, onFormC
           </div>
 
           <div className="space-y-1.5">
-            <Label>{t('electricMeters.readingDate')} *</Label>
-            <DatePicker value={form.reading_date} onChange={(v) => set({ reading_date: v })} />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>{t('electricMeters.previousReading')}</Label>
-              <Input type="number" min="0" step="0.01" value={form.previous_reading}
-                onChange={(e) => set({ previous_reading: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t('electricMeters.currentReading')} *</Label>
-              <Input type="number" min="0" step="0.01" value={form.current_reading}
-                onChange={(e) => set({ current_reading: e.target.value })} />
+            <Label>{t('electricMeters.billingType')} *</Label>
+            <div className="flex rounded-md border overflow-hidden">
+              {(['meter', 'flat'] as ElectricBillingType[]).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => set({ billing_type: type })}
+                  className={cn(
+                    'flex-1 py-2 text-sm font-medium transition-colors',
+                    form.billing_type === type
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-background text-muted-foreground hover:bg-muted'
+                  )}
+                >
+                  {t(`electricMeters.billingTypes.${type}`)}
+                </button>
+              ))}
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label>{t('electricMeters.unitPrice')} *</Label>
-            <Input type="number" min="0" step="0.0001" value={form.unit_price}
-              onChange={(e) => set({ unit_price: e.target.value })} />
+            <Label>{t('electricMeters.readingDate')} *</Label>
+            <DatePicker value={form.reading_date} onChange={(v) => set({ reading_date: v })} />
           </div>
 
-          {unitUsed !== null && unitUsed >= 0 && (
-            <div className="rounded-md border bg-muted/40 px-4 py-3 text-sm space-y-1">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t('electricMeters.unitUsed')}</span>
-                <span className="font-medium">{unitUsed.toLocaleString()} {t('electricMeters.unit')}</span>
+          {isMeter ? (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>{t('electricMeters.previousReading')}</Label>
+                  <Input type="number" min="0" step="0.01" value={form.previous_reading}
+                    onChange={(e) => set({ previous_reading: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t('electricMeters.currentReading')} *</Label>
+                  <Input type="number" min="0" step="0.01" value={form.current_reading}
+                    onChange={(e) => set({ current_reading: e.target.value })} />
+                </div>
               </div>
-              {totalAmount !== null && (
+              <div className="space-y-1.5">
+                <Label>{t('electricMeters.unitPrice')} *</Label>
+                <Input type="number" min="0" step="0.0001" value={form.unit_price}
+                  onChange={(e) => set({ unit_price: e.target.value })} />
+              </div>
+            </>
+          ) : (
+            <div className="space-y-1.5">
+              <Label>{t('electricMeters.flatAmount')} *</Label>
+              <Input type="number" min="0" step="0.01" value={form.flat_amount}
+                onChange={(e) => set({ flat_amount: e.target.value })} />
+            </div>
+          )}
+
+          {totalAmount !== null && totalAmount >= 0 && (
+            <div className="rounded-md border bg-muted/40 px-4 py-3 text-sm space-y-1">
+              {isMeter && unitUsed !== null && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">{t('electricMeters.totalAmount')}</span>
-                  <span className="font-semibold">{totalAmount.toLocaleString()} ฿</span>
+                  <span className="text-muted-foreground">{t('electricMeters.unitUsed')}</span>
+                  <span className="font-medium">{unitUsed.toLocaleString()} {t('electricMeters.unit')}</span>
                 </div>
               )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('electricMeters.totalAmount')}</span>
+                <span className="font-semibold">{totalAmount.toLocaleString()} ฿</span>
+              </div>
             </div>
           )}
 

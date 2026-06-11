@@ -7,6 +7,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -24,10 +25,12 @@ const PER_PAGE_OPTIONS = [10, 20, 50] as const
 
 const emptyForm: ElectricMeterForm = {
   room_id: '',
+  billing_type: 'meter',
   reading_date: '',
   previous_reading: '',
   current_reading: '',
   unit_price: '',
+  flat_amount: '',
   note: '',
 }
 
@@ -89,34 +92,40 @@ export function ElectricMeters() {
     setEditing(r)
     setForm({
       room_id: r.room_id,
+      billing_type: r.billing_type,
       reading_date: toDateInput(r.reading_date),
       previous_reading: String(r.previous_reading),
-      current_reading: String(r.current_reading),
-      unit_price: String(r.unit_price),
+      current_reading: r.current_reading != null ? String(r.current_reading) : '',
+      unit_price: r.unit_price != null ? String(r.unit_price) : '',
+      flat_amount: r.flat_amount != null ? String(r.flat_amount) : '',
       note: r.note,
     })
     setDialogOpen(true)
   }
 
   async function handleSave() {
-    if (!form.room_id || !form.reading_date || !form.current_reading || !form.unit_price) return
+    if (!form.room_id || !form.reading_date) return
     setSaving(true)
     try {
       if (editing) {
         await electricMeterService.update(editing.id, {
+          billing_type: form.billing_type,
           reading_date: form.reading_date,
-          previous_reading: Number(form.previous_reading),
-          current_reading: Number(form.current_reading),
-          unit_price: Number(form.unit_price),
+          previous_reading: form.previous_reading ? Number(form.previous_reading) : undefined,
+          current_reading: form.current_reading ? Number(form.current_reading) : undefined,
+          unit_price: form.unit_price ? Number(form.unit_price) : undefined,
+          flat_amount: form.flat_amount ? Number(form.flat_amount) : undefined,
           note: form.note,
         })
       } else {
         await electricMeterService.create({
           room_id: form.room_id,
+          billing_type: form.billing_type,
           reading_date: form.reading_date,
-          previous_reading: Number(form.previous_reading),
-          current_reading: Number(form.current_reading),
-          unit_price: Number(form.unit_price),
+          previous_reading: form.previous_reading ? Number(form.previous_reading) : undefined,
+          current_reading: form.current_reading ? Number(form.current_reading) : undefined,
+          unit_price: form.unit_price ? Number(form.unit_price) : undefined,
+          flat_amount: form.flat_amount ? Number(form.flat_amount) : undefined,
           note: form.note,
         })
       }
@@ -191,11 +200,9 @@ export function ElectricMeters() {
                   <thead>
                     <tr className="border-b bg-muted/40">
                       <th className="text-left px-6 py-3 font-medium text-muted-foreground">{t('electricMeters.colRoom')}</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colBillingType')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colDate')}</th>
-                      <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colPrev')}</th>
-                      <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colCurr')}</th>
                       <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colUsed')}</th>
-                      <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colUnitPrice')}</th>
                       <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colTotal')}</th>
                       <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('electricMeters.colActions')}</th>
                     </tr>
@@ -204,11 +211,15 @@ export function ElectricMeters() {
                     {filtered.map((r, i) => (
                       <tr key={r.id} className={cn('border-b transition-colors hover:bg-muted/30', i === filtered.length - 1 && 'border-0')}>
                         <td className="px-6 py-4 font-medium">{r.room_number}</td>
+                        <td className="px-4 py-4">
+                          <Badge variant={r.billing_type === 'flat' ? 'secondary' : 'outline'}>
+                            {t(`electricMeters.billingTypes.${r.billing_type}`)}
+                          </Badge>
+                        </td>
                         <td className="px-4 py-4 text-muted-foreground">{formatDate(r.reading_date)}</td>
-                        <td className="px-4 py-4 text-right text-muted-foreground">{r.previous_reading.toLocaleString()}</td>
-                        <td className="px-4 py-4 text-right text-muted-foreground">{r.current_reading.toLocaleString()}</td>
-                        <td className="px-4 py-4 text-right font-medium">{r.unit_used.toLocaleString()}</td>
-                        <td className="px-4 py-4 text-right text-muted-foreground">{r.unit_price.toLocaleString()}</td>
+                        <td className="px-4 py-4 text-right font-medium">
+                          {r.unit_used != null ? r.unit_used.toLocaleString() : '-'}
+                        </td>
                         <td className="px-4 py-4 text-right font-semibold">
                           {r.total_amount.toLocaleString()}<span className="text-xs text-muted-foreground ml-1">฿</span>
                         </td>
@@ -250,11 +261,18 @@ export function ElectricMeters() {
                 {filtered.map((r) => (
                   <div key={r.id} className="p-4 flex items-start gap-3">
                     <div className="flex-1 min-w-0 space-y-1">
-                      <p className="text-sm font-medium">{t('electricMeters.colRoom')} {r.room_number}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">{t('electricMeters.colRoom')} {r.room_number}</p>
+                        <Badge variant={r.billing_type === 'flat' ? 'secondary' : 'outline'} className="text-xs">
+                          {t(`electricMeters.billingTypes.${r.billing_type}`)}
+                        </Badge>
+                      </div>
                       <p className="text-xs text-muted-foreground">{formatDate(r.reading_date)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {r.previous_reading} → {r.current_reading} ({t('electricMeters.used')} {r.unit_used})
-                      </p>
+                      {r.billing_type === 'meter' && r.previous_reading != null && r.current_reading != null && (
+                        <p className="text-xs text-muted-foreground">
+                          {r.previous_reading} → {r.current_reading} ({t('electricMeters.used')} {r.unit_used})
+                        </p>
+                      )}
                       <p className="text-sm font-semibold">{r.total_amount.toLocaleString()} ฿</p>
                     </div>
                     <DropdownMenu>

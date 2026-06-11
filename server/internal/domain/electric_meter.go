@@ -5,40 +5,53 @@ import (
 	"time"
 )
 
+type ElectricBillingType string
+
+const (
+	ElectricBillingTypeMeter ElectricBillingType = "meter"
+	ElectricBillingTypeFlat  ElectricBillingType = "flat"
+)
+
 type ElectricMeter struct {
-	ID              string    `json:"id"`
-	RoomID          string    `json:"room_id"`
-	ReadingDate     time.Time `json:"reading_date"`
-	PreviousReading float64   `json:"previous_reading"`
-	CurrentReading  float64   `json:"current_reading"`
-	UnitPrice       float64   `json:"unit_price"`
-	Note            string    `json:"note"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID              string              `json:"id"`
+	RoomID          string              `json:"room_id"`
+	BillingType     ElectricBillingType `json:"billing_type"`
+	ReadingDate     time.Time           `json:"reading_date"`
+	PreviousReading float64             `json:"previous_reading"`
+	CurrentReading  *float64            `json:"current_reading"`
+	UnitPrice       *float64            `json:"unit_price"`
+	FlatAmount      *float64            `json:"flat_amount"`
+	Note            string              `json:"note"`
+	CreatedAt       time.Time           `json:"created_at"`
+	UpdatedAt       time.Time           `json:"updated_at"`
 }
 
 type ElectricMeterDetail struct {
 	ElectricMeter
-	RoomNumber  string  `json:"room_number"`
-	UnitUsed    float64 `json:"unit_used"`
-	TotalAmount float64 `json:"total_amount"`
+	RoomNumber  string   `json:"room_number"`
+	UnitUsed    *float64 `json:"unit_used"`
+	TotalAmount float64  `json:"total_amount"`
 }
 
 type CreateElectricMeterRequest struct {
-	RoomID          string    `json:"room_id"`
-	ReadingDate     time.Time `json:"reading_date"`
-	PreviousReading float64   `json:"previous_reading"`
-	CurrentReading  float64   `json:"current_reading"`
-	UnitPrice       float64   `json:"unit_price"`
-	Note            string    `json:"note"`
+	RoomID          string              `json:"room_id"`
+	BillingType     ElectricBillingType `json:"billing_type"`
+	ReadingDate     time.Time           `json:"reading_date"`
+	PreviousReading float64             `json:"previous_reading"`
+	CurrentReading  *float64            `json:"current_reading"`
+	UnitPrice       *float64            `json:"unit_price"`
+	FlatAmount      *float64            `json:"flat_amount"`
+	Note            string              `json:"note"`
 }
 
 type UpdateElectricMeterRequest struct {
-	ReadingDate     time.Time `json:"reading_date"`
-	PreviousReading float64   `json:"previous_reading"`
-	CurrentReading  float64   `json:"current_reading"`
-	UnitPrice       float64   `json:"unit_price"`
-	Note            string    `json:"note"`
+	BillingType     ElectricBillingType `json:"billing_type"`
+	ReadingDate     time.Time           `json:"reading_date"`
+	PreviousReading float64             `json:"previous_reading"`
+	CurrentReading  *float64            `json:"current_reading"`
+	UnitPrice       *float64            `json:"unit_price"`
+	FlatAmount      *float64            `json:"flat_amount"`
+	Note            string              `json:"note"`
 }
 
 type ElectricMeterRepository interface {
