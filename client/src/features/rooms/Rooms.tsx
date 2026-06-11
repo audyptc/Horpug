@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { roomService } from '@/features/rooms/roomService'
-import { roomTypeService } from '@/features/rooms/roomTypeService'
+import { roomTypeService } from '@/features/roomTypes/roomTypeService'
 import { RoomDialog } from '@/features/rooms/components/RoomDialog'
 import { RoomDeleteDialog } from '@/features/rooms/components/RoomDeleteDialog'
 import type { ApiRoom, ApiRoomType, RoomStatus, RoomType } from '@/types'

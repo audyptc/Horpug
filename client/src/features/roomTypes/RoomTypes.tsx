@@ -29,7 +29,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { roomTypeService } from '@/features/rooms/roomTypeService'
+import { roomTypeService } from '@/features/roomTypes/roomTypeService'
 import type { ApiRoomType } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
@@ -179,9 +179,11 @@ export function RoomTypes() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/40">
-                      <th className="text-left px-6 py-3 font-medium text-muted-foreground">{t('roomTypes.colName')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('roomTypes.colId')}</th>
-                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('roomTypes.colOrder')}</th>
+                          <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('roomTypes.colOrder')}</th>
+                      <th className="text-left px-6 py-3 font-medium text-muted-foreground">{t('roomTypes.colName')}</th>
+                    
+                  
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('roomTypes.colCreated')}</th>
                       <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('roomTypes.colActions')}</th>
                     </tr>

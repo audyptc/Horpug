@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { roomTypeService } from '@/features/rooms/roomTypeService'
+import { roomTypeService } from '@/features/roomTypes/roomTypeService'
 import type { ApiRoom, ApiRoomType, RoomStatus, RoomType } from '@/types'
 
 type RoomForm = {
