@@ -209,6 +209,8 @@ export default {
     colIdCard: 'ID Card',
     colEmail: 'Email',
     colCreated: 'Created',
+    colUpdatedAt: 'Last Updated',
+    colUpdatedBy: 'Updated By',
     colActions: 'Actions',
     noTenants: 'No tenants found matching your filters.',
     clearFilters: 'Clear filters',

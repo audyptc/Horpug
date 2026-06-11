@@ -12,11 +12,12 @@ import (
 )
 
 type TenantHandler struct {
-	tenants *usecase.TenantUseCase
+	tenants     *usecase.TenantUseCase
+	activityLog *usecase.ActivityLogUseCase
 }
 
-func NewTenantHandler(tenants *usecase.TenantUseCase) *TenantHandler {
-	return &TenantHandler{tenants: tenants}
+func NewTenantHandler(tenants *usecase.TenantUseCase, activityLog *usecase.ActivityLogUseCase) *TenantHandler {
+	return &TenantHandler{tenants: tenants, activityLog: activityLog}
 }
 
 func (h *TenantHandler) List(c fiber.Ctx) error {
@@ -52,6 +53,7 @@ func (h *TenantHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityCreate, "tenant", t.ID, t)
 	return response.Created(c, t)
 }
 
@@ -65,12 +67,16 @@ func (h *TenantHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "tenant", t.ID, t)
 	return response.OK(c, t)
 }
 
 func (h *TenantHandler) Delete(c fiber.Ctx) error {
-	if err := h.tenants.Delete(c.Context(), c.Params("id")); err != nil {
+	id := c.Params("id")
+	actorID, _ := c.Locals("user_id").(string)
+	if err := h.tenants.Delete(c.Context(), id); err != nil {
 		return err
 	}
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityDelete, "tenant", id, nil)
 	return response.Message(c, "tenant deleted")
 }

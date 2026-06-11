@@ -9,6 +9,8 @@ export interface ApiTenant {
   note: string
   created_at: string
   updated_at: string
+  updated_by: string
+  updated_by_name: string
 }
 
 export interface CreateTenantPayload {

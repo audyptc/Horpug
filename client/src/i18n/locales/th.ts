@@ -266,6 +266,8 @@ export default {
     colIdCard: 'เลขบัตรประชาชน',
     colEmail: 'อีเมล',
     colCreated: 'วันที่สร้าง',
+    colUpdatedAt: 'อัปเดตล่าสุด',
+    colUpdatedBy: 'อัปเดตโดย',
     colActions: 'การดำเนินการ',
     noTenants: 'ไม่พบผู้เช่าที่ตรงกับเงื่อนไขการค้นหา',
     clearFilters: 'ล้างตัวกรอง',

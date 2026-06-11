@@ -239,6 +239,8 @@ export function Tenants() {
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('tenants.colIdCard')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('tenants.colEmail')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('tenants.colCreated')}</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('tenants.colUpdatedAt')}</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('tenants.colUpdatedBy')}</th>
                       <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('tenants.colActions')}</th>
                     </tr>
                   </thead>
@@ -265,6 +267,10 @@ export function Tenants() {
                           {tenant.email || <span className="text-xs">—</span>}
                         </td>
                         <td className="px-4 py-4 text-muted-foreground">{formatDate(tenant.created_at)}</td>
+                        <td className="px-4 py-4 text-muted-foreground">{formatDate(tenant.updated_at)}</td>
+                        <td className="px-4 py-4 text-muted-foreground">
+                          {tenant.updated_by_name || <span className="text-xs">—</span>}
+                        </td>
                         <td className="px-6 py-4 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
