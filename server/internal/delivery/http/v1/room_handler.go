@@ -12,11 +12,12 @@ import (
 )
 
 type RoomHandler struct {
-	rooms *usecase.RoomUseCase
+	rooms       *usecase.RoomUseCase
+	activityLog *usecase.ActivityLogUseCase
 }
 
-func NewRoomHandler(rooms *usecase.RoomUseCase) *RoomHandler {
-	return &RoomHandler{rooms: rooms}
+func NewRoomHandler(rooms *usecase.RoomUseCase, activityLog *usecase.ActivityLogUseCase) *RoomHandler {
+	return &RoomHandler{rooms: rooms, activityLog: activityLog}
 }
 
 func (h *RoomHandler) List(c fiber.Ctx) error {
@@ -52,6 +53,7 @@ func (h *RoomHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityCreate, "room", room.ID, room)
 	return response.Created(c, room)
 }
 
@@ -65,12 +67,16 @@ func (h *RoomHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "room", room.ID, room)
 	return response.OK(c, room)
 }
 
 func (h *RoomHandler) Delete(c fiber.Ctx) error {
-	if err := h.rooms.Delete(c.Context(), c.Params("id")); err != nil {
+	id := c.Params("id")
+	if err := h.rooms.Delete(c.Context(), id); err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityDelete, "room", id, nil)
 	return response.Message(c, "room deleted")
 }

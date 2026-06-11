@@ -18,7 +18,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
 	roleH := v1.NewRoleHandler(c.RoleUC, c.ActivityLogUC)
 	permH := v1.NewPermissionHandler(c.PermUC)
 	menuH := v1.NewMenuHandler(c.MenuUC)
-	roomH := v1.NewRoomHandler(c.RoomUC)
+	roomH := v1.NewRoomHandler(c.RoomUC, c.ActivityLogUC)
 	roomTypeH := v1.NewRoomTypeHandler(c.RoomTypeUC)
 	tenantH := v1.NewTenantHandler(c.TenantUC)
 	contractH := v1.NewContractHandler(c.ContractUC, c.ActivityLogUC)
