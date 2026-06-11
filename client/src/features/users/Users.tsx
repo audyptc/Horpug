@@ -47,6 +47,7 @@ import {
 } from '@/components/ui/select'
 import { userService } from '@/features/users/userService'
 import { roleService } from '@/features/roles/roleService'
+import { useToast } from '@/components/ui/toast'
 import type { ApiUser, ApiRole } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
@@ -85,6 +86,7 @@ const emptyForm = {
 
 export function Users() {
   const { t } = useTranslation()
+  const toast = useToast()
   const [users, setUsers] = useState<ApiUser[]>([])
   const [roles, setRoles] = useState<ApiRole[]>([])
   const [loading, setLoading] = useState(true)
@@ -102,6 +104,7 @@ export function Users() {
   const [deletingUser, setDeletingUser] = useState<ApiUser | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [exporting, setExporting] = useState(false)
 
   const fetchUsers = useCallback(async (p: number, pp: number) => {
@@ -169,6 +172,7 @@ export function Users() {
   function openCreate() {
     setEditingUser(null)
     setForm(emptyForm)
+    setSaveError('')
     setDialogOpen(true)
   }
 
@@ -181,12 +185,14 @@ export function Users() {
       role_id: user.role?.id ?? '',
       is_active: user.is_active,
     })
+    setSaveError('')
     setDialogOpen(true)
   }
 
   async function handleSave() {
     if (!form.full_name || !form.email) return
     setSaving(true)
+    setSaveError('')
     try {
       if (editingUser) {
         const payload: Record<string, unknown> = {
@@ -200,6 +206,7 @@ export function Users() {
         if (form.role_id && form.role_id !== editingUser.role?.id) {
           await userService.assignRole(editingUser.id, { role_id: form.role_id })
         }
+        toast.success(t('users.editSuccess'))
       } else {
         if (!form.password) return
         const created = await userService.create({
@@ -211,11 +218,15 @@ export function Users() {
         if (form.role_id) {
           await userService.assignRole(created.id, { role_id: form.role_id })
         }
+        toast.success(t('users.createSuccess'))
       }
       setDialogOpen(false)
       await fetchUsers(page, perPage)
-    } catch {
-      // error handled silently; server validation will show in console
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        t('users.saveError')
+      setSaveError(msg)
     } finally {
       setSaving(false)
     }
@@ -225,12 +236,13 @@ export function Users() {
     if (!deletingUser) return
     try {
       await userService.delete(deletingUser.id)
-      // ถ้าลบ record สุดท้ายใน page ปัจจุบัน ให้ถอยไปหน้าก่อน
+      toast.success(t('users.deleteSuccess'))
       const newPage = users.length === 1 && page > 1 ? page - 1 : page
       setPage(newPage)
       await fetchUsers(newPage, perPage)
-    } catch {
-      // ignore
+    } catch (err: unknown) {
+      const reason = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(reason ? `${t('users.deleteError')}: ${reason}` : t('users.deleteError'))
     } finally {
       setDeleteDialogOpen(false)
       setDeletingUser(null)
@@ -634,6 +646,9 @@ export function Users() {
               </div>
             </div>
           </div>
+          {saveError && (
+            <p className="text-sm text-destructive px-1 pb-2">{saveError}</p>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               {t('common.cancel')}
