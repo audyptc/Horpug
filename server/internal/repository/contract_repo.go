@@ -42,7 +42,7 @@ func (r *ContractRepo) FindByID(ctx context.Context, id string) (*domain.Contrac
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT id, tenant_id, room_id, start_date, end_date,
 		       rent_price, deposit, status, note, created_at, updated_at
-		FROM contracts WHERE id = $1`, id).
+		FROM contracts WHERE id = $1 AND deleted_at IS NULL`, id).
 		Scan(&c.ID, &c.TenantID, &c.RoomID, &c.StartDate, &c.EndDate,
 			&c.RentPrice, &c.Deposit, &c.Status, &c.Note, &c.CreatedAt, &c.UpdatedAt)
 	if err == pgx.ErrNoRows {
@@ -52,7 +52,7 @@ func (r *ContractRepo) FindByID(ctx context.Context, id string) (*domain.Contrac
 }
 
 func (r *ContractRepo) FindDetailByID(ctx context.Context, id string) (*domain.ContractDetail, error) {
-	row := r.db.Pool.QueryRow(ctx, contractDetailSelect+` WHERE c.id = $1`, id)
+	row := r.db.Pool.QueryRow(ctx, contractDetailSelect+` WHERE c.id = $1 AND c.deleted_at IS NULL`, id)
 	d, err := scanContractDetail(row)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("contract not found: %w", domain.ErrNotFound)
@@ -62,7 +62,7 @@ func (r *ContractRepo) FindDetailByID(ctx context.Context, id string) (*domain.C
 
 func (r *ContractRepo) List(ctx context.Context, limit, offset int) ([]*domain.ContractDetail, error) {
 	rows, err := r.db.Pool.Query(ctx,
-		contractDetailSelect+` ORDER BY c.created_at DESC LIMIT $1 OFFSET $2`, limit, offset)
+		contractDetailSelect+` WHERE c.deleted_at IS NULL ORDER BY c.created_at DESC LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (r *ContractRepo) List(ctx context.Context, limit, offset int) ([]*domain.C
 
 func (r *ContractRepo) Count(ctx context.Context) (int, error) {
 	var total int
-	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM contracts`).Scan(&total)
+	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM contracts WHERE deleted_at IS NULL`).Scan(&total)
 	return total, err
 }
 
@@ -106,6 +106,7 @@ func (r *ContractRepo) Update(ctx context.Context, c *domain.Contract) error {
 }
 
 func (r *ContractRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.db.Pool.Exec(ctx, `DELETE FROM contracts WHERE id = $1`, id)
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE contracts SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
 	return err
 }

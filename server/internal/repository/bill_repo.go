@@ -48,7 +48,7 @@ func (r *BillRepo) FindByID(ctx context.Context, id string) (*domain.Bill, error
 		SELECT id, contract_id, billing_month,
 		       rent_amount, electric_amount, water_amount, other_amount, other_note,
 		       total_amount, status, due_date, paid_at, note, created_at, updated_at
-		FROM bills WHERE id = $1`, id).
+		FROM bills WHERE id = $1 AND deleted_at IS NULL`, id).
 		Scan(&b.ID, &b.ContractID, &b.BillingMonth,
 			&b.RentAmount, &b.ElectricAmount, &b.WaterAmount, &b.OtherAmount, &b.OtherNote,
 			&b.TotalAmount, &b.Status, &b.DueDate, &b.PaidAt, &b.Note,
@@ -60,7 +60,7 @@ func (r *BillRepo) FindByID(ctx context.Context, id string) (*domain.Bill, error
 }
 
 func (r *BillRepo) FindDetailByID(ctx context.Context, id string) (*domain.BillDetail, error) {
-	row := r.db.Pool.QueryRow(ctx, billDetailSelect+` WHERE b.id = $1`, id)
+	row := r.db.Pool.QueryRow(ctx, billDetailSelect+` WHERE b.id = $1 AND b.deleted_at IS NULL`, id)
 	d, err := scanBillDetail(row)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("bill not found: %w", domain.ErrNotFound)
@@ -70,7 +70,7 @@ func (r *BillRepo) FindDetailByID(ctx context.Context, id string) (*domain.BillD
 
 func (r *BillRepo) List(ctx context.Context, limit, offset int) ([]*domain.BillDetail, error) {
 	rows, err := r.db.Pool.Query(ctx,
-		billDetailSelect+` ORDER BY b.billing_month DESC, b.created_at DESC LIMIT $1 OFFSET $2`,
+		billDetailSelect+` WHERE b.deleted_at IS NULL ORDER BY b.billing_month DESC, b.created_at DESC LIMIT $1 OFFSET $2`,
 		limit, offset)
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func (r *BillRepo) List(ctx context.Context, limit, offset int) ([]*domain.BillD
 
 func (r *BillRepo) Count(ctx context.Context) (int, error) {
 	var total int
-	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM bills`).Scan(&total)
+	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM bills WHERE deleted_at IS NULL`).Scan(&total)
 	return total, err
 }
 
@@ -124,6 +124,7 @@ func (r *BillRepo) Update(ctx context.Context, b *domain.Bill) error {
 }
 
 func (r *BillRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.db.Pool.Exec(ctx, `DELETE FROM bills WHERE id = $1`, id)
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE bills SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
 	return err
 }

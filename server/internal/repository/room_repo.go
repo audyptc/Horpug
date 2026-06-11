@@ -24,7 +24,7 @@ func (r *RoomRepo) FindByID(ctx context.Context, id string) (*domain.Room, error
 	room := &domain.Room{}
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT id, room_number, floor, type, status, rent_price, description, created_at, updated_at
-		FROM rooms WHERE id = $1`, id).
+		FROM rooms WHERE id = $1 AND deleted_at IS NULL`, id).
 		Scan(&room.ID, &room.RoomNumber, &room.Floor, &room.Type, &room.Status,
 			&room.RentPrice, &room.Description, &room.CreatedAt, &room.UpdatedAt)
 	if err == pgx.ErrNoRows {
@@ -37,6 +37,7 @@ func (r *RoomRepo) List(ctx context.Context, limit, offset int) ([]*domain.Room,
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, room_number, floor, type, status, rent_price, description, created_at, updated_at
 		FROM rooms
+		WHERE deleted_at IS NULL
 		ORDER BY floor, room_number
 		LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
@@ -61,7 +62,7 @@ func (r *RoomRepo) List(ctx context.Context, limit, offset int) ([]*domain.Room,
 
 func (r *RoomRepo) Count(ctx context.Context) (int, error) {
 	var total int
-	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM rooms`).Scan(&total)
+	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM rooms WHERE deleted_at IS NULL`).Scan(&total)
 	return total, err
 }
 
@@ -95,6 +96,7 @@ func (r *RoomRepo) Update(ctx context.Context, room *domain.Room) error {
 }
 
 func (r *RoomRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.db.Pool.Exec(ctx, `DELETE FROM rooms WHERE id = $1`, id)
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE rooms SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
 	return err
 }

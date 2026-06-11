@@ -22,7 +22,7 @@ func (r *TenantRepo) FindByID(ctx context.Context, id string) (*domain.Tenant, e
 	t := &domain.Tenant{}
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT id, first_name, last_name, phone, id_card, email, emergency_contact, note, created_at, updated_at
-		FROM tenants WHERE id = $1`, id).
+		FROM tenants WHERE id = $1 AND deleted_at IS NULL`, id).
 		Scan(&t.ID, &t.FirstName, &t.LastName, &t.Phone, &t.IDCard,
 			&t.Email, &t.EmergencyContact, &t.Note, &t.CreatedAt, &t.UpdatedAt)
 	if err == pgx.ErrNoRows {
@@ -35,6 +35,7 @@ func (r *TenantRepo) List(ctx context.Context, limit, offset int) ([]*domain.Ten
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, first_name, last_name, phone, id_card, email, emergency_contact, note, created_at, updated_at
 		FROM tenants
+		WHERE deleted_at IS NULL
 		ORDER BY first_name, last_name
 		LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
@@ -59,7 +60,7 @@ func (r *TenantRepo) List(ctx context.Context, limit, offset int) ([]*domain.Ten
 
 func (r *TenantRepo) Count(ctx context.Context) (int, error) {
 	var total int
-	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM tenants`).Scan(&total)
+	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM tenants WHERE deleted_at IS NULL`).Scan(&total)
 	return total, err
 }
 
@@ -82,6 +83,7 @@ func (r *TenantRepo) Update(ctx context.Context, t *domain.Tenant) error {
 }
 
 func (r *TenantRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.db.Pool.Exec(ctx, `DELETE FROM tenants WHERE id = $1`, id)
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE tenants SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
 	return err
 }

@@ -45,7 +45,7 @@ func (r *MeterReadingRepo) FindByID(ctx context.Context, id string) (*domain.Met
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT id, room_id, meter_type, reading_date,
 		       previous_reading, current_reading, unit_price, note, created_at, updated_at
-		FROM meter_readings WHERE id = $1`, id).
+		FROM meter_readings WHERE id = $1 AND deleted_at IS NULL`, id).
 		Scan(&m.ID, &m.RoomID, &m.MeterType, &m.ReadingDate,
 			&m.PreviousReading, &m.CurrentReading, &m.UnitPrice, &m.Note,
 			&m.CreatedAt, &m.UpdatedAt)
@@ -56,7 +56,7 @@ func (r *MeterReadingRepo) FindByID(ctx context.Context, id string) (*domain.Met
 }
 
 func (r *MeterReadingRepo) FindDetailByID(ctx context.Context, id string) (*domain.MeterReadingDetail, error) {
-	row := r.db.Pool.QueryRow(ctx, meterReadingDetailSelect+` WHERE m.id = $1`, id)
+	row := r.db.Pool.QueryRow(ctx, meterReadingDetailSelect+` WHERE m.id = $1 AND m.deleted_at IS NULL`, id)
 	d, err := scanMeterReadingDetail(row)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("meter reading not found: %w", domain.ErrNotFound)
@@ -66,7 +66,7 @@ func (r *MeterReadingRepo) FindDetailByID(ctx context.Context, id string) (*doma
 
 func (r *MeterReadingRepo) List(ctx context.Context, limit, offset int) ([]*domain.MeterReadingDetail, error) {
 	rows, err := r.db.Pool.Query(ctx,
-		meterReadingDetailSelect+` ORDER BY m.reading_date DESC, m.created_at DESC LIMIT $1 OFFSET $2`,
+		meterReadingDetailSelect+` WHERE m.deleted_at IS NULL ORDER BY m.reading_date DESC, m.created_at DESC LIMIT $1 OFFSET $2`,
 		limit, offset)
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func (r *MeterReadingRepo) List(ctx context.Context, limit, offset int) ([]*doma
 
 func (r *MeterReadingRepo) Count(ctx context.Context) (int, error) {
 	var total int
-	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM meter_readings`).Scan(&total)
+	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM meter_readings WHERE deleted_at IS NULL`).Scan(&total)
 	return total, err
 }
 
@@ -112,6 +112,7 @@ func (r *MeterReadingRepo) Update(ctx context.Context, m *domain.MeterReading) e
 }
 
 func (r *MeterReadingRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.db.Pool.Exec(ctx, `DELETE FROM meter_readings WHERE id = $1`, id)
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE meter_readings SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
 	return err
 }

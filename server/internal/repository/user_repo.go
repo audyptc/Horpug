@@ -22,7 +22,7 @@ func (r *UserRepo) FindByID(ctx context.Context, id string) (*domain.User, error
 	u := &domain.User{}
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT id, full_name, email, password, is_active, created_at, updated_at
-		FROM users WHERE id = $1`, id).
+		FROM users WHERE id = $1 AND deleted_at IS NULL`, id).
 		Scan(&u.ID, &u.FullName, &u.Email, &u.Password, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("user not found: %w", domain.ErrNotFound)
@@ -34,7 +34,7 @@ func (r *UserRepo) FindByEmail(ctx context.Context, email string) (*domain.User,
 	u := &domain.User{}
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT id, full_name, email, password, is_active, created_at, updated_at
-		FROM users WHERE email = $1`, email).
+		FROM users WHERE email = $1 AND deleted_at IS NULL`, email).
 		Scan(&u.ID, &u.FullName, &u.Email, &u.Password, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("user not found: %w", domain.ErrNotFound)
@@ -45,7 +45,7 @@ func (r *UserRepo) FindByEmail(ctx context.Context, email string) (*domain.User,
 func (r *UserRepo) List(ctx context.Context, limit, offset int) ([]*domain.User, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, full_name, email, is_active, created_at, updated_at
-		FROM users ORDER BY created_at DESC
+		FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (r *UserRepo) List(ctx context.Context, limit, offset int) ([]*domain.User,
 
 func (r *UserRepo) Count(ctx context.Context) (int, error) {
 	var total int
-	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&total)
+	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM users WHERE deleted_at IS NULL`).Scan(&total)
 	return total, err
 }
 
@@ -89,7 +89,8 @@ func (r *UserRepo) Update(ctx context.Context, user *domain.User) error {
 }
 
 func (r *UserRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.db.Pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, id)
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE users SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
 	return err
 }
 

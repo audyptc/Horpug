@@ -37,7 +37,7 @@ func (r *PaymentRepo) FindByID(ctx context.Context, id string) (*domain.Payment,
 	p := &domain.Payment{}
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT id, bill_id, amount, method, payment_date, note, created_at, updated_at
-		FROM payments WHERE id = $1`, id).
+		FROM payments WHERE id = $1 AND deleted_at IS NULL`, id).
 		Scan(&p.ID, &p.BillID, &p.Amount, &p.Method, &p.PaymentDate, &p.Note, &p.CreatedAt, &p.UpdatedAt)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("payment not found: %w", domain.ErrNotFound)
@@ -53,7 +53,7 @@ func (r *PaymentRepo) FindDetailByID(ctx context.Context, id string) (*domain.Pa
 		JOIN contracts c ON c.id = b.contract_id
 		JOIN tenants t ON t.id = c.tenant_id
 		JOIN rooms r ON r.id = c.room_id
-		WHERE p.id = $1`, id)
+		WHERE p.id = $1 AND p.deleted_at IS NULL`, id)
 	d, err := scanPaymentDetail(row)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("payment not found: %w", domain.ErrNotFound)
@@ -69,6 +69,7 @@ func (r *PaymentRepo) List(ctx context.Context, limit, offset int) ([]*domain.Pa
 		JOIN contracts c ON c.id = b.contract_id
 		JOIN tenants t ON t.id = c.tenant_id
 		JOIN rooms r ON r.id = c.room_id
+		WHERE p.deleted_at IS NULL
 		ORDER BY p.payment_date DESC, p.created_at DESC
 		LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
@@ -92,7 +93,7 @@ func (r *PaymentRepo) List(ctx context.Context, limit, offset int) ([]*domain.Pa
 
 func (r *PaymentRepo) Count(ctx context.Context) (int, error) {
 	var total int
-	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM payments`).Scan(&total)
+	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM payments WHERE deleted_at IS NULL`).Scan(&total)
 	return total, err
 }
 
@@ -138,6 +139,7 @@ func (r *PaymentRepo) Update(ctx context.Context, p *domain.Payment) error {
 }
 
 func (r *PaymentRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.db.Pool.Exec(ctx, `DELETE FROM payments WHERE id = $1`, id)
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE payments SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
 	return err
 }
