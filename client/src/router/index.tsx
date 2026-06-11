@@ -4,6 +4,7 @@ import { Dashboard } from '@/features/dashboard/Dashboard'
 import { Users } from '@/features/users/Users'
 import { Analytics } from '@/features/analytics/Analytics'
 import { Settings } from '@/features/settings/Settings'
+import { RoomTypes } from '@/features/settings/RoomTypes'
 import { Roles } from '@/features/roles/Roles'
 import { Rooms } from '@/features/rooms/Rooms'
 import { Tenants } from '@/features/tenants/Tenants'
@@ -70,6 +71,7 @@ export const router = createBrowserRouter([
               { path: 'users', element: <Users /> },
               { path: 'roles', element: <Roles /> },
               { path: 'general', element: <Settings /> },
+              { path: 'room-types', element: <RoomTypes /> },
             ],
           },
         ],

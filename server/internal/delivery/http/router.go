@@ -19,6 +19,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
 	permH := v1.NewPermissionHandler(c.PermUC)
 	menuH := v1.NewMenuHandler(c.MenuUC)
 	roomH := v1.NewRoomHandler(c.RoomUC)
+	roomTypeH := v1.NewRoomTypeHandler(c.RoomTypeUC)
 	tenantH := v1.NewTenantHandler(c.TenantUC)
 	contractH := v1.NewContractHandler(c.ContractUC, c.ActivityLogUC)
 	meterH := v1.NewMeterReadingHandler(c.MeterReadingUC)
@@ -94,6 +95,14 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
 	roomsGroup.Get("/:id", middleware.RequirePermission("rooms.read"), roomH.GetByID)
 	roomsGroup.Put("/:id", middleware.RequirePermission("rooms.update"), roomH.Update)
 	roomsGroup.Delete("/:id", middleware.RequirePermission("rooms.delete"), roomH.Delete)
+
+	// Room Types
+	roomTypesGroup := protected.Group("/room-types")
+	roomTypesGroup.Get("/", middleware.RequirePermission("rooms.read"), roomTypeH.List)
+	roomTypesGroup.Post("/", middleware.RequirePermission("rooms.create"), roomTypeH.Create)
+	roomTypesGroup.Get("/:id", middleware.RequirePermission("rooms.read"), roomTypeH.GetByID)
+	roomTypesGroup.Put("/:id", middleware.RequirePermission("rooms.update"), roomTypeH.Update)
+	roomTypesGroup.Delete("/:id", middleware.RequirePermission("rooms.delete"), roomTypeH.Delete)
 
 	// Tenants
 	tenantsGroup := protected.Group("/tenants")

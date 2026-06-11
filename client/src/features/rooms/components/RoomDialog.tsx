@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,7 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { ApiRoom, RoomStatus, RoomType } from '@/types'
+import { roomTypeService } from '@/features/rooms/roomTypeService'
+import type { ApiRoom, ApiRoomType, RoomStatus, RoomType } from '@/types'
 
 type RoomForm = {
   room_number: string
@@ -48,6 +50,12 @@ export function RoomDialog({
   saving,
 }: Props) {
   const { t } = useTranslation()
+  const [roomTypes, setRoomTypes] = useState<ApiRoomType[]>([])
+
+  useEffect(() => {
+    if (!open) return
+    roomTypeService.list().then(setRoomTypes).catch(() => {})
+  }, [open])
 
   const isSaveDisabled = saving || !form.room_number || form.floor <= 0 || form.rent_price <= 0
 
@@ -91,9 +99,13 @@ export function RoomDialog({
               <Select value={form.type} onValueChange={(v) => set({ type: v as RoomType })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="standard">{t('rooms.types.standard')}</SelectItem>
-                  <SelectItem value="deluxe">{t('rooms.types.deluxe')}</SelectItem>
-                  <SelectItem value="suite">{t('rooms.types.suite')}</SelectItem>
+                  {roomTypes.length === 0 ? (
+                    <SelectItem value={form.type || 'standard'}>{form.type || 'standard'}</SelectItem>
+                  ) : (
+                    roomTypes.map((rt) => (
+                      <SelectItem key={rt.id} value={rt.id}>{rt.name}</SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>

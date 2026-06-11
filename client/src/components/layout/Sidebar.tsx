@@ -31,6 +31,7 @@ import {
   Bell,
   TrendingUp,
   History,
+  LayoutList,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -116,6 +117,7 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
       items: [
         { label: t('nav.users'), icon: Users, to: '/settings/users' },
         { label: t('nav.roles'), icon: ShieldCheck, to: '/settings/roles' },
+        { label: t('nav.roomTypes'), icon: LayoutList, to: '/settings/room-types' },
         { label: 'ทั่วไป', icon: SlidersHorizontal, to: '/settings/general' },
       ],
     },

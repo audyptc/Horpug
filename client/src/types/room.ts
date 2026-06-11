@@ -1,5 +1,13 @@
-export type RoomType = 'standard' | 'deluxe' | 'suite'
+export type RoomType = string
 export type RoomStatus = 'available' | 'occupied' | 'maintenance'
+
+export interface ApiRoomType {
+  id: string
+  name: string
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
 
 export interface ApiRoom {
   id: string

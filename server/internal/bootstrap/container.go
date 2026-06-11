@@ -13,6 +13,7 @@ type Container struct {
 	PermUC         *usecase.PermissionUseCase
 	MenuUC         *usecase.MenuUseCase
 	RoomUC         *usecase.RoomUseCase
+	RoomTypeUC     *usecase.RoomTypeUseCase
 	TenantUC       *usecase.TenantUseCase
 	ContractUC     *usecase.ContractUseCase
 	MeterReadingUC *usecase.MeterReadingUseCase
@@ -41,6 +42,7 @@ func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refres
 		PermUC:         usecase.NewPermissionUseCase(repos.perm),
 		MenuUC:         usecase.NewMenuUseCase(repos.menu),
 		RoomUC:         usecase.NewRoomUseCase(repos.room),
+		RoomTypeUC:     usecase.NewRoomTypeUseCase(repos.roomType),
 		TenantUC:       usecase.NewTenantUseCase(repos.tenant),
 		ContractUC:     usecase.NewContractUseCase(repos.contract, repos.room, repos.tenant),
 		MeterReadingUC: usecase.NewMeterReadingUseCase(repos.meterReading, repos.room),

@@ -33,9 +33,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { roomService } from '@/features/rooms/roomService'
+import { roomTypeService } from '@/features/rooms/roomTypeService'
 import { RoomDialog } from '@/features/rooms/components/RoomDialog'
 import { RoomDeleteDialog } from '@/features/rooms/components/RoomDeleteDialog'
-import type { ApiRoom, RoomStatus, RoomType } from '@/types'
+import type { ApiRoom, ApiRoomType, RoomStatus, RoomType } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
 
@@ -59,6 +60,7 @@ const emptyForm = {
 export function Rooms() {
   const { t } = useTranslation()
   const [rooms, setRooms] = useState<ApiRoom[]>([])
+  const [roomTypes, setRoomTypes] = useState<ApiRoomType[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
@@ -79,10 +81,14 @@ export function Rooms() {
     setLoading(true)
     setError('')
     try {
-      const resp = await roomService.list(p, pp)
+      const [resp, types] = await Promise.all([
+        roomService.list(p, pp),
+        roomTypeService.list(),
+      ])
       setRooms(resp.data)
       setTotal(resp.meta.total)
       setTotalPages(resp.meta.total_pages)
+      setRoomTypes(types)
     } catch {
       setError(t('rooms.loadError'))
     } finally {
@@ -209,9 +215,9 @@ export function Rooms() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t('rooms.allTypes')}</SelectItem>
-                  <SelectItem value="standard">{t('rooms.types.standard')}</SelectItem>
-                  <SelectItem value="deluxe">{t('rooms.types.deluxe')}</SelectItem>
-                  <SelectItem value="suite">{t('rooms.types.suite')}</SelectItem>
+                  {roomTypes.map((rt) => (
+                    <SelectItem key={rt.id} value={rt.id}>{rt.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as RoomStatus | 'all')}>
@@ -271,7 +277,7 @@ export function Rooms() {
                         </td>
                         <td className="px-4 py-4">
                           <span className="text-xs px-2 py-0.5 rounded-md bg-muted font-medium capitalize">
-                            {t(`rooms.types.${room.type}`)}
+                            {roomTypes.find((rt) => rt.id === room.type)?.name ?? room.type}
                           </span>
                         </td>
                         <td className="px-4 py-4">
@@ -337,7 +343,7 @@ export function Rooms() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{room.room_number}</p>
                       <p className="text-xs text-muted-foreground">
-                        {t('rooms.floorN', { n: room.floor })} · {t(`rooms.types.${room.type}`)}
+                        {t('rooms.floorN', { n: room.floor })} · {roomTypes.find((rt) => rt.id === room.type)?.name ?? room.type}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant={statusVariantMap[room.status]} className="text-xs">

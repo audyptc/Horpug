@@ -12,6 +12,7 @@ type repositories struct {
 	token        *repository.TokenRepo
 	menu         *repository.MenuRepo
 	room         *repository.RoomRepo
+	roomType     *repository.RoomTypeRepo
 	tenant       *repository.TenantRepo
 	contract     *repository.ContractRepo
 	meterReading *repository.MeterReadingRepo
@@ -39,6 +40,7 @@ func newRepositories(db *database.DB) repositories {
 		token:        repository.NewTokenRepo(db),
 		menu:         repository.NewMenuRepo(db),
 		room:         repository.NewRoomRepo(db),
+		roomType:     repository.NewRoomTypeRepo(db),
 		tenant:       repository.NewTenantRepo(db),
 		contract:     repository.NewContractRepo(db),
 		meterReading: repository.NewMeterReadingRepo(db),
