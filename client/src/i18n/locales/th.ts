@@ -287,6 +287,11 @@ export default {
     deleteConfirm: 'คุณแน่ใจหรือไม่ว่าต้องการลบ',
     deleteWarning: 'การดำเนินการนี้ไม่สามารถยกเลิกได้',
     loadError: 'ไม่สามารถโหลดข้อมูลผู้เช่าได้',
+    saveError: 'ไม่สามารถบันทึกข้อมูลผู้เช่าได้',
+    createSuccess: 'สร้างผู้เช่าสำเร็จ',
+    editSuccess: 'อัปเดตข้อมูลผู้เช่าสำเร็จ',
+    deleteSuccess: 'ลบผู้เช่าสำเร็จ',
+    deleteError: 'ไม่สามารถลบผู้เช่าได้',
   },
   contracts: {
     title: 'สัญญาเช่า',

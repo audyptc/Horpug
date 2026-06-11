@@ -231,6 +231,11 @@ export default {
     deleteConfirm: 'Are you sure you want to delete',
     deleteWarning: 'This action cannot be undone.',
     loadError: 'Failed to load tenants.',
+    saveError: 'Failed to save tenant.',
+    createSuccess: 'Tenant created successfully.',
+    editSuccess: 'Tenant updated successfully.',
+    deleteSuccess: 'Tenant deleted successfully.',
+    deleteError: 'Failed to delete tenant.',
   },
   rooms: {
     title: 'Rooms',

@@ -170,8 +170,9 @@ export function Rooms() {
       const newPage = rooms.length === 1 && page > 1 ? page - 1 : page
       setPage(newPage)
       await fetchRooms(newPage, perPage)
-    } catch {
-      toast.error(t('rooms.deleteError'))
+    } catch (err: unknown) {
+      const reason = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(reason ? `${t('rooms.deleteError')}: ${reason}` : t('rooms.deleteError'))
     } finally {
       setDeleteDialogOpen(false)
       setDeletingRoom(null)

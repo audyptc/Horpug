@@ -40,6 +40,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { tenantService } from '@/features/tenants/tenantService'
+import { useToast } from '@/components/ui/toast'
 import type { ApiTenant } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
@@ -62,6 +63,7 @@ function getInitials(first: string, last: string) {
 
 export function Tenants() {
   const { t } = useTranslation()
+  const toast = useToast()
   const [tenants, setTenants] = useState<ApiTenant[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -76,6 +78,7 @@ export function Tenants() {
   const [deletingTenant, setDeletingTenant] = useState<ApiTenant | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const fetchTenants = useCallback(async (p: number, pp: number) => {
     setLoading(true)
@@ -113,6 +116,7 @@ export function Tenants() {
   function openCreate() {
     setEditingTenant(null)
     setForm(emptyForm)
+    setSaveError('')
     setDialogOpen(true)
   }
 
@@ -127,22 +131,29 @@ export function Tenants() {
       emergency_contact: tenant.emergency_contact,
       note: tenant.note,
     })
+    setSaveError('')
     setDialogOpen(true)
   }
 
   async function handleSave() {
     if (!form.first_name || !form.last_name || !form.phone || !form.id_card) return
     setSaving(true)
+    setSaveError('')
     try {
       if (editingTenant) {
         await tenantService.update(editingTenant.id, form)
+        toast.success(t('tenants.editSuccess'))
       } else {
         await tenantService.create(form)
+        toast.success(t('tenants.createSuccess'))
       }
       setDialogOpen(false)
       await fetchTenants(page, perPage)
-    } catch {
-      // error handled silently
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        t('tenants.saveError')
+      setSaveError(msg)
     } finally {
       setSaving(false)
     }
@@ -152,11 +163,13 @@ export function Tenants() {
     if (!deletingTenant) return
     try {
       await tenantService.delete(deletingTenant.id)
+      toast.success(t('tenants.deleteSuccess'))
       const newPage = tenants.length === 1 && page > 1 ? page - 1 : page
       setPage(newPage)
       await fetchTenants(newPage, perPage)
-    } catch {
-      // ignore
+    } catch (err: unknown) {
+      const reason = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(reason ? `${t('tenants.deleteError')}: ${reason}` : t('tenants.deleteError'))
     } finally {
       setDeleteDialogOpen(false)
       setDeletingTenant(null)
@@ -383,6 +396,11 @@ export function Tenants() {
               {editingTenant ? t('tenants.editDesc') : t('tenants.createDesc')}
             </DialogDescription>
           </DialogHeader>
+          {saveError && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {saveError}
+            </div>
+          )}
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
