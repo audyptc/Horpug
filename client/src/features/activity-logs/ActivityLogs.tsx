@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DatePicker } from '@/components/ui/date-picker'
 import { activityLogService } from './activityLogService'
 import type { ApiActivityLog, ActivityAction } from '@/types'
 import { cn } from '@/lib/utils'
@@ -171,20 +172,18 @@ export function ActivityLogs() {
               </Select>
 
               {/* Date range */}
-              <Input
-                type="date"
-                className="h-9 w-36"
+              <DatePicker
                 value={filterFrom}
-                onChange={(e) => handleFromChange(e.target.value)}
-                title={t('activityLogs.from')}
+                onChange={handleFromChange}
+                placeholder={t('activityLogs.from')}
+                className="h-9 w-36"
               />
               <span className="text-muted-foreground text-sm">–</span>
-              <Input
-                type="date"
-                className="h-9 w-36"
+              <DatePicker
                 value={filterTo}
-                onChange={(e) => handleToChange(e.target.value)}
-                title={t('activityLogs.to')}
+                onChange={handleToChange}
+                placeholder={t('activityLogs.to')}
+                className="h-9 w-36"
               />
 
               {hasFilters && (

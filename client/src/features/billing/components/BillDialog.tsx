@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DatePicker } from '@/components/ui/date-picker'
 import type { ApiBill, ApiContract, BillStatus } from '@/types'
 
 export type BillFormState = {
@@ -148,10 +149,9 @@ export function BillDialog({
 
           <div className="space-y-1.5">
             <Label>{t('bills.dueDate')}</Label>
-            <Input
-              type="date"
+            <DatePicker
               value={form.due_date}
-              onChange={(e) => onFormChange({ due_date: e.target.value })}
+              onChange={(v) => onFormChange({ due_date: v })}
             />
           </div>
 

@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DatePicker } from '@/components/ui/date-picker'
 import type { ApiContract, ApiTenant, ApiRoom, ContractStatus } from '@/types'
 
 type ContractForm = {
@@ -99,7 +100,10 @@ export function ContractDialog({
             <Label>{t('contracts.room')} *</Label>
             <Select
               value={form.room_id}
-              onValueChange={(v) => set({ room_id: v })}
+              onValueChange={(v) => {
+                const room = availableRooms.find((r) => r.id === v)
+                set({ room_id: v, rent_price: room ? String(room.rent_price) : form.rent_price })
+              }}
               disabled={!!editingContract}
             >
               <SelectTrigger><SelectValue placeholder={t('contracts.selectRoom')} /></SelectTrigger>
@@ -116,19 +120,17 @@ export function ContractDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>{t('contracts.startDate')} *</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={form.start_date}
-                onChange={(e) => set({ start_date: e.target.value })}
+                onChange={(v) => set({ start_date: v })}
                 disabled={!!editingContract}
               />
             </div>
             <div className="space-y-1.5">
               <Label>{t('contracts.endDate')}</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={form.end_date}
-                onChange={(e) => set({ end_date: e.target.value })}
+                onChange={(v) => set({ end_date: v })}
                 placeholder={t('contracts.endDateOptional')}
               />
             </div>
@@ -140,7 +142,8 @@ export function ContractDialog({
               <Input
                 type="number"
                 min="0"
-                value={form.rent_price}
+                value={form.rent_price}   
+                className="text-right"              
                 onChange={(e) => set({ rent_price: e.target.value })}
               />
             </div>
@@ -150,6 +153,7 @@ export function ContractDialog({
                 type="number"
                 min="0"
                 value={form.deposit}
+                className="text-right"
                 onChange={(e) => set({ deposit: e.target.value })}
               />
             </div>

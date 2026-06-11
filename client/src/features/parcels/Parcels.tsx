@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DatePicker } from '@/components/ui/date-picker'
 import { parcelService } from '@/features/parcels/parcelService'
 import type { ApiParcel, ParcelStatus } from '@/types'
 import { cn } from '@/lib/utils'
@@ -473,20 +474,18 @@ export function Parcels() {
               </div>
               <div className="space-y-1.5">
                 <Label>{t('parcels.receivedDate')} *</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={form.received_date}
-                  onChange={(e) => setForm((f) => ({ ...f, received_date: e.target.value }))}
+                  onChange={(v) => setForm((f) => ({ ...f, received_date: v }))}
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <Label>{t('parcels.pickedUpDate')}</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={form.picked_up_date}
-                onChange={(e) => setForm((f) => ({ ...f, picked_up_date: e.target.value }))}
+                onChange={(v) => setForm((f) => ({ ...f, picked_up_date: v }))}
               />
             </div>
 

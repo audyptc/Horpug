@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DatePicker } from '@/components/ui/date-picker'
 import { documentService } from '@/features/documents/documentService'
 import type { ApiDocument, DocumentCategory } from '@/types'
 import { cn } from '@/lib/utils'
@@ -496,18 +497,16 @@ export function Documents() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>{t('documents.issueDate')}</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={form.issue_date}
-                  onChange={(e) => setForm((f) => ({ ...f, issue_date: e.target.value }))}
+                  onChange={(v) => setForm((f) => ({ ...f, issue_date: v }))}
                 />
               </div>
               <div className="space-y-1.5">
                 <Label>{t('documents.expiryDate')}</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={form.expiry_date}
-                  onChange={(e) => setForm((f) => ({ ...f, expiry_date: e.target.value }))}
+                  onChange={(v) => setForm((f) => ({ ...f, expiry_date: v }))}
                 />
               </div>
             </div>

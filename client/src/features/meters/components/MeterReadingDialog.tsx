@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DatePicker } from '@/components/ui/date-picker'
 import type { ApiMeterReading, ApiRoom, MeterType } from '@/types'
 
 type MeterReadingForm = {
@@ -120,10 +121,9 @@ export function MeterReadingDialog({
 
           <div className="space-y-1.5">
             <Label>{t('meters.readingDate')} *</Label>
-            <Input
-              type="date"
+            <DatePicker
               value={form.reading_date}
-              onChange={(e) => set({ reading_date: e.target.value })}
+              onChange={(v) => set({ reading_date: v })}
             />
           </div>
 

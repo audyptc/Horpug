@@ -41,6 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DatePicker } from '@/components/ui/date-picker'
 import { announcementService } from '@/features/announcements/announcementService'
 import type { ApiAnnouncement, AnnouncementType } from '@/types'
 import { cn } from '@/lib/utils'
@@ -467,20 +468,18 @@ export function Announcements() {
               </div>
               <div className="space-y-1.5">
                 <Label>{t('announcements.publishedAt')} *</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={form.published_at}
-                  onChange={(e) => setForm((f) => ({ ...f, published_at: e.target.value }))}
+                  onChange={(v) => setForm((f) => ({ ...f, published_at: v }))}
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <Label>{t('announcements.expiredAt')}</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={form.expired_at}
-                onChange={(e) => setForm((f) => ({ ...f, expired_at: e.target.value }))}
+                onChange={(v) => setForm((f) => ({ ...f, expired_at: v }))}
               />
             </div>
 

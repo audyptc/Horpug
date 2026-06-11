@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DatePicker } from '@/components/ui/date-picker'
 import type { ApiPayment, PaymentMethod } from '@/types'
 
 type PaymentForm = {
@@ -108,10 +109,9 @@ export function PaymentDialog({
 
           <div className="space-y-1.5">
             <Label>{t('payments.paymentDate')} *</Label>
-            <Input
-              type="date"
+            <DatePicker
               value={form.payment_date}
-              onChange={(e) => set({ payment_date: e.target.value })}
+              onChange={(v) => set({ payment_date: v })}
             />
           </div>
 

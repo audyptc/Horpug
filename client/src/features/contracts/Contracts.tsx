@@ -179,8 +179,8 @@ export function Contracts() {
           deposit: Number(form.deposit),
           note: form.note,
         })
-        roomService.list(1, 200).then((r) => setRooms(r.data)).catch(() => {})
       }
+      roomService.list(1, 200).then((r) => setRooms(r.data)).catch(() => {})
       setDialogOpen(false)
       await fetchContracts(page, perPage)
     } catch (err: unknown) {

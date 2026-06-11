@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DatePicker } from '@/components/ui/date-picker'
 import type { ApiMaintenanceRequest, MaintenanceStatus, MaintenancePriority } from '@/types'
 
 type MaintenanceForm = {
@@ -135,18 +136,16 @@ export function MaintenanceDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>{t('maintenance.reportedDate')} *</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={form.reported_date}
-                onChange={(e) => set({ reported_date: e.target.value })}
+                onChange={(v) => set({ reported_date: v })}
               />
             </div>
             <div className="space-y-1.5">
               <Label>{t('maintenance.resolvedDate')}</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={form.resolved_date}
-                onChange={(e) => set({ resolved_date: e.target.value })}
+                onChange={(v) => set({ resolved_date: v })}
               />
             </div>
           </div>

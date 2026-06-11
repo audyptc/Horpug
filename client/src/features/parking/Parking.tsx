@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DatePicker } from '@/components/ui/date-picker'
 import { parkingService } from '@/features/parking/parkingService'
 import type { ApiParkingSlot, ParkingStatus, VehicleType } from '@/types'
 import { cn } from '@/lib/utils'
@@ -526,10 +527,9 @@ export function Parking() {
               </div>
               <div className="space-y-1.5">
                 <Label>{t('parking.startDate')}</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={form.start_date}
-                  onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))}
+                  onChange={(v) => setForm((f) => ({ ...f, start_date: v }))}
                 />
               </div>
             </div>
