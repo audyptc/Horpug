@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Search,
@@ -18,7 +18,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,14 +26,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -42,6 +33,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { roomService } from '@/features/rooms/roomService'
+import { RoomDialog } from '@/features/rooms/components/RoomDialog'
+import { RoomDeleteDialog } from '@/features/rooms/components/RoomDeleteDialog'
 import type { ApiRoom, RoomStatus, RoomType } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
@@ -166,8 +159,6 @@ export function Rooms() {
       setDeletingRoom(null)
     }
   }
-
-  const isSaveDisabled = saving || !form.room_number || form.floor <= 0 || form.rent_price <= 0
 
   return (
     <div className="space-y-6">
@@ -427,115 +418,22 @@ export function Rooms() {
         </CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingRoom ? t('rooms.editRoom') : t('rooms.createRoom')}</DialogTitle>
-            <DialogDescription>
-              {editingRoom ? t('rooms.editDesc') : t('rooms.createDesc')}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>{t('rooms.roomNumber')} *</Label>
-                <Input
-                  placeholder="101"
-                  value={form.room_number}
-                  onChange={(e) => setForm((f) => ({ ...f, room_number: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('rooms.floor')} *</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  placeholder="1"
-                  value={form.floor}
-                  onChange={(e) => setForm((f) => ({ ...f, floor: Number(e.target.value) }))}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>{t('rooms.type')}</Label>
-                <Select value={form.type} onValueChange={(v) => setForm((f) => ({ ...f, type: v as RoomType }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="standard">{t('rooms.types.standard')}</SelectItem>
-                    <SelectItem value="deluxe">{t('rooms.types.deluxe')}</SelectItem>
-                    <SelectItem value="suite">{t('rooms.types.suite')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('rooms.status')}</Label>
-                <Select value={form.status} onValueChange={(v) => setForm((f) => ({ ...f, status: v as RoomStatus }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="available">{t('rooms.statuses.available')}</SelectItem>
-                    <SelectItem value="occupied">{t('rooms.statuses.occupied')}</SelectItem>
-                    <SelectItem value="maintenance">{t('rooms.statuses.maintenance')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t('rooms.rentPrice')} * ({t('rooms.bahtPerMonth')})</Label>
-              <Input
-                type="number"
-                min={0}
-                placeholder="3500"
-                value={form.rent_price || ''}
-                onChange={(e) => setForm((f) => ({ ...f, rent_price: Number(e.target.value) }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t('rooms.description')}</Label>
-              <textarea
-                rows={2}
-                placeholder={t('rooms.descriptionPlaceholder')}
-                value={form.description}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                  setForm((f) => ({ ...f, description: e.target.value }))
-                }
-                className="flex min-h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button onClick={handleSave} disabled={isSaveDisabled}>
-              {saving ? t('common.loading') : editingRoom ? t('rooms.saveChanges') : t('rooms.createRoom')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <RoomDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editingRoom={editingRoom}
+        form={form}
+        onFormChange={setForm}
+        onSave={handleSave}
+        saving={saving}
+      />
 
-      {/* Delete confirm */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{t('rooms.deleteRoom')}</DialogTitle>
-            <DialogDescription>
-              {t('rooms.deleteConfirm')}{' '}
-              <span className="font-semibold text-foreground">{deletingRoom?.room_number}</span>?{' '}
-              {t('rooms.deleteWarning')}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              {t('common.delete')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <RoomDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        room={deletingRoom}
+        onDelete={handleDelete}
+      />
     </div>
   )
 }

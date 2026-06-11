@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Search,
@@ -18,7 +18,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -28,14 +27,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -44,6 +35,8 @@ import {
 } from '@/components/ui/select'
 import { meterReadingService } from '@/features/meters/meterReadingService'
 import { roomService } from '@/features/rooms/roomService'
+import { MeterReadingDialog } from '@/features/meters/components/MeterReadingDialog'
+import { MeterReadingDeleteDialog } from '@/features/meters/components/MeterReadingDeleteDialog'
 import type { ApiMeterReading, ApiRoom, MeterType } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
@@ -190,22 +183,6 @@ export function MeterReadings() {
       setDeletingReading(null)
     }
   }
-
-  const unitUsed =
-    form.current_reading && form.previous_reading
-      ? Number(form.current_reading) - Number(form.previous_reading)
-      : null
-
-  const totalAmount =
-    unitUsed !== null && form.unit_price ? unitUsed * Number(form.unit_price) : null
-
-  const isSaveDisabled =
-    saving ||
-    !form.room_id ||
-    !form.reading_date ||
-    !form.current_reading ||
-    !form.unit_price ||
-    Number(form.current_reading) < Number(form.previous_reading)
 
   return (
     <div className="space-y-6">
@@ -443,169 +420,23 @@ export function MeterReadings() {
         </CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {editingReading ? t('meters.editReading') : t('meters.createReading')}
-            </DialogTitle>
-            <DialogDescription>
-              {editingReading ? t('meters.editDesc') : t('meters.createDesc')}
-            </DialogDescription>
-          </DialogHeader>
+      <MeterReadingDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editingReading={editingReading}
+        form={form}
+        onFormChange={setForm}
+        onSave={handleSave}
+        saving={saving}
+        rooms={rooms}
+      />
 
-          <div className="grid gap-4 py-4">
-            {/* Room */}
-            <div className="space-y-1.5">
-              <Label>{t('meters.room')} *</Label>
-              <Select
-                value={form.room_id}
-                onValueChange={(v) => setForm((f) => ({ ...f, room_id: v }))}
-                disabled={!!editingReading}
-              >
-                <SelectTrigger><SelectValue placeholder={t('meters.selectRoom')} /></SelectTrigger>
-                <SelectContent>
-                  {rooms.map((rm) => (
-                    <SelectItem key={rm.id} value={rm.id}>
-                      {rm.room_number}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Meter Type */}
-            <div className="space-y-1.5">
-              <Label>{t('meters.meterType')} *</Label>
-              <Select
-                value={form.meter_type}
-                onValueChange={(v) => setForm((f) => ({ ...f, meter_type: v as MeterType }))}
-                disabled={!!editingReading}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="electric">{t('meters.types.electric')}</SelectItem>
-                  <SelectItem value="water">{t('meters.types.water')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Date */}
-            <div className="space-y-1.5">
-              <Label>{t('meters.readingDate')} *</Label>
-              <Input
-                type="date"
-                value={form.reading_date}
-                onChange={(e) => setForm((f) => ({ ...f, reading_date: e.target.value }))}
-              />
-            </div>
-
-            {/* Readings */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>{t('meters.previousReading')}</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.previous_reading}
-                  onChange={(e) => setForm((f) => ({ ...f, previous_reading: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('meters.currentReading')} *</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.current_reading}
-                  onChange={(e) => setForm((f) => ({ ...f, current_reading: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            {/* Unit price */}
-            <div className="space-y-1.5">
-              <Label>{t('meters.unitPrice')} *</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.0001"
-                value={form.unit_price}
-                onChange={(e) => setForm((f) => ({ ...f, unit_price: e.target.value }))}
-              />
-            </div>
-
-            {/* Preview */}
-            {unitUsed !== null && unitUsed >= 0 && (
-              <div className="rounded-md border bg-muted/40 px-4 py-3 text-sm space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{t('meters.unitUsed')}</span>
-                  <span className="font-medium">{unitUsed.toLocaleString()} {t('meters.unit')}</span>
-                </div>
-                {totalAmount !== null && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{t('meters.totalAmount')}</span>
-                    <span className="font-semibold">{totalAmount.toLocaleString()} ฿</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Note */}
-            <div className="space-y-1.5">
-              <Label>{t('meters.note')}</Label>
-              <textarea
-                rows={2}
-                placeholder={t('meters.notePlaceholder')}
-                value={form.note}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                  setForm((f) => ({ ...f, note: e.target.value }))
-                }
-                className="flex min-h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button onClick={handleSave} disabled={isSaveDisabled}>
-              {saving
-                ? t('common.loading')
-                : editingReading
-                  ? t('meters.saveChanges')
-                  : t('meters.createReading')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete confirm */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{t('meters.deleteReading')}</DialogTitle>
-            <DialogDescription>
-              {t('meters.deleteConfirm')}{' '}
-              <span className="font-semibold text-foreground">
-                {t('meters.colRoom')} {deletingReading?.room_number}
-              </span>?{' '}
-              {t('meters.deleteWarning')}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              {t('common.delete')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <MeterReadingDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        reading={deletingReading}
+        onDelete={handleDelete}
+      />
     </div>
   )
 }

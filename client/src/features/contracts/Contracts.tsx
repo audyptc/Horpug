@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Search,
@@ -16,7 +16,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -25,14 +24,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
@@ -43,6 +34,8 @@ import {
 import { contractService } from '@/features/contracts/contractService'
 import { tenantService } from '@/features/tenants/tenantService'
 import { roomService } from '@/features/rooms/roomService'
+import { ContractDialog } from '@/features/contracts/components/ContractDialog'
+import { ContractDeleteDialog } from '@/features/contracts/components/ContractDeleteDialog'
 import type { ApiContract, ApiTenant, ApiRoom, ContractStatus } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
@@ -182,7 +175,6 @@ export function Contracts() {
           deposit: Number(form.deposit),
           note: form.note,
         })
-        // Refresh available rooms after creating
         roomService.list(1, 200).then((r) => setRooms(r.data)).catch(() => {})
       }
       setDialogOpen(false)
@@ -209,9 +201,6 @@ export function Contracts() {
       setDeletingContract(null)
     }
   }
-
-  const isSaveDisabled =
-    saving || !form.tenant_id || !form.room_id || !form.start_date || !form.rent_price
 
   return (
     <div className="space-y-6">
@@ -452,172 +441,24 @@ export function Contracts() {
         </CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {editingContract ? t('contracts.editContract') : t('contracts.createContract')}
-            </DialogTitle>
-            <DialogDescription>
-              {editingContract ? t('contracts.editDesc') : t('contracts.createDesc')}
-            </DialogDescription>
-          </DialogHeader>
+      <ContractDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editingContract={editingContract}
+        form={form}
+        onFormChange={setForm}
+        onSave={handleSave}
+        saving={saving}
+        tenants={tenants}
+        availableRooms={availableRooms}
+      />
 
-          <div className="grid gap-4 py-4">
-            {/* Tenant */}
-            <div className="space-y-1.5">
-              <Label>{t('contracts.tenant')} *</Label>
-              <Select
-                value={form.tenant_id}
-                onValueChange={(v) => setForm((f) => ({ ...f, tenant_id: v }))}
-                disabled={!!editingContract}
-              >
-                <SelectTrigger><SelectValue placeholder={t('contracts.selectTenant')} /></SelectTrigger>
-                <SelectContent>
-                  {tenants.map((tn) => (
-                    <SelectItem key={tn.id} value={tn.id}>
-                      {tn.first_name} {tn.last_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Room */}
-            <div className="space-y-1.5">
-              <Label>{t('contracts.room')} *</Label>
-              <Select
-                value={form.room_id}
-                onValueChange={(v) => setForm((f) => ({ ...f, room_id: v }))}
-                disabled={!!editingContract}
-              >
-                <SelectTrigger><SelectValue placeholder={t('contracts.selectRoom')} /></SelectTrigger>
-                <SelectContent>
-                  {availableRooms.map((rm) => (
-                    <SelectItem key={rm.id} value={rm.id}>
-                      {rm.room_number} — {rm.rent_price.toLocaleString()} ฿/เดือน
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Dates */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>{t('contracts.startDate')} *</Label>
-                <Input
-                  type="date"
-                  value={form.start_date}
-                  onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))}
-                  disabled={!!editingContract}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('contracts.endDate')}</Label>
-                <Input
-                  type="date"
-                  value={form.end_date}
-                  onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))}
-                  placeholder={t('contracts.endDateOptional')}
-                />
-              </div>
-            </div>
-
-            {/* Prices */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>{t('contracts.rentPrice')} *</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={form.rent_price}
-                  onChange={(e) => setForm((f) => ({ ...f, rent_price: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('contracts.deposit')}</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={form.deposit}
-                  onChange={(e) => setForm((f) => ({ ...f, deposit: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            {/* Status (edit only) */}
-            {editingContract && (
-              <div className="space-y-1.5">
-                <Label>{t('contracts.status')}</Label>
-                <Select
-                  value={form.status}
-                  onValueChange={(v) => setForm((f) => ({ ...f, status: v as ContractStatus }))}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">{t('contracts.statuses.active')}</SelectItem>
-                    <SelectItem value="expired">{t('contracts.statuses.expired')}</SelectItem>
-                    <SelectItem value="terminated">{t('contracts.statuses.terminated')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Note */}
-            <div className="space-y-1.5">
-              <Label>{t('contracts.note')}</Label>
-              <textarea
-                rows={2}
-                placeholder={t('contracts.notePlaceholder')}
-                value={form.note}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                  setForm((f) => ({ ...f, note: e.target.value }))
-                }
-                className="flex min-h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button onClick={handleSave} disabled={isSaveDisabled}>
-              {saving
-                ? t('common.loading')
-                : editingContract
-                  ? t('contracts.saveChanges')
-                  : t('contracts.createContract')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete confirm */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{t('contracts.deleteContract')}</DialogTitle>
-            <DialogDescription>
-              {t('contracts.deleteConfirm')}{' '}
-              <span className="font-semibold text-foreground">
-                {deletingContract?.tenant_first_name} {deletingContract?.tenant_last_name}
-              </span>?{' '}
-              {t('contracts.deleteWarning')}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              {t('common.delete')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ContractDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        contract={deletingContract}
+        onDelete={handleDelete}
+      />
     </div>
   )
 }

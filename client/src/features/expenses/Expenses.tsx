@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Search,
@@ -16,7 +16,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -26,14 +25,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -41,6 +32,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { expenseService } from '@/features/expenses/expenseService'
+import { ExpenseDialog } from '@/features/expenses/components/ExpenseDialog'
+import { ExpenseDeleteDialog } from '@/features/expenses/components/ExpenseDeleteDialog'
 import type { ApiExpense, ExpenseCategory } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
@@ -178,8 +171,6 @@ export function Expenses() {
       setDeletingExpense(null)
     }
   }
-
-  const isSaveDisabled = saving || !form.expense_date || !form.description || !form.amount
 
   const totalAmount = useMemo(
     () => filtered.reduce((sum, e) => sum + e.amount, 0),
@@ -427,119 +418,22 @@ export function Expenses() {
         </CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {editingExpense ? t('expenses.editExpense') : t('expenses.createExpense')}
-            </DialogTitle>
-            <DialogDescription>
-              {editingExpense ? t('expenses.editDesc') : t('expenses.createDesc')}
-            </DialogDescription>
-          </DialogHeader>
+      <ExpenseDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editingExpense={editingExpense}
+        form={form}
+        onFormChange={setForm}
+        onSave={handleSave}
+        saving={saving}
+      />
 
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>{t('expenses.expenseDate')} *</Label>
-                <Input
-                  type="date"
-                  value={form.expense_date}
-                  onChange={(e) => setForm((f) => ({ ...f, expense_date: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('expenses.category')} *</Label>
-                <Select
-                  value={form.category}
-                  onValueChange={(v) => setForm((f) => ({ ...f, category: v as ExpenseCategory }))}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="repair">{t('expenses.categories.repair')}</SelectItem>
-                    <SelectItem value="utilities">{t('expenses.categories.utilities')}</SelectItem>
-                    <SelectItem value="supplies">{t('expenses.categories.supplies')}</SelectItem>
-                    <SelectItem value="salary">{t('expenses.categories.salary')}</SelectItem>
-                    <SelectItem value="other">{t('expenses.categories.other')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>{t('expenses.description')} *</Label>
-              <Input
-                placeholder={t('expenses.descriptionPlaceholder')}
-                value={form.description}
-                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>{t('expenses.amount')} *</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={form.amount}
-                onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>{t('expenses.note')}</Label>
-              <textarea
-                rows={2}
-                placeholder={t('expenses.notePlaceholder')}
-                value={form.note}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                  setForm((f) => ({ ...f, note: e.target.value }))
-                }
-                className="flex min-h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button onClick={handleSave} disabled={isSaveDisabled}>
-              {saving
-                ? t('common.loading')
-                : editingExpense
-                  ? t('expenses.saveChanges')
-                  : t('expenses.createExpense')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete confirm */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{t('expenses.deleteExpense')}</DialogTitle>
-            <DialogDescription>
-              {t('expenses.deleteConfirm')}{' '}
-              <span className="font-semibold text-foreground">
-                {deletingExpense?.description}
-              </span>?{' '}
-              {t('expenses.deleteWarning')}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              {t('common.delete')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ExpenseDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        expense={deletingExpense}
+        onDelete={handleDelete}
+      />
     </div>
   )
 }

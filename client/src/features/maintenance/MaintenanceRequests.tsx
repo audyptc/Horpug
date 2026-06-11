@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Search,
@@ -16,7 +16,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -26,14 +25,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -41,6 +32,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { maintenanceService } from '@/features/maintenance/maintenanceService'
+import { MaintenanceDialog } from '@/features/maintenance/components/MaintenanceDialog'
+import { MaintenanceDeleteDialog } from '@/features/maintenance/components/MaintenanceDeleteDialog'
 import type { ApiMaintenanceRequest, MaintenanceStatus, MaintenancePriority } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
@@ -198,8 +191,6 @@ export function MaintenanceRequests() {
       setDeletingItem(null)
     }
   }
-
-  const isSaveDisabled = saving || !form.room_id || !form.title || !form.reported_date
 
   return (
     <div className="space-y-6">
@@ -446,154 +437,22 @@ export function MaintenanceRequests() {
         </CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {editingItem ? t('maintenance.editRequest') : t('maintenance.createRequest')}
-            </DialogTitle>
-            <DialogDescription>
-              {editingItem ? t('maintenance.editDesc') : t('maintenance.createDesc')}
-            </DialogDescription>
-          </DialogHeader>
+      <MaintenanceDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editingItem={editingItem}
+        form={form}
+        onFormChange={setForm}
+        onSave={handleSave}
+        saving={saving}
+      />
 
-          <div className="grid gap-4 py-4">
-            <div className="space-y-1.5">
-              <Label>{t('maintenance.roomId')} *</Label>
-              <Input
-                placeholder={t('maintenance.roomIdPlaceholder')}
-                value={form.room_id}
-                onChange={(e) => setForm((f) => ({ ...f, room_id: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>{t('maintenance.titleField')} *</Label>
-              <Input
-                placeholder={t('maintenance.titlePlaceholder')}
-                value={form.title}
-                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>{t('maintenance.descriptionField')}</Label>
-              <textarea
-                rows={2}
-                placeholder={t('maintenance.descriptionPlaceholder')}
-                value={form.description}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                  setForm((f) => ({ ...f, description: e.target.value }))
-                }
-                className="flex min-h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>{t('maintenance.status')} *</Label>
-                <Select
-                  value={form.status}
-                  onValueChange={(v) => setForm((f) => ({ ...f, status: v as MaintenanceStatus }))}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="open">{t('maintenance.statuses.open')}</SelectItem>
-                    <SelectItem value="in_progress">{t('maintenance.statuses.in_progress')}</SelectItem>
-                    <SelectItem value="done">{t('maintenance.statuses.done')}</SelectItem>
-                    <SelectItem value="cancelled">{t('maintenance.statuses.cancelled')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('maintenance.priority')} *</Label>
-                <Select
-                  value={form.priority}
-                  onValueChange={(v) => setForm((f) => ({ ...f, priority: v as MaintenancePriority }))}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="urgent">{t('maintenance.priorities.urgent')}</SelectItem>
-                    <SelectItem value="high">{t('maintenance.priorities.high')}</SelectItem>
-                    <SelectItem value="normal">{t('maintenance.priorities.normal')}</SelectItem>
-                    <SelectItem value="low">{t('maintenance.priorities.low')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>{t('maintenance.reportedDate')} *</Label>
-                <Input
-                  type="date"
-                  value={form.reported_date}
-                  onChange={(e) => setForm((f) => ({ ...f, reported_date: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('maintenance.resolvedDate')}</Label>
-                <Input
-                  type="date"
-                  value={form.resolved_date}
-                  onChange={(e) => setForm((f) => ({ ...f, resolved_date: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>{t('maintenance.note')}</Label>
-              <textarea
-                rows={2}
-                placeholder={t('maintenance.notePlaceholder')}
-                value={form.note}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                  setForm((f) => ({ ...f, note: e.target.value }))
-                }
-                className="flex min-h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button onClick={handleSave} disabled={isSaveDisabled}>
-              {saving
-                ? t('common.loading')
-                : editingItem
-                  ? t('maintenance.saveChanges')
-                  : t('maintenance.createRequest')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete confirm */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{t('maintenance.deleteRequest')}</DialogTitle>
-            <DialogDescription>
-              {t('maintenance.deleteConfirm')}{' '}
-              <span className="font-semibold text-foreground">
-                {deletingItem?.title}
-              </span>?{' '}
-              {t('maintenance.deleteWarning')}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              {t('common.delete')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <MaintenanceDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        item={deletingItem}
+        onDelete={handleDelete}
+      />
     </div>
   )
 }

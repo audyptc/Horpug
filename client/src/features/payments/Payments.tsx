@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Search,
@@ -19,7 +19,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -29,14 +28,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -44,6 +35,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { paymentService } from '@/features/payments/paymentService'
+import { PaymentDialog } from '@/features/payments/components/PaymentDialog'
+import { PaymentDeleteDialog } from '@/features/payments/components/PaymentDeleteDialog'
 import type { ApiPayment, PaymentMethod } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
@@ -191,8 +184,6 @@ export function Payments() {
       setDeletingItem(null)
     }
   }
-
-  const isSaveDisabled = saving || !form.bill_id || !form.amount || Number(form.amount) <= 0 || !form.payment_date
 
   return (
     <div className="space-y-6">
@@ -437,115 +428,22 @@ export function Payments() {
         </CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {editingItem ? t('payments.editPayment') : t('payments.createPayment')}
-            </DialogTitle>
-            <DialogDescription>
-              {editingItem ? t('payments.editDesc') : t('payments.createDesc')}
-            </DialogDescription>
-          </DialogHeader>
+      <PaymentDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editingItem={editingItem}
+        form={form}
+        onFormChange={setForm}
+        onSave={handleSave}
+        saving={saving}
+      />
 
-          <div className="grid gap-4 py-4">
-            {!editingItem && (
-              <div className="space-y-1.5">
-                <Label>{t('payments.billId')} *</Label>
-                <Input
-                  placeholder={t('payments.billIdPlaceholder')}
-                  value={form.bill_id}
-                  onChange={(e) => setForm((f) => ({ ...f, bill_id: e.target.value }))}
-                />
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>{t('payments.amount')} *</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={form.amount}
-                  onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('payments.method')} *</Label>
-                <Select
-                  value={form.method}
-                  onValueChange={(v) => setForm((f) => ({ ...f, method: v as PaymentMethod }))}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">{t('payments.methods.cash')}</SelectItem>
-                    <SelectItem value="transfer">{t('payments.methods.transfer')}</SelectItem>
-                    <SelectItem value="qr">{t('payments.methods.qr')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>{t('payments.paymentDate')} *</Label>
-              <Input
-                type="date"
-                value={form.payment_date}
-                onChange={(e) => setForm((f) => ({ ...f, payment_date: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>{t('payments.note')}</Label>
-              <textarea
-                rows={2}
-                placeholder={t('payments.notePlaceholder')}
-                value={form.note}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                  setForm((f) => ({ ...f, note: e.target.value }))
-                }
-                className="flex min-h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button onClick={handleSave} disabled={isSaveDisabled}>
-              {saving ? t('common.loading') : editingItem ? t('payments.saveChanges') : t('payments.createPayment')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete confirm */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{t('payments.deletePayment')}</DialogTitle>
-            <DialogDescription>
-              {t('payments.deleteConfirm')}{' '}
-              <span className="font-semibold text-foreground">
-                ฿{deletingItem ? formatBaht(deletingItem.amount) : ''}
-              </span>?{' '}
-              {t('payments.deleteWarning')}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              {t('common.delete')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PaymentDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        item={deletingItem}
+        onDelete={handleDelete}
+      />
     </div>
   )
 }
