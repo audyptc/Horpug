@@ -36,6 +36,7 @@ import { roomService } from '@/features/rooms/roomService'
 import { roomTypeService } from '@/features/roomTypes/roomTypeService'
 import { RoomDialog } from '@/features/rooms/components/RoomDialog'
 import { RoomDeleteDialog } from '@/features/rooms/components/RoomDeleteDialog'
+import { useToast } from '@/components/ui/toast'
 import type { ApiRoom, ApiRoomType, RoomStatus, RoomType } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
@@ -59,6 +60,7 @@ const emptyForm = {
 
 export function Rooms() {
   const { t } = useTranslation()
+  const toast = useToast()
   const [rooms, setRooms] = useState<ApiRoom[]>([])
   const [roomTypes, setRoomTypes] = useState<ApiRoomType[]>([])
   const [loading, setLoading] = useState(true)
@@ -143,8 +145,10 @@ export function Rooms() {
     try {
       if (editingRoom) {
         await roomService.update(editingRoom.id, form)
+        toast.success(t('rooms.editSuccess'))
       } else {
         await roomService.create(form)
+        toast.success(t('rooms.createSuccess'))
       }
       setDialogOpen(false)
       await fetchRooms(page, perPage)
@@ -162,11 +166,12 @@ export function Rooms() {
     if (!deletingRoom) return
     try {
       await roomService.delete(deletingRoom.id)
+      toast.success(t('rooms.deleteSuccess'))
       const newPage = rooms.length === 1 && page > 1 ? page - 1 : page
       setPage(newPage)
       await fetchRooms(newPage, perPage)
     } catch {
-      // ignore
+      toast.error(t('rooms.deleteError'))
     } finally {
       setDeleteDialogOpen(false)
       setDeletingRoom(null)

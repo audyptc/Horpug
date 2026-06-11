@@ -273,6 +273,10 @@ export default {
     deleteWarning: 'This action cannot be undone.',
     loadError: 'Failed to load rooms.',
     saveError: 'Failed to save room.',
+    createSuccess: 'Room created successfully.',
+    editSuccess: 'Room updated successfully.',
+    deleteSuccess: 'Room deleted successfully.',
+    deleteError: 'Failed to delete room.',
     types: {
       standard: 'Standard',
       deluxe: 'Deluxe',

@@ -233,6 +233,10 @@ export default {
     deleteWarning: 'การดำเนินการนี้ไม่สามารถยกเลิกได้',
     loadError: 'ไม่สามารถโหลดข้อมูลห้องพักได้',
     saveError: 'ไม่สามารถบันทึกข้อมูลได้',
+    createSuccess: 'เพิ่มห้องพักสำเร็จ',
+    editSuccess: 'แก้ไขห้องพักสำเร็จ',
+    deleteSuccess: 'ลบห้องพักสำเร็จ',
+    deleteError: 'ไม่สามารถลบห้องพักได้',
     types: {
       standard: 'ธรรมดา',
       deluxe: 'ดีลักซ์',

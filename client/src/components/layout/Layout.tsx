@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
+import { ToastProvider } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
 
 export function Layout() {
@@ -9,6 +10,7 @@ export function Layout() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   return (
+    <ToastProvider>
     <div className="flex h-screen bg-background overflow-hidden">
       {/* Mobile overlay */}
       {mobileSidebarOpen && (
@@ -40,5 +42,6 @@ export function Layout() {
         </main>
       </div>
     </div>
+    </ToastProvider>
   )
 }
