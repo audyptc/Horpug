@@ -17,6 +17,6 @@ export interface NotificationItem {
 export const notificationService = {
   async list(): Promise<NotificationItem[]> {
     const { data } = await api.get<ApiResponse<NotificationItem[]>>('/notifications')
-    return data.data
+    return Array.isArray(data.data) ? data.data : []
   },
 }

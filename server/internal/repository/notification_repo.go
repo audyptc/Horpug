@@ -80,7 +80,7 @@ func (r *NotificationRepo) ListExpiringContracts(ctx context.Context, withinDays
 		JOIN rooms rm   ON rm.id = c.room_id
 		WHERE c.status = 'active'
 		  AND c.end_date IS NOT NULL
-		  AND c.end_date BETWEEN NOW() AND NOW() + ($1 || ' days')::interval
+		  AND c.end_date BETWEEN NOW() AND NOW() + make_interval(days => $1)
 		ORDER BY c.end_date ASC
 		LIMIT $2`, withinDays, limit)
 	if err != nil {
