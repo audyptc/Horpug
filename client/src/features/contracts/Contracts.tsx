@@ -86,6 +86,7 @@ export function Contracts() {
   const [deletingContract, setDeletingContract] = useState<ApiContract | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const fetchContracts = useCallback(async (p: number, pp: number) => {
     setLoading(true)
@@ -135,10 +136,12 @@ export function Contracts() {
   function openCreate() {
     setEditingContract(null)
     setForm(emptyForm)
+    setSaveError('')
     setDialogOpen(true)
   }
 
   function openEdit(contract: ApiContract) {
+    setSaveError('')
     setEditingContract(contract)
     setForm({
       tenant_id: contract.tenant_id,
@@ -156,10 +159,11 @@ export function Contracts() {
   async function handleSave() {
     if (!form.tenant_id || !form.room_id || !form.start_date || !form.rent_price) return
     setSaving(true)
+    setSaveError('')
     try {
       if (editingContract) {
         await contractService.update(editingContract.id, {
-          end_date: form.end_date || null,
+          end_date: form.end_date ? `${form.end_date}T00:00:00Z` : null,
           rent_price: Number(form.rent_price),
           deposit: Number(form.deposit),
           status: form.status,
@@ -169,8 +173,8 @@ export function Contracts() {
         await contractService.create({
           tenant_id: form.tenant_id,
           room_id: form.room_id,
-          start_date: form.start_date,
-          end_date: form.end_date || null,
+          start_date: `${form.start_date}T00:00:00Z`,
+          end_date: form.end_date ? `${form.end_date}T00:00:00Z` : null,
           rent_price: Number(form.rent_price),
           deposit: Number(form.deposit),
           note: form.note,
@@ -179,8 +183,9 @@ export function Contracts() {
       }
       setDialogOpen(false)
       await fetchContracts(page, perPage)
-    } catch {
-      // handled silently
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setSaveError(msg || t('contracts.saveError'))
     } finally {
       setSaving(false)
     }
@@ -451,6 +456,7 @@ export function Contracts() {
         saving={saving}
         tenants={tenants}
         availableRooms={availableRooms}
+        saveError={saveError}
       />
 
       <ContractDeleteDialog

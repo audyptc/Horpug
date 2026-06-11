@@ -179,9 +179,12 @@ export function RoomTypes() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/40">
-                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('roomTypes.colId')}</th>
-                          <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('roomTypes.colOrder')}</th>
-                      <th className="text-left px-6 py-3 font-medium text-muted-foreground">{t('roomTypes.colName')}</th>
+                       <th className="text-left px-6 py-3 font-medium text-muted-foreground">{t('roomTypes.colName')}</th>
+                            <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('roomTypes.colId')}</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('roomTypes.colOrder')}</th>
+                 
+                    
+                   
                     
                   
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('roomTypes.colCreated')}</th>
@@ -197,7 +200,7 @@ export function RoomTypes() {
                           i === filtered.length - 1 && 'border-0'
                         )}
                       >
-                        <td className="px-6 py-4">
+                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
                               <LayoutList className="w-4 h-4 text-muted-foreground" />
@@ -205,10 +208,14 @@ export function RoomTypes() {
                             <span className="font-medium">{rt.name}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-4">
+                         <td className="px-4 py-4">
                           <code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">{rt.id}</code>
                         </td>
-                        <td className="px-4 py-4 text-muted-foreground">{rt.sort_order}</td>
+                            <td className="px-4 py-4 text-muted-foreground">{rt.sort_order}</td>
+                        
+                       
+                       
+                    
                         <td className="px-4 py-4 text-muted-foreground">{formatDate(rt.created_at)}</td>
                         <td className="px-6 py-4 text-right">
                           <DropdownMenu>

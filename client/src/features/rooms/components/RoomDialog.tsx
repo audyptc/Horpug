@@ -134,6 +134,7 @@ export function RoomDialog({
               type="number"
               min={0}
               placeholder="3500"
+              className="text-right"
               value={form.rent_price || ''}
               onChange={(e) => set({ rent_price: Number(e.target.value) })}
             />

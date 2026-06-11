@@ -326,6 +326,7 @@ export default {
     deleteConfirm: 'Are you sure you want to delete the contract for',
     deleteWarning: 'This action cannot be undone.',
     loadError: 'Failed to load contracts.',
+    saveError: 'Failed to save contract.',
     openEnded: 'Open-ended',
     bahtPerMonth: '฿/mo',
     statuses: {

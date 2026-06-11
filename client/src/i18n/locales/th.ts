@@ -326,6 +326,7 @@ export default {
     deleteConfirm: 'คุณแน่ใจหรือไม่ว่าต้องการลบสัญญาของ',
     deleteWarning: 'การดำเนินการนี้ไม่สามารถยกเลิกได้',
     loadError: 'ไม่สามารถโหลดข้อมูลสัญญาเช่าได้',
+    saveError: 'ไม่สามารถบันทึกสัญญาเช่าได้',
     openEnded: 'ไม่กำหนด',
     bahtPerMonth: 'บาท/เดือน',
     statuses: {

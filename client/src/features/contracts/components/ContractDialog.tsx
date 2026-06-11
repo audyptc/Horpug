@@ -40,6 +40,7 @@ type Props = {
   saving: boolean
   tenants: ApiTenant[]
   availableRooms: ApiRoom[]
+  saveError?: string
 }
 
 export function ContractDialog({
@@ -52,6 +53,7 @@ export function ContractDialog({
   saving,
   tenants,
   availableRooms,
+  saveError,
 }: Props) {
   const { t } = useTranslation()
 
@@ -181,6 +183,12 @@ export function ContractDialog({
             />
           </div>
         </div>
+
+        {saveError && (
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {saveError}
+          </div>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
