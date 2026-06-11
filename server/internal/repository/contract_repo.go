@@ -118,3 +118,11 @@ func (r *ContractRepo) HasActiveContractForRoom(ctx context.Context, roomID stri
 		WHERE room_id = $1 AND status = 'active' AND deleted_at IS NULL`, roomID).Scan(&count)
 	return count > 0, err
 }
+
+func (r *ContractRepo) HasActiveContractForTenant(ctx context.Context, tenantID string) (bool, error) {
+	var count int
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM contracts
+		WHERE tenant_id = $1 AND status = 'active' AND deleted_at IS NULL`, tenantID).Scan(&count)
+	return count > 0, err
+}

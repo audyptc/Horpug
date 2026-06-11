@@ -14,8 +14,11 @@ type Tenant struct {
 	Email            string    `json:"email"`
 	EmergencyContact string    `json:"emergency_contact"`
 	Note             string    `json:"note"`
-	CreatedAt        time.Time `json:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	CreatedBy     string    `json:"created_by"`
+	UpdatedBy     string    `json:"updated_by"`
+	UpdatedByName string    `json:"updated_by_name"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 type CreateTenantRequest struct {

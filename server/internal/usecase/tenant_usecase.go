@@ -11,11 +11,12 @@ import (
 )
 
 type TenantUseCase struct {
-	tenantRepo domain.TenantRepository
+	tenantRepo   domain.TenantRepository
+	contractRepo domain.ContractRepository
 }
 
-func NewTenantUseCase(tenantRepo domain.TenantRepository) *TenantUseCase {
-	return &TenantUseCase{tenantRepo: tenantRepo}
+func NewTenantUseCase(tenantRepo domain.TenantRepository, contractRepo domain.ContractRepository) *TenantUseCase {
+	return &TenantUseCase{tenantRepo: tenantRepo, contractRepo: contractRepo}
 }
 
 func (uc *TenantUseCase) List(ctx context.Context, limit, offset int) ([]*domain.Tenant, int, error) {
@@ -41,7 +42,7 @@ func (uc *TenantUseCase) GetByID(ctx context.Context, id string) (*domain.Tenant
 	return t, nil
 }
 
-func (uc *TenantUseCase) Create(ctx context.Context, req *domain.CreateTenantRequest) (*domain.Tenant, error) {
+func (uc *TenantUseCase) Create(ctx context.Context, req *domain.CreateTenantRequest, actorID string) (*domain.Tenant, error) {
 	t := &domain.Tenant{
 		ID:               uuid.New().String(),
 		FirstName:        req.FirstName,
@@ -51,6 +52,8 @@ func (uc *TenantUseCase) Create(ctx context.Context, req *domain.CreateTenantReq
 		Email:            req.Email,
 		EmergencyContact: req.EmergencyContact,
 		Note:             req.Note,
+		CreatedBy:        actorID,
+		UpdatedBy:        actorID,
 	}
 	if err := uc.tenantRepo.Create(ctx, t); err != nil {
 		return nil, apierror.Internal(err)
@@ -58,7 +61,7 @@ func (uc *TenantUseCase) Create(ctx context.Context, req *domain.CreateTenantReq
 	return t, nil
 }
 
-func (uc *TenantUseCase) Update(ctx context.Context, id string, req *domain.UpdateTenantRequest) (*domain.Tenant, error) {
+func (uc *TenantUseCase) Update(ctx context.Context, id string, req *domain.UpdateTenantRequest, actorID string) (*domain.Tenant, error) {
 	t, err := uc.tenantRepo.FindByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
@@ -81,6 +84,7 @@ func (uc *TenantUseCase) Update(ctx context.Context, id string, req *domain.Upda
 	t.Email = req.Email
 	t.EmergencyContact = req.EmergencyContact
 	t.Note = req.Note
+	t.UpdatedBy = actorID
 	if err := uc.tenantRepo.Update(ctx, t); err != nil {
 		return nil, apierror.Internal(err)
 	}
@@ -93,6 +97,13 @@ func (uc *TenantUseCase) Delete(ctx context.Context, id string) error {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)
+	}
+	hasContract, err := uc.contractRepo.HasActiveContractForTenant(ctx, id)
+	if err != nil {
+		return apierror.Internal(err)
+	}
+	if hasContract {
+		return apierror.Conflict("ไม่สามารถลบผู้เช่าที่มีสัญญาเช่าที่ยังใช้งานอยู่ได้")
 	}
 	if err := uc.tenantRepo.Delete(ctx, id); err != nil {
 		return apierror.Internal(err)

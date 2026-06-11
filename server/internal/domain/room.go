@@ -6,13 +6,13 @@ import (
 )
 
 type Room struct {
-	ID          string    `json:"id"`
-	RoomNumber  string    `json:"room_number"`
-	Floor       int       `json:"floor"`
-	Type        string    `json:"type"`
-	Status      string    `json:"status"`
-	RentPrice   float64   `json:"rent_price"`
-	Description string    `json:"description"`
+	ID            string    `json:"id"`
+	RoomNumber    string    `json:"room_number"`
+	Floor         int       `json:"floor"`
+	Type          string    `json:"type"`
+	Status        string    `json:"status"`
+	RentPrice     float64   `json:"rent_price"`
+	Description   string    `json:"description"`
 	CreatedBy     string    `json:"created_by"`
 	UpdatedBy     string    `json:"updated_by"`
 	UpdatedByName string    `json:"updated_by_name"`
