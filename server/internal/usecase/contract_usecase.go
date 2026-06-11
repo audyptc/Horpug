@@ -47,7 +47,7 @@ func (uc *ContractUseCase) GetByID(ctx context.Context, id string) (*domain.Cont
 	return d, nil
 }
 
-func (uc *ContractUseCase) Create(ctx context.Context, req *domain.CreateContractRequest) (*domain.ContractDetail, error) {
+func (uc *ContractUseCase) Create(ctx context.Context, req *domain.CreateContractRequest, actorID string) (*domain.ContractDetail, error) {
 	if _, err := uc.tenantRepo.FindByID(ctx, req.TenantID); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			return nil, apierror.NotFound("tenant not found")
@@ -76,6 +76,8 @@ func (uc *ContractUseCase) Create(ctx context.Context, req *domain.CreateContrac
 		Deposit:   req.Deposit,
 		Status:    domain.ContractStatusActive,
 		Note:      req.Note,
+		CreatedBy: actorID,
+		UpdatedBy: actorID,
 	}
 	if err := uc.contractRepo.Create(ctx, c); err != nil {
 		return nil, apierror.Internal(err)
@@ -89,7 +91,7 @@ func (uc *ContractUseCase) Create(ctx context.Context, req *domain.CreateContrac
 	return uc.contractRepo.FindDetailByID(ctx, c.ID)
 }
 
-func (uc *ContractUseCase) Update(ctx context.Context, id string, req *domain.UpdateContractRequest) (*domain.ContractDetail, error) {
+func (uc *ContractUseCase) Update(ctx context.Context, id string, req *domain.UpdateContractRequest, actorID string) (*domain.ContractDetail, error) {
 	c, err := uc.contractRepo.FindByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
@@ -111,6 +113,7 @@ func (uc *ContractUseCase) Update(ctx context.Context, id string, req *domain.Up
 		c.Status = req.Status
 	}
 	c.Note = req.Note
+	c.UpdatedBy = actorID
 
 	if err := uc.contractRepo.Update(ctx, c); err != nil {
 		return nil, apierror.Internal(err)

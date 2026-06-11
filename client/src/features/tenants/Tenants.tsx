@@ -43,7 +43,7 @@ import { tenantService } from '@/features/tenants/tenantService'
 import { useToast } from '@/components/ui/toast'
 import type { ApiTenant } from '@/types'
 import { cn } from '@/lib/utils'
-import { formatDate } from '@/lib/dateUtils'
+import { formatDateTime } from '@/lib/dateUtils'
 
 const PER_PAGE_OPTIONS = [10, 20, 50] as const
 
@@ -266,8 +266,8 @@ export function Tenants() {
                         <td className="px-4 py-4 text-muted-foreground">
                           {tenant.email || <span className="text-xs">—</span>}
                         </td>
-                        <td className="px-4 py-4 text-muted-foreground">{formatDate(tenant.created_at)}</td>
-                        <td className="px-4 py-4 text-muted-foreground">{formatDate(tenant.updated_at)}</td>
+                        <td className="px-4 py-4 text-muted-foreground">{formatDateTime(tenant.created_at)}</td>
+                        <td className="px-4 py-4 text-muted-foreground">{formatDateTime(tenant.updated_at)}</td>
                         <td className="px-4 py-4 text-muted-foreground">
                           {tenant.updated_by_name || <span className="text-xs">—</span>}
                         </td>

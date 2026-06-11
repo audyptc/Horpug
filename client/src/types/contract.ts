@@ -12,6 +12,9 @@ export interface ApiContract {
   note: string
   created_at: string
   updated_at: string
+  created_by: string
+  updated_by: string
+  updated_by_name: string
   tenant_first_name: string
   tenant_last_name: string
   room_number: string

@@ -38,7 +38,7 @@ import { ContractDialog } from '@/features/contracts/components/ContractDialog'
 import { ContractDeleteDialog } from '@/features/contracts/components/ContractDeleteDialog'
 import type { ApiContract, ApiTenant, ApiRoom, ContractStatus } from '@/types'
 import { cn } from '@/lib/utils'
-import { formatDate } from '@/lib/dateUtils'
+import { formatDate, formatDateTime } from '@/lib/dateUtils'
 
 const PER_PAGE_OPTIONS = [10, 20, 50] as const
 
@@ -284,6 +284,9 @@ export function Contracts() {
                       <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('contracts.colRentPrice')}</th>
                       <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('contracts.colDeposit')}</th>
                       <th className="text-center px-4 py-3 font-medium text-muted-foreground">{t('contracts.colStatus')}</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('contracts.colCreatedAt')}</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('contracts.colUpdatedAt')}</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('contracts.colUpdatedBy')}</th>
                       <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('contracts.colActions')}</th>
                     </tr>
                   </thead>
@@ -318,6 +321,9 @@ export function Contracts() {
                             {t(`contracts.statuses.${contract.status}`)}
                           </Badge>
                         </td>
+                        <td className="px-4 py-4 text-muted-foreground">{formatDateTime(contract.created_at)}</td>
+                        <td className="px-4 py-4 text-muted-foreground">{formatDateTime(contract.updated_at)}</td>
+                        <td className="px-4 py-4 text-muted-foreground">{contract.updated_by_name || '-'}</td>
                         <td className="px-6 py-4 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -379,6 +385,10 @@ export function Contracts() {
                       <Badge variant={STATUS_VARIANTS[contract.status]} className="text-xs">
                         {t(`contracts.statuses.${contract.status}`)}
                       </Badge>
+                      <p className="text-xs text-muted-foreground">
+                        {t('contracts.colCreatedAt')}: {formatDateTime(contract.created_at)} · {t('contracts.colUpdatedAt')}: {formatDateTime(contract.updated_at)}
+                        {contract.updated_by_name ? ` · ${contract.updated_by_name}` : ''}
+                      </p>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
