@@ -6,6 +6,7 @@ ALTER TABLE contracts      ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAU
 ALTER TABLE bills          ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL;
 ALTER TABLE payments       ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL;
 ALTER TABLE meter_readings ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL;
+ALTER TABLE expenses       ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL;
 
 -- Replace global unique constraints with partial unique indexes so that soft-deleted
 -- records do not block re-creation of the same value.

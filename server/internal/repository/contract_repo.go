@@ -110,3 +110,11 @@ func (r *ContractRepo) Delete(ctx context.Context, id string) error {
 		`UPDATE contracts SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
 	return err
 }
+
+func (r *ContractRepo) HasActiveContractForRoom(ctx context.Context, roomID string) (bool, error) {
+	var count int
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM contracts
+		WHERE room_id = $1 AND status = 'active' AND deleted_at IS NULL`, roomID).Scan(&count)
+	return count > 0, err
+}

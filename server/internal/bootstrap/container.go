@@ -41,7 +41,7 @@ func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refres
 		RoleUC:         usecase.NewRoleUseCase(repos.role, repos.perm, repos.menu),
 		PermUC:         usecase.NewPermissionUseCase(repos.perm),
 		MenuUC:         usecase.NewMenuUseCase(repos.menu),
-		RoomUC:         usecase.NewRoomUseCase(repos.room),
+		RoomUC:         usecase.NewRoomUseCase(repos.room, repos.contract),
 		RoomTypeUC:     usecase.NewRoomTypeUseCase(repos.roomType),
 		TenantUC:       usecase.NewTenantUseCase(repos.tenant),
 		ContractUC:     usecase.NewContractUseCase(repos.contract, repos.room, repos.tenant),

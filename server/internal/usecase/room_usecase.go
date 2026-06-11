@@ -11,11 +11,12 @@ import (
 )
 
 type RoomUseCase struct {
-	roomRepo domain.RoomRepository
+	roomRepo     domain.RoomRepository
+	contractRepo domain.ContractRepository
 }
 
-func NewRoomUseCase(roomRepo domain.RoomRepository) *RoomUseCase {
-	return &RoomUseCase{roomRepo: roomRepo}
+func NewRoomUseCase(roomRepo domain.RoomRepository, contractRepo domain.ContractRepository) *RoomUseCase {
+	return &RoomUseCase{roomRepo: roomRepo, contractRepo: contractRepo}
 }
 
 func (uc *RoomUseCase) List(ctx context.Context, limit, offset int) ([]*domain.Room, int, error) {
@@ -105,6 +106,13 @@ func (uc *RoomUseCase) Delete(ctx context.Context, id string) error {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)
+	}
+	hasContract, err := uc.contractRepo.HasActiveContractForRoom(ctx, id)
+	if err != nil {
+		return apierror.Internal(err)
+	}
+	if hasContract {
+		return apierror.Conflict("ไม่สามารถลบห้องที่มีสัญญาเช่าที่ยังใช้งานอยู่ได้")
 	}
 	if err := uc.roomRepo.Delete(ctx, id); err != nil {
 		return apierror.Internal(err)

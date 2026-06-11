@@ -60,4 +60,5 @@ type ContractRepository interface {
 	Create(ctx context.Context, c *Contract) error
 	Update(ctx context.Context, c *Contract) error
 	Delete(ctx context.Context, id string) error
+	HasActiveContractForRoom(ctx context.Context, roomID string) (bool, error)
 }

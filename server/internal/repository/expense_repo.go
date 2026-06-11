@@ -22,7 +22,7 @@ func (r *ExpenseRepo) FindByID(ctx context.Context, id string) (*domain.Expense,
 	e := &domain.Expense{}
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT id, expense_date, category, description, amount, note, created_at, updated_at
-		FROM expenses WHERE id = $1`, id).
+		FROM expenses WHERE id = $1 AND deleted_at IS NULL`, id).
 		Scan(&e.ID, &e.ExpenseDate, &e.Category, &e.Description, &e.Amount, &e.Note, &e.CreatedAt, &e.UpdatedAt)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("expense not found: %w", domain.ErrNotFound)
@@ -34,6 +34,7 @@ func (r *ExpenseRepo) List(ctx context.Context, limit, offset int) ([]*domain.Ex
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, expense_date, category, description, amount, note, created_at, updated_at
 		FROM expenses
+		WHERE deleted_at IS NULL
 		ORDER BY expense_date DESC, created_at DESC
 		LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
@@ -57,7 +58,7 @@ func (r *ExpenseRepo) List(ctx context.Context, limit, offset int) ([]*domain.Ex
 
 func (r *ExpenseRepo) Count(ctx context.Context) (int, error) {
 	var total int
-	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM expenses`).Scan(&total)
+	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM expenses WHERE deleted_at IS NULL`).Scan(&total)
 	return total, err
 }
 
@@ -79,6 +80,7 @@ func (r *ExpenseRepo) Update(ctx context.Context, e *domain.Expense) error {
 }
 
 func (r *ExpenseRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.db.Pool.Exec(ctx, `DELETE FROM expenses WHERE id = $1`, id)
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE expenses SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
 	return err
 }
