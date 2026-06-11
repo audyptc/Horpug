@@ -264,7 +264,8 @@ export function Rooms() {
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('rooms.colType')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('rooms.colStatus')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('rooms.colRentPrice')}</th>
-                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('rooms.colCreated')}</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('rooms.colUpdatedAt')}</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('rooms.colUpdatedBy')}</th>
                       <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('rooms.colActions')}</th>
                     </tr>
                   </thead>
@@ -301,7 +302,8 @@ export function Rooms() {
                         <td className="px-4 py-4 font-medium">
                           {room.rent_price.toLocaleString('th-TH')} {t('rooms.bahtPerMonth')}
                         </td>
-                        <td className="px-4 py-4 text-muted-foreground">{formatDate(room.created_at)}</td>
+                        <td className="px-4 py-4 text-muted-foreground">{formatDate(room.updated_at)}</td>
+                        <td className="px-4 py-4 text-muted-foreground">{room.updated_by_name || '-'}</td>
                         <td className="px-6 py-4 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>

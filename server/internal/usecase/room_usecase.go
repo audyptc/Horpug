@@ -42,7 +42,7 @@ func (uc *RoomUseCase) GetByID(ctx context.Context, id string) (*domain.Room, er
 	return room, nil
 }
 
-func (uc *RoomUseCase) Create(ctx context.Context, req *domain.CreateRoomRequest) (*domain.Room, error) {
+func (uc *RoomUseCase) Create(ctx context.Context, req *domain.CreateRoomRequest, actorID string) (*domain.Room, error) {
 	room := &domain.Room{
 		ID:          uuid.New().String(),
 		RoomNumber:  req.RoomNumber,
@@ -51,6 +51,8 @@ func (uc *RoomUseCase) Create(ctx context.Context, req *domain.CreateRoomRequest
 		Status:      req.Status,
 		RentPrice:   req.RentPrice,
 		Description: req.Description,
+		CreatedBy:   actorID,
+		UpdatedBy:   actorID,
 	}
 	if room.Type == "" {
 		room.Type = "standard"
@@ -67,7 +69,7 @@ func (uc *RoomUseCase) Create(ctx context.Context, req *domain.CreateRoomRequest
 	return room, nil
 }
 
-func (uc *RoomUseCase) Update(ctx context.Context, id string, req *domain.UpdateRoomRequest) (*domain.Room, error) {
+func (uc *RoomUseCase) Update(ctx context.Context, id string, req *domain.UpdateRoomRequest, actorID string) (*domain.Room, error) {
 	room, err := uc.roomRepo.FindByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
@@ -91,6 +93,7 @@ func (uc *RoomUseCase) Update(ctx context.Context, id string, req *domain.Update
 		room.RentPrice = req.RentPrice
 	}
 	room.Description = req.Description
+	room.UpdatedBy = actorID
 	if err := uc.roomRepo.Update(ctx, room); err != nil {
 		if errors.Is(err, domain.ErrDuplicate) {
 			return nil, apierror.Conflict("ห้องหมายเลขนี้มีอยู่แล้ว")

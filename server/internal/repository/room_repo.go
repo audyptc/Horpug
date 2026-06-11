@@ -23,10 +23,16 @@ func NewRoomRepo(db *database.DB) *RoomRepo {
 func (r *RoomRepo) FindByID(ctx context.Context, id string) (*domain.Room, error) {
 	room := &domain.Room{}
 	err := r.db.Pool.QueryRow(ctx, `
-		SELECT id, room_number, floor, type, status, rent_price, description, created_at, updated_at
-		FROM rooms WHERE id = $1 AND deleted_at IS NULL`, id).
+		SELECT r.id, r.room_number, r.floor, r.type, r.status, r.rent_price, r.description,
+		       COALESCE(r.created_by::text, ''), COALESCE(r.updated_by::text, ''),
+		       COALESCE(u.full_name, ''),
+		       r.created_at, r.updated_at
+		FROM rooms r
+		LEFT JOIN users u ON u.id = r.updated_by
+		WHERE r.id = $1 AND r.deleted_at IS NULL`, id).
 		Scan(&room.ID, &room.RoomNumber, &room.Floor, &room.Type, &room.Status,
-			&room.RentPrice, &room.Description, &room.CreatedAt, &room.UpdatedAt)
+			&room.RentPrice, &room.Description, &room.CreatedBy, &room.UpdatedBy,
+			&room.UpdatedByName, &room.CreatedAt, &room.UpdatedAt)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("room not found: %w", domain.ErrNotFound)
 	}
@@ -35,10 +41,14 @@ func (r *RoomRepo) FindByID(ctx context.Context, id string) (*domain.Room, error
 
 func (r *RoomRepo) List(ctx context.Context, limit, offset int) ([]*domain.Room, error) {
 	rows, err := r.db.Pool.Query(ctx, `
-		SELECT id, room_number, floor, type, status, rent_price, description, created_at, updated_at
-		FROM rooms
-		WHERE deleted_at IS NULL
-		ORDER BY floor, room_number
+		SELECT r.id, r.room_number, r.floor, r.type, r.status, r.rent_price, r.description,
+		       COALESCE(r.created_by::text, ''), COALESCE(r.updated_by::text, ''),
+		       COALESCE(u.full_name, ''),
+		       r.created_at, r.updated_at
+		FROM rooms r
+		LEFT JOIN users u ON u.id = r.updated_by
+		WHERE r.deleted_at IS NULL
+		ORDER BY r.floor, r.room_number
 		LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		return nil, err
@@ -49,7 +59,8 @@ func (r *RoomRepo) List(ctx context.Context, limit, offset int) ([]*domain.Room,
 	for rows.Next() {
 		room := &domain.Room{}
 		if err := rows.Scan(&room.ID, &room.RoomNumber, &room.Floor, &room.Type, &room.Status,
-			&room.RentPrice, &room.Description, &room.CreatedAt, &room.UpdatedAt); err != nil {
+			&room.RentPrice, &room.Description, &room.CreatedBy, &room.UpdatedBy,
+			&room.UpdatedByName, &room.CreatedAt, &room.UpdatedAt); err != nil {
 			return nil, err
 		}
 		rooms = append(rooms, room)
@@ -68,9 +79,9 @@ func (r *RoomRepo) Count(ctx context.Context) (int, error) {
 
 func (r *RoomRepo) Create(ctx context.Context, room *domain.Room) error {
 	_, err := r.db.Pool.Exec(ctx, `
-		INSERT INTO rooms (id, room_number, floor, type, status, rent_price, description)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		room.ID, room.RoomNumber, room.Floor, room.Type, room.Status, room.RentPrice, room.Description)
+		INSERT INTO rooms (id, room_number, floor, type, status, rent_price, description, created_by, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, '')::uuid, NULLIF($8, '')::uuid)`,
+		room.ID, room.RoomNumber, room.Floor, room.Type, room.Status, room.RentPrice, room.Description, room.CreatedBy)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -83,9 +94,10 @@ func (r *RoomRepo) Create(ctx context.Context, room *domain.Room) error {
 func (r *RoomRepo) Update(ctx context.Context, room *domain.Room) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		UPDATE rooms
-		SET room_number = $2, floor = $3, type = $4, status = $5, rent_price = $6, description = $7, updated_at = NOW()
+		SET room_number = $2, floor = $3, type = $4, status = $5, rent_price = $6, description = $7,
+		    updated_by = NULLIF($8, '')::uuid, updated_at = NOW()
 		WHERE id = $1`,
-		room.ID, room.RoomNumber, room.Floor, room.Type, room.Status, room.RentPrice, room.Description)
+		room.ID, room.RoomNumber, room.Floor, room.Type, room.Status, room.RentPrice, room.Description, room.UpdatedBy)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {

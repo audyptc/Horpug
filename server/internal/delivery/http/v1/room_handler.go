@@ -47,7 +47,8 @@ func (h *RoomHandler) Create(c fiber.Ctx) error {
 	if err := validator.CreateRoomRequest(&req); err != nil {
 		return err
 	}
-	room, err := h.rooms.Create(c.Context(), &req)
+	actorID, _ := c.Locals("user_id").(string)
+	room, err := h.rooms.Create(c.Context(), &req, actorID)
 	if err != nil {
 		return err
 	}
@@ -59,7 +60,8 @@ func (h *RoomHandler) Update(c fiber.Ctx) error {
 	if err := c.Bind().JSON(&req); err != nil {
 		return apierror.BadRequest("invalid request body")
 	}
-	room, err := h.rooms.Update(c.Context(), c.Params("id"), &req)
+	actorID, _ := c.Locals("user_id").(string)
+	room, err := h.rooms.Update(c.Context(), c.Params("id"), &req, actorID)
 	if err != nil {
 		return err
 	}
