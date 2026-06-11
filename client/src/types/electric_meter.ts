@@ -1,9 +1,6 @@
-export type MeterType = 'electric' | 'water'
-
-export interface ApiMeterReading {
+export interface ApiElectricMeter {
   id: string
   room_id: string
-  meter_type: MeterType
   reading_date: string
   previous_reading: number
   current_reading: number
@@ -16,9 +13,8 @@ export interface ApiMeterReading {
   room_number: string
 }
 
-export interface CreateMeterReadingPayload {
+export interface CreateElectricMeterPayload {
   room_id: string
-  meter_type: MeterType
   reading_date: string
   previous_reading: number
   current_reading: number
@@ -26,7 +22,7 @@ export interface CreateMeterReadingPayload {
   note: string
 }
 
-export interface UpdateMeterReadingPayload {
+export interface UpdateElectricMeterPayload {
   reading_date?: string
   previous_reading?: number
   current_reading?: number

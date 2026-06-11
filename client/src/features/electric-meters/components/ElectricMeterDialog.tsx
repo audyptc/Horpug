@@ -1,0 +1,142 @@
+import { useTranslation } from 'react-i18next'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { DatePicker } from '@/components/ui/date-picker'
+import type { ApiElectricMeter, ApiRoom } from '@/types'
+
+export type ElectricMeterForm = {
+  room_id: string
+  reading_date: string
+  previous_reading: string
+  current_reading: string
+  unit_price: string
+  note: string
+}
+
+type Props = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  editing: ApiElectricMeter | null
+  form: ElectricMeterForm
+  onFormChange: (form: ElectricMeterForm) => void
+  onSave: () => void
+  saving: boolean
+  rooms: ApiRoom[]
+}
+
+export function ElectricMeterDialog({ open, onOpenChange, editing, form, onFormChange, onSave, saving, rooms }: Props) {
+  const { t } = useTranslation()
+
+  const unitUsed =
+    form.current_reading && form.previous_reading
+      ? Number(form.current_reading) - Number(form.previous_reading)
+      : null
+  const totalAmount = unitUsed !== null && form.unit_price ? unitUsed * Number(form.unit_price) : null
+
+  const isSaveDisabled =
+    saving ||
+    !form.room_id ||
+    !form.reading_date ||
+    !form.current_reading ||
+    !form.unit_price ||
+    Number(form.current_reading) < Number(form.previous_reading)
+
+  function set(patch: Partial<ElectricMeterForm>) {
+    onFormChange({ ...form, ...patch })
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{editing ? t('electricMeters.editReading') : t('electricMeters.createReading')}</DialogTitle>
+          <DialogDescription>{editing ? t('electricMeters.editDesc') : t('electricMeters.createDesc')}</DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-4">
+          <div className="space-y-1.5">
+            <Label>{t('electricMeters.room')} *</Label>
+            <Select value={form.room_id} onValueChange={(v) => set({ room_id: v })} disabled={!!editing}>
+              <SelectTrigger><SelectValue placeholder={t('electricMeters.selectRoom')} /></SelectTrigger>
+              <SelectContent>
+                {rooms.map((rm) => (
+                  <SelectItem key={rm.id} value={rm.id}>{rm.room_number}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>{t('electricMeters.readingDate')} *</Label>
+            <DatePicker value={form.reading_date} onChange={(v) => set({ reading_date: v })} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>{t('electricMeters.previousReading')}</Label>
+              <Input type="number" min="0" step="0.01" value={form.previous_reading}
+                onChange={(e) => set({ previous_reading: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t('electricMeters.currentReading')} *</Label>
+              <Input type="number" min="0" step="0.01" value={form.current_reading}
+                onChange={(e) => set({ current_reading: e.target.value })} />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>{t('electricMeters.unitPrice')} *</Label>
+            <Input type="number" min="0" step="0.0001" value={form.unit_price}
+              onChange={(e) => set({ unit_price: e.target.value })} />
+          </div>
+
+          {unitUsed !== null && unitUsed >= 0 && (
+            <div className="rounded-md border bg-muted/40 px-4 py-3 text-sm space-y-1">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('electricMeters.unitUsed')}</span>
+                <span className="font-medium">{unitUsed.toLocaleString()} {t('electricMeters.unit')}</span>
+              </div>
+              {totalAmount !== null && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('electricMeters.totalAmount')}</span>
+                  <span className="font-semibold">{totalAmount.toLocaleString()} ฿</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <Label>{t('electricMeters.note')}</Label>
+            <textarea rows={2} placeholder={t('electricMeters.notePlaceholder')} value={form.note}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => set({ note: e.target.value })}
+              className="flex min-h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t('common.cancel')}</Button>
+          <Button onClick={onSave} disabled={isSaveDisabled}>
+            {saving ? t('common.loading') : editing ? t('electricMeters.saveChanges') : t('electricMeters.createReading')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

@@ -16,7 +16,8 @@ type Container struct {
 	RoomTypeUC     *usecase.RoomTypeUseCase
 	TenantUC       *usecase.TenantUseCase
 	ContractUC     *usecase.ContractUseCase
-	MeterReadingUC *usecase.MeterReadingUseCase
+	ElectricMeterUC *usecase.ElectricMeterUseCase
+	WaterMeterUC    *usecase.WaterMeterUseCase
 	BillUC         *usecase.BillUseCase
 	DashboardUC    *usecase.DashboardUseCase
 	AnalyticsUC    *usecase.AnalyticsUseCase
@@ -45,7 +46,8 @@ func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refres
 		RoomTypeUC:     usecase.NewRoomTypeUseCase(repos.roomType),
 		TenantUC:       usecase.NewTenantUseCase(repos.tenant, repos.contract),
 		ContractUC:     usecase.NewContractUseCase(repos.contract, repos.room, repos.tenant),
-		MeterReadingUC: usecase.NewMeterReadingUseCase(repos.meterReading, repos.room),
+		ElectricMeterUC: usecase.NewElectricMeterUseCase(repos.electricMeter, repos.room),
+		WaterMeterUC:    usecase.NewWaterMeterUseCase(repos.waterMeter, repos.room),
 		BillUC:         usecase.NewBillUseCase(repos.bill, repos.contract),
 		DashboardUC:    usecase.NewDashboardUseCase(repos.dashboard),
 		AnalyticsUC:    usecase.NewAnalyticsUseCase(repos.analytics),

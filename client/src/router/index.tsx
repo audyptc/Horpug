@@ -9,7 +9,8 @@ import { Roles } from '@/features/roles/Roles'
 import { Rooms } from '@/features/rooms/Rooms'
 import { Tenants } from '@/features/tenants/Tenants'
 import { Contracts } from '@/features/contracts/Contracts'
-import { MeterReadings } from '@/features/meters/MeterReadings'
+import { ElectricMeters } from '@/features/electric-meters/ElectricMeters'
+import { WaterMeters } from '@/features/water-meters/WaterMeters'
 import { Bills } from '@/features/billing/Bills'
 import { Expenses } from '@/features/expenses/Expenses'
 import { MaintenanceRequests } from '@/features/maintenance/MaintenanceRequests'
@@ -52,7 +53,8 @@ export const router = createBrowserRouter([
           { path: 'rooms', element: <Rooms /> },
           { path: 'tenants', element: <Tenants /> },
           { path: 'contracts', element: <Contracts /> },
-          { path: 'meters', element: <MeterReadings /> },
+          { path: 'electric-meters', element: <ElectricMeters /> },
+          { path: 'water-meters', element: <WaterMeters /> },
           { path: 'bills', element: <Bills /> },
           { path: 'expenses', element: <Expenses /> },
           { path: 'maintenance', element: <MaintenanceRequests /> },

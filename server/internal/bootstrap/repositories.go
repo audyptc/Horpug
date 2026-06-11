@@ -15,7 +15,8 @@ type repositories struct {
 	roomType     *repository.RoomTypeRepo
 	tenant       *repository.TenantRepo
 	contract     *repository.ContractRepo
-	meterReading *repository.MeterReadingRepo
+	electricMeter *repository.ElectricMeterRepo
+	waterMeter    *repository.WaterMeterRepo
 	bill         *repository.BillRepo
 	dashboard    *repository.DashboardRepo
 	analytics    *repository.AnalyticsRepo
@@ -43,7 +44,8 @@ func newRepositories(db *database.DB) repositories {
 		roomType:     repository.NewRoomTypeRepo(db),
 		tenant:       repository.NewTenantRepo(db),
 		contract:     repository.NewContractRepo(db),
-		meterReading: repository.NewMeterReadingRepo(db),
+		electricMeter: repository.NewElectricMeterRepo(db),
+		waterMeter:    repository.NewWaterMeterRepo(db),
 		bill:         repository.NewBillRepo(db),
 		dashboard:    repository.NewDashboardRepo(db),
 		analytics:    repository.NewAnalyticsRepo(db),

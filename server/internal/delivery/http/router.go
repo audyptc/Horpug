@@ -22,7 +22,8 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
 	roomTypeH := v1.NewRoomTypeHandler(c.RoomTypeUC)
 	tenantH := v1.NewTenantHandler(c.TenantUC, c.ActivityLogUC)
 	contractH := v1.NewContractHandler(c.ContractUC, c.ActivityLogUC)
-	meterH := v1.NewMeterReadingHandler(c.MeterReadingUC)
+	electricMeterH := v1.NewElectricMeterHandler(c.ElectricMeterUC)
+	waterMeterH := v1.NewWaterMeterHandler(c.WaterMeterUC)
 	billH := v1.NewBillHandler(c.BillUC)
 	dashboardH := v1.NewDashboardHandler(c.DashboardUC)
 	analyticsH := v1.NewAnalyticsHandler(c.AnalyticsUC)
@@ -120,13 +121,21 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
 	contractsGroup.Put("/:id", middleware.RequirePermission("contracts.update"), contractH.Update)
 	contractsGroup.Delete("/:id", middleware.RequirePermission("contracts.delete"), contractH.Delete)
 
-	// Meter Readings
-	metersGroup := protected.Group("/meters")
-	metersGroup.Get("/", middleware.RequirePermission("meters.read"), meterH.List)
-	metersGroup.Post("/", middleware.RequirePermission("meters.create"), meterH.Create)
-	metersGroup.Get("/:id", middleware.RequirePermission("meters.read"), meterH.GetByID)
-	metersGroup.Put("/:id", middleware.RequirePermission("meters.update"), meterH.Update)
-	metersGroup.Delete("/:id", middleware.RequirePermission("meters.delete"), meterH.Delete)
+	// Electric Meter Readings
+	electricMetersGroup := protected.Group("/electric-meters")
+	electricMetersGroup.Get("/", middleware.RequirePermission("meters.read"), electricMeterH.List)
+	electricMetersGroup.Post("/", middleware.RequirePermission("meters.create"), electricMeterH.Create)
+	electricMetersGroup.Get("/:id", middleware.RequirePermission("meters.read"), electricMeterH.GetByID)
+	electricMetersGroup.Put("/:id", middleware.RequirePermission("meters.update"), electricMeterH.Update)
+	electricMetersGroup.Delete("/:id", middleware.RequirePermission("meters.delete"), electricMeterH.Delete)
+
+	// Water Meter Readings
+	waterMetersGroup := protected.Group("/water-meters")
+	waterMetersGroup.Get("/", middleware.RequirePermission("meters.read"), waterMeterH.List)
+	waterMetersGroup.Post("/", middleware.RequirePermission("meters.create"), waterMeterH.Create)
+	waterMetersGroup.Get("/:id", middleware.RequirePermission("meters.read"), waterMeterH.GetByID)
+	waterMetersGroup.Put("/:id", middleware.RequirePermission("meters.update"), waterMeterH.Update)
+	waterMetersGroup.Delete("/:id", middleware.RequirePermission("meters.delete"), waterMeterH.Delete)
 
 	// Bills
 	billsGroup := protected.Group("/bills")

@@ -1,0 +1,104 @@
+package usecase
+
+import (
+	"context"
+	"errors"
+
+	"apigofiberhorpug/internal/delivery/http/apierror"
+	"apigofiberhorpug/internal/domain"
+
+	"github.com/google/uuid"
+)
+
+type ElectricMeterUseCase struct {
+	repo     domain.ElectricMeterRepository
+	roomRepo domain.RoomRepository
+}
+
+func NewElectricMeterUseCase(repo domain.ElectricMeterRepository, roomRepo domain.RoomRepository) *ElectricMeterUseCase {
+	return &ElectricMeterUseCase{repo: repo, roomRepo: roomRepo}
+}
+
+func (uc *ElectricMeterUseCase) List(ctx context.Context, limit, offset int) ([]*domain.ElectricMeterDetail, int, error) {
+	total, err := uc.repo.Count(ctx)
+	if err != nil {
+		return nil, 0, apierror.Internal(err)
+	}
+	list, err := uc.repo.List(ctx, limit, offset)
+	if err != nil {
+		return nil, 0, apierror.Internal(err)
+	}
+	return list, total, nil
+}
+
+func (uc *ElectricMeterUseCase) GetByID(ctx context.Context, id string) (*domain.ElectricMeterDetail, error) {
+	d, err := uc.repo.FindDetailByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, apierror.NotFound(err.Error())
+		}
+		return nil, apierror.Internal(err)
+	}
+	return d, nil
+}
+
+func (uc *ElectricMeterUseCase) Create(ctx context.Context, req *domain.CreateElectricMeterRequest) (*domain.ElectricMeterDetail, error) {
+	if _, err := uc.roomRepo.FindByID(ctx, req.RoomID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, apierror.NotFound("room not found")
+		}
+		return nil, apierror.Internal(err)
+	}
+
+	m := &domain.ElectricMeter{
+		ID:              uuid.New().String(),
+		RoomID:          req.RoomID,
+		ReadingDate:     req.ReadingDate,
+		PreviousReading: req.PreviousReading,
+		CurrentReading:  req.CurrentReading,
+		UnitPrice:       req.UnitPrice,
+		Note:            req.Note,
+	}
+	if err := uc.repo.Create(ctx, m); err != nil {
+		return nil, apierror.Internal(err)
+	}
+	return uc.repo.FindDetailByID(ctx, m.ID)
+}
+
+func (uc *ElectricMeterUseCase) Update(ctx context.Context, id string, req *domain.UpdateElectricMeterRequest) (*domain.ElectricMeterDetail, error) {
+	m, err := uc.repo.FindByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, apierror.NotFound(err.Error())
+		}
+		return nil, apierror.Internal(err)
+	}
+
+	if !req.ReadingDate.IsZero() {
+		m.ReadingDate = req.ReadingDate
+	}
+	m.PreviousReading = req.PreviousReading
+	m.CurrentReading = req.CurrentReading
+	if req.UnitPrice > 0 {
+		m.UnitPrice = req.UnitPrice
+	}
+	m.Note = req.Note
+
+	if err := uc.repo.Update(ctx, m); err != nil {
+		return nil, apierror.Internal(err)
+	}
+	return uc.repo.FindDetailByID(ctx, id)
+}
+
+func (uc *ElectricMeterUseCase) Delete(ctx context.Context, id string) error {
+	if _, err := uc.repo.FindByID(ctx, id); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return apierror.NotFound(err.Error())
+		}
+		return apierror.Internal(err)
+	}
+	if err := uc.repo.Delete(ctx, id); err != nil {
+		return apierror.Internal(err)
+	}
+	return nil
+}

@@ -5,17 +5,9 @@ import (
 	"time"
 )
 
-type MeterType string
-
-const (
-	MeterTypeElectric MeterType = "electric"
-	MeterTypeWater    MeterType = "water"
-)
-
-type MeterReading struct {
+type ElectricMeter struct {
 	ID              string    `json:"id"`
 	RoomID          string    `json:"room_id"`
-	MeterType       MeterType `json:"meter_type"`
 	ReadingDate     time.Time `json:"reading_date"`
 	PreviousReading float64   `json:"previous_reading"`
 	CurrentReading  float64   `json:"current_reading"`
@@ -25,16 +17,15 @@ type MeterReading struct {
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 
-type MeterReadingDetail struct {
-	MeterReading
+type ElectricMeterDetail struct {
+	ElectricMeter
 	RoomNumber  string  `json:"room_number"`
 	UnitUsed    float64 `json:"unit_used"`
 	TotalAmount float64 `json:"total_amount"`
 }
 
-type CreateMeterReadingRequest struct {
+type CreateElectricMeterRequest struct {
 	RoomID          string    `json:"room_id"`
-	MeterType       MeterType `json:"meter_type"`
 	ReadingDate     time.Time `json:"reading_date"`
 	PreviousReading float64   `json:"previous_reading"`
 	CurrentReading  float64   `json:"current_reading"`
@@ -42,7 +33,7 @@ type CreateMeterReadingRequest struct {
 	Note            string    `json:"note"`
 }
 
-type UpdateMeterReadingRequest struct {
+type UpdateElectricMeterRequest struct {
 	ReadingDate     time.Time `json:"reading_date"`
 	PreviousReading float64   `json:"previous_reading"`
 	CurrentReading  float64   `json:"current_reading"`
@@ -50,12 +41,12 @@ type UpdateMeterReadingRequest struct {
 	Note            string    `json:"note"`
 }
 
-type MeterReadingRepository interface {
-	FindByID(ctx context.Context, id string) (*MeterReading, error)
-	FindDetailByID(ctx context.Context, id string) (*MeterReadingDetail, error)
-	List(ctx context.Context, limit, offset int) ([]*MeterReadingDetail, error)
+type ElectricMeterRepository interface {
+	FindByID(ctx context.Context, id string) (*ElectricMeter, error)
+	FindDetailByID(ctx context.Context, id string) (*ElectricMeterDetail, error)
+	List(ctx context.Context, limit, offset int) ([]*ElectricMeterDetail, error)
 	Count(ctx context.Context) (int, error)
-	Create(ctx context.Context, m *MeterReading) error
-	Update(ctx context.Context, m *MeterReading) error
+	Create(ctx context.Context, m *ElectricMeter) error
+	Update(ctx context.Context, m *ElectricMeter) error
 	Delete(ctx context.Context, id string) error
 }
