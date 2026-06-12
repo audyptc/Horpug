@@ -1,4 +1,6 @@
+import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Check, ChevronDown, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,7 +20,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { DatePicker } from '@/components/ui/date-picker'
-import type { ApiMaintenanceRequest, MaintenanceStatus, MaintenancePriority } from '@/types'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { roomService } from '@/features/rooms/roomService'
+import type { ApiMaintenanceRequest, MaintenanceStatus, MaintenancePriority, ApiRoom } from '@/types'
+import { cn } from '@/lib/utils'
 
 type MaintenanceForm = {
   room_id: string
@@ -39,6 +45,7 @@ type Props = {
   onFormChange: (form: MaintenanceForm) => void
   onSave: () => void
   saving: boolean
+  error?: string
 }
 
 export function MaintenanceDialog({
@@ -49,13 +56,64 @@ export function MaintenanceDialog({
   onFormChange,
   onSave,
   saving,
+  error,
 }: Props) {
   const { t } = useTranslation()
+
+  const [rooms, setRooms] = useState<ApiRoom[]>([])
+  const [roomsLoading, setRoomsLoading] = useState(false)
+  const [roomSearch, setRoomSearch] = useState('')
+  const [roomPickerOpen, setRoomPickerOpen] = useState(false)
 
   const isSaveDisabled = saving || !form.room_id || !form.title || !form.reported_date
 
   function set(patch: Partial<MaintenanceForm>) {
     onFormChange({ ...form, ...patch })
+  }
+
+  useEffect(() => {
+    if (!open) return
+    setRoomsLoading(true)
+    roomService
+      .list(1, 200)
+      .then((r) => setRooms(r.data))
+      .catch(() => {})
+      .finally(() => setRoomsLoading(false))
+  }, [open])
+
+  useEffect(() => {
+    if (!open) {
+      setRoomSearch('')
+      setRoomPickerOpen(false)
+    }
+  }, [open])
+
+  const selectedRoom = rooms.find((r) => r.id === form.room_id) ?? null
+
+  const displayRoom =
+    selectedRoom?.room_number ??
+    (editingItem?.room_number && form.room_id === editingItem.room_id
+      ? editingItem.room_number
+      : null)
+
+  const filteredRooms = useMemo(() => {
+    const q = roomSearch.toLowerCase()
+    if (!q) return rooms
+    return rooms.filter((r) => r.room_number.toLowerCase().includes(q))
+  }, [rooms, roomSearch])
+
+  function selectRoom(room: ApiRoom) {
+    set({ room_id: room.id })
+    setRoomPickerOpen(false)
+    setRoomSearch('')
+  }
+
+  function handleStatusChange(v: string) {
+    const patch: Partial<MaintenanceForm> = { status: v as MaintenanceStatus }
+    if (v === 'done' && !form.resolved_date) {
+      patch.resolved_date = new Date().toISOString().slice(0, 10)
+    }
+    set(patch)
   }
 
   return (
@@ -72,12 +130,63 @@ export function MaintenanceDialog({
 
         <div className="grid gap-4 py-4">
           <div className="space-y-1.5">
-            <Label>{t('maintenance.roomId')} *</Label>
-            <Input
-              placeholder={t('maintenance.roomIdPlaceholder')}
-              value={form.room_id}
-              onChange={(e) => set({ room_id: e.target.value })}
-            />
+            <Label>{t('maintenance.selectRoom')} *</Label>
+            <Popover open={roomPickerOpen} onOpenChange={setRoomPickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className={cn(
+                    'w-full justify-between font-normal',
+                    !displayRoom && 'text-muted-foreground'
+                  )}
+                >
+                  {displayRoom ?? t('maintenance.selectRoomPlaceholder')}
+                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0" align="start">
+                <div className="p-2 border-b">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder={t('maintenance.roomSearch')}
+                      className="pl-8 h-8 text-sm"
+                      value={roomSearch}
+                      onChange={(e) => setRoomSearch(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <ScrollArea className="max-h-48">
+                  {roomsLoading ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">
+                      {t('common.loading')}
+                    </p>
+                  ) : filteredRooms.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">
+                      {t('maintenance.noRooms')}
+                    </p>
+                  ) : (
+                    filteredRooms.map((room) => (
+                      <button
+                        key={room.id}
+                        type="button"
+                        onClick={() => selectRoom(room)}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
+                      >
+                        <Check
+                          className={cn(
+                            'h-4 w-4 shrink-0',
+                            form.room_id === room.id ? 'opacity-100' : 'opacity-0'
+                          )}
+                        />
+                        {room.room_number}
+                      </button>
+                    ))
+                  )}
+                </ScrollArea>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="space-y-1.5">
@@ -103,10 +212,7 @@ export function MaintenanceDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>{t('maintenance.status')} *</Label>
-              <Select
-                value={form.status}
-                onValueChange={(v) => set({ status: v as MaintenanceStatus })}
-              >
+              <Select value={form.status} onValueChange={handleStatusChange}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="open">{t('maintenance.statuses.open')}</SelectItem>
@@ -141,13 +247,15 @@ export function MaintenanceDialog({
                 onChange={(v) => set({ reported_date: v })}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label>{t('maintenance.resolvedDate')}</Label>
-              <DatePicker
-                value={form.resolved_date}
-                onChange={(v) => set({ resolved_date: v })}
-              />
-            </div>
+            {(form.status === 'done' || form.status === 'cancelled' || form.resolved_date) && (
+              <div className="space-y-1.5">
+                <Label>{t('maintenance.resolvedDate')}</Label>
+                <DatePicker
+                  value={form.resolved_date}
+                  onChange={(v) => set({ resolved_date: v })}
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -160,6 +268,10 @@ export function MaintenanceDialog({
               className="flex min-h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
             />
           </div>
+
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
         </div>
 
         <DialogFooter>

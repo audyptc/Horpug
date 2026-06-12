@@ -80,6 +80,7 @@ export function Expenses() {
   const [deletingExpense, setDeletingExpense] = useState<ApiExpense | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const fetchExpenses = useCallback(async (p: number, pp: number) => {
     setLoading(true)
@@ -117,6 +118,7 @@ export function Expenses() {
   function openCreate() {
     setEditingExpense(null)
     setForm({ ...emptyForm, expense_date: new Date().toISOString().slice(0, 10) })
+    setSaveError('')
     setDialogOpen(true)
   }
 
@@ -129,15 +131,17 @@ export function Expenses() {
       amount: String(expense.amount),
       note: expense.note,
     })
+    setSaveError('')
     setDialogOpen(true)
   }
 
   async function handleSave() {
     if (!form.expense_date || !form.description || !form.amount) return
     setSaving(true)
+    setSaveError('')
     try {
       const payload = {
-        expense_date: form.expense_date,
+        expense_date: `${form.expense_date}T00:00:00Z`,
         category: form.category,
         description: form.description,
         amount: Number(form.amount),
@@ -151,7 +155,7 @@ export function Expenses() {
       setDialogOpen(false)
       await fetchExpenses(page, perPage)
     } catch {
-      // handled silently
+      setSaveError(t('expenses.saveError'))
     } finally {
       setSaving(false)
     }
@@ -426,6 +430,7 @@ export function Expenses() {
         onFormChange={setForm}
         onSave={handleSave}
         saving={saving}
+        error={saveError}
       />
 
       <ExpenseDeleteDialog

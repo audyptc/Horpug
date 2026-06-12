@@ -36,6 +36,7 @@ type Props = {
   onFormChange: (form: ExpenseForm) => void
   onSave: () => void
   saving: boolean
+  error?: string
 }
 
 export function ExpenseDialog({
@@ -46,6 +47,7 @@ export function ExpenseDialog({
   onFormChange,
   onSave,
   saving,
+  error,
 }: Props) {
   const { t } = useTranslation()
 
@@ -106,6 +108,7 @@ export function ExpenseDialog({
           <div className="space-y-1.5">
             <Label>{t('expenses.amount')} *</Label>
             <Input
+              className="text-right"
               type="number"
               min="0"
               step="0.01"
@@ -126,6 +129,10 @@ export function ExpenseDialog({
             />
           </div>
         </div>
+
+        {error && (
+          <p className="text-sm text-destructive">{error}</p>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

@@ -12,6 +12,8 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  PlayCircle,
+  CheckCircle2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -90,6 +92,7 @@ export function MaintenanceRequests() {
   const [deletingItem, setDeletingItem] = useState<ApiMaintenanceRequest | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const fetchItems = useCallback(async (p: number, pp: number) => {
     setLoading(true)
@@ -130,11 +133,13 @@ export function MaintenanceRequests() {
 
   function openCreate() {
     setEditingItem(null)
+    setSaveError('')
     setForm({ ...emptyForm, reported_date: new Date().toISOString().slice(0, 10) })
     setDialogOpen(true)
   }
 
   function openEdit(item: ApiMaintenanceRequest) {
+    setSaveError('')
     setEditingItem(item)
     setForm({
       room_id: item.room_id,
@@ -152,6 +157,7 @@ export function MaintenanceRequests() {
   async function handleSave() {
     if (!form.room_id || !form.title || !form.reported_date) return
     setSaving(true)
+    setSaveError('')
     try {
       const payload = {
         room_id: form.room_id,
@@ -159,8 +165,8 @@ export function MaintenanceRequests() {
         description: form.description,
         status: form.status,
         priority: form.priority,
-        reported_date: form.reported_date,
-        resolved_date: form.resolved_date || null,
+        reported_date: form.reported_date + 'T00:00:00Z',
+        resolved_date: form.resolved_date ? form.resolved_date + 'T00:00:00Z' : null,
         note: form.note,
       }
       if (editingItem) {
@@ -171,9 +177,30 @@ export function MaintenanceRequests() {
       setDialogOpen(false)
       await fetchItems(page, perPage)
     } catch {
-      // handled silently
+      setSaveError(t('maintenance.saveError'))
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleQuickStatus(item: ApiMaintenanceRequest, status: MaintenanceStatus) {
+    try {
+      await maintenanceService.update(item.id, {
+        room_id: item.room_id,
+        title: item.title,
+        description: item.description,
+        status,
+        priority: item.priority,
+        reported_date: item.reported_date,
+        resolved_date:
+          status === 'done'
+            ? (item.resolved_date ?? new Date().toISOString())
+            : item.resolved_date ?? null,
+        note: item.note,
+      })
+      await fetchItems(page, perPage)
+    } catch {
+      // ignore
     }
   }
 
@@ -318,6 +345,19 @@ export function MaintenanceRequests() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              {item.status === 'open' && (
+                                <DropdownMenuItem onClick={() => handleQuickStatus(item, 'in_progress')} className="gap-2">
+                                  <PlayCircle className="w-4 h-4" /> {t('maintenance.startProgress')}
+                                </DropdownMenuItem>
+                              )}
+                              {(item.status === 'open' || item.status === 'in_progress') && (
+                                <DropdownMenuItem onClick={() => handleQuickStatus(item, 'done')} className="gap-2">
+                                  <CheckCircle2 className="w-4 h-4" /> {t('maintenance.markDone')}
+                                </DropdownMenuItem>
+                              )}
+                              {(item.status === 'open' || item.status === 'in_progress') && (
+                                <DropdownMenuSeparator />
+                              )}
                               <DropdownMenuItem onClick={() => openEdit(item)} className="gap-2">
                                 <Pencil className="w-4 h-4" /> {t('common.edit')}
                               </DropdownMenuItem>
@@ -378,6 +418,19 @@ export function MaintenanceRequests() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        {item.status === 'open' && (
+                          <DropdownMenuItem onClick={() => handleQuickStatus(item, 'in_progress')} className="gap-2">
+                            <PlayCircle className="w-4 h-4" /> {t('maintenance.startProgress')}
+                          </DropdownMenuItem>
+                        )}
+                        {(item.status === 'open' || item.status === 'in_progress') && (
+                          <DropdownMenuItem onClick={() => handleQuickStatus(item, 'done')} className="gap-2">
+                            <CheckCircle2 className="w-4 h-4" /> {t('maintenance.markDone')}
+                          </DropdownMenuItem>
+                        )}
+                        {(item.status === 'open' || item.status === 'in_progress') && (
+                          <DropdownMenuSeparator />
+                        )}
                         <DropdownMenuItem onClick={() => openEdit(item)}>{t('common.edit')}</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -445,6 +498,7 @@ export function MaintenanceRequests() {
         onFormChange={setForm}
         onSave={handleSave}
         saving={saving}
+        error={saveError}
       />
 
       <MaintenanceDeleteDialog

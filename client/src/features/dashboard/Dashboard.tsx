@@ -1,30 +1,76 @@
-﻿import { useState, useEffect } from 'react'
+﻿import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import {
   Home, Users, FileText, AlertCircle, CheckCircle2,
-  TrendingUp, DoorOpen, Wrench, Clock,
+  TrendingUp, DoorOpen, Wrench, Clock, Megaphone, Pin,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import { dashboardService } from '@/features/dashboard/dashboardService'
-import type { ApiDashboardSummary } from '@/types'
+import { announcementService } from '@/features/announcements/announcementService'
+import type { ApiDashboardSummary, ApiAnnouncement } from '@/types'
 import { cn } from '@/lib/utils'
+import { formatDate } from '@/lib/dateUtils'
 
 function formatBaht(amount: number) {
   return new Intl.NumberFormat('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount)
+}
+
+const TYPE_ACCENT: Record<string, string> = {
+  general: 'border-l-slate-400',
+  maintenance: 'border-l-amber-400',
+  payment: 'border-l-blue-400',
+  emergency: 'border-l-red-500',
+}
+
+const TYPE_BADGE: Record<string, 'secondary' | 'outline' | 'default' | 'destructive'> = {
+  general: 'secondary',
+  maintenance: 'outline',
+  payment: 'default',
+  emergency: 'destructive',
 }
 
 export function Dashboard() {
   const { t } = useTranslation()
   const [summary, setSummary] = useState<ApiDashboardSummary | null>(null)
   const [loading, setLoading] = useState(true)
+  const [announcements, setAnnouncements] = useState<ApiAnnouncement[]>([])
+  const [announcementsLoading, setAnnouncementsLoading] = useState(true)
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<ApiAnnouncement | null>(null)
 
   useEffect(() => {
     dashboardService.summary()
       .then(setSummary)
       .catch(() => {})
       .finally(() => setLoading(false))
+    announcementService.list(1, 50)
+      .then((r) => setAnnouncements(r.data))
+      .catch(() => {})
+      .finally(() => setAnnouncementsLoading(false))
   }, [])
+
+  const activeAnnouncements = useMemo(() => {
+    const now = new Date()
+    return announcements
+      .filter((a) => {
+        const published = new Date(a.published_at)
+        const expired = a.expired_at ? new Date(a.expired_at) : null
+        return published <= now && (expired === null || expired > now)
+      })
+      .sort((a, b) => {
+        if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1
+        return new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+      })
+  }, [announcements])
 
   const statCards = [
     {
@@ -181,6 +227,86 @@ export function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Announcements */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <div className="flex items-center gap-2">
+            <Megaphone className="w-4 h-4 text-muted-foreground" />
+            <div>
+              <CardTitle>{t('dashboard.latestAnnouncements')}</CardTitle>
+              <CardDescription className="mt-0.5">{t('dashboard.latestAnnouncementsDesc')}</CardDescription>
+            </div>
+          </div>
+          <Link to="/announcements" className="text-xs text-primary hover:underline shrink-0">
+            {t('dashboard.viewAll')}
+          </Link>
+        </CardHeader>
+        <CardContent>
+          {announcementsLoading ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">{t('common.loading')}</p>
+          ) : activeAnnouncements.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">{t('dashboard.noActiveAnnouncements')}</p>
+          ) : (
+            <div className="space-y-2">
+              {activeAnnouncements.map((ann) => (
+                <button
+                  key={ann.id}
+                  type="button"
+                  onClick={() => setSelectedAnnouncement(ann)}
+                  className={cn('w-full text-left p-3 rounded-lg border border-l-4 bg-card hover:bg-muted/40 transition-colors', TYPE_ACCENT[ann.type])}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                        {ann.is_pinned && <Pin className="w-3 h-3 text-muted-foreground shrink-0" />}
+                        <Badge variant={TYPE_BADGE[ann.type]} className="text-xs">
+                          {t(`announcements.types.${ann.type}`)}
+                        </Badge>
+                        <span className="font-medium text-sm">{ann.title}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{ann.content}</p>
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0 mt-0.5">
+                      {formatDate(ann.published_at)}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={!!selectedAnnouncement} onOpenChange={(open) => { if (!open) setSelectedAnnouncement(null) }}>
+        <DialogContent className="max-w-lg">
+          {selectedAnnouncement && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  {selectedAnnouncement.is_pinned && <Pin className="w-3.5 h-3.5 text-muted-foreground" />}
+                  <Badge variant={TYPE_BADGE[selectedAnnouncement.type]}>
+                    {t(`announcements.types.${selectedAnnouncement.type}`)}
+                  </Badge>
+                </div>
+                <DialogTitle>{selectedAnnouncement.title}</DialogTitle>
+                <DialogDescription className="flex gap-3 text-xs">
+                  <span>{t('announcements.publishedAt')}: {formatDate(selectedAnnouncement.published_at)}</span>
+                  {selectedAnnouncement.expired_at && (
+                    <span>{t('announcements.expiredAt')}: {formatDate(selectedAnnouncement.expired_at)}</span>
+                  )}
+                </DialogDescription>
+              </DialogHeader>
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">{selectedAnnouncement.content}</p>
+              <div className="flex justify-end pt-2">
+                <Button variant="outline" onClick={() => setSelectedAnnouncement(null)}>
+                  {t('common.cancel')}
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

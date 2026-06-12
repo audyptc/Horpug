@@ -87,6 +87,7 @@ export function Announcements() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<ApiAnnouncement | null>(null)
   const [deletingItem, setDeletingItem] = useState<ApiAnnouncement | null>(null)
+  const [selectedItem, setSelectedItem] = useState<ApiAnnouncement | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
 
@@ -151,8 +152,8 @@ export function Announcements() {
         content: form.content,
         type: form.type,
         is_pinned: form.is_pinned,
-        published_at: form.published_at,
-        expired_at: form.expired_at || null,
+        published_at: form.published_at + 'T00:00:00Z',
+        expired_at: form.expired_at ? form.expired_at + 'T00:00:00Z' : null,
       }
       if (editingItem) {
         await announcementService.update(editingItem.id, payload)
@@ -268,8 +269,9 @@ export function Announcements() {
                     {filtered.map((item, i) => (
                       <tr
                         key={item.id}
+                        onClick={() => setSelectedItem(item)}
                         className={cn(
-                          'border-b transition-colors hover:bg-muted/30',
+                          'border-b transition-colors hover:bg-muted/30 cursor-pointer',
                           i === filtered.length - 1 && 'border-0'
                         )}
                       >
@@ -287,7 +289,7 @@ export function Announcements() {
                         <td className="px-4 py-4 text-center">
                           {item.is_pinned && <Pin className="w-4 h-4 text-primary mx-auto" />}
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -335,7 +337,11 @@ export function Announcements() {
               {/* Mobile cards */}
               <div className="md:hidden divide-y">
                 {filtered.map((item) => (
-                  <div key={item.id} className="p-4 flex items-start gap-3">
+                  <div
+                    key={item.id}
+                    onClick={() => setSelectedItem(item)}
+                    className="p-4 flex items-start gap-3 cursor-pointer hover:bg-muted/30 transition-colors"
+                  >
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium truncate">{item.title}</p>
@@ -349,23 +355,25 @@ export function Announcements() {
                         <span className="text-xs text-muted-foreground">{formatDate(item.published_at)}</span>
                       </div>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(item)}>{t('common.edit')}</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => { setDeletingItem(item); setDeleteDialogOpen(true) }}
-                        >
-                          {t('common.delete')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEdit(item)}>{t('common.edit')}</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => { setDeletingItem(item); setDeleteDialogOpen(true) }}
+                          >
+                            {t('common.delete')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -503,6 +511,37 @@ export function Announcements() {
               {saving ? t('common.loading') : editingItem ? t('announcements.saveChanges') : t('announcements.createAnnouncement')}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail dialog */}
+      <Dialog open={!!selectedItem} onOpenChange={(open) => { if (!open) setSelectedItem(null) }}>
+        <DialogContent className="max-w-lg">
+          {selectedItem && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  {selectedItem.is_pinned && <Pin className="w-3.5 h-3.5 text-muted-foreground" />}
+                  <Badge variant={TYPE_VARIANTS[selectedItem.type] as 'secondary' | 'outline' | 'destructive'}>
+                    {t(`announcements.types.${selectedItem.type}`)}
+                  </Badge>
+                </div>
+                <DialogTitle>{selectedItem.title}</DialogTitle>
+                <DialogDescription className="flex gap-4 text-xs">
+                  <span>{t('announcements.publishedAt')}: {formatDate(selectedItem.published_at)}</span>
+                  {selectedItem.expired_at && (
+                    <span>{t('announcements.expiredAt')}: {formatDate(selectedItem.expired_at)}</span>
+                  )}
+                </DialogDescription>
+              </DialogHeader>
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">{selectedItem.content}</p>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setSelectedItem(null)}>
+                  {t('common.cancel')}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
