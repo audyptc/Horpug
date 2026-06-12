@@ -63,8 +63,9 @@ func (uc *BillUseCase) Create(ctx context.Context, req *domain.CreateBillRequest
 		RentAmount:     req.RentAmount,
 		ElectricAmount: req.ElectricAmount,
 		WaterAmount:    req.WaterAmount,
+		ParkingAmount:  req.ParkingAmount,
 		OtherAmount:    otherAmount,
-		TotalAmount:    req.RentAmount + req.ElectricAmount + req.WaterAmount + otherAmount,
+		TotalAmount:    req.RentAmount + req.ElectricAmount + req.WaterAmount + req.ParkingAmount + otherAmount,
 		Status:         domain.BillStatusUnpaid,
 		DueDate:        req.DueDate,
 		Note:           req.Note,
@@ -113,8 +114,9 @@ func (uc *BillUseCase) Update(ctx context.Context, id string, req *domain.Update
 	b.RentAmount = req.RentAmount
 	b.ElectricAmount = req.ElectricAmount
 	b.WaterAmount = req.WaterAmount
+	b.ParkingAmount = req.ParkingAmount
 	b.OtherAmount = otherAmount
-	b.TotalAmount = req.RentAmount + req.ElectricAmount + req.WaterAmount + otherAmount
+	b.TotalAmount = req.RentAmount + req.ElectricAmount + req.WaterAmount + req.ParkingAmount + otherAmount
 	b.DueDate = req.DueDate
 	b.Note = req.Note
 

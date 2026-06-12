@@ -29,9 +29,10 @@ import { billService } from '@/features/billing/billService'
 import { contractService } from '@/features/contracts/contractService'
 import { electricMeterService } from '@/features/electric-meters/electricMeterService'
 import { waterMeterService } from '@/features/water-meters/waterMeterService'
+import { parkingService } from '@/features/parking/parkingService'
 import { paymentService } from '@/features/payments/paymentService'
 import { PaymentDialog } from '@/features/payments/components/PaymentDialog'
-import type { ApiBill, ApiContract, PaymentMethod } from '@/types'
+import type { ApiBill, ApiContract, ApiParkingSlot, PaymentMethod } from '@/types'
 
 const EMPTY_FORM: BillFormState = {
   contract_id: '',
@@ -39,6 +40,7 @@ const EMPTY_FORM: BillFormState = {
   rent_amount: '',
   electric_amount: '',
   water_amount: '',
+  parking_amount: '',
   other_items: [],
   due_date: '',
   note: '',
@@ -71,6 +73,9 @@ export function Bills() {
   const [saving, setSaving] = useState(false)
   const [autoFilling, setAutoFilling] = useState(false)
 
+  const [tenantParkingSlots, setTenantParkingSlots] = useState<ApiParkingSlot[]>([])
+  const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([])
+
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [paymentForm, setPaymentForm] = useState({
     bill_id: '',
@@ -95,17 +100,37 @@ export function Bills() {
     if (!contract) return
     setForm((f) => ({ ...f, contract_id: contractId, rent_amount: String(contract.rent_price) }))
     setAutoFilling(true)
-    const [electric, water] = await Promise.all([
+    const [electric, water, parkingResp] = await Promise.all([
       electricMeterService.getLatestByRoomId(contract.room_id),
       waterMeterService.getLatestByRoomId(contract.room_id),
+      parkingService.list(1, 200),
     ])
     setAutoFilling(false)
+    const slots = parkingResp.data.filter(
+      (s) => s.tenant_id === contract.tenant_id && s.status === 'occupied'
+    )
+    setTenantParkingSlots(slots)
+    const allIds = slots.map((s) => s.id)
+    setSelectedSlotIds(allIds)
+    const parkingTotal = slots.reduce((sum, s) => sum + s.monthly_fee, 0)
     setForm((f) => ({
       ...f,
       electric_amount: electric ? String(electric.total_amount) : f.electric_amount,
       water_amount: water ? String(water.total_amount) : f.water_amount,
+      parking_amount: parkingTotal > 0 ? String(parkingTotal) : '',
     }))
   }, [contracts])
+
+  const handleSlotToggle = useCallback((slotId: string) => {
+    setSelectedSlotIds((prev) => {
+      const next = prev.includes(slotId) ? prev.filter((id) => id !== slotId) : [...prev, slotId]
+      const total = tenantParkingSlots
+        .filter((s) => next.includes(s.id))
+        .reduce((sum, s) => sum + s.monthly_fee, 0)
+      setForm((f) => ({ ...f, parking_amount: total > 0 ? String(total) : '' }))
+      return next
+    })
+  }, [tenantParkingSlots])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -120,6 +145,8 @@ export function Bills() {
   function openCreate() {
     setEditingBill(null)
     setForm(EMPTY_FORM)
+    setTenantParkingSlots([])
+    setSelectedSlotIds([])
     setDialogOpen(true)
   }
 
@@ -131,6 +158,7 @@ export function Bills() {
       rent_amount: String(bill.rent_amount),
       electric_amount: String(bill.electric_amount),
       water_amount: String(bill.water_amount),
+      parking_amount: bill.parking_amount > 0 ? String(bill.parking_amount) : '',
       other_items: (bill.other_items ?? []).map((item) => ({
         label: item.label,
         amount: String(item.amount),
@@ -139,9 +167,17 @@ export function Bills() {
       note: bill.note,
       status: bill.status,
     })
+    setTenantParkingSlots([])
+    setSelectedSlotIds([])
     setDialogOpen(true)
-    try {
-      const detail = await billService.getById(bill.id)
+
+    // โหลด slots และ other_items พร้อมกัน
+    const contract = contracts.find((c) => c.id === bill.contract_id)
+    const [detail, parkingResp] = await Promise.all([
+      billService.getById(bill.id).catch(() => null),
+      contract ? parkingService.list(1, 200).catch(() => null) : Promise.resolve(null),
+    ])
+    if (detail) {
       setForm((f) => ({
         ...f,
         other_items: detail.other_items.map((item) => ({
@@ -149,8 +185,23 @@ export function Bills() {
           amount: String(item.amount),
         })),
       }))
-    } catch {
-      // keep the empty list from list response
+    }
+    if (parkingResp && contract) {
+      const slots = parkingResp.data.filter(
+        (s) => s.tenant_id === contract.tenant_id && s.status === 'occupied'
+      )
+      setTenantParkingSlots(slots)
+      // pre-select ช่องที่ผลรวมตรงกับที่บันทึกไว้
+      const stored = bill.parking_amount
+      if (stored > 0) {
+        const matching = slots.filter((s) => s.monthly_fee === stored)
+        if (matching.length === 1) {
+          setSelectedSlotIds([matching[0].id])
+        } else {
+          const allSum = slots.reduce((sum, s) => sum + s.monthly_fee, 0)
+          if (allSum === stored) setSelectedSlotIds(slots.map((s) => s.id))
+        }
+      }
     }
   }
 
@@ -166,6 +217,7 @@ export function Bills() {
           rent_amount: Number(form.rent_amount) || 0,
           electric_amount: Number(form.electric_amount) || 0,
           water_amount: Number(form.water_amount) || 0,
+          parking_amount: Number(form.parking_amount) || 0,
           other_items: otherItems,
           status: form.status,
           due_date: form.due_date ? `${form.due_date}T00:00:00Z` : null,
@@ -178,6 +230,7 @@ export function Bills() {
           rent_amount: Number(form.rent_amount) || 0,
           electric_amount: Number(form.electric_amount) || 0,
           water_amount: Number(form.water_amount) || 0,
+          parking_amount: Number(form.parking_amount) || 0,
           other_items: otherItems,
           due_date: form.due_date ? `${form.due_date}T00:00:00Z` : null,
           note: form.note,
@@ -331,6 +384,9 @@ export function Bills() {
         onContractChange={handleContractChange}
         autoFilling={autoFilling}
         contracts={contracts}
+        parkingSlots={tenantParkingSlots}
+        selectedSlotIds={selectedSlotIds}
+        onSlotToggle={handleSlotToggle}
         onSave={handleSave}
         saving={saving}
       />

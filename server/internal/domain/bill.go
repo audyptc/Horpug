@@ -33,6 +33,7 @@ type Bill struct {
 	RentAmount     float64    `json:"rent_amount"`
 	ElectricAmount float64    `json:"electric_amount"`
 	WaterAmount    float64    `json:"water_amount"`
+	ParkingAmount  float64    `json:"parking_amount"`
 	OtherAmount    float64    `json:"other_amount"` // cached sum of other items
 	TotalAmount    float64    `json:"total_amount"`
 	Status         BillStatus `json:"status"`
@@ -60,6 +61,7 @@ type CreateBillRequest struct {
 	RentAmount     float64              `json:"rent_amount"`
 	ElectricAmount float64              `json:"electric_amount"`
 	WaterAmount    float64              `json:"water_amount"`
+	ParkingAmount  float64              `json:"parking_amount"`
 	OtherItems     []BillOtherItemInput `json:"other_items"`
 	DueDate        *time.Time           `json:"due_date"`
 	Note           string               `json:"note"`
@@ -69,6 +71,7 @@ type UpdateBillRequest struct {
 	RentAmount     float64               `json:"rent_amount"`
 	ElectricAmount float64               `json:"electric_amount"`
 	WaterAmount    float64               `json:"water_amount"`
+	ParkingAmount  float64               `json:"parking_amount"`
 	OtherItems     *[]BillOtherItemInput `json:"other_items"` // nil = keep existing
 	Status         BillStatus            `json:"status"`
 	DueDate        *time.Time            `json:"due_date"`

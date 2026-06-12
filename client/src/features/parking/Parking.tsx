@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect, useCallback } from 'react'
+﻿import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Search,
@@ -12,6 +12,9 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  ChevronDown,
+  X,
+  User,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,9 +43,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { DatePicker } from '@/components/ui/date-picker'
 import { parkingService } from '@/features/parking/parkingService'
-import type { ApiParkingSlot, ParkingStatus, VehicleType } from '@/types'
+import { tenantService } from '@/features/tenants/tenantService'
+import type { ApiParkingSlot, ApiTenant, ParkingStatus, VehicleType } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
 
@@ -59,7 +64,7 @@ const emptyForm = {
   status: 'available' as ParkingStatus,
   tenant_id: '' as string,
   license_plate: '',
-  monthly_fee: 0,
+  monthly_fee: '' as string | number,
   start_date: '',
   note: '',
 }
@@ -85,6 +90,11 @@ export function Parking() {
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
 
+  const [tenants, setTenants] = useState<ApiTenant[]>([])
+  const [tenantPickerOpen, setTenantPickerOpen] = useState(false)
+  const [tenantSearch, setTenantSearch] = useState('')
+  const tenantSearchRef = useRef<HTMLInputElement>(null)
+
   const fetchItems = useCallback(
     async (p: number, pp: number) => {
       setLoading(true)
@@ -106,6 +116,11 @@ export function Parking() {
   useEffect(() => {
     fetchItems(page, perPage)
   }, [fetchItems, page, perPage])
+
+  useEffect(() => {
+    if (!dialogOpen) return
+    tenantService.list(1, 200).then((r) => setTenants(r.data)).catch(() => {})
+  }, [dialogOpen])
 
   function handlePerPageChange(value: string) {
     setPerPage(Number(value))
@@ -129,6 +144,7 @@ export function Parking() {
   function openCreate() {
     setEditingItem(null)
     setForm(emptyForm)
+    setTenantSearch('')
     setDialogOpen(true)
   }
 
@@ -140,12 +156,37 @@ export function Parking() {
       status: item.status,
       tenant_id: item.tenant_id ?? '',
       license_plate: item.license_plate,
-      monthly_fee: item.monthly_fee,
+      monthly_fee: item.monthly_fee > 0 ? item.monthly_fee : '',
       start_date: toDateInput(item.start_date),
       note: item.note,
     })
+    setTenantSearch('')
     setDialogOpen(true)
   }
+
+  function handleStatusChange(v: string) {
+    const newStatus = v as ParkingStatus
+    setForm((f) => ({
+      ...f,
+      status: newStatus,
+      ...(newStatus === 'available'
+        ? { tenant_id: '', license_plate: '', start_date: '' }
+        : {}),
+    }))
+  }
+
+  const selectedTenant = tenants.find((t) => t.id === form.tenant_id) ?? null
+
+  const filteredTenants = useMemo(() => {
+    const q = tenantSearch.toLowerCase()
+    if (!q) return tenants
+    return tenants.filter(
+      (t) =>
+        t.first_name.toLowerCase().includes(q) ||
+        t.last_name.toLowerCase().includes(q) ||
+        `${t.first_name} ${t.last_name}`.toLowerCase().includes(q)
+    )
+  }, [tenants, tenantSearch])
 
   async function handleSave() {
     if (!form.slot_number) return
@@ -155,10 +196,10 @@ export function Parking() {
         slot_number: form.slot_number,
         vehicle_type: form.vehicle_type,
         status: form.status,
-        tenant_id: form.tenant_id || null,
-        license_plate: form.license_plate,
-        monthly_fee: Number(form.monthly_fee),
-        start_date: form.start_date || null,
+        tenant_id: form.status === 'occupied' ? form.tenant_id || null : null,
+        license_plate: form.status === 'occupied' ? form.license_plate : '',
+        monthly_fee: form.monthly_fee === '' ? 0 : Number(form.monthly_fee),
+        start_date: form.status === 'occupied' ? form.start_date || null : null,
         note: form.note,
       }
       if (editingItem) {
@@ -458,6 +499,7 @@ export function Parking() {
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
+            {/* ข้อมูลช่องจอด */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>{t('parking.slotNumber')} *</Label>
@@ -485,10 +527,7 @@ export function Parking() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>{t('parking.status')}</Label>
-                <Select
-                  value={form.status}
-                  onValueChange={(v) => setForm((f) => ({ ...f, status: v as ParkingStatus }))}
-                >
+                <Select value={form.status} onValueChange={handleStatusChange}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="available">{t('parking.statuses.available')}</SelectItem>
@@ -501,35 +540,9 @@ export function Parking() {
                 <Input
                   type="number"
                   min={0}
+                  placeholder={t('parking.monthlyFeePlaceholder')}
                   value={form.monthly_fee}
-                  onChange={(e) => setForm((f) => ({ ...f, monthly_fee: Number(e.target.value) }))}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>{t('parking.licensePlate')}</Label>
-              <Input
-                placeholder={t('parking.licensePlatePlaceholder')}
-                value={form.license_plate}
-                onChange={(e) => setForm((f) => ({ ...f, license_plate: e.target.value }))}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>{t('parking.tenantId')}</Label>
-                <Input
-                  placeholder={t('parking.tenantIdPlaceholder')}
-                  value={form.tenant_id}
-                  onChange={(e) => setForm((f) => ({ ...f, tenant_id: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('parking.startDate')}</Label>
-                <DatePicker
-                  value={form.start_date}
-                  onChange={(v) => setForm((f) => ({ ...f, start_date: v }))}
+                  onChange={(e) => setForm((f) => ({ ...f, monthly_fee: e.target.value }))}
                 />
               </div>
             </div>
@@ -542,6 +555,126 @@ export function Parking() {
                 onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
               />
             </div>
+
+            {/* ข้อมูลผู้ใช้ช่องจอด (แสดงเฉพาะเมื่อ occupied) */}
+            {form.status === 'occupied' && (
+              <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  {t('parking.occupancySection')}
+                </p>
+
+                {/* Tenant picker */}
+                <div className="space-y-1.5">
+                  <Label>{t('parking.tenant')}</Label>
+                  <Popover
+                    open={tenantPickerOpen}
+                    onOpenChange={(open) => {
+                      setTenantPickerOpen(open)
+                      if (open) {
+                        setTenantSearch('')
+                        setTimeout(() => tenantSearchRef.current?.focus(), 50)
+                      }
+                    }}
+                  >
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className={cn(
+                          'flex w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm ring-offset-background',
+                          'hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+                          !selectedTenant && 'text-muted-foreground'
+                        )}
+                      >
+                        <span className="flex items-center gap-2 min-w-0">
+                          <User className="w-4 h-4 shrink-0 text-muted-foreground" />
+                          <span className="truncate">
+                            {selectedTenant
+                              ? `${selectedTenant.first_name} ${selectedTenant.last_name}`
+                              : t('parking.selectTenantPlaceholder')}
+                          </span>
+                        </span>
+                        <span className="flex items-center gap-1 shrink-0 ml-2">
+                          {selectedTenant && (
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              className="rounded p-0.5 hover:bg-muted"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setForm((f) => ({ ...f, tenant_id: '' }))
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.stopPropagation()
+                                  setForm((f) => ({ ...f, tenant_id: '' }))
+                                }
+                              }}
+                            >
+                              <X className="w-3.5 h-3.5 text-muted-foreground" />
+                            </span>
+                          )}
+                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        </span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-72 p-0">
+                      <div className="p-2 border-b">
+                        <Input
+                          ref={tenantSearchRef}
+                          placeholder={t('parking.searchTenant')}
+                          value={tenantSearch}
+                          onChange={(e) => setTenantSearch(e.target.value)}
+                          className="h-8"
+                        />
+                      </div>
+                      <div className="max-h-48 overflow-y-auto py-1">
+                        {filteredTenants.length === 0 ? (
+                          <p className="px-3 py-2 text-sm text-muted-foreground">
+                            {t('parking.noTenantFound')}
+                          </p>
+                        ) : (
+                          filteredTenants.map((tenant) => (
+                            <button
+                              key={tenant.id}
+                              type="button"
+                              className={cn(
+                                'flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent text-left',
+                                form.tenant_id === tenant.id && 'bg-accent font-medium'
+                              )}
+                              onClick={() => {
+                                setForm((f) => ({ ...f, tenant_id: tenant.id }))
+                                setTenantPickerOpen(false)
+                              }}
+                            >
+                              <User className="w-4 h-4 shrink-0 text-muted-foreground" />
+                              {tenant.first_name} {tenant.last_name}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label>{t('parking.licensePlate')}</Label>
+                    <Input
+                      placeholder={t('parking.licensePlatePlaceholder')}
+                      value={form.license_plate}
+                      onChange={(e) => setForm((f) => ({ ...f, license_plate: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>{t('parking.startDate')}</Label>
+                    <DatePicker
+                      value={form.start_date}
+                      onChange={(v) => setForm((f) => ({ ...f, start_date: v }))}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>

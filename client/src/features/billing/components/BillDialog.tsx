@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Loader2, Plus, Trash2 } from 'lucide-react'
+import { Loader2, Plus, Trash2, Car, Bike } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,7 +21,8 @@ import {
 } from '@/components/ui/select'
 import { DatePicker } from '@/components/ui/date-picker'
 import { MonthPicker } from '@/components/ui/month-picker'
-import type { ApiBill, ApiContract, BillStatus } from '@/types'
+import type { ApiBill, ApiContract, ApiParkingSlot, BillStatus } from '@/types'
+import { cn } from '@/lib/utils'
 
 export type OtherItem = { label: string; amount: string }
 
@@ -31,6 +32,7 @@ export type BillFormState = {
   rent_amount: string
   electric_amount: string
   water_amount: string
+  parking_amount: string
   other_items: OtherItem[]
   due_date: string
   note: string
@@ -46,6 +48,9 @@ interface BillDialogProps {
   onContractChange: (contractId: string) => void
   autoFilling: boolean
   contracts: ApiContract[]
+  parkingSlots: ApiParkingSlot[]
+  selectedSlotIds: string[]
+  onSlotToggle: (id: string) => void
   onSave: () => void
   saving: boolean
 }
@@ -59,6 +64,9 @@ export function BillDialog({
   onContractChange,
   autoFilling,
   contracts,
+  parkingSlots,
+  selectedSlotIds,
+  onSlotToggle,
   onSave,
   saving,
 }: BillDialogProps) {
@@ -71,6 +79,7 @@ export function BillDialog({
     (Number(form.rent_amount) || 0) +
     (Number(form.electric_amount) || 0) +
     (Number(form.water_amount) || 0) +
+    (Number(form.parking_amount) || 0) +
     otherTotal
 
   const isSaveDisabled = saving || !form.contract_id || !form.billing_month
@@ -143,6 +152,74 @@ export function BillDialog({
               </div>
             ))}
           </div>
+
+          {/* ค่าจอดรถ — checkbox list หรือ manual input */}
+          {parkingSlots.length > 0 ? (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                {t('bills.parkingAmount')}
+                {autoFilling && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+              </Label>
+              <div className="rounded-md border divide-y">
+                {parkingSlots.map((slot) => {
+                  const checked = selectedSlotIds.includes(slot.id)
+                  return (
+                    <label
+                      key={slot.id}
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-2.5 cursor-pointer select-none',
+                        'hover:bg-muted/40 transition-colors',
+                        checked && 'bg-muted/30'
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => onSlotToggle(slot.id)}
+                        className="h-4 w-4 rounded border-input accent-primary"
+                      />
+                      <span className="text-muted-foreground shrink-0">
+                        {slot.vehicle_type === 'car'
+                          ? <Car className="h-4 w-4" />
+                          : <Bike className="h-4 w-4" />}
+                      </span>
+                      <span className="flex-1 text-sm font-medium">{slot.slot_number}</span>
+                      {slot.license_plate && (
+                        <span className="text-xs text-muted-foreground">{slot.license_plate}</span>
+                      )}
+                      <span className="text-sm font-semibold tabular-nums">
+                        {slot.monthly_fee > 0 ? `฿${slot.monthly_fee.toLocaleString()}` : '—'}
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+              {selectedSlotIds.length > 0 && (
+                <p className="text-xs text-muted-foreground text-right">
+                  {t('bills.parkingSelectedTotal')}:&nbsp;
+                  <span className="font-semibold text-foreground">
+                    ฿{(Number(form.parking_amount) || 0).toLocaleString()}
+                  </span>
+                </p>
+              )}
+            </div>
+          ) : (
+            form.contract_id && (
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1.5">
+                  {t('bills.parkingAmount')}
+                  {autoFilling && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                </Label>
+                <Input
+                  className="text-right"
+                  type="number" min="0" step="0.01"
+                  value={form.parking_amount}
+                  onChange={(e) => onFormChange({ parking_amount: e.target.value })}
+                  disabled={autoFilling}
+                />
+              </div>
+            )
+          )}
 
           {/* Other items */}
           <div className="space-y-2">

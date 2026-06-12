@@ -20,6 +20,7 @@ export interface ApiBill {
   rent_amount: number
   electric_amount: number
   water_amount: number
+  parking_amount: number
   other_amount: number
   other_items: BillOtherItem[]
   total_amount: number
@@ -40,6 +41,7 @@ export interface CreateBillPayload {
   rent_amount: number
   electric_amount: number
   water_amount: number
+  parking_amount: number
   other_items: BillOtherItemInput[]
   due_date: string | null
   note: string
@@ -49,6 +51,7 @@ export interface UpdateBillPayload {
   rent_amount: number
   electric_amount: number
   water_amount: number
+  parking_amount: number
   other_items?: BillOtherItemInput[]
   status: BillStatus
   due_date: string | null

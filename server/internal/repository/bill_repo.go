@@ -21,7 +21,7 @@ func NewBillRepo(db *database.DB) *BillRepo {
 const billDetailSelect = `
 	SELECT
 		b.id, b.contract_id, b.billing_month,
-		b.rent_amount, b.electric_amount, b.water_amount, b.other_amount,
+		b.rent_amount, b.electric_amount, b.water_amount, b.parking_amount, b.other_amount,
 		b.total_amount, b.status, b.due_date, b.paid_at, b.note,
 		b.created_at, b.updated_at,
 		COALESCE(b.created_by::text, ''), COALESCE(b.updated_by::text, ''), COALESCE(ub.full_name, ''),
@@ -36,7 +36,7 @@ func scanBillDetail(row pgx.Row) (*domain.BillDetail, error) {
 	d := &domain.BillDetail{}
 	err := row.Scan(
 		&d.ID, &d.ContractID, &d.BillingMonth,
-		&d.RentAmount, &d.ElectricAmount, &d.WaterAmount, &d.OtherAmount,
+		&d.RentAmount, &d.ElectricAmount, &d.WaterAmount, &d.ParkingAmount, &d.OtherAmount,
 		&d.TotalAmount, &d.Status, &d.DueDate, &d.PaidAt, &d.Note,
 		&d.CreatedAt, &d.UpdatedAt,
 		&d.CreatedBy, &d.UpdatedBy, &d.UpdatedByName,
@@ -50,12 +50,12 @@ func (r *BillRepo) FindByID(ctx context.Context, id string) (*domain.Bill, error
 	b := &domain.Bill{}
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT id, contract_id, billing_month,
-		       rent_amount, electric_amount, water_amount, other_amount,
+		       rent_amount, electric_amount, water_amount, parking_amount, other_amount,
 		       total_amount, status, due_date, paid_at, note, created_at, updated_at,
 		       COALESCE(created_by::text, ''), COALESCE(updated_by::text, '')
 		FROM bills WHERE id = $1 AND deleted_at IS NULL`, id).
 		Scan(&b.ID, &b.ContractID, &b.BillingMonth,
-			&b.RentAmount, &b.ElectricAmount, &b.WaterAmount, &b.OtherAmount,
+			&b.RentAmount, &b.ElectricAmount, &b.WaterAmount, &b.ParkingAmount, &b.OtherAmount,
 			&b.TotalAmount, &b.Status, &b.DueDate, &b.PaidAt, &b.Note,
 			&b.CreatedAt, &b.UpdatedAt,
 			&b.CreatedBy, &b.UpdatedBy)
@@ -143,11 +143,11 @@ func (r *BillRepo) Create(ctx context.Context, b *domain.Bill) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		INSERT INTO bills (
 			id, contract_id, billing_month,
-			rent_amount, electric_amount, water_amount, other_amount,
+			rent_amount, electric_amount, water_amount, parking_amount, other_amount,
 			total_amount, status, due_date, note, created_by, updated_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, NULLIF($12,'')::uuid, NULLIF($12,'')::uuid)`,
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, NULLIF($13,'')::uuid, NULLIF($13,'')::uuid)`,
 		b.ID, b.ContractID, b.BillingMonth,
-		b.RentAmount, b.ElectricAmount, b.WaterAmount, b.OtherAmount,
+		b.RentAmount, b.ElectricAmount, b.WaterAmount, b.ParkingAmount, b.OtherAmount,
 		b.TotalAmount, b.Status, b.DueDate, b.Note, b.CreatedBy)
 	return err
 }
@@ -155,12 +155,12 @@ func (r *BillRepo) Create(ctx context.Context, b *domain.Bill) error {
 func (r *BillRepo) Update(ctx context.Context, b *domain.Bill) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		UPDATE bills
-		SET rent_amount=$2, electric_amount=$3, water_amount=$4,
-		    other_amount=$5, total_amount=$6,
-		    status=$7, due_date=$8, paid_at=$9, note=$10,
-		    updated_by=NULLIF($11,'')::uuid, updated_at=NOW()
+		SET rent_amount=$2, electric_amount=$3, water_amount=$4, parking_amount=$5,
+		    other_amount=$6, total_amount=$7,
+		    status=$8, due_date=$9, paid_at=$10, note=$11,
+		    updated_by=NULLIF($12,'')::uuid, updated_at=NOW()
 		WHERE id=$1`,
-		b.ID, b.RentAmount, b.ElectricAmount, b.WaterAmount,
+		b.ID, b.RentAmount, b.ElectricAmount, b.WaterAmount, b.ParkingAmount,
 		b.OtherAmount, b.TotalAmount,
 		b.Status, b.DueDate, b.PaidAt, b.Note, b.UpdatedBy)
 	return err
