@@ -22,7 +22,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
 	roomTypeH := v1.NewRoomTypeHandler(c.RoomTypeUC)
 	tenantH := v1.NewTenantHandler(c.TenantUC, c.ActivityLogUC)
 	contractH := v1.NewContractHandler(c.ContractUC, c.ActivityLogUC)
-	electricMeterH := v1.NewElectricMeterHandler(c.ElectricMeterUC)
+	electricMeterH := v1.NewElectricMeterHandler(c.ElectricMeterUC, c.ActivityLogUC)
 	waterMeterH := v1.NewWaterMeterHandler(c.WaterMeterUC)
 	billH := v1.NewBillHandler(c.BillUC)
 	dashboardH := v1.NewDashboardHandler(c.DashboardUC)

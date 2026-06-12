@@ -12,11 +12,12 @@ import (
 )
 
 type ElectricMeterHandler struct {
-	uc *usecase.ElectricMeterUseCase
+	uc          *usecase.ElectricMeterUseCase
+	activityLog *usecase.ActivityLogUseCase
 }
 
-func NewElectricMeterHandler(uc *usecase.ElectricMeterUseCase) *ElectricMeterHandler {
-	return &ElectricMeterHandler{uc: uc}
+func NewElectricMeterHandler(uc *usecase.ElectricMeterUseCase, activityLog *usecase.ActivityLogUseCase) *ElectricMeterHandler {
+	return &ElectricMeterHandler{uc: uc, activityLog: activityLog}
 }
 
 func (h *ElectricMeterHandler) List(c fiber.Ctx) error {
@@ -52,6 +53,7 @@ func (h *ElectricMeterHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityCreate, "electric_meter", d.ID, d)
 	return response.Created(c, d)
 }
 
@@ -65,12 +67,16 @@ func (h *ElectricMeterHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "electric_meter", d.ID, d)
 	return response.OK(c, d)
 }
 
 func (h *ElectricMeterHandler) Delete(c fiber.Ctx) error {
-	if err := h.uc.Delete(c.Context(), c.Params("id")); err != nil {
+	id := c.Params("id")
+	if err := h.uc.Delete(c.Context(), id); err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityDelete, "electric_meter", id, nil)
 	return response.Message(c, "electric meter reading deleted")
 }
