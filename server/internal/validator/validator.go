@@ -92,6 +92,11 @@ func CreateBillRequest(req *domain.CreateBillRequest) error {
 	if req.RentAmount < 0 {
 		return apierror.BadRequest("rent_amount must be >= 0")
 	}
+	for _, item := range req.OtherItems {
+		if item.Amount < 0 {
+			return apierror.BadRequest("other item amount must be >= 0")
+		}
+	}
 	return nil
 }
 

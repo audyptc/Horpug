@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -35,8 +35,7 @@ const EMPTY_FORM: BillFormState = {
   rent_amount: '',
   electric_amount: '',
   water_amount: '',
-  other_amount: '',
-  other_note: '',
+  other_items: [],
   due_date: '',
   note: '',
   status: 'unpaid',
@@ -87,7 +86,7 @@ export function Bills() {
     setDialogOpen(true)
   }
 
-  function openEdit(bill: ApiBill) {
+  async function openEdit(bill: ApiBill) {
     setEditingBill(bill)
     setForm({
       contract_id: bill.contract_id,
@@ -95,26 +94,42 @@ export function Bills() {
       rent_amount: String(bill.rent_amount),
       electric_amount: String(bill.electric_amount),
       water_amount: String(bill.water_amount),
-      other_amount: String(bill.other_amount),
-      other_note: bill.other_note,
+      other_items: (bill.other_items ?? []).map((item) => ({
+        label: item.label,
+        amount: String(item.amount),
+      })),
       due_date: toDateInput(bill.due_date),
       note: bill.note,
       status: bill.status,
     })
     setDialogOpen(true)
+    try {
+      const detail = await billService.getById(bill.id)
+      setForm((f) => ({
+        ...f,
+        other_items: detail.other_items.map((item) => ({
+          label: item.label,
+          amount: String(item.amount),
+        })),
+      }))
+    } catch {
+      // keep the empty list from list response
+    }
   }
 
   const handleSave = useCallback(async () => {
     if (!form.contract_id || !form.billing_month) return
     setSaving(true)
+    const otherItems = form.other_items
+      .map((item) => ({ label: item.label, amount: Number(item.amount) || 0 }))
+      .filter((item) => item.label || item.amount > 0)
     try {
       if (editingBill) {
         await billService.update(editingBill.id, {
           rent_amount: Number(form.rent_amount) || 0,
           electric_amount: Number(form.electric_amount) || 0,
           water_amount: Number(form.water_amount) || 0,
-          other_amount: Number(form.other_amount) || 0,
-          other_note: form.other_note,
+          other_items: otherItems,
           status: form.status,
           due_date: form.due_date || null,
           note: form.note,
@@ -126,8 +141,7 @@ export function Bills() {
           rent_amount: Number(form.rent_amount) || 0,
           electric_amount: Number(form.electric_amount) || 0,
           water_amount: Number(form.water_amount) || 0,
-          other_amount: Number(form.other_amount) || 0,
-          other_note: form.other_note,
+          other_items: otherItems,
           due_date: form.due_date || null,
           note: form.note,
         })
@@ -147,8 +161,6 @@ export function Bills() {
         rent_amount: bill.rent_amount,
         electric_amount: bill.electric_amount,
         water_amount: bill.water_amount,
-        other_amount: bill.other_amount,
-        other_note: bill.other_note,
         status: 'paid',
         due_date: bill.due_date,
         note: bill.note,

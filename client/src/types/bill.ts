@@ -1,5 +1,18 @@
 export type BillStatus = 'unpaid' | 'paid' | 'overdue'
 
+export interface BillOtherItem {
+  id: string
+  bill_id: string
+  label: string
+  amount: number
+  sort_order: number
+}
+
+export interface BillOtherItemInput {
+  label: string
+  amount: number
+}
+
 export interface ApiBill {
   id: string
   contract_id: string
@@ -8,7 +21,7 @@ export interface ApiBill {
   electric_amount: number
   water_amount: number
   other_amount: number
-  other_note: string
+  other_items: BillOtherItem[]
   total_amount: number
   status: BillStatus
   due_date: string | null
@@ -27,8 +40,7 @@ export interface CreateBillPayload {
   rent_amount: number
   electric_amount: number
   water_amount: number
-  other_amount: number
-  other_note: string
+  other_items: BillOtherItemInput[]
   due_date: string | null
   note: string
 }
@@ -37,8 +49,7 @@ export interface UpdateBillPayload {
   rent_amount: number
   electric_amount: number
   water_amount: number
-  other_amount: number
-  other_note: string
+  other_items?: BillOtherItemInput[]
   status: BillStatus
   due_date: string | null
   note: string

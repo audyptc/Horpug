@@ -21,7 +21,7 @@ func NewBillRepo(db *database.DB) *BillRepo {
 const billDetailSelect = `
 	SELECT
 		b.id, b.contract_id, b.billing_month,
-		b.rent_amount, b.electric_amount, b.water_amount, b.other_amount, b.other_note,
+		b.rent_amount, b.electric_amount, b.water_amount, b.other_amount,
 		b.total_amount, b.status, b.due_date, b.paid_at, b.note,
 		b.created_at, b.updated_at,
 		t.first_name, t.last_name, r.room_number
@@ -34,11 +34,12 @@ func scanBillDetail(row pgx.Row) (*domain.BillDetail, error) {
 	d := &domain.BillDetail{}
 	err := row.Scan(
 		&d.ID, &d.ContractID, &d.BillingMonth,
-		&d.RentAmount, &d.ElectricAmount, &d.WaterAmount, &d.OtherAmount, &d.OtherNote,
+		&d.RentAmount, &d.ElectricAmount, &d.WaterAmount, &d.OtherAmount,
 		&d.TotalAmount, &d.Status, &d.DueDate, &d.PaidAt, &d.Note,
 		&d.CreatedAt, &d.UpdatedAt,
 		&d.TenantFirstName, &d.TenantLastName, &d.RoomNumber,
 	)
+	d.OtherItems = []domain.BillOtherItem{}
 	return d, err
 }
 
@@ -46,11 +47,11 @@ func (r *BillRepo) FindByID(ctx context.Context, id string) (*domain.Bill, error
 	b := &domain.Bill{}
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT id, contract_id, billing_month,
-		       rent_amount, electric_amount, water_amount, other_amount, other_note,
+		       rent_amount, electric_amount, water_amount, other_amount,
 		       total_amount, status, due_date, paid_at, note, created_at, updated_at
 		FROM bills WHERE id = $1 AND deleted_at IS NULL`, id).
 		Scan(&b.ID, &b.ContractID, &b.BillingMonth,
-			&b.RentAmount, &b.ElectricAmount, &b.WaterAmount, &b.OtherAmount, &b.OtherNote,
+			&b.RentAmount, &b.ElectricAmount, &b.WaterAmount, &b.OtherAmount,
 			&b.TotalAmount, &b.Status, &b.DueDate, &b.PaidAt, &b.Note,
 			&b.CreatedAt, &b.UpdatedAt)
 	if err == pgx.ErrNoRows {
@@ -65,7 +66,15 @@ func (r *BillRepo) FindDetailByID(ctx context.Context, id string) (*domain.BillD
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("bill not found: %w", domain.ErrNotFound)
 	}
-	return d, err
+	if err != nil {
+		return nil, err
+	}
+	items, err := r.FindOtherItems(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	d.OtherItems = items
+	return d, nil
 }
 
 func (r *BillRepo) List(ctx context.Context, limit, offset int) ([]*domain.BillDetail, error) {
@@ -86,9 +95,37 @@ func (r *BillRepo) List(ctx context.Context, limit, offset int) ([]*domain.BillD
 		list = append(list, d)
 	}
 	if list == nil {
-		list = []*domain.BillDetail{}
+		return []*domain.BillDetail{}, nil
 	}
-	return list, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	ids := make([]string, len(list))
+	for i, b := range list {
+		ids[i] = b.ID
+	}
+	itemRows, err := r.db.Pool.Query(ctx,
+		`SELECT id, bill_id, label, amount, sort_order FROM bill_other_items WHERE bill_id = ANY($1) ORDER BY sort_order`,
+		ids)
+	if err != nil {
+		return nil, err
+	}
+	defer itemRows.Close()
+
+	idxMap := make(map[string]int, len(list))
+	for i, b := range list {
+		idxMap[b.ID] = i
+	}
+	for itemRows.Next() {
+		var item domain.BillOtherItem
+		if err := itemRows.Scan(&item.ID, &item.BillID, &item.Label, &item.Amount, &item.SortOrder); err != nil {
+			return nil, err
+		}
+		idx := idxMap[item.BillID]
+		list[idx].OtherItems = append(list[idx].OtherItems, item)
+	}
+	return list, itemRows.Err()
 }
 
 func (r *BillRepo) Count(ctx context.Context) (int, error) {
@@ -101,11 +138,11 @@ func (r *BillRepo) Create(ctx context.Context, b *domain.Bill) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		INSERT INTO bills (
 			id, contract_id, billing_month,
-			rent_amount, electric_amount, water_amount, other_amount, other_note,
+			rent_amount, electric_amount, water_amount, other_amount,
 			total_amount, status, due_date, note
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
 		b.ID, b.ContractID, b.BillingMonth,
-		b.RentAmount, b.ElectricAmount, b.WaterAmount, b.OtherAmount, b.OtherNote,
+		b.RentAmount, b.ElectricAmount, b.WaterAmount, b.OtherAmount,
 		b.TotalAmount, b.Status, b.DueDate, b.Note)
 	return err
 }
@@ -114,11 +151,11 @@ func (r *BillRepo) Update(ctx context.Context, b *domain.Bill) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		UPDATE bills
 		SET rent_amount=$2, electric_amount=$3, water_amount=$4,
-		    other_amount=$5, other_note=$6, total_amount=$7,
-		    status=$8, due_date=$9, paid_at=$10, note=$11, updated_at=NOW()
+		    other_amount=$5, total_amount=$6,
+		    status=$7, due_date=$8, paid_at=$9, note=$10, updated_at=NOW()
 		WHERE id=$1`,
 		b.ID, b.RentAmount, b.ElectricAmount, b.WaterAmount,
-		b.OtherAmount, b.OtherNote, b.TotalAmount,
+		b.OtherAmount, b.TotalAmount,
 		b.Status, b.DueDate, b.PaidAt, b.Note)
 	return err
 }
@@ -127,4 +164,48 @@ func (r *BillRepo) Delete(ctx context.Context, id string) error {
 	_, err := r.db.Pool.Exec(ctx,
 		`UPDATE bills SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
 	return err
+}
+
+func (r *BillRepo) ReplaceOtherItems(ctx context.Context, billID string, items []domain.BillOtherItem) error {
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, `DELETE FROM bill_other_items WHERE bill_id = $1`, billID); err != nil {
+		return err
+	}
+	for _, item := range items {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO bill_other_items (id, bill_id, label, amount, sort_order)
+			VALUES ($1, $2, $3, $4, $5)`,
+			item.ID, billID, item.Label, item.Amount, item.SortOrder); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
+}
+
+func (r *BillRepo) FindOtherItems(ctx context.Context, billID string) ([]domain.BillOtherItem, error) {
+	rows, err := r.db.Pool.Query(ctx,
+		`SELECT id, bill_id, label, amount, sort_order FROM bill_other_items WHERE bill_id = $1 ORDER BY sort_order`,
+		billID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []domain.BillOtherItem
+	for rows.Next() {
+		var item domain.BillOtherItem
+		if err := rows.Scan(&item.ID, &item.BillID, &item.Label, &item.Amount, &item.SortOrder); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	if items == nil {
+		items = []domain.BillOtherItem{}
+	}
+	return items, rows.Err()
 }

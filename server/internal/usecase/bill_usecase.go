@@ -51,7 +51,10 @@ func (uc *BillUseCase) Create(ctx context.Context, req *domain.CreateBillRequest
 		return nil, apierror.Internal(err)
 	}
 
-	total := req.RentAmount + req.ElectricAmount + req.WaterAmount + req.OtherAmount
+	var otherAmount float64
+	for _, item := range req.OtherItems {
+		otherAmount += item.Amount
+	}
 
 	b := &domain.Bill{
 		ID:             uuid.New().String(),
@@ -60,9 +63,8 @@ func (uc *BillUseCase) Create(ctx context.Context, req *domain.CreateBillRequest
 		RentAmount:     req.RentAmount,
 		ElectricAmount: req.ElectricAmount,
 		WaterAmount:    req.WaterAmount,
-		OtherAmount:    req.OtherAmount,
-		OtherNote:      req.OtherNote,
-		TotalAmount:    total,
+		OtherAmount:    otherAmount,
+		TotalAmount:    req.RentAmount + req.ElectricAmount + req.WaterAmount + otherAmount,
 		Status:         domain.BillStatusUnpaid,
 		DueDate:        req.DueDate,
 		Note:           req.Note,
@@ -70,6 +72,21 @@ func (uc *BillUseCase) Create(ctx context.Context, req *domain.CreateBillRequest
 	if err := uc.billRepo.Create(ctx, b); err != nil {
 		return nil, apierror.Internal(err)
 	}
+
+	items := make([]domain.BillOtherItem, len(req.OtherItems))
+	for i, inp := range req.OtherItems {
+		items[i] = domain.BillOtherItem{
+			ID:        uuid.New().String(),
+			BillID:    b.ID,
+			Label:     inp.Label,
+			Amount:    inp.Amount,
+			SortOrder: i,
+		}
+	}
+	if err := uc.billRepo.ReplaceOtherItems(ctx, b.ID, items); err != nil {
+		return nil, apierror.Internal(err)
+	}
+
 	return uc.billRepo.FindDetailByID(ctx, b.ID)
 }
 
@@ -82,12 +99,20 @@ func (uc *BillUseCase) Update(ctx context.Context, id string, req *domain.Update
 		return nil, apierror.Internal(err)
 	}
 
+	var otherAmount float64
+	if req.OtherItems != nil {
+		for _, item := range *req.OtherItems {
+			otherAmount += item.Amount
+		}
+	} else {
+		otherAmount = b.OtherAmount
+	}
+
 	b.RentAmount = req.RentAmount
 	b.ElectricAmount = req.ElectricAmount
 	b.WaterAmount = req.WaterAmount
-	b.OtherAmount = req.OtherAmount
-	b.OtherNote = req.OtherNote
-	b.TotalAmount = req.RentAmount + req.ElectricAmount + req.WaterAmount + req.OtherAmount
+	b.OtherAmount = otherAmount
+	b.TotalAmount = req.RentAmount + req.ElectricAmount + req.WaterAmount + otherAmount
 	b.DueDate = req.DueDate
 	b.Note = req.Note
 
@@ -105,6 +130,23 @@ func (uc *BillUseCase) Update(ctx context.Context, id string, req *domain.Update
 	if err := uc.billRepo.Update(ctx, b); err != nil {
 		return nil, apierror.Internal(err)
 	}
+
+	if req.OtherItems != nil {
+		items := make([]domain.BillOtherItem, len(*req.OtherItems))
+		for i, inp := range *req.OtherItems {
+			items[i] = domain.BillOtherItem{
+				ID:        uuid.New().String(),
+				BillID:    id,
+				Label:     inp.Label,
+				Amount:    inp.Amount,
+				SortOrder: i,
+			}
+		}
+		if err := uc.billRepo.ReplaceOtherItems(ctx, id, items); err != nil {
+			return nil, apierror.Internal(err)
+		}
+	}
+
 	return uc.billRepo.FindDetailByID(ctx, id)
 }
 

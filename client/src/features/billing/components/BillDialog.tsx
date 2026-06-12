@@ -1,5 +1,6 @@
-﻿import { useMemo } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,7 +20,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { DatePicker } from '@/components/ui/date-picker'
+import { MonthPicker } from '@/components/ui/month-picker'
 import type { ApiBill, ApiContract, BillStatus } from '@/types'
+
+export type OtherItem = { label: string; amount: string }
 
 export type BillFormState = {
   contract_id: string
@@ -27,8 +31,7 @@ export type BillFormState = {
   rent_amount: string
   electric_amount: string
   water_amount: string
-  other_amount: string
-  other_note: string
+  other_items: OtherItem[]
   due_date: string
   note: string
   status: BillStatus
@@ -58,17 +61,32 @@ export function BillDialog({
   const { t } = useTranslation()
 
   const activeContracts = useMemo(() => contracts.filter((c) => c.status === 'active'), [contracts])
+
+  const otherTotal = form.other_items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
   const previewTotal =
     (Number(form.rent_amount) || 0) +
     (Number(form.electric_amount) || 0) +
     (Number(form.water_amount) || 0) +
-    (Number(form.other_amount) || 0)
+    otherTotal
 
   const isSaveDisabled = saving || !form.contract_id || !form.billing_month
 
+  function addOtherItem() {
+    onFormChange({ other_items: [...form.other_items, { label: '', amount: '' }] })
+  }
+
+  function updateOtherItem(index: number, patch: Partial<OtherItem>) {
+    const updated = form.other_items.map((item, i) => (i === index ? { ...item, ...patch } : item))
+    onFormChange({ other_items: updated })
+  }
+
+  function removeOtherItem(index: number) {
+    onFormChange({ other_items: form.other_items.filter((_, i) => i !== index) })
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editingBill ? t('bills.editBill') : t('bills.createBill')}</DialogTitle>
           <DialogDescription>{editingBill ? t('bills.editDesc') : t('bills.createDesc')}</DialogDescription>
@@ -95,18 +113,17 @@ export function BillDialog({
 
           <div className="space-y-1.5">
             <Label>{t('bills.billingMonth')} *</Label>
-            <Input
-              type="month"
+            <MonthPicker
               value={form.billing_month}
-              onChange={(e) => onFormChange({ billing_month: e.target.value })}
+              onChange={(v) => onFormChange({ billing_month: v })}
               disabled={!!editingBill}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {(['rent_amount', 'electric_amount', 'water_amount', 'other_amount'] as const).map((field) => (
+            {(['rent_amount', 'electric_amount', 'water_amount'] as const).map((field) => (
               <div key={field} className="space-y-1.5">
-                <Label>{t(`bills.${field}`)}</Label>
+                <Label>{t(`bills.${field.replace(/_([a-z])/g, (_, c) => c.toUpperCase())}`)}</Label>
                 <Input
                   type="number" min="0" step="0.01"
                   value={form[field]}
@@ -116,13 +133,46 @@ export function BillDialog({
             ))}
           </div>
 
-          <div className="space-y-1.5">
-            <Label>{t('bills.otherNote')}</Label>
-            <Input
-              placeholder={t('bills.otherNotePlaceholder')}
-              value={form.other_note}
-              onChange={(e) => onFormChange({ other_note: e.target.value })}
-            />
+          {/* Other items */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>{t('bills.otherItems')}</Label>
+              <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={addOtherItem}>
+                <Plus className="h-3 w-3" />
+                {t('bills.addOtherItem')}
+              </Button>
+            </div>
+
+            {form.other_items.length > 0 && (
+              <div className="space-y-2">
+                {form.other_items.map((item, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <Input
+                      placeholder={t('bills.otherItemLabel')}
+                      value={item.label}
+                      onChange={(e) => updateOtherItem(i, { label: e.target.value })}
+                      className="flex-1"
+                    />
+                    <Input
+                      type="number" min="0" step="0.01"
+                      placeholder="0"
+                      value={item.amount}
+                      onChange={(e) => updateOtherItem(i, { amount: e.target.value })}
+                      className="w-28"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => removeOtherItem(i)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="rounded-md border bg-muted/40 px-4 py-3 text-sm flex justify-between">
