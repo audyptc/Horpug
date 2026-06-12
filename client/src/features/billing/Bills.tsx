@@ -29,7 +29,9 @@ import { billService } from '@/features/billing/billService'
 import { contractService } from '@/features/contracts/contractService'
 import { electricMeterService } from '@/features/electric-meters/electricMeterService'
 import { waterMeterService } from '@/features/water-meters/waterMeterService'
-import type { ApiBill, ApiContract } from '@/types'
+import { paymentService } from '@/features/payments/paymentService'
+import { PaymentDialog } from '@/features/payments/components/PaymentDialog'
+import type { ApiBill, ApiContract, PaymentMethod } from '@/types'
 
 const EMPTY_FORM: BillFormState = {
   contract_id: '',
@@ -68,6 +70,17 @@ export function Bills() {
   const [form, setForm] = useState<BillFormState>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [autoFilling, setAutoFilling] = useState(false)
+
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
+  const [paymentForm, setPaymentForm] = useState({
+    bill_id: '',
+    amount: '',
+    method: 'cash' as PaymentMethod,
+    payment_date: '',
+    note: '',
+  })
+  const [paymentSaving, setPaymentSaving] = useState(false)
+  const [paymentError, setPaymentError] = useState('')
 
   useEffect(() => {
     contractService.list(1, 200).then((r) => setContracts(r.data)).catch(() => {})
@@ -179,21 +192,38 @@ export function Bills() {
     }
   }, [form, editingBill, refresh])
 
-  const handleMarkPaid = useCallback(async (bill: ApiBill) => {
+  const handleMarkPaid = useCallback((bill: ApiBill) => {
+    setPaymentForm({
+      bill_id: bill.id,
+      amount: String(bill.total_amount),
+      method: 'cash',
+      payment_date: new Date().toISOString().slice(0, 10),
+      note: '',
+    })
+    setPaymentError('')
+    setPaymentDialogOpen(true)
+  }, [])
+
+  const handlePaymentSave = useCallback(async () => {
+    if (!paymentForm.bill_id || !paymentForm.amount || !paymentForm.payment_date) return
+    setPaymentSaving(true)
+    setPaymentError('')
     try {
-      await billService.update(bill.id, {
-        rent_amount: bill.rent_amount,
-        electric_amount: bill.electric_amount,
-        water_amount: bill.water_amount,
-        status: 'paid',
-        due_date: bill.due_date,
-        note: bill.note,
+      await paymentService.create({
+        bill_id: paymentForm.bill_id,
+        amount: Number(paymentForm.amount),
+        method: paymentForm.method,
+        payment_date: paymentForm.payment_date + 'T00:00:00Z',
+        note: paymentForm.note,
       })
+      setPaymentDialogOpen(false)
       refresh()
     } catch {
-      // silent
+      setPaymentError('เกิดข้อผิดพลาด กรุณาลองใหม่')
+    } finally {
+      setPaymentSaving(false)
     }
-  }, [refresh])
+  }, [paymentForm, refresh])
 
   async function handleDelete() {
     if (!deletingBill) return
@@ -303,6 +333,17 @@ export function Bills() {
         contracts={contracts}
         onSave={handleSave}
         saving={saving}
+      />
+
+      <PaymentDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        editingItem={null}
+        form={paymentForm}
+        onFormChange={setPaymentForm}
+        onSave={handlePaymentSave}
+        saving={paymentSaving}
+        error={paymentError}
       />
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

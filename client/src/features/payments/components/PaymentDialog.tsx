@@ -42,6 +42,7 @@ type Props = {
   onFormChange: (form: PaymentForm) => void
   onSave: () => void
   saving: boolean
+  error?: string
 }
 
 function formatBaht(n: number) {
@@ -56,6 +57,7 @@ export function PaymentDialog({
   onFormChange,
   onSave,
   saving,
+  error,
 }: Props) {
   const { t } = useTranslation()
 
@@ -232,6 +234,7 @@ export function PaymentDialog({
             <div className="space-y-1.5">
               <Label>{t('payments.amount')} *</Label>
               <Input
+                className="text-right"
                 type="number"
                 min="0"
                 step="0.01"
@@ -274,6 +277,10 @@ export function PaymentDialog({
             />
           </div>
         </div>
+
+        {error && (
+          <p className="text-sm text-destructive -mt-2">{error}</p>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

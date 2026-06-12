@@ -85,6 +85,7 @@ export function Payments() {
   const [deletingItem, setDeletingItem] = useState<ApiPayment | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const fetchItems = useCallback(async (p: number, pp: number) => {
     setLoading(true)
@@ -126,6 +127,7 @@ export function Payments() {
   function openCreate() {
     setEditingItem(null)
     setForm({ ...emptyForm, payment_date: new Date().toISOString().slice(0, 10) })
+    setSaveError('')
     setDialogOpen(true)
   }
 
@@ -138,18 +140,21 @@ export function Payments() {
       payment_date: toDateInput(item.payment_date),
       note: item.note,
     })
+    setSaveError('')
     setDialogOpen(true)
   }
 
   async function handleSave() {
     if (!form.bill_id || !form.amount || !form.payment_date) return
     setSaving(true)
+    setSaveError('')
     try {
+      const paymentDate = form.payment_date + 'T00:00:00Z'
       if (editingItem) {
         await paymentService.update(editingItem.id, {
           amount: Number(form.amount),
           method: form.method,
-          payment_date: form.payment_date,
+          payment_date: paymentDate,
           note: form.note,
         })
       } else {
@@ -157,14 +162,14 @@ export function Payments() {
           bill_id: form.bill_id,
           amount: Number(form.amount),
           method: form.method,
-          payment_date: form.payment_date,
+          payment_date: paymentDate,
           note: form.note,
         })
       }
       setDialogOpen(false)
       await fetchItems(page, perPage)
     } catch {
-      // handled silently
+      setSaveError('เกิดข้อผิดพลาด กรุณาลองใหม่')
     } finally {
       setSaving(false)
     }
@@ -436,6 +441,7 @@ export function Payments() {
         onFormChange={setForm}
         onSave={handleSave}
         saving={saving}
+        error={saveError}
       />
 
       <PaymentDeleteDialog
