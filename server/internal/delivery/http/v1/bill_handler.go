@@ -12,11 +12,12 @@ import (
 )
 
 type BillHandler struct {
-	bills *usecase.BillUseCase
+	bills       *usecase.BillUseCase
+	activityLog *usecase.ActivityLogUseCase
 }
 
-func NewBillHandler(bills *usecase.BillUseCase) *BillHandler {
-	return &BillHandler{bills: bills}
+func NewBillHandler(bills *usecase.BillUseCase, activityLog *usecase.ActivityLogUseCase) *BillHandler {
+	return &BillHandler{bills: bills, activityLog: activityLog}
 }
 
 func (h *BillHandler) List(c fiber.Ctx) error {
@@ -47,10 +48,12 @@ func (h *BillHandler) Create(c fiber.Ctx) error {
 	if err := validator.CreateBillRequest(&req); err != nil {
 		return err
 	}
-	d, err := h.bills.Create(c.Context(), &req)
+	actorID, _ := c.Locals("user_id").(string)
+	d, err := h.bills.Create(c.Context(), &req, actorID)
 	if err != nil {
 		return err
 	}
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityCreate, "bill", d.ID, d)
 	return response.Created(c, d)
 }
 
@@ -59,16 +62,21 @@ func (h *BillHandler) Update(c fiber.Ctx) error {
 	if err := c.Bind().JSON(&req); err != nil {
 		return apierror.BadRequest("invalid request body")
 	}
-	d, err := h.bills.Update(c.Context(), c.Params("id"), &req)
+	actorID, _ := c.Locals("user_id").(string)
+	d, err := h.bills.Update(c.Context(), c.Params("id"), &req, actorID)
 	if err != nil {
 		return err
 	}
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "bill", d.ID, d)
 	return response.OK(c, d)
 }
 
 func (h *BillHandler) Delete(c fiber.Ctx) error {
-	if err := h.bills.Delete(c.Context(), c.Params("id")); err != nil {
+	id := c.Params("id")
+	if err := h.bills.Delete(c.Context(), id); err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityDelete, "bill", id, nil)
 	return response.Message(c, "bill deleted")
 }

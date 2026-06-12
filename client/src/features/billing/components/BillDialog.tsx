@@ -134,6 +134,7 @@ export function BillDialog({
                   )}
                 </Label>
                 <Input
+                  className="text-right"
                   type="number" min="0" step="0.01"
                   value={form[field]}
                   onChange={(e) => onFormChange({ [field]: e.target.value })}
@@ -163,12 +164,12 @@ export function BillDialog({
                       onChange={(e) => updateOtherItem(i, { label: e.target.value })}
                       className="flex-1"
                     />
-                    <Input
+                    <Input                  
                       type="number" min="0" step="0.01"
                       placeholder="0"
                       value={item.amount}
                       onChange={(e) => updateOtherItem(i, { amount: e.target.value })}
-                      className="w-28"
+                      className="w-28 text-right"
                     />
                     <Button
                       type="button"
