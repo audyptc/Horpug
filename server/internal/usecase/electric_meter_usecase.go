@@ -42,7 +42,7 @@ func (uc *ElectricMeterUseCase) GetByID(ctx context.Context, id string) (*domain
 	return d, nil
 }
 
-func (uc *ElectricMeterUseCase) Create(ctx context.Context, req *domain.CreateElectricMeterRequest) (*domain.ElectricMeterDetail, error) {
+func (uc *ElectricMeterUseCase) Create(ctx context.Context, req *domain.CreateElectricMeterRequest, actorID string) (*domain.ElectricMeterDetail, error) {
 	if _, err := uc.roomRepo.FindByID(ctx, req.RoomID); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			return nil, apierror.NotFound("room not found")
@@ -60,6 +60,8 @@ func (uc *ElectricMeterUseCase) Create(ctx context.Context, req *domain.CreateEl
 		UnitPrice:       req.UnitPrice,
 		FlatAmount:      req.FlatAmount,
 		Note:            req.Note,
+		CreatedBy:       actorID,
+		UpdatedBy:       actorID,
 	}
 	if err := uc.repo.Create(ctx, m); err != nil {
 		return nil, apierror.Internal(err)
@@ -67,7 +69,7 @@ func (uc *ElectricMeterUseCase) Create(ctx context.Context, req *domain.CreateEl
 	return uc.repo.FindDetailByID(ctx, m.ID)
 }
 
-func (uc *ElectricMeterUseCase) Update(ctx context.Context, id string, req *domain.UpdateElectricMeterRequest) (*domain.ElectricMeterDetail, error) {
+func (uc *ElectricMeterUseCase) Update(ctx context.Context, id string, req *domain.UpdateElectricMeterRequest, actorID string) (*domain.ElectricMeterDetail, error) {
 	m, err := uc.repo.FindByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
@@ -85,6 +87,7 @@ func (uc *ElectricMeterUseCase) Update(ctx context.Context, id string, req *doma
 	m.UnitPrice = req.UnitPrice
 	m.FlatAmount = req.FlatAmount
 	m.Note = req.Note
+	m.UpdatedBy = actorID
 
 	if err := uc.repo.Update(ctx, m); err != nil {
 		return nil, apierror.Internal(err)

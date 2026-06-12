@@ -116,25 +116,25 @@ export function ElectricMeterDialog({ open, onOpenChange, editing, form, onFormC
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label>{t('electricMeters.previousReading')}</Label>
-                  <Input type="number" min="0" step="0.01" value={form.previous_reading}
+                  <Input className="text-right" type="number" min="0" step="0.01" value={form.previous_reading}
                     onChange={(e) => set({ previous_reading: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>{t('electricMeters.currentReading')} *</Label>
-                  <Input type="number" min="0" step="0.01" value={form.current_reading}
+                  <Input className="text-right" type="number" min="0" step="0.01" value={form.current_reading}
                     onChange={(e) => set({ current_reading: e.target.value })} />
                 </div>
               </div>
               <div className="space-y-1.5">
                 <Label>{t('electricMeters.unitPrice')} *</Label>
-                <Input type="number" min="0" step="0.0001" value={form.unit_price}
+                <Input className="text-right" type="number" min="0" step="0.0001" value={form.unit_price}
                   onChange={(e) => set({ unit_price: e.target.value })} />
               </div>
             </>
           ) : (
             <div className="space-y-1.5">
               <Label>{t('electricMeters.flatAmount')} *</Label>
-              <Input type="number" min="0" step="0.01" value={form.flat_amount}
+              <Input className="text-right" type="number" min="0" step="0.01" value={form.flat_amount}
                 onChange={(e) => set({ flat_amount: e.target.value })} />
             </div>
           )}

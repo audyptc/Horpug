@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff, Building2, Lock, Mail, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
@@ -10,7 +9,6 @@ import { Label } from '@/components/ui/label'
 export function Login() {
   const { t } = useTranslation()
   const { login } = useAuth()
-  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -23,7 +21,6 @@ export function Login() {
     setLoading(true)
     try {
       await login(email, password)
-      navigate('/', { replace: true })
     } catch {
       setError(t('login.invalidCredentials'))
     } finally {

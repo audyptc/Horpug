@@ -110,7 +110,7 @@ export function WaterMeters() {
       if (editing) {
         await waterMeterService.update(editing.id, {
           billing_type: form.billing_type,
-          reading_date: form.reading_date,
+          reading_date: `${form.reading_date}T00:00:00Z`,
           previous_reading: form.previous_reading ? Number(form.previous_reading) : undefined,
           current_reading: form.current_reading ? Number(form.current_reading) : undefined,
           unit_price: form.unit_price ? Number(form.unit_price) : undefined,
@@ -121,7 +121,7 @@ export function WaterMeters() {
         await waterMeterService.create({
           room_id: form.room_id,
           billing_type: form.billing_type,
-          reading_date: form.reading_date,
+          reading_date: `${form.reading_date}T00:00:00Z`,
           previous_reading: form.previous_reading ? Number(form.previous_reading) : undefined,
           current_reading: form.current_reading ? Number(form.current_reading) : undefined,
           unit_price: form.unit_price ? Number(form.unit_price) : undefined,

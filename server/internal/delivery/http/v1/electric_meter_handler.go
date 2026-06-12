@@ -47,7 +47,8 @@ func (h *ElectricMeterHandler) Create(c fiber.Ctx) error {
 	if err := validator.CreateElectricMeterRequest(&req); err != nil {
 		return err
 	}
-	d, err := h.uc.Create(c.Context(), &req)
+	actorID, _ := c.Locals("user_id").(string)
+	d, err := h.uc.Create(c.Context(), &req, actorID)
 	if err != nil {
 		return err
 	}
@@ -59,7 +60,8 @@ func (h *ElectricMeterHandler) Update(c fiber.Ctx) error {
 	if err := c.Bind().JSON(&req); err != nil {
 		return apierror.BadRequest("invalid request body")
 	}
-	d, err := h.uc.Update(c.Context(), c.Params("id"), &req)
+	actorID, _ := c.Locals("user_id").(string)
+	d, err := h.uc.Update(c.Context(), c.Params("id"), &req, actorID)
 	if err != nil {
 		return err
 	}

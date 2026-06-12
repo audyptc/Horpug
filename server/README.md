@@ -72,7 +72,7 @@ On startup, the service will:
 Generate docs from `server/` directory:
 
 ```bash
-swag init -g cmd/api/main.go -d cmd/api,internal/delivery/http,internal/domain -o docs
+swag init -g main.go -d cmd/api,internal/delivery/http,internal/domain -o docs
 ```
 
 Then open:

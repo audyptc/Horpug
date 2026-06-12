@@ -110,7 +110,7 @@ export function ElectricMeters() {
       if (editing) {
         await electricMeterService.update(editing.id, {
           billing_type: form.billing_type,
-          reading_date: form.reading_date,
+          reading_date: `${form.reading_date}T00:00:00Z`,
           previous_reading: form.previous_reading ? Number(form.previous_reading) : undefined,
           current_reading: form.current_reading ? Number(form.current_reading) : undefined,
           unit_price: form.unit_price ? Number(form.unit_price) : undefined,
@@ -121,7 +121,7 @@ export function ElectricMeters() {
         await electricMeterService.create({
           room_id: form.room_id,
           billing_type: form.billing_type,
-          reading_date: form.reading_date,
+          reading_date: `${form.reading_date}T00:00:00Z`,
           previous_reading: form.previous_reading ? Number(form.previous_reading) : undefined,
           current_reading: form.current_reading ? Number(form.current_reading) : undefined,
           unit_price: form.unit_price ? Number(form.unit_price) : undefined,
@@ -202,6 +202,8 @@ export function ElectricMeters() {
                       <th className="text-left px-6 py-3 font-medium text-muted-foreground">{t('electricMeters.colRoom')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colBillingType')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colDate')}</th>
+                      <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colPrev')}</th>
+                      <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colCurr')}</th>
                       <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colUsed')}</th>
                       <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colTotal')}</th>
                       <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('electricMeters.colActions')}</th>
@@ -217,6 +219,12 @@ export function ElectricMeters() {
                           </Badge>
                         </td>
                         <td className="px-4 py-4 text-muted-foreground">{formatDate(r.reading_date)}</td>
+                        <td className="px-4 py-4 text-right text-muted-foreground">
+                          {r.billing_type === 'meter' ? r.previous_reading.toLocaleString() : '-'}
+                        </td>
+                        <td className="px-4 py-4 text-right font-medium">
+                          {r.billing_type === 'meter' && r.current_reading != null ? r.current_reading.toLocaleString() : '-'}
+                        </td>
                         <td className="px-4 py-4 text-right font-medium">
                           {r.unit_used != null ? r.unit_used.toLocaleString() : '-'}
                         </td>

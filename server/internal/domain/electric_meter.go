@@ -24,6 +24,9 @@ type ElectricMeter struct {
 	Note            string              `json:"note"`
 	CreatedAt       time.Time           `json:"created_at"`
 	UpdatedAt       time.Time           `json:"updated_at"`
+	CreatedBy       string              `json:"created_by"`
+	UpdatedBy       string              `json:"updated_by"`
+	UpdatedByName   string              `json:"updated_by_name"`
 }
 
 type ElectricMeterDetail struct {

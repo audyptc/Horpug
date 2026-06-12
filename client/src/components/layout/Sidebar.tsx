@@ -84,9 +84,9 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
       items: [
         { label: t('nav.electricMeters'), icon: Zap, to: '/electric-meters' },
         { label: t('nav.waterMeters'), icon: Droplets, to: '/water-meters' },
-        { label: t('nav.bills'), icon: Receipt, to: '/bills' },
-        { label: t('nav.expenses'), icon: Wallet, to: '/expenses' },
+        { label: t('nav.bills'), icon: Receipt, to: '/bills' },       
         { label: t('nav.payments'), icon: HandCoins, to: '/payments' },
+        { label: t('nav.expenses'), icon: Wallet, to: '/expenses' },
       ],
     },
     {
@@ -158,7 +158,7 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
       <div className="flex items-center h-16 px-4 border-b border-sidebar-border shrink-0">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-sidebar-primary shrink-0">
-            <Zap className="w-4 h-4 text-sidebar-primary-foreground" />
+            <Building2 className="w-4 h-4 text-sidebar-primary-foreground" />
           </div>
           <span className={cn('font-bold text-sidebar-foreground text-lg tracking-tight truncate', collapsed && 'md:hidden')}>
             Horpug
