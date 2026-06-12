@@ -202,6 +202,8 @@ export function WaterMeters() {
                       <th className="text-left px-6 py-3 font-medium text-muted-foreground">{t('waterMeters.colRoom')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('waterMeters.colBillingType')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('waterMeters.colDate')}</th>
+                      <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('waterMeters.colPreviousReading')}</th>
+                      <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('waterMeters.colCurrentReading')}</th>
                       <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('waterMeters.colUsed')}</th>
                       <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('waterMeters.colTotal')}</th>
                       <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('waterMeters.colActions')}</th>
@@ -217,6 +219,12 @@ export function WaterMeters() {
                           </Badge>
                         </td>
                         <td className="px-4 py-4 text-muted-foreground">{formatDate(r.reading_date)}</td>
+                        <td className="px-4 py-4 text-right text-muted-foreground">
+                          {r.previous_reading != null ? r.previous_reading.toLocaleString() : '-'}
+                        </td>
+                        <td className="px-4 py-4 text-right text-muted-foreground">
+                          {r.current_reading != null ? r.current_reading.toLocaleString() : '-'}
+                        </td>
                         <td className="px-4 py-4 text-right font-medium">
                           {r.unit_used != null ? r.unit_used.toLocaleString() : '-'}
                         </td>

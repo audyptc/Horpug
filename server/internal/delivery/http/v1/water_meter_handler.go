@@ -12,11 +12,12 @@ import (
 )
 
 type WaterMeterHandler struct {
-	uc *usecase.WaterMeterUseCase
+	uc          *usecase.WaterMeterUseCase
+	activityLog *usecase.ActivityLogUseCase
 }
 
-func NewWaterMeterHandler(uc *usecase.WaterMeterUseCase) *WaterMeterHandler {
-	return &WaterMeterHandler{uc: uc}
+func NewWaterMeterHandler(uc *usecase.WaterMeterUseCase, activityLog *usecase.ActivityLogUseCase) *WaterMeterHandler {
+	return &WaterMeterHandler{uc: uc, activityLog: activityLog}
 }
 
 func (h *WaterMeterHandler) List(c fiber.Ctx) error {
@@ -47,10 +48,12 @@ func (h *WaterMeterHandler) Create(c fiber.Ctx) error {
 	if err := validator.CreateWaterMeterRequest(&req); err != nil {
 		return err
 	}
-	d, err := h.uc.Create(c.Context(), &req)
+	actorID, _ := c.Locals("user_id").(string)
+	d, err := h.uc.Create(c.Context(), &req, actorID)
 	if err != nil {
 		return err
 	}
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityCreate, "water_meter", d.ID, d)
 	return response.Created(c, d)
 }
 
@@ -59,16 +62,21 @@ func (h *WaterMeterHandler) Update(c fiber.Ctx) error {
 	if err := c.Bind().JSON(&req); err != nil {
 		return apierror.BadRequest("invalid request body")
 	}
-	d, err := h.uc.Update(c.Context(), c.Params("id"), &req)
+	actorID, _ := c.Locals("user_id").(string)
+	d, err := h.uc.Update(c.Context(), c.Params("id"), &req, actorID)
 	if err != nil {
 		return err
 	}
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "water_meter", d.ID, d)
 	return response.OK(c, d)
 }
 
 func (h *WaterMeterHandler) Delete(c fiber.Ctx) error {
-	if err := h.uc.Delete(c.Context(), c.Params("id")); err != nil {
+	id := c.Params("id")
+	if err := h.uc.Delete(c.Context(), id); err != nil {
 		return err
 	}
+	actorID, _ := c.Locals("user_id").(string)
+	h.activityLog.Log(c.Context(), actorID, domain.ActivityDelete, "water_meter", id, nil)
 	return response.Message(c, "water meter reading deleted")
 }

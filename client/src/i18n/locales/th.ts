@@ -418,6 +418,8 @@ export default {
     colRoom: 'ห้อง',
     colBillingType: 'ประเภทการคิดค่า',
     colDate: 'วันที่',
+    colPreviousReading: 'ยอดก่อน',
+    colCurrentReading: 'ยอดปัจจุบัน',
     colUsed: 'หน่วยที่ใช้',
     colTotal: 'ยอดรวม',
     colActions: 'การดำเนินการ',

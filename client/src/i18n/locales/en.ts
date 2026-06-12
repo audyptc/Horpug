@@ -418,6 +418,8 @@ export default {
     colRoom: 'Room',
     colBillingType: 'Billing Type',
     colDate: 'Date',
+    colPreviousReading: 'Prev. Reading',
+    colCurrentReading: 'Curr. Reading',
     colUsed: 'Used',
     colTotal: 'Total',
     colActions: 'Actions',

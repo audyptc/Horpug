@@ -42,7 +42,7 @@ func (uc *WaterMeterUseCase) GetByID(ctx context.Context, id string) (*domain.Wa
 	return d, nil
 }
 
-func (uc *WaterMeterUseCase) Create(ctx context.Context, req *domain.CreateWaterMeterRequest) (*domain.WaterMeterDetail, error) {
+func (uc *WaterMeterUseCase) Create(ctx context.Context, req *domain.CreateWaterMeterRequest, actorID string) (*domain.WaterMeterDetail, error) {
 	if _, err := uc.roomRepo.FindByID(ctx, req.RoomID); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			return nil, apierror.NotFound("room not found")
@@ -60,6 +60,8 @@ func (uc *WaterMeterUseCase) Create(ctx context.Context, req *domain.CreateWater
 		UnitPrice:       req.UnitPrice,
 		FlatAmount:      req.FlatAmount,
 		Note:            req.Note,
+		CreatedBy:       actorID,
+		UpdatedBy:       actorID,
 	}
 	if err := uc.repo.Create(ctx, m); err != nil {
 		return nil, apierror.Internal(err)
@@ -67,7 +69,7 @@ func (uc *WaterMeterUseCase) Create(ctx context.Context, req *domain.CreateWater
 	return uc.repo.FindDetailByID(ctx, m.ID)
 }
 
-func (uc *WaterMeterUseCase) Update(ctx context.Context, id string, req *domain.UpdateWaterMeterRequest) (*domain.WaterMeterDetail, error) {
+func (uc *WaterMeterUseCase) Update(ctx context.Context, id string, req *domain.UpdateWaterMeterRequest, actorID string) (*domain.WaterMeterDetail, error) {
 	m, err := uc.repo.FindByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
@@ -85,6 +87,7 @@ func (uc *WaterMeterUseCase) Update(ctx context.Context, id string, req *domain.
 	m.UnitPrice = req.UnitPrice
 	m.FlatAmount = req.FlatAmount
 	m.Note = req.Note
+	m.UpdatedBy = actorID
 
 	if err := uc.repo.Update(ctx, m); err != nil {
 		return nil, apierror.Internal(err)
