@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Trash2 } from 'lucide-react'
+import { Loader2, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -43,6 +43,8 @@ interface BillDialogProps {
   editingBill: ApiBill | null
   form: BillFormState
   onFormChange: (patch: Partial<BillFormState>) => void
+  onContractChange: (contractId: string) => void
+  autoFilling: boolean
   contracts: ApiContract[]
   onSave: () => void
   saving: boolean
@@ -54,6 +56,8 @@ export function BillDialog({
   editingBill,
   form,
   onFormChange,
+  onContractChange,
+  autoFilling,
   contracts,
   onSave,
   saving,
@@ -97,7 +101,7 @@ export function BillDialog({
             <Label>{t('bills.contract')} *</Label>
             <Select
               value={form.contract_id}
-              onValueChange={(v) => onFormChange({ contract_id: v })}
+              onValueChange={(v) => onContractChange(v)}
               disabled={!!editingBill}
             >
               <SelectTrigger><SelectValue placeholder={t('bills.selectContract')} /></SelectTrigger>
@@ -123,11 +127,17 @@ export function BillDialog({
           <div className="grid grid-cols-2 gap-4">
             {(['rent_amount', 'electric_amount', 'water_amount'] as const).map((field) => (
               <div key={field} className="space-y-1.5">
-                <Label>{t(`bills.${field.replace(/_([a-z])/g, (_, c) => c.toUpperCase())}`)}</Label>
+                <Label className="flex items-center gap-1.5">
+                  {t(`bills.${field.replace(/_([a-z])/g, (_, c) => c.toUpperCase())}`)}
+                  {autoFilling && (field === 'electric_amount' || field === 'water_amount') && (
+                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                  )}
+                </Label>
                 <Input
                   type="number" min="0" step="0.01"
                   value={form[field]}
                   onChange={(e) => onFormChange({ [field]: e.target.value })}
+                  disabled={autoFilling && (field === 'electric_amount' || field === 'water_amount')}
                 />
               </div>
             ))}

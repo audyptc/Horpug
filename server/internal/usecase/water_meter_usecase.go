@@ -42,6 +42,17 @@ func (uc *WaterMeterUseCase) GetByID(ctx context.Context, id string) (*domain.Wa
 	return d, nil
 }
 
+func (uc *WaterMeterUseCase) GetLatestByRoomID(ctx context.Context, roomID string) (*domain.WaterMeterDetail, error) {
+	d, err := uc.repo.FindLatestByRoomID(ctx, roomID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, apierror.NotFound(err.Error())
+		}
+		return nil, apierror.Internal(err)
+	}
+	return d, nil
+}
+
 func (uc *WaterMeterUseCase) Create(ctx context.Context, req *domain.CreateWaterMeterRequest, actorID string) (*domain.WaterMeterDetail, error) {
 	if _, err := uc.roomRepo.FindByID(ctx, req.RoomID); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {

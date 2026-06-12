@@ -34,4 +34,13 @@ export const electricMeterService = {
   async delete(id: string): Promise<void> {
     await api.delete(`/electric-meters/${id}`)
   },
+
+  async getLatestByRoomId(roomId: string): Promise<ApiElectricMeter | null> {
+    try {
+      const { data } = await api.get<ApiResponse<ApiElectricMeter>>(`/electric-meters/latest?room_id=${roomId}`)
+      return data.data
+    } catch {
+      return null
+    }
+  },
 }

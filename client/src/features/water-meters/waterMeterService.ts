@@ -34,4 +34,13 @@ export const waterMeterService = {
   async delete(id: string): Promise<void> {
     await api.delete(`/water-meters/${id}`)
   },
+
+  async getLatestByRoomId(roomId: string): Promise<ApiWaterMeter | null> {
+    try {
+      const { data } = await api.get<ApiResponse<ApiWaterMeter>>(`/water-meters/latest?room_id=${roomId}`)
+      return data.data
+    } catch {
+      return null
+    }
+  },
 }

@@ -42,6 +42,17 @@ func (uc *ElectricMeterUseCase) GetByID(ctx context.Context, id string) (*domain
 	return d, nil
 }
 
+func (uc *ElectricMeterUseCase) GetLatestByRoomID(ctx context.Context, roomID string) (*domain.ElectricMeterDetail, error) {
+	d, err := uc.repo.FindLatestByRoomID(ctx, roomID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, apierror.NotFound(err.Error())
+		}
+		return nil, apierror.Internal(err)
+	}
+	return d, nil
+}
+
 func (uc *ElectricMeterUseCase) Create(ctx context.Context, req *domain.CreateElectricMeterRequest, actorID string) (*domain.ElectricMeterDetail, error) {
 	if _, err := uc.roomRepo.FindByID(ctx, req.RoomID); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {

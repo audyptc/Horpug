@@ -27,6 +27,8 @@ import { BillDialog, type BillFormState } from '@/features/billing/components/Bi
 import { usePaginatedList } from '@/hooks/usePaginatedList'
 import { billService } from '@/features/billing/billService'
 import { contractService } from '@/features/contracts/contractService'
+import { electricMeterService } from '@/features/electric-meters/electricMeterService'
+import { waterMeterService } from '@/features/water-meters/waterMeterService'
 import type { ApiBill, ApiContract } from '@/types'
 
 const EMPTY_FORM: BillFormState = {
@@ -65,10 +67,32 @@ export function Bills() {
   const [deletingBill, setDeletingBill] = useState<ApiBill | null>(null)
   const [form, setForm] = useState<BillFormState>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+  const [autoFilling, setAutoFilling] = useState(false)
 
   useEffect(() => {
     contractService.list(1, 200).then((r) => setContracts(r.data)).catch(() => {})
   }, [])
+
+  function onFormChange(patch: Partial<BillFormState>) {
+    setForm((f) => ({ ...f, ...patch }))
+  }
+
+  const handleContractChange = useCallback(async (contractId: string) => {
+    const contract = contracts.find((c) => c.id === contractId)
+    if (!contract) return
+    setForm((f) => ({ ...f, contract_id: contractId, rent_amount: String(contract.rent_price) }))
+    setAutoFilling(true)
+    const [electric, water] = await Promise.all([
+      electricMeterService.getLatestByRoomId(contract.room_id),
+      waterMeterService.getLatestByRoomId(contract.room_id),
+    ])
+    setAutoFilling(false)
+    setForm((f) => ({
+      ...f,
+      electric_amount: electric ? String(electric.total_amount) : f.electric_amount,
+      water_amount: water ? String(water.total_amount) : f.water_amount,
+    }))
+  }, [contracts])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -131,18 +155,18 @@ export function Bills() {
           water_amount: Number(form.water_amount) || 0,
           other_items: otherItems,
           status: form.status,
-          due_date: form.due_date || null,
+          due_date: form.due_date ? `${form.due_date}T00:00:00Z` : null,
           note: form.note,
         })
       } else {
         await billService.create({
           contract_id: form.contract_id,
-          billing_month: form.billing_month + '-01',
+          billing_month: `${form.billing_month}-01T00:00:00Z`,
           rent_amount: Number(form.rent_amount) || 0,
           electric_amount: Number(form.electric_amount) || 0,
           water_amount: Number(form.water_amount) || 0,
           other_items: otherItems,
-          due_date: form.due_date || null,
+          due_date: form.due_date ? `${form.due_date}T00:00:00Z` : null,
           note: form.note,
         })
       }
@@ -273,7 +297,9 @@ export function Bills() {
         onOpenChange={setDialogOpen}
         editingBill={editingBill}
         form={form}
-        onFormChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+        onFormChange={onFormChange}
+        onContractChange={handleContractChange}
+        autoFilling={autoFilling}
         contracts={contracts}
         onSave={handleSave}
         saving={saving}

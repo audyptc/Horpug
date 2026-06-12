@@ -40,6 +40,18 @@ func (h *ElectricMeterHandler) GetByID(c fiber.Ctx) error {
 	return response.OK(c, d)
 }
 
+func (h *ElectricMeterHandler) GetLatestByRoomID(c fiber.Ctx) error {
+	roomID := c.Query("room_id")
+	if roomID == "" {
+		return apierror.BadRequest("room_id is required")
+	}
+	d, err := h.uc.GetLatestByRoomID(c.Context(), roomID)
+	if err != nil {
+		return err
+	}
+	return response.OK(c, d)
+}
+
 func (h *ElectricMeterHandler) Create(c fiber.Ctx) error {
 	var req domain.CreateElectricMeterRequest
 	if err := c.Bind().JSON(&req); err != nil {

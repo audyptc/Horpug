@@ -60,6 +60,7 @@ type UpdateElectricMeterRequest struct {
 type ElectricMeterRepository interface {
 	FindByID(ctx context.Context, id string) (*ElectricMeter, error)
 	FindDetailByID(ctx context.Context, id string) (*ElectricMeterDetail, error)
+	FindLatestByRoomID(ctx context.Context, roomID string) (*ElectricMeterDetail, error)
 	List(ctx context.Context, limit, offset int) ([]*ElectricMeterDetail, error)
 	Count(ctx context.Context) (int, error)
 	Create(ctx context.Context, m *ElectricMeter) error

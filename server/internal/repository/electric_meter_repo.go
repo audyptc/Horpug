@@ -71,6 +71,17 @@ func (r *ElectricMeterRepo) FindDetailByID(ctx context.Context, id string) (*dom
 	return d, err
 }
 
+func (r *ElectricMeterRepo) FindLatestByRoomID(ctx context.Context, roomID string) (*domain.ElectricMeterDetail, error) {
+	row := r.db.Pool.QueryRow(ctx,
+		electricMeterDetailSelect+` WHERE e.room_id = $1 AND e.deleted_at IS NULL ORDER BY e.reading_date DESC, e.created_at DESC LIMIT 1`,
+		roomID)
+	d, err := scanElectricMeterDetail(row)
+	if err == pgx.ErrNoRows {
+		return nil, fmt.Errorf("electric meter reading not found: %w", domain.ErrNotFound)
+	}
+	return d, err
+}
+
 func (r *ElectricMeterRepo) List(ctx context.Context, limit, offset int) ([]*domain.ElectricMeterDetail, error) {
 	rows, err := r.db.Pool.Query(ctx,
 		electricMeterDetailSelect+` WHERE e.deleted_at IS NULL ORDER BY e.reading_date DESC, e.created_at DESC LIMIT $1 OFFSET $2`,

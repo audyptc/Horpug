@@ -40,6 +40,18 @@ func (h *WaterMeterHandler) GetByID(c fiber.Ctx) error {
 	return response.OK(c, d)
 }
 
+func (h *WaterMeterHandler) GetLatestByRoomID(c fiber.Ctx) error {
+	roomID := c.Query("room_id")
+	if roomID == "" {
+		return apierror.BadRequest("room_id is required")
+	}
+	d, err := h.uc.GetLatestByRoomID(c.Context(), roomID)
+	if err != nil {
+		return err
+	}
+	return response.OK(c, d)
+}
+
 func (h *WaterMeterHandler) Create(c fiber.Ctx) error {
 	var req domain.CreateWaterMeterRequest
 	if err := c.Bind().JSON(&req); err != nil {

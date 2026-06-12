@@ -71,6 +71,17 @@ func (r *WaterMeterRepo) FindDetailByID(ctx context.Context, id string) (*domain
 	return d, err
 }
 
+func (r *WaterMeterRepo) FindLatestByRoomID(ctx context.Context, roomID string) (*domain.WaterMeterDetail, error) {
+	row := r.db.Pool.QueryRow(ctx,
+		waterMeterDetailSelect+` WHERE w.room_id = $1 AND w.deleted_at IS NULL ORDER BY w.reading_date DESC, w.created_at DESC LIMIT 1`,
+		roomID)
+	d, err := scanWaterMeterDetail(row)
+	if err == pgx.ErrNoRows {
+		return nil, fmt.Errorf("water meter reading not found: %w", domain.ErrNotFound)
+	}
+	return d, err
+}
+
 func (r *WaterMeterRepo) List(ctx context.Context, limit, offset int) ([]*domain.WaterMeterDetail, error) {
 	rows, err := r.db.Pool.Query(ctx,
 		waterMeterDetailSelect+` WHERE w.deleted_at IS NULL ORDER BY w.reading_date DESC, w.created_at DESC LIMIT $1 OFFSET $2`,
