@@ -44,8 +44,6 @@ CREATE TABLE IF NOT EXISTS user_roles (
 CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles(role_id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_active       ON users   (email)       WHERE deleted_at IS NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_rooms_room_number_active ON rooms   (room_number) WHERE deleted_at IS NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_id_card_active   ON tenants (id_card)     WHERE deleted_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS role_menu_permissions (
     role_id       UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
@@ -109,6 +107,9 @@ CREATE TABLE IF NOT EXISTS tenants (
     created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_rooms_room_number_active ON rooms   (room_number) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_id_card_active   ON tenants (id_card)     WHERE deleted_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS contracts (
     id         UUID PRIMARY KEY,

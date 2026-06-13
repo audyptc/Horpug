@@ -25,10 +25,16 @@ func ParsePaginationQuery(c fiber.Ctx) (page, perPage, offset int, err error) {
 		}
 	}
 
+	// รองรับทั้ง per_page และ limit
 	if rawPerPage := c.Query("per_page"); rawPerPage != "" {
 		perPage, err = strconv.Atoi(rawPerPage)
 		if err != nil || perPage < 1 {
 			return 0, 0, 0, apierror.BadRequest("per_page must be a positive integer")
+		}
+	} else if rawLimit := c.Query("limit"); rawLimit != "" {
+		perPage, err = strconv.Atoi(rawLimit)
+		if err != nil || perPage < 1 {
+			return 0, 0, 0, apierror.BadRequest("limit must be a positive integer")
 		}
 	}
 
@@ -36,6 +42,18 @@ func ParsePaginationQuery(c fiber.Ctx) (page, perPage, offset int, err error) {
 		perPage = MaxPerPage
 	}
 
-	offset = (page - 1) * perPage
+	// รองรับทั้ง offset โดยตรง และคำนวณจาก page
+	if rawOffset := c.Query("offset"); rawOffset != "" {
+		offset, err = strconv.Atoi(rawOffset)
+		if err != nil || offset < 0 {
+			return 0, 0, 0, apierror.BadRequest("offset must be a non-negative integer")
+		}
+		if perPage > 0 {
+			page = offset/perPage + 1
+		}
+	} else {
+		offset = (page - 1) * perPage
+	}
+
 	return page, perPage, offset, nil
 }

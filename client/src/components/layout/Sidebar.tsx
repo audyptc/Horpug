@@ -36,6 +36,7 @@ import {
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/features/auth/AuthContext'
 
 interface NavItem {
   label: string
@@ -59,6 +60,11 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
   const { t } = useTranslation()
   const location = useLocation()
+  const { allowedPaths } = useAuth()
+
+  function isAllowed(to: string): boolean {
+    return allowedPaths === null || allowedPaths.has(to)
+  }
 
   const navGroups: NavGroup[] = [
     {
@@ -178,11 +184,14 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
       <ScrollArea className="flex-1 py-3">
         <nav className="px-2 space-y-1">
           {navGroups.map((group) => {
+            const visibleItems = group.items.filter((item) => isAllowed(item.to))
+            if (visibleItems.length === 0) return null
+
             const GroupIcon = group.icon
             const isGroupOpen = openGroups.has(group.key)
             const hasGroupLabel = !!group.label
 
-            const isGroupActive = group.items.some((item) =>
+            const isGroupActive = visibleItems.some((item) =>
               item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to)
             )
 
@@ -223,7 +232,7 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
                       hasGroupLabel && !collapsed && 'ml-3 mt-0.5'
                     )}
                   >
-                    {group.items.map(({ label, icon: Icon, to }) => {
+                    {visibleItems.map(({ label, icon: Icon, to }) => {
                       const isActive =
                         to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)
 

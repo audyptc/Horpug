@@ -12,6 +12,7 @@ interface AuthContextValue extends AuthState {
   userId: string | null
   roleName: string | null
   isAdmin: boolean
+  allowedPaths: Set<string> | null  // null = admin (ไม่มีข้อจำกัด)
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
 }
@@ -116,6 +117,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = roleName?.toLowerCase() === 'admin'
 
+  const allowedPaths = useMemo((): Set<string> | null => {
+    if (isAdmin) return null
+    if (!state.accessToken) return new Set()
+    const payload = decodeJwt(state.accessToken)
+    const perms = (payload?.permissions as string[]) ?? []
+    return new Set(
+      perms
+        .filter((p) => p.endsWith('.read'))
+        .map((p) => {
+          const pathPart = p.slice(0, p.lastIndexOf('.read'))
+          return pathPart === '' ? '/' : '/' + pathPart
+        })
+    )
+  }, [isAdmin, state.accessToken])
+
   const login = useCallback(async (email: string, password: string) => {
     const resp = await authService.login(email, password)
     // Fix 1: refresh_token ถูก set เป็น HttpOnly cookie โดย server แล้ว ไม่ต้อง store ใน localStorage
@@ -174,7 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [state.isAuthenticated])
 
   return (
-    <AuthContext.Provider value={{ ...state, userId, roleName, isAdmin, login, logout }}>
+    <AuthContext.Provider value={{ ...state, userId, roleName, isAdmin, allowedPaths, login, logout }}>
       {children}
     </AuthContext.Provider>
   )
