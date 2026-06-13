@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff, Building2, Lock, Mail, AlertCircle } from 'lucide-react'
@@ -9,25 +9,34 @@ import { Label } from '@/components/ui/label'
 
 export function Login() {
   const { t } = useTranslation()
-  const { login } = useAuth()
+  const { login, isAuthenticated } = useAuth()
   const navigate = useNavigate()
+  const submittingRef = useRef(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true })
+    }
+  }, [isAuthenticated, navigate])
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    if (submittingRef.current) return
+    submittingRef.current = true
     setError('')
     setLoading(true)
     try {
       await login(email, password)
-      navigate('/', { replace: true })
     } catch {
       setError(t('login.invalidCredentials'))
     } finally {
       setLoading(false)
+      submittingRef.current = false
     }
   }
 

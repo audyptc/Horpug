@@ -151,8 +151,8 @@ export function Parcels() {
         recipient_name: form.recipient_name,
         room_number: form.room_number,
         status: form.status,
-        received_date: form.received_date,
-        picked_up_date: form.picked_up_date || null,
+        received_date: form.received_date + 'T00:00:00Z',
+        picked_up_date: form.picked_up_date ? form.picked_up_date + 'T00:00:00Z' : null,
         note: form.note,
       }
       if (editingItem) {

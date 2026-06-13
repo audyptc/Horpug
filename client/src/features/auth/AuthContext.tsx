@@ -87,18 +87,21 @@ function getUserIdFromToken(token: string | null): string | null {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const initialToken = getStoredToken()
-  const validInitialToken = initialToken && !isExpired(initialToken) && !isIdleExpired() ? initialToken : null
-  if (initialToken && !validInitialToken) {
-    clearStoredAuth()
-  }
-  if (validInitialToken && !getLastActivityAtMs()) {
-    touchLastActivity()
-  }
+  const [state, setState] = useState<AuthState>(() => {
+    const token = getStoredToken()
+    const validToken = token && !isExpired(token) && !isIdleExpired() ? token : null
 
-  const [state, setState] = useState<AuthState>({
-    accessToken: validInitialToken,
-    isAuthenticated: !!validInitialToken,
+    if (token && !validToken) {
+      clearStoredAuth()
+    }
+    if (validToken && !getLastActivityAtMs()) {
+      touchLastActivity()
+    }
+
+    return {
+      accessToken: validToken,
+      isAuthenticated: !!validToken,
+    }
   })
 
   const userId = useMemo(() => getUserIdFromToken(state.accessToken), [state.accessToken])
