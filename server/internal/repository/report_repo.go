@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"fmt"
 
 	"apigofiberhorpug/internal/database"
 	"apigofiberhorpug/internal/domain"
@@ -19,7 +18,7 @@ func NewReportRepo(db *database.DB) *ReportRepo {
 func (r *ReportRepo) IncomeReport(ctx context.Context, from, to string) (*domain.IncomeReport, error) {
 	report := &domain.IncomeReport{}
 
-	rows, err := r.db.Pool.Query(ctx, fmt.Sprintf(`
+	rows, err := r.db.Pool.Query(ctx, `
 		SELECT
 			TO_CHAR(DATE_TRUNC('month', billing_month), 'YYYY-MM') AS month,
 			COALESCE(SUM(rent_amount), 0)     AS rent_amount,
@@ -30,11 +29,11 @@ func (r *ReportRepo) IncomeReport(ctx context.Context, from, to string) (*domain
 			COUNT(*) AS bill_count
 		FROM bills
 		WHERE status = 'paid'
-		  AND DATE_TRUNC('month', billing_month) >= DATE_TRUNC('month', '%s'::date)
-		  AND DATE_TRUNC('month', billing_month) <= DATE_TRUNC('month', '%s'::date)
+		  AND DATE_TRUNC('month', billing_month) >= DATE_TRUNC('month', $1::date)
+		  AND DATE_TRUNC('month', billing_month) <= DATE_TRUNC('month', $2::date)
 		GROUP BY DATE_TRUNC('month', billing_month)
 		ORDER BY DATE_TRUNC('month', billing_month)
-	`, from, to))
+	`, from, to)
 	if err != nil {
 		return nil, err
 	}
@@ -61,18 +60,18 @@ func (r *ReportRepo) IncomeReport(ctx context.Context, from, to string) (*domain
 func (r *ReportRepo) ExpenseReport(ctx context.Context, from, to string) (*domain.ExpenseReport, error) {
 	report := &domain.ExpenseReport{}
 
-	rows, err := r.db.Pool.Query(ctx, fmt.Sprintf(`
+	rows, err := r.db.Pool.Query(ctx, `
 		SELECT
 			TO_CHAR(DATE_TRUNC('month', expense_date), 'YYYY-MM') AS month,
 			category,
 			COALESCE(SUM(amount), 0) AS total_amount,
 			COUNT(*) AS count
 		FROM expenses
-		WHERE DATE_TRUNC('month', expense_date) >= DATE_TRUNC('month', '%s'::date)
-		  AND DATE_TRUNC('month', expense_date) <= DATE_TRUNC('month', '%s'::date)
+		WHERE DATE_TRUNC('month', expense_date) >= DATE_TRUNC('month', $1::date)
+		  AND DATE_TRUNC('month', expense_date) <= DATE_TRUNC('month', $2::date)
 		GROUP BY DATE_TRUNC('month', expense_date), category
 		ORDER BY DATE_TRUNC('month', expense_date), category
-	`, from, to))
+	`, from, to)
 	if err != nil {
 		return nil, err
 	}
