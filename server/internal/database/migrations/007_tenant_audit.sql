@@ -1,2 +1,0 @@
-ALTER TABLE tenants ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id);
-ALTER TABLE tenants ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES users(id);

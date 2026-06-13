@@ -26,9 +26,10 @@ CREATE TABLE IF NOT EXISTS permissions (
 CREATE TABLE IF NOT EXISTS users (
     id         UUID PRIMARY KEY,
     full_name  TEXT NOT NULL,
-    email      TEXT NOT NULL UNIQUE,
+    email      TEXT NOT NULL,
     password   TEXT NOT NULL,
     is_active  BOOLEAN NOT NULL DEFAULT TRUE,
+    deleted_at TIMESTAMPTZ DEFAULT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -41,6 +42,10 @@ CREATE TABLE IF NOT EXISTS user_roles (
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles(role_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_active       ON users   (email)       WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_rooms_room_number_active ON rooms   (room_number) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_id_card_active   ON tenants (id_card)     WHERE deleted_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS role_menu_permissions (
     role_id       UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
@@ -66,14 +71,25 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
 
+CREATE TABLE IF NOT EXISTS room_types (
+    id         TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS rooms (
     id          UUID PRIMARY KEY,
-    room_number TEXT NOT NULL UNIQUE,
+    room_number TEXT NOT NULL,
     floor       INTEGER NOT NULL,
     type        TEXT NOT NULL DEFAULT 'standard',
     status      TEXT NOT NULL DEFAULT 'available',
     rent_price  NUMERIC(10,2) NOT NULL,
     description TEXT NOT NULL DEFAULT '',
+    created_by  UUID REFERENCES users(id),
+    updated_by  UUID REFERENCES users(id),
+    deleted_at  TIMESTAMPTZ DEFAULT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -83,10 +99,13 @@ CREATE TABLE IF NOT EXISTS tenants (
     first_name        TEXT NOT NULL,
     last_name         TEXT NOT NULL,
     phone             TEXT NOT NULL,
-    id_card           TEXT NOT NULL UNIQUE,
+    id_card           TEXT NOT NULL,
     email             TEXT NOT NULL DEFAULT '',
     emergency_contact TEXT NOT NULL DEFAULT '',
     note              TEXT NOT NULL DEFAULT '',
+    created_by        UUID REFERENCES users(id),
+    updated_by        UUID REFERENCES users(id),
+    deleted_at        TIMESTAMPTZ DEFAULT NULL,
     created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -101,21 +120,45 @@ CREATE TABLE IF NOT EXISTS contracts (
     deposit    NUMERIC(10,2) NOT NULL DEFAULT 0,
     status     TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'expired', 'terminated')),
     note       TEXT NOT NULL DEFAULT '',
+    created_by UUID REFERENCES users(id),
+    updated_by UUID REFERENCES users(id),
+    deleted_at TIMESTAMPTZ DEFAULT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS meter_readings (
+CREATE TABLE IF NOT EXISTS electric_meter_readings (
     id               UUID PRIMARY KEY,
     room_id          UUID NOT NULL REFERENCES rooms(id),
-    meter_type       TEXT NOT NULL CHECK (meter_type IN ('electric', 'water')),
+    billing_type     TEXT NOT NULL DEFAULT 'meter' CHECK (billing_type IN ('meter', 'flat')),
     reading_date     DATE NOT NULL,
     previous_reading NUMERIC(12,2) NOT NULL DEFAULT 0,
-    current_reading  NUMERIC(12,2) NOT NULL,
-    unit_price       NUMERIC(10,4) NOT NULL,
+    current_reading  NUMERIC(12,2),
+    unit_price       NUMERIC(10,4),
+    flat_amount      NUMERIC(10,2),
     note             TEXT NOT NULL DEFAULT '',
+    created_by       UUID REFERENCES users(id),
+    updated_by       UUID REFERENCES users(id),
     created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at       TIMESTAMPTZ DEFAULT NULL
+);
+
+CREATE TABLE IF NOT EXISTS water_meter_readings (
+    id               UUID PRIMARY KEY,
+    room_id          UUID NOT NULL REFERENCES rooms(id),
+    billing_type     TEXT NOT NULL DEFAULT 'meter' CHECK (billing_type IN ('meter', 'flat')),
+    reading_date     DATE NOT NULL,
+    previous_reading NUMERIC(12,2),
+    current_reading  NUMERIC(12,2),
+    unit_price       NUMERIC(10,4),
+    flat_amount      NUMERIC(10,2),
+    note             TEXT NOT NULL DEFAULT '',
+    created_by       UUID REFERENCES users(id),
+    updated_by       UUID REFERENCES users(id),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at       TIMESTAMPTZ DEFAULT NULL
 );
 
 CREATE TABLE IF NOT EXISTS bills (
@@ -126,12 +169,15 @@ CREATE TABLE IF NOT EXISTS bills (
     electric_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
     water_amount    NUMERIC(10,2) NOT NULL DEFAULT 0,
     other_amount    NUMERIC(10,2) NOT NULL DEFAULT 0,
-    other_note      TEXT NOT NULL DEFAULT '',
+    parking_amount  NUMERIC(10,2) NOT NULL DEFAULT 0,
     total_amount    NUMERIC(10,2) NOT NULL DEFAULT 0,
     status          TEXT NOT NULL DEFAULT 'unpaid' CHECK (status IN ('unpaid', 'paid', 'overdue')),
     due_date        DATE,
     paid_at         TIMESTAMPTZ,
     note            TEXT NOT NULL DEFAULT '',
+    created_by      UUID REFERENCES users(id),
+    updated_by      UUID REFERENCES users(id),
+    deleted_at      TIMESTAMPTZ DEFAULT NULL,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -143,6 +189,7 @@ CREATE TABLE IF NOT EXISTS expenses (
     description  TEXT NOT NULL,
     amount       NUMERIC(10,2) NOT NULL DEFAULT 0,
     note         TEXT NOT NULL DEFAULT '',
+    deleted_at   TIMESTAMPTZ DEFAULT NULL,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -168,9 +215,21 @@ CREATE TABLE IF NOT EXISTS payments (
     method       TEXT NOT NULL DEFAULT 'cash' CHECK (method IN ('cash', 'transfer', 'qr')),
     payment_date DATE NOT NULL,
     note         TEXT NOT NULL DEFAULT '',
+    deleted_at   TIMESTAMPTZ DEFAULT NULL,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS bill_other_items (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    bill_id    UUID NOT NULL REFERENCES bills(id) ON DELETE CASCADE,
+    label      TEXT NOT NULL DEFAULT '',
+    amount     NUMERIC(10,2) NOT NULL DEFAULT 0,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_bill_other_items_bill_id ON bill_other_items(bill_id);
 
 CREATE TABLE IF NOT EXISTS announcements (
     id           UUID PRIMARY KEY,
@@ -210,6 +269,20 @@ CREATE TABLE IF NOT EXISTS parcels (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS activity_logs (
+    id          UUID PRIMARY KEY,
+    actor_id    UUID REFERENCES users(id) ON DELETE SET NULL,
+    action      TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id   TEXT NOT NULL,
+    new_value   JSONB,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_activity_logs_actor_id    ON activity_logs(actor_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_entity_type ON activity_logs(entity_type);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at  ON activity_logs(created_at DESC);
 
 CREATE TABLE IF NOT EXISTS documents (
     id          UUID PRIMARY KEY,

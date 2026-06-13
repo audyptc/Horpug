@@ -1,3 +1,10 @@
+-- Room types
+INSERT INTO room_types (id, name, sort_order) VALUES
+    ('standard', 'ธรรมดา', 1),
+    ('deluxe',   'ดีลักซ์', 2),
+    ('suite',    'สวีท',   3)
+ON CONFLICT (id) DO NOTHING;
+
 -- Roles
 INSERT INTO roles (id, name, description, is_active) VALUES
     ('11111111-1111-1111-1111-111111111001', 'admin', 'ระบบผู้ดูแลหลัก', TRUE);
@@ -26,7 +33,9 @@ INSERT INTO menus (id, name, path) VALUES
     ('44444444-4444-4444-4444-444444444013', 'ประกาศ',         '/announcements'),
     ('44444444-4444-4444-4444-444444444014', 'จอดรถ',          '/parking'),
     ('44444444-4444-4444-4444-444444444015', 'พัสดุ',          '/parcels'),
-    ('44444444-4444-4444-4444-444444444016', 'เอกสาร',         '/documents');
+    ('44444444-4444-4444-4444-444444444016', 'เอกสาร',         '/documents'),
+    ('44444444-4444-4444-4444-444444444017', 'ประวัติการใช้งาน', '/activity-logs'),
+    ('44444444-4444-4444-4444-444444444018', 'รายงาน',         '/reports');
 
 -- Permissions
 INSERT INTO permissions (id, name, description) VALUES
