@@ -22,6 +22,7 @@ const (
 type Claims struct {
 	UserID      string   `json:"user_id"`
 	Email       string   `json:"email"`
+	RoleName    string   `json:"role_name"`
 	Permissions []string `json:"permissions"`
 	jwt.RegisteredClaims
 }
@@ -73,7 +74,16 @@ func (uc *AuthUseCase) Login(ctx context.Context, req *domain.LoginRequest) (*do
 		return nil, apierror.Internal(err)
 	}
 
-	accessToken, err := uc.generateAccessToken(user, permissions)
+	role, err := uc.userRepo.GetRole(ctx, user.ID)
+	if err != nil {
+		return nil, apierror.Internal(err)
+	}
+	roleName := ""
+	if role != nil {
+		roleName = role.Name
+	}
+
+	accessToken, err := uc.generateAccessToken(user, roleName, permissions)
 	if err != nil {
 		return nil, apierror.Internal(err)
 	}
@@ -128,7 +138,16 @@ func (uc *AuthUseCase) Refresh(ctx context.Context, rawToken string) (*domain.Lo
 		return nil, apierror.Internal(err)
 	}
 
-	accessToken, err := uc.generateAccessToken(user, permissions)
+	refreshRole, err := uc.userRepo.GetRole(ctx, user.ID)
+	if err != nil {
+		return nil, apierror.Internal(err)
+	}
+	refreshRoleName := ""
+	if refreshRole != nil {
+		refreshRoleName = refreshRole.Name
+	}
+
+	accessToken, err := uc.generateAccessToken(user, refreshRoleName, permissions)
 	if err != nil {
 		return nil, apierror.Internal(err)
 	}
@@ -180,10 +199,11 @@ func (uc *AuthUseCase) ValidateAccessToken(tokenString string) (*Claims, error) 
 	return claims, nil
 }
 
-func (uc *AuthUseCase) generateAccessToken(user *domain.User, permissions []string) (string, error) {
+func (uc *AuthUseCase) generateAccessToken(user *domain.User, roleName string, permissions []string) (string, error) {
 	claims := &Claims{
 		UserID:      user.ID,
 		Email:       user.Email,
+		RoleName:    roleName,
 		Permissions: permissions,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(uc.accessTokenDuration)),

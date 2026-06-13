@@ -23,6 +23,7 @@ func RequireAuth(auth *usecase.AuthUseCase) fiber.Handler {
 
 		c.Locals("user_id", claims.UserID)
 		c.Locals("email", claims.Email)
+		c.Locals("role_name", claims.RoleName)
 		c.Locals("permissions", claims.Permissions)
 		return c.Next()
 	}
@@ -30,6 +31,9 @@ func RequireAuth(auth *usecase.AuthUseCase) fiber.Handler {
 
 func RequirePermission(permission string) fiber.Handler {
 	return func(c fiber.Ctx) error {
+		if roleName, _ := c.Locals("role_name").(string); strings.EqualFold(roleName, "admin") {
+			return c.Next()
+		}
 		perms, _ := c.Locals("permissions").([]string)
 		for _, p := range perms {
 			if p == permission {

@@ -414,23 +414,33 @@ export function Roles() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openPermissions(role)} className="gap-2">
-                                <ShieldCheck className="w-4 h-4" /> {t('roles.managePermissions')}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => openEdit(role)} className="gap-2">
-                                <Pencil className="w-4 h-4" /> {t('common.edit')}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="gap-2 text-destructive focus:text-destructive"
-                                onClick={() => {
-                                  setDeletingRole(role)
-                                  setDeleteDialogOpen(true)
-                                }}
-                              >
-                                <Trash2 className="w-4 h-4" /> {t('common.delete')}
-                              </DropdownMenuItem>
+                              {role.name.toLowerCase() !== 'admin' && (
+                                <>
+                                  <DropdownMenuItem onClick={() => openPermissions(role)} className="gap-2">
+                                    <ShieldCheck className="w-4 h-4" /> {t('roles.managePermissions')}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+                              {role.name.toLowerCase() !== 'admin' && (
+                                <DropdownMenuItem onClick={() => openEdit(role)} className="gap-2">
+                                  <Pencil className="w-4 h-4" /> {t('common.edit')}
+                                </DropdownMenuItem>
+                              )}
+                              {role.name.toLowerCase() !== 'admin' && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="gap-2 text-destructive focus:text-destructive"
+                                    onClick={() => {
+                                      setDeletingRole(role)
+                                      setDeleteDialogOpen(true)
+                                    }}
+                                  >
+                                    <Trash2 className="w-4 h-4" /> {t('common.delete')}
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>
@@ -491,21 +501,31 @@ export function Roles() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openPermissions(role)} className="gap-2">
-                          <ShieldCheck className="w-4 h-4" /> {t('roles.managePermissions')}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => openEdit(role)}>{t('common.edit')}</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => {
-                            setDeletingRole(role)
-                            setDeleteDialogOpen(true)
-                          }}
-                        >
-                          {t('common.delete')}
-                        </DropdownMenuItem>
+                        {role.name.toLowerCase() !== 'admin' && (
+                          <>
+                            <DropdownMenuItem onClick={() => openPermissions(role)} className="gap-2">
+                              <ShieldCheck className="w-4 h-4" /> {t('roles.managePermissions')}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </>
+                        )}
+                        {role.name.toLowerCase() !== 'admin' && (
+                          <DropdownMenuItem onClick={() => openEdit(role)}>{t('common.edit')}</DropdownMenuItem>
+                        )}
+                        {role.name.toLowerCase() !== 'admin' && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => {
+                                setDeletingRole(role)
+                                setDeleteDialogOpen(true)
+                              }}
+                            >
+                              {t('common.delete')}
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>

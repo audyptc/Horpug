@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/domain"
@@ -87,6 +88,9 @@ func (uc *RoleUseCase) Update(ctx context.Context, id string, req *domain.Update
 		}
 		return nil, apierror.Internal(err)
 	}
+	if strings.EqualFold(role.Name, "admin") {
+		return nil, apierror.Forbidden("cannot modify admin role")
+	}
 	if req.Name != "" {
 		role.Name = req.Name
 	}
@@ -105,11 +109,15 @@ func (uc *RoleUseCase) Update(ctx context.Context, id string, req *domain.Update
 }
 
 func (uc *RoleUseCase) Delete(ctx context.Context, id string) error {
-	if _, err := uc.roleRepo.FindByID(ctx, id); err != nil {
+	role, err := uc.roleRepo.FindByID(ctx, id)
+	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)
+	}
+	if strings.EqualFold(role.Name, "admin") {
+		return apierror.Forbidden("cannot delete admin role")
 	}
 	if err := uc.roleRepo.Delete(ctx, id); err != nil {
 		return apierror.Internal(err)
@@ -118,11 +126,15 @@ func (uc *RoleUseCase) Delete(ctx context.Context, id string) error {
 }
 
 func (uc *RoleUseCase) AssignPermissions(ctx context.Context, roleID string, req *domain.AssignPermissionsRequest) error {
-	if _, err := uc.roleRepo.FindByID(ctx, roleID); err != nil {
+	role, err := uc.roleRepo.FindByID(ctx, roleID)
+	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)
+	}
+	if strings.EqualFold(role.Name, "admin") {
+		return apierror.Forbidden("cannot modify permissions for admin role")
 	}
 	for _, item := range req.Items {
 		if _, err := uc.menuRepo.FindByID(ctx, item.MenuID); err != nil {
