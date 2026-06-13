@@ -95,7 +95,7 @@ func (r *ReportRepo) OccupancyReport(ctx context.Context) (*domain.OccupancyRepo
 	report := &domain.OccupancyReport{}
 
 	rows, err := r.db.Pool.Query(ctx, `
-		SELECT
+		SELECT DISTINCT ON (r.id)
 			r.room_number,
 			r.floor,
 			r.type,
@@ -105,7 +105,7 @@ func (r *ReportRepo) OccupancyReport(ctx context.Context) (*domain.OccupancyRepo
 		FROM rooms r
 		LEFT JOIN contracts c ON c.room_id = r.id AND c.status = 'active'
 		LEFT JOIN tenants t ON t.id = c.tenant_id
-		ORDER BY r.floor, r.room_number
+		ORDER BY r.id, r.floor, r.room_number
 	`)
 	if err != nil {
 		return nil, err

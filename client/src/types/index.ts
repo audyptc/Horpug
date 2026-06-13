@@ -1,4 +1,5 @@
 export * from './common'
+export * from './menu'
 export * from './activity_log'
 export * from './role'
 export * from './user'

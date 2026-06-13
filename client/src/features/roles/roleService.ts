@@ -1,10 +1,13 @@
-﻿import api from '@/lib/axios'
+import api from '@/lib/axios'
 import type {
   ApiPaginatedResponse,
   ApiResponse,
   ApiRole,
+  ApiMenu,
+  ApiPermission,
   CreateRolePayload,
   UpdateRolePayload,
+  AssignPermissionsPayload,
 } from '@/types'
 
 export const roleService = {
@@ -38,5 +41,19 @@ export const roleService = {
 
   async delete(id: string): Promise<void> {
     await api.delete(`/roles/${id}`)
+  },
+
+  async listMenus(): Promise<ApiMenu[]> {
+    const { data } = await api.get<ApiPaginatedResponse<ApiMenu>>('/menus/?limit=100&offset=0')
+    return data.data
+  },
+
+  async listPermissions(): Promise<ApiPermission[]> {
+    const { data } = await api.get<ApiPaginatedResponse<ApiPermission>>('/permissions/?limit=100&offset=0')
+    return data.data
+  },
+
+  async assignPermissions(id: string, payload: AssignPermissionsPayload): Promise<void> {
+    await api.put(`/roles/${id}/permissions`, payload)
   },
 }

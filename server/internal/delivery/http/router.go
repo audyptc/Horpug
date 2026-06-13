@@ -81,14 +81,14 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	rolesGroup.Delete("/:id", middleware.RequirePermission("roles.delete"), roleH.Delete)
 	rolesGroup.Put("/:id/permissions", middleware.RequirePermission("roles.update"), roleH.AssignPermissions)
 
-	// Permissions (read-only, managed via migrations)
+	// Permissions (read-only metadata — no specific permission required beyond auth)
 	permGroup := protected.Group("/permissions")
-	permGroup.Get("/", middleware.RequirePermission("permissions.read"), permH.List)
+	permGroup.Get("/", permH.List)
 
-	// Menus
+	// Menus (read-only metadata — no specific permission required beyond auth)
 	menusGroup := protected.Group("/menus")
-	menusGroup.Get("/", middleware.RequirePermission("menus.read"), menuH.List)
-	menusGroup.Get("/:id", middleware.RequirePermission("menus.read"), menuH.GetByID)
+	menusGroup.Get("/", menuH.List)
+	menusGroup.Get("/:id", menuH.GetByID)
 
 	// Rooms
 	roomsGroup := protected.Group("/rooms")
