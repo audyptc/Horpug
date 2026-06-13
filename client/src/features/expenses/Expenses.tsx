@@ -37,6 +37,7 @@ import { ExpenseDeleteDialog } from '@/features/expenses/components/ExpenseDelet
 import type { ApiExpense, ExpenseCategory } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
+import { usePermission } from '@/hooks/usePermission'
 
 const PER_PAGE_OPTIONS = [10, 20, 50] as const
 
@@ -63,6 +64,7 @@ const emptyForm = {
 
 export function Expenses() {
   const { t } = useTranslation()
+  const { canCreate, canUpdate, canDelete } = usePermission('/expenses')
 
   const [expenses, setExpenses] = useState<ApiExpense[]>([])
   const [loading, setLoading] = useState(true)
@@ -194,10 +196,12 @@ export function Expenses() {
           <Button variant="outline" size="icon" onClick={() => fetchExpenses(page, perPage)} disabled={loading}>
             <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
           </Button>
-          <Button onClick={openCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">{t('expenses.addExpense')}</span>
-          </Button>
+          {canCreate && (
+            <Button onClick={openCreate} className="gap-2">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">{t('expenses.addExpense')}</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -257,7 +261,9 @@ export function Expenses() {
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('expenses.colCategory')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('expenses.colDescription')}</th>
                       <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('expenses.colAmount')}</th>
-                      <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('expenses.colActions')}</th>
+                      {(canUpdate || canDelete) && (
+                        <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('expenses.colActions')}</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -285,27 +291,33 @@ export function Expenses() {
                           {expense.amount.toLocaleString()}
                           <span className="text-xs text-muted-foreground ml-1">฿</span>
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEdit(expense)} className="gap-2">
-                                <Pencil className="w-4 h-4" /> {t('common.edit')}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="gap-2 text-destructive focus:text-destructive"
-                                onClick={() => { setDeletingExpense(expense); setDeleteDialogOpen(true) }}
-                              >
-                                <Trash2 className="w-4 h-4" /> {t('common.delete')}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
+                        {(canUpdate || canDelete) && (
+                          <td className="px-6 py-4 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {canUpdate && (
+                                  <DropdownMenuItem onClick={() => openEdit(expense)} className="gap-2">
+                                    <Pencil className="w-4 h-4" /> {t('common.edit')}
+                                  </DropdownMenuItem>
+                                )}
+                                {canUpdate && canDelete && <DropdownMenuSeparator />}
+                                {canDelete && (
+                                  <DropdownMenuItem
+                                    className="gap-2 text-destructive focus:text-destructive"
+                                    onClick={() => { setDeletingExpense(expense); setDeleteDialogOpen(true) }}
+                                  >
+                                    <Trash2 className="w-4 h-4" /> {t('common.delete')}
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -356,23 +368,29 @@ export function Expenses() {
                         {t(`expenses.categories.${expense.category}`)}
                       </Badge>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(expense)}>{t('common.edit')}</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => { setDeletingExpense(expense); setDeleteDialogOpen(true) }}
-                        >
-                          {t('common.delete')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {(canUpdate || canDelete) && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {canUpdate && (
+                            <DropdownMenuItem onClick={() => openEdit(expense)}>{t('common.edit')}</DropdownMenuItem>
+                          )}
+                          {canUpdate && canDelete && <DropdownMenuSeparator />}
+                          {canDelete && (
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => { setDeletingExpense(expense); setDeleteDialogOpen(true) }}
+                            >
+                              {t('common.delete')}
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 ))}
               </div>

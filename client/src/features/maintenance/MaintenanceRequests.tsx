@@ -39,6 +39,7 @@ import { MaintenanceDeleteDialog } from '@/features/maintenance/components/Maint
 import type { ApiMaintenanceRequest, MaintenanceStatus, MaintenancePriority } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
+import { usePermission } from '@/hooks/usePermission'
 
 const PER_PAGE_OPTIONS = [10, 20, 50] as const
 
@@ -74,6 +75,7 @@ const emptyForm = {
 
 export function MaintenanceRequests() {
   const { t } = useTranslation()
+  const { canCreate, canUpdate, canDelete } = usePermission('/maintenance')
 
   const [items, setItems] = useState<ApiMaintenanceRequest[]>([])
   const [loading, setLoading] = useState(true)
@@ -232,10 +234,12 @@ export function MaintenanceRequests() {
           <Button variant="outline" size="icon" onClick={() => fetchItems(page, perPage)} disabled={loading}>
             <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
           </Button>
-          <Button onClick={openCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">{t('maintenance.addRequest')}</span>
-          </Button>
+          {canCreate && (
+            <Button onClick={openCreate} className="gap-2">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">{t('maintenance.addRequest')}</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -307,7 +311,9 @@ export function MaintenanceRequests() {
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('maintenance.colStatus')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('maintenance.colPriority')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('maintenance.colDate')}</th>
-                      <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('maintenance.colActions')}</th>
+                      {(canUpdate || canDelete) && (
+                        <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('maintenance.colActions')}</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -337,40 +343,46 @@ export function MaintenanceRequests() {
                           </Badge>
                         </td>
                         <td className="px-4 py-4 text-muted-foreground">{formatDate(item.reported_date)}</td>
-                        <td className="px-6 py-4 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {item.status === 'open' && (
-                                <DropdownMenuItem onClick={() => handleQuickStatus(item, 'in_progress')} className="gap-2">
-                                  <PlayCircle className="w-4 h-4" /> {t('maintenance.startProgress')}
-                                </DropdownMenuItem>
-                              )}
-                              {(item.status === 'open' || item.status === 'in_progress') && (
-                                <DropdownMenuItem onClick={() => handleQuickStatus(item, 'done')} className="gap-2">
-                                  <CheckCircle2 className="w-4 h-4" /> {t('maintenance.markDone')}
-                                </DropdownMenuItem>
-                              )}
-                              {(item.status === 'open' || item.status === 'in_progress') && (
-                                <DropdownMenuSeparator />
-                              )}
-                              <DropdownMenuItem onClick={() => openEdit(item)} className="gap-2">
-                                <Pencil className="w-4 h-4" /> {t('common.edit')}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="gap-2 text-destructive focus:text-destructive"
-                                onClick={() => { setDeletingItem(item); setDeleteDialogOpen(true) }}
-                              >
-                                <Trash2 className="w-4 h-4" /> {t('common.delete')}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
+                        {(canUpdate || canDelete) && (
+                          <td className="px-6 py-4 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {canUpdate && item.status === 'open' && (
+                                  <DropdownMenuItem onClick={() => handleQuickStatus(item, 'in_progress')} className="gap-2">
+                                    <PlayCircle className="w-4 h-4" /> {t('maintenance.startProgress')}
+                                  </DropdownMenuItem>
+                                )}
+                                {canUpdate && (item.status === 'open' || item.status === 'in_progress') && (
+                                  <DropdownMenuItem onClick={() => handleQuickStatus(item, 'done')} className="gap-2">
+                                    <CheckCircle2 className="w-4 h-4" /> {t('maintenance.markDone')}
+                                  </DropdownMenuItem>
+                                )}
+                                {canUpdate && (item.status === 'open' || item.status === 'in_progress') && (
+                                  <DropdownMenuSeparator />
+                                )}
+                                {canUpdate && (
+                                  <DropdownMenuItem onClick={() => openEdit(item)} className="gap-2">
+                                    <Pencil className="w-4 h-4" /> {t('common.edit')}
+                                  </DropdownMenuItem>
+                                )}
+                                {canUpdate && canDelete && <DropdownMenuSeparator />}
+                                {canDelete && (
+                                  <DropdownMenuItem
+                                    className="gap-2 text-destructive focus:text-destructive"
+                                    onClick={() => { setDeletingItem(item); setDeleteDialogOpen(true) }}
+                                  >
+                                    <Trash2 className="w-4 h-4" /> {t('common.delete')}
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -411,36 +423,42 @@ export function MaintenanceRequests() {
                         </Badge>
                       </div>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {item.status === 'open' && (
-                          <DropdownMenuItem onClick={() => handleQuickStatus(item, 'in_progress')} className="gap-2">
-                            <PlayCircle className="w-4 h-4" /> {t('maintenance.startProgress')}
-                          </DropdownMenuItem>
-                        )}
-                        {(item.status === 'open' || item.status === 'in_progress') && (
-                          <DropdownMenuItem onClick={() => handleQuickStatus(item, 'done')} className="gap-2">
-                            <CheckCircle2 className="w-4 h-4" /> {t('maintenance.markDone')}
-                          </DropdownMenuItem>
-                        )}
-                        {(item.status === 'open' || item.status === 'in_progress') && (
-                          <DropdownMenuSeparator />
-                        )}
-                        <DropdownMenuItem onClick={() => openEdit(item)}>{t('common.edit')}</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => { setDeletingItem(item); setDeleteDialogOpen(true) }}
-                        >
-                          {t('common.delete')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {(canUpdate || canDelete) && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {canUpdate && item.status === 'open' && (
+                            <DropdownMenuItem onClick={() => handleQuickStatus(item, 'in_progress')} className="gap-2">
+                              <PlayCircle className="w-4 h-4" /> {t('maintenance.startProgress')}
+                            </DropdownMenuItem>
+                          )}
+                          {canUpdate && (item.status === 'open' || item.status === 'in_progress') && (
+                            <DropdownMenuItem onClick={() => handleQuickStatus(item, 'done')} className="gap-2">
+                              <CheckCircle2 className="w-4 h-4" /> {t('maintenance.markDone')}
+                            </DropdownMenuItem>
+                          )}
+                          {canUpdate && (item.status === 'open' || item.status === 'in_progress') && (
+                            <DropdownMenuSeparator />
+                          )}
+                          {canUpdate && (
+                            <DropdownMenuItem onClick={() => openEdit(item)}>{t('common.edit')}</DropdownMenuItem>
+                          )}
+                          {canUpdate && canDelete && <DropdownMenuSeparator />}
+                          {canDelete && (
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => { setDeletingItem(item); setDeleteDialogOpen(true) }}
+                            >
+                              {t('common.delete')}
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 ))}
               </div>

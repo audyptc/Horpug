@@ -40,6 +40,7 @@ import { useToast } from '@/components/ui/toast'
 import type { ApiRoom, ApiRoomType, RoomStatus, RoomType } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDateTime } from '@/lib/dateUtils'
+import { usePermission } from '@/hooks/usePermission'
 
 const PER_PAGE_OPTIONS = [10, 20, 50] as const
 
@@ -61,6 +62,7 @@ const emptyForm = {
 export function Rooms() {
   const { t } = useTranslation()
   const toast = useToast()
+  const { canCreate, canUpdate, canDelete } = usePermission('/rooms')
   const [rooms, setRooms] = useState<ApiRoom[]>([])
   const [roomTypes, setRoomTypes] = useState<ApiRoomType[]>([])
   const [loading, setLoading] = useState(true)
@@ -192,10 +194,12 @@ export function Rooms() {
           <Button variant="outline" size="icon" onClick={() => fetchRooms(page, perPage)} disabled={loading}>
             <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
           </Button>
-          <Button onClick={openCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">{t('rooms.addRoom')}</span>
-          </Button>
+          {canCreate && (
+            <Button onClick={openCreate} className="gap-2">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">{t('rooms.addRoom')}</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -267,7 +271,9 @@ export function Rooms() {
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('rooms.colCreatedAt')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('rooms.colUpdatedAt')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('rooms.colUpdatedBy')}</th>
-                      <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('rooms.colActions')}</th>
+                      {(canUpdate || canDelete) && (
+                        <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('rooms.colActions')}</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -306,27 +312,33 @@ export function Rooms() {
                         <td className="px-4 py-4 text-muted-foreground">{formatDateTime(room.created_at)}</td>
                         <td className="px-4 py-4 text-muted-foreground">{formatDateTime(room.updated_at)}</td>
                         <td className="px-4 py-4 text-muted-foreground">{room.updated_by_name || '-'}</td>
-                        <td className="px-6 py-4 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEdit(room)} className="gap-2">
-                                <Pencil className="w-4 h-4" /> {t('common.edit')}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="gap-2 text-destructive focus:text-destructive"
-                                onClick={() => { setDeletingRoom(room); setDeleteDialogOpen(true) }}
-                              >
-                                <Trash2 className="w-4 h-4" /> {t('common.delete')}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
+                        {(canUpdate || canDelete) && (
+                          <td className="px-6 py-4 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {canUpdate && (
+                                  <DropdownMenuItem onClick={() => openEdit(room)} className="gap-2">
+                                    <Pencil className="w-4 h-4" /> {t('common.edit')}
+                                  </DropdownMenuItem>
+                                )}
+                                {canUpdate && canDelete && <DropdownMenuSeparator />}
+                                {canDelete && (
+                                  <DropdownMenuItem
+                                    className="gap-2 text-destructive focus:text-destructive"
+                                    onClick={() => { setDeletingRoom(room); setDeleteDialogOpen(true) }}
+                                  >
+                                    <Trash2 className="w-4 h-4" /> {t('common.delete')}
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -371,23 +383,29 @@ export function Rooms() {
                         </span>
                       </div>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(room)}>{t('common.edit')}</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => { setDeletingRoom(room); setDeleteDialogOpen(true) }}
-                        >
-                          {t('common.delete')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {(canUpdate || canDelete) && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {canUpdate && (
+                            <DropdownMenuItem onClick={() => openEdit(room)}>{t('common.edit')}</DropdownMenuItem>
+                          )}
+                          {canUpdate && canDelete && <DropdownMenuSeparator />}
+                          {canDelete && (
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => { setDeletingRoom(room); setDeleteDialogOpen(true) }}
+                            >
+                              {t('common.delete')}
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 ))}
               </div>

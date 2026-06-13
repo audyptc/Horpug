@@ -42,7 +42,7 @@ export function DatePicker({ value, onChange, placeholder = 'เลือกว�
           mode="single"
           selected={selected}
           onSelect={handleSelect}
-          initialFocus
+          autoFocus
         />
       </PopoverContent>
     </Popover>

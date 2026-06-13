@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/select'
 import { DatePicker } from '@/components/ui/date-picker'
 import { announcementService } from '@/features/announcements/announcementService'
+import { usePermission } from '@/hooks/usePermission'
 import type { ApiAnnouncement, AnnouncementType } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
@@ -72,6 +73,7 @@ const emptyForm = {
 
 export function Announcements() {
   const { t } = useTranslation()
+  const { canCreate, canUpdate, canDelete } = usePermission('/announcements')
 
   const [items, setItems] = useState<ApiAnnouncement[]>([])
   const [loading, setLoading] = useState(true)
@@ -199,10 +201,12 @@ export function Announcements() {
           <Button variant="outline" size="icon" onClick={() => fetchItems(page, perPage)} disabled={loading}>
             <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
           </Button>
-          <Button onClick={openCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">{t('announcements.addAnnouncement')}</span>
-          </Button>
+          {canCreate && (
+            <Button onClick={openCreate} className="gap-2">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">{t('announcements.addAnnouncement')}</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -262,7 +266,9 @@ export function Announcements() {
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('announcements.colPublished')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('announcements.colExpired')}</th>
                       <th className="text-center px-4 py-3 font-medium text-muted-foreground">{t('announcements.colPinned')}</th>
-                      <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('announcements.colActions')}</th>
+                      {(canUpdate || canDelete) && (
+                        <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('announcements.colActions')}</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -289,27 +295,33 @@ export function Announcements() {
                         <td className="px-4 py-4 text-center">
                           {item.is_pinned && <Pin className="w-4 h-4 text-primary mx-auto" />}
                         </td>
-                        <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEdit(item)} className="gap-2">
-                                <Pencil className="w-4 h-4" /> {t('common.edit')}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="gap-2 text-destructive focus:text-destructive"
-                                onClick={() => { setDeletingItem(item); setDeleteDialogOpen(true) }}
-                              >
-                                <Trash2 className="w-4 h-4" /> {t('common.delete')}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
+                        {(canUpdate || canDelete) && (
+                          <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {canUpdate && (
+                                  <DropdownMenuItem onClick={() => openEdit(item)} className="gap-2">
+                                    <Pencil className="w-4 h-4" /> {t('common.edit')}
+                                  </DropdownMenuItem>
+                                )}
+                                {canUpdate && canDelete && <DropdownMenuSeparator />}
+                                {canDelete && (
+                                  <DropdownMenuItem
+                                    className="gap-2 text-destructive focus:text-destructive"
+                                    onClick={() => { setDeletingItem(item); setDeleteDialogOpen(true) }}
+                                  >
+                                    <Trash2 className="w-4 h-4" /> {t('common.delete')}
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -355,25 +367,31 @@ export function Announcements() {
                         <span className="text-xs text-muted-foreground">{formatDate(item.published_at)}</span>
                       </div>
                     </div>
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEdit(item)}>{t('common.edit')}</DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => { setDeletingItem(item); setDeleteDialogOpen(true) }}
-                          >
-                            {t('common.delete')}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                    {(canUpdate || canDelete) && (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {canUpdate && (
+                              <DropdownMenuItem onClick={() => openEdit(item)}>{t('common.edit')}</DropdownMenuItem>
+                            )}
+                            {canUpdate && canDelete && <DropdownMenuSeparator />}
+                            {canDelete && (
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => { setDeletingItem(item); setDeleteDialogOpen(true) }}
+                              >
+                                {t('common.delete')}
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -39,6 +39,7 @@ import { ContractDeleteDialog } from '@/features/contracts/components/ContractDe
 import type { ApiContract, ApiTenant, ApiRoom, ContractStatus } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate, formatDateTime } from '@/lib/dateUtils'
+import { usePermission } from '@/hooks/usePermission'
 
 const PER_PAGE_OPTIONS = [10, 20, 50] as const
 
@@ -66,6 +67,7 @@ const emptyForm = {
 
 export function Contracts() {
   const { t } = useTranslation()
+  const { canCreate, canUpdate, canDelete } = usePermission('/contracts')
 
   const [contracts, setContracts] = useState<ApiContract[]>([])
   const [loading, setLoading] = useState(true)
@@ -220,10 +222,12 @@ export function Contracts() {
           <Button variant="outline" size="icon" onClick={() => fetchContracts(page, perPage)} disabled={loading}>
             <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
           </Button>
-          <Button onClick={openCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">{t('contracts.addContract')}</span>
-          </Button>
+          {canCreate && (
+            <Button onClick={openCreate} className="gap-2">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">{t('contracts.addContract')}</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -287,7 +291,9 @@ export function Contracts() {
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('contracts.colCreatedAt')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('contracts.colUpdatedAt')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('contracts.colUpdatedBy')}</th>
-                      <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('contracts.colActions')}</th>
+                      {(canUpdate || canDelete) && (
+                        <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('contracts.colActions')}</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -324,27 +330,33 @@ export function Contracts() {
                         <td className="px-4 py-4 text-muted-foreground">{formatDateTime(contract.created_at)}</td>
                         <td className="px-4 py-4 text-muted-foreground">{formatDateTime(contract.updated_at)}</td>
                         <td className="px-4 py-4 text-muted-foreground">{contract.updated_by_name || '-'}</td>
-                        <td className="px-6 py-4 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEdit(contract)} className="gap-2">
-                                <Pencil className="w-4 h-4" /> {t('common.edit')}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="gap-2 text-destructive focus:text-destructive"
-                                onClick={() => { setDeletingContract(contract); setDeleteDialogOpen(true) }}
-                              >
-                                <Trash2 className="w-4 h-4" /> {t('common.delete')}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
+                        {(canUpdate || canDelete) && (
+                          <td className="px-6 py-4 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {canUpdate && (
+                                  <DropdownMenuItem onClick={() => openEdit(contract)} className="gap-2">
+                                    <Pencil className="w-4 h-4" /> {t('common.edit')}
+                                  </DropdownMenuItem>
+                                )}
+                                {canUpdate && canDelete && <DropdownMenuSeparator />}
+                                {canDelete && (
+                                  <DropdownMenuItem
+                                    className="gap-2 text-destructive focus:text-destructive"
+                                    onClick={() => { setDeletingContract(contract); setDeleteDialogOpen(true) }}
+                                  >
+                                    <Trash2 className="w-4 h-4" /> {t('common.delete')}
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -390,23 +402,29 @@ export function Contracts() {
                         {contract.updated_by_name ? ` · ${contract.updated_by_name}` : ''}
                       </p>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(contract)}>{t('common.edit')}</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => { setDeletingContract(contract); setDeleteDialogOpen(true) }}
-                        >
-                          {t('common.delete')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {(canUpdate || canDelete) && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {canUpdate && (
+                            <DropdownMenuItem onClick={() => openEdit(contract)}>{t('common.edit')}</DropdownMenuItem>
+                          )}
+                          {canUpdate && canDelete && <DropdownMenuSeparator />}
+                          {canDelete && (
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => { setDeletingContract(contract); setDeleteDialogOpen(true) }}
+                            >
+                              {t('common.delete')}
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 ))}
               </div>

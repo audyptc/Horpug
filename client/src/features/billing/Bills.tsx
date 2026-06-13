@@ -25,6 +25,7 @@ import { ErrorBanner } from '@/components/shared/ErrorBanner'
 import { BillTable } from '@/features/billing/components/BillTable'
 import { BillDialog, type BillFormState } from '@/features/billing/components/BillDialog'
 import { usePaginatedList } from '@/hooks/usePaginatedList'
+import { usePermission } from '@/hooks/usePermission'
 import { billService } from '@/features/billing/billService'
 import { contractService } from '@/features/contracts/contractService'
 import { electricMeterService } from '@/features/electric-meters/electricMeterService'
@@ -57,6 +58,7 @@ function toDateInput(iso: string | null | undefined) {
 
 export function Bills() {
   const { t } = useTranslation()
+  const { canCreate, canUpdate, canDelete } = usePermission('/bills')
 
   const { items: bills, loading, hasError, page, perPage, total, totalPages, setPage, setPerPage, refresh, deletedOnPage } =
     usePaginatedList(billService.list, { initialPerPage: 20 })
@@ -309,10 +311,12 @@ export function Bills() {
         loading={loading}
         onRefresh={refresh}
       >
-        <Button onClick={openCreate} className="gap-2">
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">{t('bills.addBill')}</span>
-        </Button>
+        {canCreate && (
+          <Button onClick={openCreate} className="gap-2">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">{t('bills.addBill')}</span>
+          </Button>
+        )}
       </PageHeader>
 
       {hasError && <ErrorBanner message={t('bills.loadError')} />}
@@ -361,6 +365,8 @@ export function Bills() {
                 onMarkPaid={handleMarkPaid}
                 onDelete={openDelete}
                 onClearFilters={clearFilters}
+                canUpdate={canUpdate}
+                canDelete={canDelete}
               />
               <Pagination
                 page={page}

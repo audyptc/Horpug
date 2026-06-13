@@ -13,6 +13,7 @@ interface AuthContextValue extends AuthState {
   roleName: string | null
   isAdmin: boolean
   allowedPaths: Set<string> | null  // null = admin (ไม่มีข้อจำกัด)
+  rawPermissions: Set<string>       // ทุก permission ดิบจาก JWT เช่น "rooms.create"
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
 }
@@ -89,6 +90,30 @@ function getUserIdFromToken(token: string | null): string | null {
   return (payload?.user_id as string) ?? null
 }
 
+function normalizePath(path: string): string {
+  const base = path.split(/[?#]/, 1)[0].trim()
+  if (!base || base === '/') return '/'
+
+  const collapsed = base.replace(/\/+/g, '/').replace(/\/+$/, '')
+  if (!collapsed) return '/'
+  return collapsed.startsWith('/') ? collapsed : `/${collapsed}`
+}
+
+function permissionToPath(permission: string): string | null {
+  const p = permission.trim()
+  if (!p.endsWith('.read')) return null
+
+  const resource = p.slice(0, -'.read'.length)
+  if (!resource || resource === '/') return '/'
+
+  if (resource.includes('/')) {
+    return normalizePath(resource)
+  }
+
+  // Backward compatibility for legacy dot-resource claims, e.g. settings.users.read
+  return normalizePath(resource.replace(/\./g, '/'))
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>(() => {
     const token = getStoredToken()
@@ -117,20 +142,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = roleName?.toLowerCase() === 'admin'
 
-  const allowedPaths = useMemo((): Set<string> | null => {
-    if (isAdmin) return null
+  const rawPermissions = useMemo((): Set<string> => {
     if (!state.accessToken) return new Set()
     const payload = decodeJwt(state.accessToken)
-    const perms = (payload?.permissions as string[]) ?? []
+    return new Set((payload?.permissions as string[]) ?? [])
+  }, [state.accessToken])
+
+  const allowedPaths = useMemo((): Set<string> | null => {
+    if (isAdmin) return null
     return new Set(
-      perms
-        .filter((p) => p.endsWith('.read'))
-        .map((p) => {
-          const pathPart = p.slice(0, p.lastIndexOf('.read'))
-          return pathPart === '' ? '/' : '/' + pathPart
-        })
+      Array.from(rawPermissions)
+        .map(permissionToPath)
+        .filter((path): path is string => path !== null)
     )
-  }, [isAdmin, state.accessToken])
+  }, [isAdmin, rawPermissions])
 
   const login = useCallback(async (email: string, password: string) => {
     const resp = await authService.login(email, password)
@@ -190,7 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [state.isAuthenticated])
 
   return (
-    <AuthContext.Provider value={{ ...state, userId, roleName, isAdmin, allowedPaths, login, logout }}>
+    <AuthContext.Provider value={{ ...state, userId, roleName, isAdmin, allowedPaths, rawPermissions, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

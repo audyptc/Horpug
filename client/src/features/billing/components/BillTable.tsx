@@ -27,9 +27,11 @@ interface BillTableProps {
   onMarkPaid: (bill: ApiBill) => void
   onDelete: (bill: ApiBill) => void
   onClearFilters: () => void
+  canUpdate?: boolean
+  canDelete?: boolean
 }
 
-export function BillTable({ bills, hasFilters, onEdit, onMarkPaid, onDelete, onClearFilters }: BillTableProps) {
+export function BillTable({ bills, hasFilters, onEdit, onMarkPaid, onDelete, onClearFilters, canUpdate = true, canDelete = true }: BillTableProps) {
   const { t } = useTranslation()
 
   if (bills.length === 0) {
@@ -57,7 +59,9 @@ export function BillTable({ bills, hasFilters, onEdit, onMarkPaid, onDelete, onC
               <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('bills.colWater')}</th>
               <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('bills.colTotal')}</th>
               <th className="text-center px-4 py-3 font-medium text-muted-foreground">{t('bills.colStatus')}</th>
-              <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('bills.colActions')}</th>
+              {(canUpdate || canDelete) && (
+                <th className="text-right px-6 py-3 font-medium text-muted-foreground">{t('bills.colActions')}</th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -81,9 +85,11 @@ export function BillTable({ bills, hasFilters, onEdit, onMarkPaid, onDelete, onC
                     {t(`bills.statuses.${bill.status}`)}
                   </Badge>
                 </td>
-                <td className="px-6 py-4 text-right">
-                  <BillActions bill={bill} onEdit={onEdit} onMarkPaid={onMarkPaid} onDelete={onDelete} />
-                </td>
+                {(canUpdate || canDelete) && (
+                  <td className="px-6 py-4 text-right">
+                    <BillActions bill={bill} onEdit={onEdit} onMarkPaid={onMarkPaid} onDelete={onDelete} canUpdate={canUpdate} canDelete={canDelete} />
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -104,7 +110,9 @@ export function BillTable({ bills, hasFilters, onEdit, onMarkPaid, onDelete, onC
                 {t(`bills.statuses.${bill.status}`)}
               </Badge>
             </div>
-            <BillActions bill={bill} onEdit={onEdit} onMarkPaid={onMarkPaid} onDelete={onDelete} />
+            {(canUpdate || canDelete) && (
+              <BillActions bill={bill} onEdit={onEdit} onMarkPaid={onMarkPaid} onDelete={onDelete} canUpdate={canUpdate} canDelete={canDelete} />
+            )}
           </div>
         ))}
       </div>
@@ -117,9 +125,11 @@ interface BillActionsProps {
   onEdit: (bill: ApiBill) => void
   onMarkPaid: (bill: ApiBill) => void
   onDelete: (bill: ApiBill) => void
+  canUpdate?: boolean
+  canDelete?: boolean
 }
 
-function BillActions({ bill, onEdit, onMarkPaid, onDelete }: BillActionsProps) {
+function BillActions({ bill, onEdit, onMarkPaid, onDelete, canUpdate = true, canDelete = true }: BillActionsProps) {
   const { t } = useTranslation()
   return (
     <DropdownMenu>
@@ -129,21 +139,25 @@ function BillActions({ bill, onEdit, onMarkPaid, onDelete }: BillActionsProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {bill.status !== 'paid' && (
+        {canUpdate && bill.status !== 'paid' && (
           <DropdownMenuItem onClick={() => onMarkPaid(bill)} className="gap-2">
             <CheckCircle2 className="w-4 h-4" /> {t('bills.markPaid')}
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={() => onEdit(bill)} className="gap-2">
-          <Pencil className="w-4 h-4" /> {t('common.edit')}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="gap-2 text-destructive focus:text-destructive"
-          onClick={() => onDelete(bill)}
-        >
-          <Trash2 className="w-4 h-4" /> {t('common.delete')}
-        </DropdownMenuItem>
+        {canUpdate && (
+          <DropdownMenuItem onClick={() => onEdit(bill)} className="gap-2">
+            <Pencil className="w-4 h-4" /> {t('common.edit')}
+          </DropdownMenuItem>
+        )}
+        {canUpdate && canDelete && <DropdownMenuSeparator />}
+        {canDelete && (
+          <DropdownMenuItem
+            className="gap-2 text-destructive focus:text-destructive"
+            onClick={() => onDelete(bill)}
+          >
+            <Trash2 className="w-4 h-4" /> {t('common.delete')}
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )
