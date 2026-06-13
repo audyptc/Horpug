@@ -12,6 +12,8 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Paperclip,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -84,6 +86,9 @@ export function Documents() {
   const [deletingItem, setDeletingItem] = useState<ApiDocument | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   const fetchItems = useCallback(
     async (p: number, pp: number) => {
@@ -123,14 +128,27 @@ export function Documents() {
     })
   }, [items, search, filterCategory])
 
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setSelectedFile(file)
+    setForm((f) => ({ ...f, file_url: '' }))
+    setUploadError('')
+    e.target.value = ''
+  }
+
   function openCreate() {
     setEditingItem(null)
     setForm(emptyForm)
+    setSelectedFile(null)
+    setUploadError('')
     setDialogOpen(true)
   }
 
   function openEdit(item: ApiDocument) {
     setEditingItem(item)
+    setSelectedFile(null)
+    setUploadError('')
     setForm({
       title: item.title,
       category: item.category,
@@ -147,11 +165,24 @@ export function Documents() {
     if (!form.title) return
     setSaving(true)
     try {
+      let fileUrl = form.file_url
+      if (selectedFile) {
+        setUploading(true)
+        try {
+          const result = await documentService.upload(selectedFile)
+          fileUrl = result.url
+        } catch {
+          setUploadError(t('documents.uploadError'))
+          return
+        } finally {
+          setUploading(false)
+        }
+      }
       const payload = {
         title: form.title,
         category: form.category,
         tenant_id: form.tenant_id || null,
-        file_url: form.file_url,
+        file_url: fileUrl,
         issue_date: form.issue_date || null,
         expiry_date: form.expiry_date || null,
         note: form.note,
@@ -185,7 +216,7 @@ export function Documents() {
     }
   }
 
-  const isSaveDisabled = saving || !form.title
+  const isSaveDisabled = saving || uploading || !form.title
 
   const categoryBadgeVariant = (cat: DocumentCategory) => {
     switch (cat) {
@@ -486,12 +517,52 @@ export function Documents() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>{t('documents.fileUrl')}</Label>
-              <Input
-                placeholder={t('documents.fileUrlPlaceholder')}
-                value={form.file_url}
-                onChange={(e) => setForm((f) => ({ ...f, file_url: e.target.value }))}
-              />
+              <Label>{t('documents.file')}</Label>
+              {(selectedFile || form.file_url) && (
+                <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm bg-muted/40">
+                  <Paperclip className="w-4 h-4 text-muted-foreground shrink-0" />
+                  {selectedFile ? (
+                    <span className="flex-1 truncate">{selectedFile.name}</span>
+                  ) : (
+                    <a
+                      href={form.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 truncate text-primary hover:underline"
+                    >
+                      {form.file_url.split('/').pop()}
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedFile(null); setForm((f) => ({ ...f, file_url: '' })) }}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <label className={cn(
+                  'flex items-center gap-2 cursor-pointer rounded-md border px-3 py-2 text-sm',
+                  'hover:bg-muted/50 transition-colors',
+                  saving && 'opacity-50 pointer-events-none'
+                )}>
+                  <Paperclip className="w-4 h-4" />
+                  {(selectedFile || form.file_url) ? t('documents.changeFile') : t('documents.chooseFile')}
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx"
+                    onChange={handleFileChange}
+                    disabled={saving}
+                  />
+                </label>
+                <span className="text-xs text-muted-foreground">{t('documents.fileHint')}</span>
+              </div>
+              {uploadError && (
+                <p className="text-xs text-destructive">{uploadError}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -526,7 +597,9 @@ export function Documents() {
               {t('common.cancel')}
             </Button>
             <Button onClick={handleSave} disabled={isSaveDisabled}>
-              {saving
+              {uploading
+                ? t('documents.uploading')
+                : saving
                 ? t('common.loading')
                 : editingItem
                 ? t('documents.saveChanges')

@@ -16,6 +16,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
+	"github.com/gofiber/fiber/v3/middleware/static"
 )
 
 // @title  API
@@ -51,6 +52,7 @@ func main() {
 	app := fiber.New(fiber.Config{
 		AppName:      "Horpug API v1.0",
 		ErrorHandler: deliveryhttp.ErrorHandler,
+		BodyLimit:    20 * 1024 * 1024, // 20MB for file uploads
 	})
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     cfg.CORSOrigins,
@@ -77,8 +79,10 @@ func main() {
 		return c.JSON(fiber.Map{"status": "up", "database": "connected"})
 	})
 
+	app.Use("/uploads", static.New(cfg.UploadDir))
+
 	setupScalarDocs(app)
-	deliveryhttp.SetupRoutes(app, container)
+	deliveryhttp.SetupRoutes(app, container, cfg)
 
 	go func() {
 		time.Sleep(200 * time.Millisecond)

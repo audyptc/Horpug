@@ -3,6 +3,7 @@ package http
 import (
 	"time"
 
+	"apigofiberhorpug/config"
 	"apigofiberhorpug/internal/bootstrap"
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/delivery/http/middleware"
@@ -12,7 +13,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/limiter"
 )
 
-func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
+func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	authH := v1.NewAuthHandler(c.AuthUC)
 	userH := v1.NewUserHandler(c.UserUC, c.ActivityLogUC)
 	roleH := v1.NewRoleHandler(c.RoleUC, c.ActivityLogUC)
@@ -34,7 +35,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
 	reportH := v1.NewReportHandler(c.ReportUC)
 	parkingH := v1.NewParkingHandler(c.ParkingUC)
 	parcelH := v1.NewParcelHandler(c.ParcelUC)
-	documentH := v1.NewDocumentHandler(c.DocumentUC)
+	documentH := v1.NewDocumentHandler(c.DocumentUC, cfg.UploadDir, cfg.UploadBaseURL)
 	notificationH := v1.NewNotificationHandler(c.NotificationUC)
 	searchH := v1.NewSearchHandler(c.SearchUC)
 	activityLogH := v1.NewActivityLogHandler(c.ActivityLogUC)
@@ -211,6 +212,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container) {
 	documentsGroup := protected.Group("/documents")
 	documentsGroup.Get("/", middleware.RequirePermission("documents.read"), documentH.List)
 	documentsGroup.Post("/", middleware.RequirePermission("documents.create"), documentH.Create)
+	documentsGroup.Post("/upload", middleware.RequirePermission("documents.create"), documentH.Upload)
 	documentsGroup.Get("/:id", middleware.RequirePermission("documents.read"), documentH.GetByID)
 	documentsGroup.Put("/:id", middleware.RequirePermission("documents.update"), documentH.Update)
 	documentsGroup.Delete("/:id", middleware.RequirePermission("documents.delete"), documentH.Delete)

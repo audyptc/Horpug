@@ -18,6 +18,8 @@ type Config struct {
 	AccessTokenDuration  time.Duration
 	RefreshTokenDuration time.Duration
 	CORSOrigins          []string
+	UploadDir            string
+	UploadBaseURL        string
 }
 
 func Load() (*Config, error) {
@@ -67,6 +69,8 @@ func Load() (*Config, error) {
 		AccessTokenDuration:  accessTokenDuration,
 		RefreshTokenDuration: refreshTokenDuration,
 		CORSOrigins:          corsOrigins("CORS_ORIGINS", "http://localhost,http://localhost:5173,http://localhost:3000"),
+		UploadDir:            strOrDefault("UPLOAD_DIR", "./uploads"),
+		UploadBaseURL:        strOrDefault("UPLOAD_BASE_URL", "http://localhost:8080"),
 	}, nil
 }
 

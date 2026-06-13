@@ -28,4 +28,14 @@ export const documentService = {
   delete(id: string) {
     return api.delete(`/documents/${id}`)
   },
+
+  upload(file: File) {
+    const form = new FormData()
+    form.append('file', file)
+    return api
+      .post<{ data: { url: string } }>('/documents/upload', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data.data)
+  },
 }
