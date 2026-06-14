@@ -100,11 +100,11 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 
 	// Room Types
 	roomTypesGroup := protected.Group("/room-types")
-	roomTypesGroup.Get("/", middleware.RequirePermission("rooms.read"), roomTypeH.List)
-	roomTypesGroup.Post("/", middleware.RequirePermission("rooms.create"), roomTypeH.Create)
-	roomTypesGroup.Get("/:id", middleware.RequirePermission("rooms.read"), roomTypeH.GetByID)
-	roomTypesGroup.Put("/:id", middleware.RequirePermission("rooms.update"), roomTypeH.Update)
-	roomTypesGroup.Delete("/:id", middleware.RequirePermission("rooms.delete"), roomTypeH.Delete)
+	roomTypesGroup.Get("/", middleware.RequirePermission("settings/room-types.read"), roomTypeH.List)
+	roomTypesGroup.Post("/", middleware.RequirePermission("settings/room-types.create"), roomTypeH.Create)
+	roomTypesGroup.Get("/:id", middleware.RequirePermission("settings/room-types.read"), roomTypeH.GetByID)
+	roomTypesGroup.Put("/:id", middleware.RequirePermission("settings/room-types.update"), roomTypeH.Update)
+	roomTypesGroup.Delete("/:id", middleware.RequirePermission("settings/room-types.delete"), roomTypeH.Delete)
 
 	// Tenants
 	tenantsGroup := protected.Group("/tenants")
@@ -124,21 +124,21 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 
 	// Electric Meter Readings
 	electricMetersGroup := protected.Group("/electric-meters")
-	electricMetersGroup.Get("/", middleware.RequirePermission("meters.read"), electricMeterH.List)
-	electricMetersGroup.Post("/", middleware.RequirePermission("meters.create"), electricMeterH.Create)
-	electricMetersGroup.Get("/latest", middleware.RequirePermission("meters.read"), electricMeterH.GetLatestByRoomID)
-	electricMetersGroup.Get("/:id", middleware.RequirePermission("meters.read"), electricMeterH.GetByID)
-	electricMetersGroup.Put("/:id", middleware.RequirePermission("meters.update"), electricMeterH.Update)
-	electricMetersGroup.Delete("/:id", middleware.RequirePermission("meters.delete"), electricMeterH.Delete)
+	electricMetersGroup.Get("/", middleware.RequirePermission("electric-meters.read"), electricMeterH.List)
+	electricMetersGroup.Post("/", middleware.RequirePermission("electric-meters.create"), electricMeterH.Create)
+	electricMetersGroup.Get("/latest", middleware.RequirePermission("electric-meters.read"), electricMeterH.GetLatestByRoomID)
+	electricMetersGroup.Get("/:id", middleware.RequirePermission("electric-meters.read"), electricMeterH.GetByID)
+	electricMetersGroup.Put("/:id", middleware.RequirePermission("electric-meters.update"), electricMeterH.Update)
+	electricMetersGroup.Delete("/:id", middleware.RequirePermission("electric-meters.delete"), electricMeterH.Delete)
 
 	// Water Meter Readings
 	waterMetersGroup := protected.Group("/water-meters")
-	waterMetersGroup.Get("/", middleware.RequirePermission("meters.read"), waterMeterH.List)
-	waterMetersGroup.Post("/", middleware.RequirePermission("meters.create"), waterMeterH.Create)
-	waterMetersGroup.Get("/latest", middleware.RequirePermission("meters.read"), waterMeterH.GetLatestByRoomID)
-	waterMetersGroup.Get("/:id", middleware.RequirePermission("meters.read"), waterMeterH.GetByID)
-	waterMetersGroup.Put("/:id", middleware.RequirePermission("meters.update"), waterMeterH.Update)
-	waterMetersGroup.Delete("/:id", middleware.RequirePermission("meters.delete"), waterMeterH.Delete)
+	waterMetersGroup.Get("/", middleware.RequirePermission("water-meters.read"), waterMeterH.List)
+	waterMetersGroup.Post("/", middleware.RequirePermission("water-meters.create"), waterMeterH.Create)
+	waterMetersGroup.Get("/latest", middleware.RequirePermission("water-meters.read"), waterMeterH.GetLatestByRoomID)
+	waterMetersGroup.Get("/:id", middleware.RequirePermission("water-meters.read"), waterMeterH.GetByID)
+	waterMetersGroup.Put("/:id", middleware.RequirePermission("water-meters.update"), waterMeterH.Update)
+	waterMetersGroup.Delete("/:id", middleware.RequirePermission("water-meters.delete"), waterMeterH.Delete)
 
 	// Bills
 	billsGroup := protected.Group("/bills")
@@ -149,10 +149,10 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	billsGroup.Delete("/:id", middleware.RequirePermission("bills.delete"), billH.Delete)
 
 	// Dashboard
-	protected.Get("/dashboard/summary", dashboardH.Summary)
+	protected.Get("/dashboard/summary", middleware.RequirePermission(".read"), dashboardH.Summary)
 
 	// Analytics
-	protected.Get("/analytics/summary", analyticsH.Summary)
+	protected.Get("/analytics/summary", middleware.RequirePermission("analytics.read"), analyticsH.Summary)
 
 	// Maintenance Requests
 	maintenanceGroup := protected.Group("/maintenance")
