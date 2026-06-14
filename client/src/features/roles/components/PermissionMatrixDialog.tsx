@@ -71,7 +71,7 @@ export function PermissionMatrixDialog({ role, open, onOpenChange }: Props) {
       })
       .catch(() => setError(t('roles.permLoadError')))
       .finally(() => setLoading(false))
-  }, [open, role?.id, t])
+  }, [open, role, t])
 
   function togglePermission(menuId: string, permId: string) {
     setMatrix((prev) => {

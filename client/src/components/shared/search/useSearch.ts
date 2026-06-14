@@ -11,24 +11,35 @@ export function useSearch() {
     if (query.trim().length < 2) {
       setResults(null)
       setError(false)
+      setLoading(false)
       return
     }
 
+    let cancelled = false
     const timer = setTimeout(async () => {
       setLoading(true)
       setError(false)
       try {
         const data = await searchService.search(query.trim())
-        setResults(data)
+        if (!cancelled) {
+          setResults(data)
+        }
       } catch {
-        setResults(null)
-        setError(true)
+        if (!cancelled) {
+          setResults(null)
+          setError(true)
+        }
       } finally {
-        setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+        }
       }
     }, 500)
 
-    return () => clearTimeout(timer)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
   }, [query])
 
   return { query, setQuery, results, loading, error }

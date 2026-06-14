@@ -134,8 +134,8 @@ export function Header({ onMenuClick }: HeaderProps) {
               </DropdownMenuItem>
             ) : (
               notifications.map((n) => {
-                let msg = ''
-                let sub = ''
+                let msg: string
+                let sub: string
                 if (n.type === 'overdue_bill') {
                   msg = t('header.notifOverdue', {
                     room: n.room_number,

@@ -336,7 +336,7 @@ function AlertRow({
           <p className="text-xs text-muted-foreground">฿{new Intl.NumberFormat('th-TH').format(amount)}</p>
         )}
       </div>
-      <Badge variant={variant as any}>
+      <Badge variant={variant}>
         {value} {t('dashboard.items')}
       </Badge>
     </div>
