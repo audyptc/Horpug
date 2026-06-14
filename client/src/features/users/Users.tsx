@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
 import {
@@ -22,7 +22,6 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,14 +29,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
@@ -47,11 +38,12 @@ import {
 } from '@/components/ui/select'
 import { userService } from '@/features/users/userService'
 import { roleService } from '@/features/roles/roleService'
-import { useToast } from '@/components/ui/toast'
 import type { ApiUser, ApiRole } from '@/types'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/dateUtils'
 import { usePermission } from '@/hooks/usePermission'
+import { UserFormDialog } from './components/UserFormDialog'
+import { DeleteUserDialog } from './components/DeleteUserDialog'
 
 type StatusFilter = 'all' | 'active' | 'inactive'
 
@@ -95,17 +87,8 @@ function getInitials(name: string) {
   return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
 }
 
-const emptyForm = {
-  full_name: '',
-  email: '',
-  password: '',
-  role_id: '',
-  is_active: true,
-}
-
 export function Users() {
   const { t } = useTranslation()
-  const toast = useToast()
   const { canCreate, canUpdate, canDelete, canExport } = usePermission('/settings/users')
   const [users, setUsers] = useState<ApiUser[]>([])
   const [roles, setRoles] = useState<ApiRole[]>([])
@@ -122,9 +105,6 @@ export function Users() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<ApiUser | null>(null)
   const [deletingUser, setDeletingUser] = useState<ApiUser | null>(null)
-  const [form, setForm] = useState(emptyForm)
-  const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState('')
   const [exporting, setExporting] = useState(false)
 
   const fetchUsers = useCallback(async (p: number, pp: number) => {
@@ -191,82 +171,18 @@ export function Users() {
 
   function openCreate() {
     setEditingUser(null)
-    setForm(emptyForm)
-    setSaveError('')
     setDialogOpen(true)
   }
 
   function openEdit(user: ApiUser) {
     setEditingUser(user)
-    setForm({
-      full_name: user.full_name,
-      email: user.email,
-      password: '',
-      role_id: user.role?.id ?? '',
-      is_active: user.is_active,
-    })
-    setSaveError('')
     setDialogOpen(true)
   }
 
-  async function handleSave() {
-    if (!form.full_name || !form.email) return
-    setSaving(true)
-    setSaveError('')
-    try {
-      if (editingUser) {
-        const payload: Record<string, unknown> = {
-          full_name: form.full_name,
-          is_active: form.is_active,
-        }
-        if (form.password) payload.password = form.password
-
-        await userService.update(editingUser.id, payload)
-
-        if (form.role_id && form.role_id !== editingUser.role?.id) {
-          await userService.assignRole(editingUser.id, { role_id: form.role_id })
-        }
-        toast.success(t('users.editSuccess'))
-      } else {
-        if (!form.password) return
-        const created = await userService.create({
-          full_name: form.full_name,
-          email: form.email,
-          password: form.password,
-        })
-
-        if (form.role_id) {
-          await userService.assignRole(created.id, { role_id: form.role_id })
-        }
-        toast.success(t('users.createSuccess'))
-      }
-      setDialogOpen(false)
-      await fetchUsers(page, perPage)
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        t('users.saveError')
-      setSaveError(msg)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function handleDelete() {
-    if (!deletingUser) return
-    try {
-      await userService.delete(deletingUser.id)
-      toast.success(t('users.deleteSuccess'))
-      const newPage = users.length === 1 && page > 1 ? page - 1 : page
-      setPage(newPage)
-      await fetchUsers(newPage, perPage)
-    } catch (err: unknown) {
-      const reason = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-      toast.error(reason ? `${t('users.deleteError')}: ${reason}` : t('users.deleteError'))
-    } finally {
-      setDeleteDialogOpen(false)
-      setDeletingUser(null)
-    }
+  async function handleUserDeleted() {
+    const newPage = users.length === 1 && page > 1 ? page - 1 : page
+    if (newPage !== page) setPage(newPage)
+    await fetchUsers(newPage, perPage)
   }
 
   return (
@@ -297,7 +213,6 @@ export function Users() {
         </div>
       )}
 
-      {/* Table */}
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -535,7 +450,6 @@ export function Users() {
                   </span>
 
                   <div className="flex items-center gap-4">
-                    {/* Per-page selector */}
                     <div className="flex items-center gap-2">
                       <span className="hidden sm:inline shrink-0">{t('users.perPage')}</span>
                       <Select value={String(perPage)} onValueChange={handlePerPageChange}>
@@ -550,47 +464,21 @@ export function Users() {
                       </Select>
                     </div>
 
-                    {/* Page info */}
                     <span className="shrink-0">
                       {t('users.page')} {page} {t('users.of')} {totalPages}
                     </span>
 
-                    {/* Nav buttons */}
                     <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setPage(1)}
-                        disabled={page === 1}
-                      >
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPage(1)} disabled={page === 1}>
                         <ChevronsLeft className="w-4 h-4" />
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setPage((p) => p - 1)}
-                        disabled={page === 1}
-                      >
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPage((p) => p - 1)} disabled={page === 1}>
                         <ChevronLeft className="w-4 h-4" />
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setPage((p) => p + 1)}
-                        disabled={page >= totalPages}
-                      >
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPage((p) => p + 1)} disabled={page >= totalPages}>
                         <ChevronRight className="w-4 h-4" />
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setPage(totalPages)}
-                        disabled={page >= totalPages}
-                      >
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPage(totalPages)} disabled={page >= totalPages}>
                         <ChevronsRight className="w-4 h-4" />
                       </Button>
                     </div>
@@ -602,126 +490,20 @@ export function Users() {
         </CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingUser ? t('users.editUser') : t('users.createUser')}</DialogTitle>
-            <DialogDescription>
-              {editingUser ? t('users.editDesc') : t('users.createDesc')}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2 space-y-1.5">
-                <Label>{t('users.fullName')} *</Label>
-                <Input
-                  placeholder="John Doe"
-                  value={form.full_name}
-                  onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))}
-                />
-              </div>
-              {!editingUser && (
-                <div className="col-span-2 space-y-1.5">
-                  <Label>{t('users.email')} *</Label>
-                  <Input
-                    type="email"
-                    placeholder="john@example.com"
-                    value={form.email}
-                    onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                  />
-                </div>
-              )}
-              <div className="col-span-2 space-y-1.5">
-                <Label>
-                  {t('users.password')}
-                  {!editingUser && ' *'}
-                  {editingUser && (
-                    <span className="ml-1 text-xs text-muted-foreground">
-                      ({t('users.passwordOptional')})
-                    </span>
-                  )}
-                </Label>
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('users.role')}</Label>
-                <Select
-                  value={form.role_id}
-                  onValueChange={(v) => setForm((f) => ({ ...f, role_id: v }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('users.selectRole')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roles.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        {r.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('users.status')}</Label>
-                <Select
-                  value={form.is_active ? 'active' : 'inactive'}
-                  onValueChange={(v) => setForm((f) => ({ ...f, is_active: v === 'active' }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">{t('users.statuses.active')}</SelectItem>
-                    <SelectItem value="inactive">{t('users.statuses.inactive')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-          {saveError && (
-            <p className="text-sm text-destructive px-1 pb-2">{saveError}</p>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={saving || !form.full_name || (!editingUser && (!form.email || !form.password))}
-            >
-              {saving ? t('common.loading') : editingUser ? t('users.saveChanges') : t('users.createUser')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UserFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editingUser={editingUser}
+        roles={roles}
+        onSaved={() => fetchUsers(page, perPage)}
+      />
 
-      {/* Delete confirm */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{t('users.deleteUser')}</DialogTitle>
-            <DialogDescription>
-              {t('users.deleteConfirm')}{' '}
-              <span className="font-semibold text-foreground">{deletingUser?.full_name}</span>?{' '}
-              {t('users.deleteWarning')}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              {t('common.delete')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteUserDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        user={deletingUser}
+        onDeleted={handleUserDeleted}
+      />
     </div>
   )
 }
