@@ -1,6 +1,6 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Save, Bell, Palette, Sun, Moon, User2, Camera, KeyRound } from 'lucide-react'
+import { Save, Palette, Sun, Moon, User2, KeyRound, Loader2, UserCircle } from 'lucide-react'
 import { useTheme, SIDEBAR_COLORS } from '@/lib/theme'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -15,25 +15,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useAuth } from '@/features/auth/AuthContext'
 import { userService } from '@/features/users/userService'
 import type { ApiUser } from '@/types'
 import { cn } from '@/lib/utils'
 
-function getAvatar(name: string) {
-  return `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(name)}`
-}
 
 export function Settings() {
   const { t, i18n } = useTranslation()
   const { theme, setTheme, sidebarColor, setSidebarColor } = useTheme()
   const { userId } = useAuth()
-  const [saved, setSaved] = useState(false)
   const [activeSection, setActiveSection] = useState('profile')
   const [currentUser, setCurrentUser] = useState<ApiUser | null>(null)
+
   const [profile, setProfile] = useState({ name: '', email: '' })
-  const [notifs, setNotifs] = useState({ newUsers: true, security: true, updates: false })
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState('')
+
+  const [password, setPassword] = useState({ newPass: '', confirm: '' })
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [passwordSaved, setPasswordSaved] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
 
   useEffect(() => {
     if (!userId) return
@@ -43,9 +46,48 @@ export function Settings() {
     }).catch(() => {})
   }, [userId])
 
-  function handleSave() {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  async function handleSave() {
+    if (!userId) return
+    setSaving(true)
+    setSaveError('')
+    try {
+      await userService.update(userId, { full_name: profile.name })
+      setCurrentUser((u) => u ? { ...u, full_name: profile.name } : u)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch {
+      setSaveError(t('common.errorRetry', { defaultValue: 'เกิดข้อผิดพลาด ลองใหม่อีกครั้ง' }))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handlePasswordChange() {
+    setPasswordError('')
+    if (!password.newPass) {
+      setPasswordError(t('settings.passwordRequired', { defaultValue: 'กรุณากรอกรหัสผ่านใหม่' }))
+      return
+    }
+    if (password.newPass.length < 6) {
+      setPasswordError(t('settings.passwordTooShort', { defaultValue: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' }))
+      return
+    }
+    if (password.newPass !== password.confirm) {
+      setPasswordError(t('settings.passwordMismatch', { defaultValue: 'รหัสผ่านใหม่ไม่ตรงกัน' }))
+      return
+    }
+    if (!userId) return
+    setPasswordSaving(true)
+    try {
+      await userService.update(userId, { password: password.newPass })
+      setPassword({ newPass: '', confirm: '' })
+      setPasswordSaved(true)
+      setTimeout(() => setPasswordSaved(false), 2000)
+    } catch {
+      setPasswordError(t('common.errorRetry', { defaultValue: 'เกิดข้อผิดพลาด ลองใหม่อีกครั้ง' }))
+    } finally {
+      setPasswordSaving(false)
+    }
   }
 
   function scrollTo(id: string) {
@@ -55,18 +97,9 @@ export function Settings() {
 
   const navItems = [
     { id: 'profile', label: t('settings.profile'), icon: User2, color: 'text-violet-500' },
-    { id: 'notifications', label: t('settings.notifications'), icon: Bell, color: 'text-blue-500' },
     { id: 'security', label: t('settings.security'), icon: KeyRound, color: 'text-emerald-500' },
     { id: 'appearance', label: t('settings.appearance'), icon: Palette, color: 'text-amber-500' },
   ]
-
-  const notifItems = [
-    { key: 'newUsers' as const, label: t('settings.notif.newUsers'), desc: t('settings.notif.newUsersDesc') },
-    { key: 'security' as const, label: t('settings.notif.security'), desc: t('settings.notif.securityDesc') },
-    { key: 'updates' as const, label: t('settings.notif.updates'), desc: t('settings.notif.updatesDesc') },
-  ]
-
-  const avatarName = currentUser?.full_name ?? profile.name ?? '?'
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -76,8 +109,8 @@ export function Settings() {
           <h1 className="text-2xl font-bold tracking-tight">{t('settings.title')}</h1>
           <p className="text-muted-foreground text-sm mt-1">{t('settings.subtitle')}</p>
         </div>
-        <Button onClick={handleSave} className="gap-2 min-w-28 shrink-0">
-          <Save className="w-4 h-4" />
+        <Button onClick={handleSave} disabled={saving} className="gap-2 min-w-28 shrink-0">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {saved ? t('common.saved') : t('common.save')}
         </Button>
       </div>
@@ -114,19 +147,8 @@ export function Settings() {
             <div className="h-24 bg-linear-to-r from-violet-500/20 via-violet-400/10 to-transparent" />
             <CardHeader className="-mt-10 pb-4">
               <div className="flex items-end justify-between">
-                <div className="relative">
-                  <Avatar className="h-20 w-20 ring-4 ring-background shadow-md">
-                    <AvatarImage src={avatarName !== '?' ? getAvatar(avatarName) : undefined} />
-                    <AvatarFallback className="text-lg">
-                      {avatarName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <button
-                    type="button"
-                    className="absolute bottom-0 right-0 p-1.5 rounded-full bg-background border shadow-sm hover:bg-muted transition-colors"
-                  >
-                    <Camera className="w-3 h-3 text-muted-foreground" />
-                  </button>
+                <div className="h-20 w-20 flex items-center justify-center rounded-full ring-4 ring-background shadow-md bg-muted">
+                  <UserCircle className="w-12 h-12 text-muted-foreground" />
                 </div>
                 {currentUser?.role && (
                   <Badge variant="secondary" className="capitalize mb-1">
@@ -140,7 +162,7 @@ export function Settings() {
               </div>
             </CardHeader>
             <Separator />
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label>{t('settings.fullName')}</Label>
@@ -150,56 +172,23 @@ export function Settings() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>{t('settings.email')}</Label>
+                  <Label className="flex items-center gap-1.5">
+                    {t('settings.email')}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      ({t('settings.emailReadOnly', { defaultValue: 'แก้ไขไม่ได้' })})
+                    </span>
+                  </Label>
                   <Input
                     type="email"
                     value={profile.email}
-                    onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))}
+                    disabled
+                    className="disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Notifications */}
-          <Card id="notifications">
-            <CardHeader className="flex flex-row items-center gap-3 pb-4">
-              <div className="p-2 rounded-lg bg-blue-500/10 shrink-0">
-                <Bell className="w-4 h-4 text-blue-500" />
-              </div>
-              <div>
-                <CardTitle className="text-base">{t('settings.notifications')}</CardTitle>
-                <CardDescription>{t('settings.notificationsDesc')}</CardDescription>
-              </div>
-            </CardHeader>
-            <Separator />
-            <CardContent className="pt-2">
-              {notifItems.map((item, i) => (
-                <div key={item.key}>
-                  <div className="flex items-center justify-between py-3.5">
-                    <div>
-                      <p className="text-sm font-medium">{item.label}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setNotifs((n) => ({ ...n, [item.key]: !n[item.key] }))}
-                      className={cn(
-                        'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none shrink-0 ml-4',
-                        notifs[item.key] ? 'bg-primary' : 'bg-muted-foreground/30'
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          'inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform',
-                          notifs[item.key] ? 'translate-x-5' : 'translate-x-0.5'
-                        )}
-                      />
-                    </button>
-                  </div>
-                  {i < notifItems.length - 1 && <Separator />}
-                </div>
-              ))}
+              {saveError && (
+                <p className="text-sm text-destructive">{saveError}</p>
+              )}
             </CardContent>
           </Card>
 
@@ -216,20 +205,44 @@ export function Settings() {
             </CardHeader>
             <Separator />
             <CardContent className="pt-6 space-y-4">
-              <div className="space-y-1.5 max-w-sm">
-                <Label>{t('settings.currentPassword')}</Label>
-                <Input type="password" placeholder="••••••••" />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-sm sm:max-w-none">
                 <div className="space-y-1.5">
                   <Label>{t('settings.newPassword')}</Label>
-                  <Input type="password" placeholder="••••••••" />
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    value={password.newPass}
+                    onChange={(e) => setPassword((p) => ({ ...p, newPass: e.target.value }))}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>{t('settings.confirmPassword')}</Label>
-                  <Input type="password" placeholder="••••••••" />
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    value={password.confirm}
+                    onChange={(e) => setPassword((p) => ({ ...p, confirm: e.target.value }))}
+                  />
                 </div>
               </div>
+              {passwordError && (
+                <p className="text-sm text-destructive">{passwordError}</p>
+              )}
+              <Button
+                onClick={handlePasswordChange}
+                disabled={passwordSaving || (!password.newPass && !password.confirm)}
+                variant="outline"
+                className="gap-2"
+              >
+                {passwordSaving
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <KeyRound className="w-4 h-4" />
+                }
+                {passwordSaved
+                  ? t('settings.passwordChanged', { defaultValue: 'เปลี่ยนรหัสผ่านแล้ว' })
+                  : t('settings.changePassword', { defaultValue: 'เปลี่ยนรหัสผ่าน' })
+                }
+              </Button>
             </CardContent>
           </Card>
 
@@ -305,39 +318,24 @@ export function Settings() {
 
               <Separator />
 
-              {/* Language & Timezone */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label>{t('settings.language')}</Label>
-                  <Select
-                    value={i18n.language}
-                    onValueChange={(v) => {
-                      i18n.changeLanguage(v)
-                      localStorage.setItem('lang', v)
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">🇺🇸 English</SelectItem>
-                      <SelectItem value="th">🇹🇭 ภาษาไทย</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>{t('settings.timezone')}</Label>
-                  <Select defaultValue="asia_bangkok">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="asia_bangkok">Asia/Bangkok (GMT+7)</SelectItem>
-                      <SelectItem value="utc">UTC</SelectItem>
-                      <SelectItem value="us_eastern">US/Eastern</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Language */}
+              <div className="space-y-1.5 max-w-xs">
+                <Label>{t('settings.language')}</Label>
+                <Select
+                  value={i18n.language}
+                  onValueChange={(v) => {
+                    i18n.changeLanguage(v)
+                    localStorage.setItem('lang', v)
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="en">🇺🇸 English</SelectItem>
+                    <SelectItem value="th">🇹🇭 ภาษาไทย</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>

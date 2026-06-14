@@ -9,6 +9,7 @@ import {
   Trash2,
   ShieldCheck,
   UserCog,
+  UserCircle,
   SearchX,
   RefreshCw,
   ChevronLeft,
@@ -20,7 +21,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
   DropdownMenu,
@@ -65,27 +65,6 @@ function getRoleColor(roleName: string) {
   return roleColorMap[roleName.toLowerCase()] ?? 'text-slate-600 bg-slate-500/10'
 }
 
-function getAvatar(name: string) {
-  return `https://api.dicebear.com/9.x/micah/svg?seed=${encodeURIComponent(name)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`
-}
-
-const avatarGradients = [
-  'from-violet-500 to-purple-600',
-  'from-blue-500 to-cyan-500',
-  'from-emerald-500 to-teal-600',
-  'from-orange-500 to-amber-500',
-  'from-rose-500 to-pink-600',
-  'from-indigo-500 to-blue-600',
-] as const
-
-function getAvatarGradient(name: string) {
-  const hash = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
-  return avatarGradients[hash % avatarGradients.length]
-}
-
-function getInitials(name: string) {
-  return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
-}
 
 export function Users() {
   const { t } = useTranslation()
@@ -299,12 +278,7 @@ export function Users() {
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10 ring-2 ring-offset-2 ring-muted">
-                              <AvatarImage src={getAvatar(user.full_name)} className="object-cover" />
-                              <AvatarFallback className={cn('text-xs font-semibold text-white bg-linear-to-br', getAvatarGradient(user.full_name))}>
-                                {getInitials(user.full_name)}
-                              </AvatarFallback>
-                            </Avatar>
+                            <UserCircle className="size-6 shrink-0 text-muted-foreground" />
                             <div>
                               <p className="font-medium">{user.full_name}</p>
                               <p className="text-xs text-muted-foreground">{user.email}</p>
@@ -390,12 +364,7 @@ export function Users() {
               <div className="md:hidden divide-y">
                 {filtered.map((user) => (
                   <div key={user.id} className="p-4 flex items-center gap-3">
-                    <Avatar className="h-11 w-11 shrink-0 ring-2 ring-offset-2 ring-muted">
-                      <AvatarImage src={getAvatar(user.full_name)} className="object-cover" />
-                      <AvatarFallback className={cn('text-xs font-semibold text-white bg-linear-to-br', getAvatarGradient(user.full_name))}>
-                        {getInitials(user.full_name)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <UserCircle className="size-6 shrink-0 text-muted-foreground" />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{user.full_name}</p>
                       <p className="text-xs text-muted-foreground truncate">{user.email}</p>
