@@ -19,7 +19,7 @@ import { ElectricMeterDialog, type ElectricMeterForm } from '@/features/electric
 import { ElectricMeterDeleteDialog } from '@/features/electric-meters/components/ElectricMeterDeleteDialog'
 import type { ApiElectricMeter, ApiRoom } from '@/types'
 import { cn } from '@/lib/utils'
-import { formatDate } from '@/lib/dateUtils'
+import { formatDate, formatMonth } from '@/lib/dateUtils'
 import { usePermission } from '@/hooks/usePermission'
 
 const PER_PAGE_OPTIONS = [10, 20, 50] as const
@@ -27,6 +27,7 @@ const PER_PAGE_OPTIONS = [10, 20, 50] as const
 const emptyForm: ElectricMeterForm = {
   room_id: '',
   billing_type: 'meter',
+  billing_month: '',
   reading_date: '',
   previous_reading: '',
   current_reading: '',
@@ -95,6 +96,7 @@ export function ElectricMeters() {
     setForm({
       room_id: r.room_id,
       billing_type: r.billing_type,
+      billing_month: r.billing_month ? r.billing_month.slice(0, 7) : '',
       reading_date: toDateInput(r.reading_date),
       previous_reading: String(r.previous_reading),
       current_reading: r.current_reading != null ? String(r.current_reading) : '',
@@ -112,6 +114,7 @@ export function ElectricMeters() {
       if (editing) {
         await electricMeterService.update(editing.id, {
           billing_type: form.billing_type,
+          billing_month: form.billing_month ? `${form.billing_month}-01T00:00:00Z` : null,
           reading_date: `${form.reading_date}T00:00:00Z`,
           previous_reading: form.previous_reading ? Number(form.previous_reading) : undefined,
           current_reading: form.current_reading ? Number(form.current_reading) : undefined,
@@ -123,6 +126,7 @@ export function ElectricMeters() {
         await electricMeterService.create({
           room_id: form.room_id,
           billing_type: form.billing_type,
+          billing_month: form.billing_month ? `${form.billing_month}-01T00:00:00Z` : undefined,
           reading_date: `${form.reading_date}T00:00:00Z`,
           previous_reading: form.previous_reading ? Number(form.previous_reading) : undefined,
           current_reading: form.current_reading ? Number(form.current_reading) : undefined,
@@ -205,6 +209,7 @@ export function ElectricMeters() {
                     <tr className="border-b bg-muted/40">
                       <th className="text-left px-6 py-3 font-medium text-muted-foreground">{t('electricMeters.colRoom')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colBillingType')}</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colBillingMonth')}</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colDate')}</th>
                       <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colPrev')}</th>
                       <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t('electricMeters.colCurr')}</th>
@@ -223,6 +228,9 @@ export function ElectricMeters() {
                           <Badge variant={r.billing_type === 'flat' ? 'secondary' : 'outline'}>
                             {t(`electricMeters.billingTypes.${r.billing_type}`)}
                           </Badge>
+                        </td>
+                        <td className="px-4 py-4 text-muted-foreground">
+                          {r.billing_month ? formatMonth(r.billing_month) : <span className="text-muted-foreground/40">—</span>}
                         </td>
                         <td className="px-4 py-4 text-muted-foreground">{formatDate(r.reading_date)}</td>
                         <td className="px-4 py-4 text-right text-muted-foreground">
@@ -287,6 +295,9 @@ export function ElectricMeters() {
                           {t(`electricMeters.billingTypes.${r.billing_type}`)}
                         </Badge>
                       </div>
+                      {r.billing_month && (
+                        <p className="text-xs font-medium">{formatMonth(r.billing_month)}</p>
+                      )}
                       <p className="text-xs text-muted-foreground">{formatDate(r.reading_date)}</p>
                       {r.billing_type === 'meter' && r.previous_reading != null && r.current_reading != null && (
                         <p className="text-xs text-muted-foreground">

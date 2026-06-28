@@ -4,6 +4,7 @@ export interface ApiWaterMeter {
   id: string
   room_id: string
   billing_type: WaterBillingType
+  billing_month: string | null
   reading_date: string
   previous_reading: number | null
   current_reading: number | null
@@ -20,6 +21,7 @@ export interface ApiWaterMeter {
 export interface CreateWaterMeterPayload {
   room_id: string
   billing_type: WaterBillingType
+  billing_month?: string
   reading_date: string
   previous_reading?: number
   current_reading?: number
@@ -30,6 +32,7 @@ export interface CreateWaterMeterPayload {
 
 export interface UpdateWaterMeterPayload {
   billing_type?: WaterBillingType
+  billing_month?: string | null
   reading_date?: string
   previous_reading?: number
   current_reading?: number

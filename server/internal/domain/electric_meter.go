@@ -16,6 +16,7 @@ type ElectricMeter struct {
 	ID              string              `json:"id"`
 	RoomID          string              `json:"room_id"`
 	BillingType     ElectricBillingType `json:"billing_type"`
+	BillingMonth    *time.Time          `json:"billing_month"`
 	ReadingDate     time.Time           `json:"reading_date"`
 	PreviousReading float64             `json:"previous_reading"`
 	CurrentReading  *float64            `json:"current_reading"`
@@ -39,6 +40,7 @@ type ElectricMeterDetail struct {
 type CreateElectricMeterRequest struct {
 	RoomID          string              `json:"room_id"`
 	BillingType     ElectricBillingType `json:"billing_type"`
+	BillingMonth    *time.Time          `json:"billing_month"`
 	ReadingDate     time.Time           `json:"reading_date"`
 	PreviousReading float64             `json:"previous_reading"`
 	CurrentReading  *float64            `json:"current_reading"`
@@ -49,6 +51,7 @@ type CreateElectricMeterRequest struct {
 
 type UpdateElectricMeterRequest struct {
 	BillingType     ElectricBillingType `json:"billing_type"`
+	BillingMonth    *time.Time          `json:"billing_month"`
 	ReadingDate     time.Time           `json:"reading_date"`
 	PreviousReading float64             `json:"previous_reading"`
 	CurrentReading  *float64            `json:"current_reading"`

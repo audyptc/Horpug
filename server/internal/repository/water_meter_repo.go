@@ -20,7 +20,7 @@ func NewWaterMeterRepo(db *database.DB) *WaterMeterRepo {
 
 const waterMeterDetailSelect = `
 	SELECT
-		w.id, w.room_id, w.billing_type, w.reading_date,
+		w.id, w.room_id, w.billing_type, w.billing_month, w.reading_date,
 		w.previous_reading, w.current_reading, w.unit_price, w.flat_amount,
 		w.note, w.created_at, w.updated_at,
 		COALESCE(w.created_by::text, ''), COALESCE(w.updated_by::text, ''), COALESCE(ub.full_name, ''),
@@ -36,7 +36,7 @@ const waterMeterDetailSelect = `
 func scanWaterMeterDetail(row pgx.Row) (*domain.WaterMeterDetail, error) {
 	d := &domain.WaterMeterDetail{}
 	err := row.Scan(
-		&d.ID, &d.RoomID, &d.BillingType, &d.ReadingDate,
+		&d.ID, &d.RoomID, &d.BillingType, &d.BillingMonth, &d.ReadingDate,
 		&d.PreviousReading, &d.CurrentReading, &d.UnitPrice, &d.FlatAmount,
 		&d.Note, &d.CreatedAt, &d.UpdatedAt,
 		&d.CreatedBy, &d.UpdatedBy, &d.UpdatedByName,
@@ -48,11 +48,11 @@ func scanWaterMeterDetail(row pgx.Row) (*domain.WaterMeterDetail, error) {
 func (r *WaterMeterRepo) FindByID(ctx context.Context, id string) (*domain.WaterMeter, error) {
 	m := &domain.WaterMeter{}
 	err := r.db.Pool.QueryRow(ctx, `
-		SELECT id, room_id, billing_type, reading_date,
+		SELECT id, room_id, billing_type, billing_month, reading_date,
 		       previous_reading, current_reading, unit_price, flat_amount, note, created_at, updated_at,
 		       COALESCE(created_by::text, ''), COALESCE(updated_by::text, '')
 		FROM water_meter_readings WHERE id = $1 AND deleted_at IS NULL`, id).
-		Scan(&m.ID, &m.RoomID, &m.BillingType, &m.ReadingDate,
+		Scan(&m.ID, &m.RoomID, &m.BillingType, &m.BillingMonth, &m.ReadingDate,
 			&m.PreviousReading, &m.CurrentReading, &m.UnitPrice, &m.FlatAmount,
 			&m.Note, &m.CreatedAt, &m.UpdatedAt,
 			&m.CreatedBy, &m.UpdatedBy)
@@ -114,9 +114,9 @@ func (r *WaterMeterRepo) Count(ctx context.Context) (int, error) {
 func (r *WaterMeterRepo) Create(ctx context.Context, m *domain.WaterMeter) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		INSERT INTO water_meter_readings
-		    (id, room_id, billing_type, reading_date, previous_reading, current_reading, unit_price, flat_amount, note, created_by, updated_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULLIF($10, '')::uuid, NULLIF($10, '')::uuid)`,
-		m.ID, m.RoomID, m.BillingType, m.ReadingDate,
+		    (id, room_id, billing_type, billing_month, reading_date, previous_reading, current_reading, unit_price, flat_amount, note, created_by, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULLIF($11, '')::uuid, NULLIF($11, '')::uuid)`,
+		m.ID, m.RoomID, m.BillingType, m.BillingMonth, m.ReadingDate,
 		m.PreviousReading, m.CurrentReading, m.UnitPrice, m.FlatAmount, m.Note, m.CreatedBy)
 	return err
 }
@@ -124,10 +124,10 @@ func (r *WaterMeterRepo) Create(ctx context.Context, m *domain.WaterMeter) error
 func (r *WaterMeterRepo) Update(ctx context.Context, m *domain.WaterMeter) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		UPDATE water_meter_readings
-		SET billing_type = $2, reading_date = $3, previous_reading = $4, current_reading = $5,
-		    unit_price = $6, flat_amount = $7, note = $8, updated_by = NULLIF($9, '')::uuid, updated_at = NOW()
+		SET billing_type = $2, billing_month = $3, reading_date = $4, previous_reading = $5, current_reading = $6,
+		    unit_price = $7, flat_amount = $8, note = $9, updated_by = NULLIF($10, '')::uuid, updated_at = NOW()
 		WHERE id = $1`,
-		m.ID, m.BillingType, m.ReadingDate,
+		m.ID, m.BillingType, m.BillingMonth, m.ReadingDate,
 		m.PreviousReading, m.CurrentReading, m.UnitPrice, m.FlatAmount, m.Note, m.UpdatedBy)
 	return err
 }

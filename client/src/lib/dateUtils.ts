@@ -20,6 +20,13 @@ export function formatDate(dateStr: string): string {
   })
 }
 
+export function formatMonth(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('th-TH', {
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
 export function formatDateTime(dateStr: string): string {
   return new Date(dateStr).toLocaleString('en-GB', {
     day: '2-digit',

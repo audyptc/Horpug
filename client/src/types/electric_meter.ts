@@ -4,6 +4,7 @@ export interface ApiElectricMeter {
   id: string
   room_id: string
   billing_type: ElectricBillingType
+  billing_month: string | null
   reading_date: string
   previous_reading: number
   current_reading: number | null
@@ -20,6 +21,7 @@ export interface ApiElectricMeter {
 export interface CreateElectricMeterPayload {
   room_id: string
   billing_type: ElectricBillingType
+  billing_month?: string
   reading_date: string
   previous_reading?: number
   current_reading?: number
@@ -30,6 +32,7 @@ export interface CreateElectricMeterPayload {
 
 export interface UpdateElectricMeterPayload {
   billing_type?: ElectricBillingType
+  billing_month?: string | null
   reading_date?: string
   previous_reading?: number
   current_reading?: number

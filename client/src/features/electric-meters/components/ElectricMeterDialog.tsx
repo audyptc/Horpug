@@ -18,12 +18,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { DatePicker } from '@/components/ui/date-picker'
+import { MonthPicker } from '@/components/ui/month-picker'
 import { cn } from '@/lib/utils'
 import type { ApiElectricMeter, ApiRoom, ElectricBillingType } from '@/types'
 
 export type ElectricMeterForm = {
   room_id: string
   billing_type: ElectricBillingType
+  billing_month: string
   reading_date: string
   previous_reading: string
   current_reading: string
@@ -104,6 +106,11 @@ export function ElectricMeterDialog({ open, onOpenChange, editing, form, onFormC
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>{t('electricMeters.billingMonth')} *</Label>
+            <MonthPicker value={form.billing_month} onChange={(v) => set({ billing_month: v })} />
           </div>
 
           <div className="space-y-1.5">

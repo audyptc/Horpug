@@ -16,6 +16,7 @@ type WaterMeter struct {
 	ID              string           `json:"id"`
 	RoomID          string           `json:"room_id"`
 	BillingType     WaterBillingType `json:"billing_type"`
+	BillingMonth    *time.Time       `json:"billing_month"`
 	ReadingDate     time.Time        `json:"reading_date"`
 	PreviousReading *float64         `json:"previous_reading"`
 	CurrentReading  *float64         `json:"current_reading"`
@@ -39,6 +40,7 @@ type WaterMeterDetail struct {
 type CreateWaterMeterRequest struct {
 	RoomID          string           `json:"room_id"`
 	BillingType     WaterBillingType `json:"billing_type"`
+	BillingMonth    *time.Time       `json:"billing_month"`
 	ReadingDate     time.Time        `json:"reading_date"`
 	PreviousReading *float64         `json:"previous_reading"`
 	CurrentReading  *float64         `json:"current_reading"`
@@ -49,6 +51,7 @@ type CreateWaterMeterRequest struct {
 
 type UpdateWaterMeterRequest struct {
 	BillingType     WaterBillingType `json:"billing_type"`
+	BillingMonth    *time.Time       `json:"billing_month"`
 	ReadingDate     time.Time        `json:"reading_date"`
 	PreviousReading *float64         `json:"previous_reading"`
 	CurrentReading  *float64         `json:"current_reading"`

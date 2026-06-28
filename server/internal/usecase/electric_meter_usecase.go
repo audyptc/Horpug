@@ -65,6 +65,7 @@ func (uc *ElectricMeterUseCase) Create(ctx context.Context, req *domain.CreateEl
 		ID:              uuid.New().String(),
 		RoomID:          req.RoomID,
 		BillingType:     req.BillingType,
+		BillingMonth:    req.BillingMonth,
 		ReadingDate:     req.ReadingDate,
 		PreviousReading: req.PreviousReading,
 		CurrentReading:  req.CurrentReading,
@@ -93,6 +94,7 @@ func (uc *ElectricMeterUseCase) Update(ctx context.Context, id string, req *doma
 		m.ReadingDate = req.ReadingDate
 	}
 	m.BillingType = req.BillingType
+	m.BillingMonth = req.BillingMonth
 	m.PreviousReading = req.PreviousReading
 	m.CurrentReading = req.CurrentReading
 	m.UnitPrice = req.UnitPrice

@@ -18,12 +18,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { DatePicker } from '@/components/ui/date-picker'
+import { MonthPicker } from '@/components/ui/month-picker'
 import { cn } from '@/lib/utils'
 import type { ApiWaterMeter, ApiRoom, WaterBillingType } from '@/types'
 
 export type WaterMeterForm = {
   room_id: string
   billing_type: WaterBillingType
+  billing_month: string
   reading_date: string
   previous_reading: string
   current_reading: string
@@ -105,6 +107,11 @@ export function WaterMeterDialog({ open, onOpenChange, editing, form, onFormChan
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>{t('waterMeters.billingMonth')} *</Label>
+            <MonthPicker value={form.billing_month} onChange={(v) => set({ billing_month: v })} />
           </div>
 
           <div className="space-y-1.5">
