@@ -353,6 +353,7 @@ export default {
     rentPrice: 'Rent Price (฿/mo)',
     deposit: 'Deposit (฿)',
     status: 'Contract Status',
+    numOccupants: 'Number of Occupants',
     note: 'Notes',
     notePlaceholder: 'Additional details...',
     saveChanges: 'Save Changes',

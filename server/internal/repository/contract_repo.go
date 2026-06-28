@@ -21,7 +21,7 @@ func NewContractRepo(db *database.DB) *ContractRepo {
 const contractDetailSelect = `
 	SELECT
 		c.id, c.tenant_id, c.room_id, c.start_date, c.end_date,
-		c.rent_price, c.deposit, c.status, c.note, c.created_at, c.updated_at,
+		c.rent_price, c.deposit, c.num_occupants, c.status, c.note, c.created_at, c.updated_at,
 		COALESCE(c.created_by::text, ''), COALESCE(c.updated_by::text, ''),
 		t.first_name, t.last_name, r.room_number,
 		COALESCE(u.full_name, '')
@@ -34,7 +34,7 @@ func scanContractDetail(row pgx.Row) (*domain.ContractDetail, error) {
 	d := &domain.ContractDetail{}
 	err := row.Scan(
 		&d.ID, &d.TenantID, &d.RoomID, &d.StartDate, &d.EndDate,
-		&d.RentPrice, &d.Deposit, &d.Status, &d.Note, &d.CreatedAt, &d.UpdatedAt,
+		&d.RentPrice, &d.Deposit, &d.NumOccupants, &d.Status, &d.Note, &d.CreatedAt, &d.UpdatedAt,
 		&d.CreatedBy, &d.UpdatedBy,
 		&d.TenantFirstName, &d.TenantLastName, &d.RoomNumber,
 		&d.UpdatedByName,
@@ -46,11 +46,11 @@ func (r *ContractRepo) FindByID(ctx context.Context, id string) (*domain.Contrac
 	c := &domain.Contract{}
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT id, tenant_id, room_id, start_date, end_date,
-		       rent_price, deposit, status, note, created_at, updated_at,
+		       rent_price, deposit, num_occupants, status, note, created_at, updated_at,
 		       COALESCE(created_by::text, ''), COALESCE(updated_by::text, '')
 		FROM contracts WHERE id = $1 AND deleted_at IS NULL`, id).
 		Scan(&c.ID, &c.TenantID, &c.RoomID, &c.StartDate, &c.EndDate,
-			&c.RentPrice, &c.Deposit, &c.Status, &c.Note, &c.CreatedAt, &c.UpdatedAt,
+			&c.RentPrice, &c.Deposit, &c.NumOccupants, &c.Status, &c.Note, &c.CreatedAt, &c.UpdatedAt,
 			&c.CreatedBy, &c.UpdatedBy)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("contract not found: %w", domain.ErrNotFound)
@@ -97,19 +97,19 @@ func (r *ContractRepo) Count(ctx context.Context) (int, error) {
 
 func (r *ContractRepo) Create(ctx context.Context, c *domain.Contract) error {
 	_, err := r.db.Pool.Exec(ctx, `
-		INSERT INTO contracts (id, tenant_id, room_id, start_date, end_date, rent_price, deposit, status, note, created_by, updated_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULLIF($10, '')::uuid, NULLIF($10, '')::uuid)`,
-		c.ID, c.TenantID, c.RoomID, c.StartDate, c.EndDate, c.RentPrice, c.Deposit, c.Status, c.Note, c.CreatedBy)
+		INSERT INTO contracts (id, tenant_id, room_id, start_date, end_date, rent_price, deposit, num_occupants, status, note, created_by, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULLIF($11, '')::uuid, NULLIF($11, '')::uuid)`,
+		c.ID, c.TenantID, c.RoomID, c.StartDate, c.EndDate, c.RentPrice, c.Deposit, c.NumOccupants, c.Status, c.Note, c.CreatedBy)
 	return err
 }
 
 func (r *ContractRepo) Update(ctx context.Context, c *domain.Contract) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		UPDATE contracts
-		SET end_date = $2, rent_price = $3, deposit = $4, status = $5, note = $6,
-		    updated_by = NULLIF($7, '')::uuid, updated_at = NOW()
+		SET end_date = $2, rent_price = $3, deposit = $4, num_occupants = $5, status = $6, note = $7,
+		    updated_by = NULLIF($8, '')::uuid, updated_at = NOW()
 		WHERE id = $1`,
-		c.ID, c.EndDate, c.RentPrice, c.Deposit, c.Status, c.Note, c.UpdatedBy)
+		c.ID, c.EndDate, c.RentPrice, c.Deposit, c.NumOccupants, c.Status, c.Note, c.UpdatedBy)
 	return err
 }
 

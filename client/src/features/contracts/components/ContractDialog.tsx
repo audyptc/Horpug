@@ -27,6 +27,7 @@ type ContractForm = {
   end_date: string
   rent_price: string
   deposit: string
+  num_occupants: string
   note: string
   status: ContractStatus
 }
@@ -175,6 +176,17 @@ export function ContractDialog({
               </Select>
             </div>
           )}
+
+          <div className="space-y-1.5">
+            <Label>{t('contracts.numOccupants')}</Label>
+            <Input
+              type="number"
+              min="1"
+              value={form.num_occupants}
+              className="text-right"
+              onChange={(e) => set({ num_occupants: e.target.value })}
+            />
+          </div>
 
           <div className="space-y-1.5">
             <Label>{t('contracts.note')}</Label>

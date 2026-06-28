@@ -353,6 +353,7 @@ export default {
     rentPrice: 'ค่าเช่า (บาท/เดือน)',
     deposit: 'เงินประกัน (บาท)',
     status: 'สถานะสัญญา',
+    numOccupants: 'จำนวนผู้อาศัย',
     note: 'หมายเหตุ',
     notePlaceholder: 'รายละเอียดเพิ่มเติม...',
     saveChanges: 'บันทึกการเปลี่ยนแปลง',

@@ -14,15 +14,16 @@ const (
 )
 
 type Contract struct {
-	ID        string         `json:"id"`
-	TenantID  string         `json:"tenant_id"`
-	RoomID    string         `json:"room_id"`
-	StartDate time.Time      `json:"start_date"`
-	EndDate   *time.Time     `json:"end_date"`
-	RentPrice float64        `json:"rent_price"`
-	Deposit   float64        `json:"deposit"`
-	Status    ContractStatus `json:"status"`
-	Note      string         `json:"note"`
+	ID           string         `json:"id"`
+	TenantID     string         `json:"tenant_id"`
+	RoomID       string         `json:"room_id"`
+	StartDate    time.Time      `json:"start_date"`
+	EndDate      *time.Time     `json:"end_date"`
+	RentPrice    float64        `json:"rent_price"`
+	Deposit      float64        `json:"deposit"`
+	NumOccupants int            `json:"num_occupants"`
+	Status       ContractStatus `json:"status"`
+	Note         string         `json:"note"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	CreatedBy string         `json:"created_by"`
@@ -38,21 +39,23 @@ type ContractDetail struct {
 }
 
 type CreateContractRequest struct {
-	TenantID  string     `json:"tenant_id"`
-	RoomID    string     `json:"room_id"`
-	StartDate time.Time  `json:"start_date"`
-	EndDate   *time.Time `json:"end_date"`
-	RentPrice float64    `json:"rent_price"`
-	Deposit   float64    `json:"deposit"`
-	Note      string     `json:"note"`
+	TenantID     string     `json:"tenant_id"`
+	RoomID       string     `json:"room_id"`
+	StartDate    time.Time  `json:"start_date"`
+	EndDate      *time.Time `json:"end_date"`
+	RentPrice    float64    `json:"rent_price"`
+	Deposit      float64    `json:"deposit"`
+	NumOccupants int        `json:"num_occupants"`
+	Note         string     `json:"note"`
 }
 
 type UpdateContractRequest struct {
-	EndDate   *time.Time     `json:"end_date"`
-	RentPrice float64        `json:"rent_price"`
-	Deposit   float64        `json:"deposit"`
-	Status    ContractStatus `json:"status"`
-	Note      string         `json:"note"`
+	EndDate      *time.Time     `json:"end_date"`
+	RentPrice    float64        `json:"rent_price"`
+	Deposit      float64        `json:"deposit"`
+	NumOccupants *int           `json:"num_occupants"`
+	Status       ContractStatus `json:"status"`
+	Note         string         `json:"note"`
 }
 
 type ContractRepository interface {

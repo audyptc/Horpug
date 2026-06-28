@@ -44,9 +44,6 @@ func CreateTenantRequest(req *domain.CreateTenantRequest) error {
 	if req.FirstName == "" || req.LastName == "" {
 		return apierror.BadRequest("first_name and last_name are required")
 	}
-	if req.Phone == "" {
-		return apierror.BadRequest("phone is required")
-	}
 	if req.IDCard == "" {
 		return apierror.BadRequest("id_card is required")
 	}

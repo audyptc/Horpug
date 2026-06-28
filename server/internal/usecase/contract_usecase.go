@@ -66,18 +66,23 @@ func (uc *ContractUseCase) Create(ctx context.Context, req *domain.CreateContrac
 		return nil, apierror.BadRequest("room is not available")
 	}
 
+	numOccupants := req.NumOccupants
+	if numOccupants < 1 {
+		numOccupants = 1
+	}
 	c := &domain.Contract{
-		ID:        uuid.New().String(),
-		TenantID:  req.TenantID,
-		RoomID:    req.RoomID,
-		StartDate: req.StartDate,
-		EndDate:   req.EndDate,
-		RentPrice: req.RentPrice,
-		Deposit:   req.Deposit,
-		Status:    domain.ContractStatusActive,
-		Note:      req.Note,
-		CreatedBy: actorID,
-		UpdatedBy: actorID,
+		ID:           uuid.New().String(),
+		TenantID:     req.TenantID,
+		RoomID:       req.RoomID,
+		StartDate:    req.StartDate,
+		EndDate:      req.EndDate,
+		RentPrice:    req.RentPrice,
+		Deposit:      req.Deposit,
+		NumOccupants: numOccupants,
+		Status:       domain.ContractStatusActive,
+		Note:         req.Note,
+		CreatedBy:    actorID,
+		UpdatedBy:    actorID,
 	}
 	if err := uc.contractRepo.Create(ctx, c); err != nil {
 		return nil, apierror.Internal(err)
@@ -111,6 +116,9 @@ func (uc *ContractUseCase) Update(ctx context.Context, id string, req *domain.Up
 	}
 	if req.Status != "" {
 		c.Status = req.Status
+	}
+	if req.NumOccupants != nil && *req.NumOccupants >= 1 {
+		c.NumOccupants = *req.NumOccupants
 	}
 	c.Note = req.Note
 	c.UpdatedBy = actorID

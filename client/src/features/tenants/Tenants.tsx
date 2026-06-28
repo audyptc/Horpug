@@ -138,7 +138,7 @@ export function Tenants() {
   }
 
   async function handleSave() {
-    if (!form.first_name || !form.last_name || !form.phone || !form.id_card) return
+    if (!form.first_name || !form.last_name || !form.id_card) return
     setSaving(true)
     setSaveError('')
     try {
@@ -178,7 +178,7 @@ export function Tenants() {
     }
   }
 
-  const isSaveDisabled = saving || !form.first_name || !form.last_name || !form.phone || !form.id_card
+  const isSaveDisabled = saving || !form.first_name || !form.last_name || !form.id_card
 
   return (
     <div className="space-y-6">
@@ -446,7 +446,7 @@ export function Tenants() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>{t('tenants.phone')} *</Label>
+                <Label>{t('tenants.phone')}</Label>
                 <Input
                   placeholder="0812345678"
                   value={form.phone}

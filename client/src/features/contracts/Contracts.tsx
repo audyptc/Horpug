@@ -61,6 +61,7 @@ const emptyForm = {
   end_date: '',
   rent_price: '',
   deposit: '',
+  num_occupants: '1',
   note: '',
   status: 'active' as ContractStatus,
 }
@@ -152,6 +153,7 @@ export function Contracts() {
       end_date: toDateInput(contract.end_date),
       rent_price: String(contract.rent_price),
       deposit: String(contract.deposit),
+      num_occupants: String(contract.num_occupants ?? 1),
       note: contract.note,
       status: contract.status,
     })
@@ -168,6 +170,7 @@ export function Contracts() {
           end_date: form.end_date ? `${form.end_date}T00:00:00Z` : null,
           rent_price: Number(form.rent_price),
           deposit: Number(form.deposit),
+          num_occupants: Number(form.num_occupants) || 1,
           status: form.status,
           note: form.note,
         })
@@ -179,6 +182,7 @@ export function Contracts() {
           end_date: form.end_date ? `${form.end_date}T00:00:00Z` : null,
           rent_price: Number(form.rent_price),
           deposit: Number(form.deposit),
+          num_occupants: Number(form.num_occupants) || 1,
           note: form.note,
         })
       }

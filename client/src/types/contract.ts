@@ -8,6 +8,7 @@ export interface ApiContract {
   end_date: string | null
   rent_price: number
   deposit: number
+  num_occupants: number
   status: ContractStatus
   note: string
   created_at: string
@@ -27,6 +28,7 @@ export interface CreateContractPayload {
   end_date: string | null
   rent_price: number
   deposit: number
+  num_occupants: number
   note: string
 }
 
@@ -34,6 +36,7 @@ export interface UpdateContractPayload {
   end_date?: string | null
   rent_price?: number
   deposit?: number
+  num_occupants?: number
   status?: ContractStatus
   note?: string
 }
