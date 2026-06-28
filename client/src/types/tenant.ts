@@ -7,6 +7,7 @@ export interface ApiTenant {
   email: string
   emergency_contact: string
   note: string
+  active_room_numbers: string[]
   created_at: string
   updated_at: string
   updated_by: string

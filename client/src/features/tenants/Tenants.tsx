@@ -264,7 +264,12 @@ export function Tenants() {
                             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-xs font-semibold text-primary">
                               {getInitials(tenant.first_name, tenant.last_name)}
                             </div>
-                            <span className="font-medium">{tenant.first_name} {tenant.last_name}</span>
+                            <div>
+                              <span className="font-medium">{tenant.first_name} {tenant.last_name}</span>
+                              {tenant.active_room_numbers?.length > 0 && (
+                                <p className="text-xs text-muted-foreground">ห้อง {tenant.active_room_numbers.join(', ')}</p>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-4 text-muted-foreground">{tenant.phone}</td>
@@ -336,6 +341,9 @@ export function Tenants() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{tenant.first_name} {tenant.last_name}</p>
+                      {tenant.active_room_numbers?.length > 0 && (
+                        <p className="text-xs text-primary/80 font-medium">ห้อง {tenant.active_room_numbers.join(', ')}</p>
+                      )}
                       <p className="text-xs text-muted-foreground">{tenant.phone}</p>
                       <p className="text-xs text-muted-foreground font-mono">{tenant.id_card}</p>
                     </div>
@@ -426,6 +434,12 @@ export function Tenants() {
             </div>
           )}
           <div className="grid gap-4 py-4">
+            {editingTenant && editingTenant.active_room_numbers.length > 0 && (
+              <div className="rounded-md border border-border bg-muted/40 px-4 py-2.5 text-sm flex items-center gap-2">
+                <span className="text-muted-foreground">ห้องที่เช่าอยู่:</span>
+                <span className="font-medium">ห้อง {editingTenant.active_room_numbers.join(', ')}</span>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>{t('tenants.firstName')} *</Label>

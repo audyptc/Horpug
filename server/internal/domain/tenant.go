@@ -14,6 +14,7 @@ type Tenant struct {
 	Email            string    `json:"email"`
 	EmergencyContact string    `json:"emergency_contact"`
 	Note             string    `json:"note"`
+	ActiveRoomNumbers []string  `json:"active_room_numbers"`
 	CreatedBy     string    `json:"created_by"`
 	UpdatedBy     string    `json:"updated_by"`
 	UpdatedByName string    `json:"updated_by_name"`
