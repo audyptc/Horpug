@@ -35,9 +35,11 @@ export const waterMeterService = {
     await api.delete(`/water-meters/${id}`)
   },
 
-  async getLatestByRoomId(roomId: string): Promise<ApiWaterMeter | null> {
+  async getLatestByRoomId(roomId: string, billingMonth?: string): Promise<ApiWaterMeter | null> {
     try {
-      const { data } = await api.get<ApiResponse<ApiWaterMeter>>(`/water-meters/latest?room_id=${roomId}`)
+      const params = new URLSearchParams({ room_id: roomId })
+      if (billingMonth) params.set('billing_month', `${billingMonth}-01`)
+      const { data } = await api.get<ApiResponse<ApiWaterMeter>>(`/water-meters/latest?${params}`)
       return data.data
     } catch {
       return null

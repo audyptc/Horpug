@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -89,6 +89,11 @@ export function Bills() {
   const [paymentSaving, setPaymentSaving] = useState(false)
   const [paymentError, setPaymentError] = useState('')
 
+  const contractIdRef = useRef('')
+  const billingMonthRef = useRef('')
+  contractIdRef.current = form.contract_id
+  billingMonthRef.current = form.billing_month
+
   useEffect(() => {
     contractService.list(1, 200).then((r) => setContracts(r.data)).catch(() => {})
   }, [])
@@ -102,9 +107,10 @@ export function Bills() {
     if (!contract) return
     setForm((f) => ({ ...f, contract_id: contractId, rent_amount: String(contract.rent_price) }))
     setAutoFilling(true)
+    const billingMonth = billingMonthRef.current || undefined
     const [electric, water, parkingResp] = await Promise.all([
-      electricMeterService.getLatestByRoomId(contract.room_id),
-      waterMeterService.getLatestByRoomId(contract.room_id),
+      electricMeterService.getLatestByRoomId(contract.room_id, billingMonth),
+      waterMeterService.getLatestByRoomId(contract.room_id, billingMonth),
       parkingService.list(1, 200),
     ])
     setAutoFilling(false)
@@ -121,6 +127,28 @@ export function Bills() {
       water_amount: water ? String(water.total_amount) : f.water_amount,
       parking_amount: parkingTotal > 0 ? String(parkingTotal) : '',
     }))
+  }, [contracts])
+
+  const handleBillingMonthChange = useCallback(async (billingMonth: string) => {
+    setForm((f) => ({ ...f, billing_month: billingMonth }))
+    const contractId = contractIdRef.current
+    if (!contractId) return
+    const contract = contracts.find((c) => c.id === contractId)
+    if (!contract) return
+    setAutoFilling(true)
+    try {
+      const [electric, water] = await Promise.all([
+        electricMeterService.getLatestByRoomId(contract.room_id, billingMonth || undefined),
+        waterMeterService.getLatestByRoomId(contract.room_id, billingMonth || undefined),
+      ])
+      setForm((f) => ({
+        ...f,
+        electric_amount: electric ? String(electric.total_amount) : f.electric_amount,
+        water_amount: water ? String(water.total_amount) : f.water_amount,
+      }))
+    } finally {
+      setAutoFilling(false)
+    }
   }, [contracts])
 
   const handleSlotToggle = useCallback((slotId: string) => {
@@ -388,6 +416,7 @@ export function Bills() {
         form={form}
         onFormChange={onFormChange}
         onContractChange={handleContractChange}
+        onBillingMonthChange={handleBillingMonthChange}
         autoFilling={autoFilling}
         contracts={contracts}
         parkingSlots={tenantParkingSlots}

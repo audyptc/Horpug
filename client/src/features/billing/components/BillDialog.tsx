@@ -46,6 +46,7 @@ interface BillDialogProps {
   form: BillFormState
   onFormChange: (patch: Partial<BillFormState>) => void
   onContractChange: (contractId: string) => void
+  onBillingMonthChange: (v: string) => void
   autoFilling: boolean
   contracts: ApiContract[]
   parkingSlots: ApiParkingSlot[]
@@ -62,6 +63,7 @@ export function BillDialog({
   form,
   onFormChange,
   onContractChange,
+  onBillingMonthChange,
   autoFilling,
   contracts,
   parkingSlots,
@@ -128,7 +130,7 @@ export function BillDialog({
             <Label>{t('bills.billingMonth')} *</Label>
             <MonthPicker
               value={form.billing_month}
-              onChange={(v) => onFormChange({ billing_month: v })}
+              onChange={(v) => onBillingMonthChange(v)}
               disabled={!!editingBill}
             />
           </div>

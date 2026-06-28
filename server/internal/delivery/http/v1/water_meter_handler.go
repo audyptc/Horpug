@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"time"
+
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/delivery/http/httputil"
 	"apigofiberhorpug/internal/delivery/http/response"
@@ -45,7 +47,15 @@ func (h *WaterMeterHandler) GetLatestByRoomID(c fiber.Ctx) error {
 	if roomID == "" {
 		return apierror.BadRequest("room_id is required")
 	}
-	d, err := h.uc.GetLatestByRoomID(c.Context(), roomID)
+	var billingMonth *time.Time
+	if bm := c.Query("billing_month"); bm != "" {
+		t, err := time.Parse("2006-01-02", bm)
+		if err != nil {
+			return apierror.BadRequest("invalid billing_month, expected YYYY-MM-DD")
+		}
+		billingMonth = &t
+	}
+	d, err := h.uc.GetLatestByRoomID(c.Context(), roomID, billingMonth)
 	if err != nil {
 		return err
 	}

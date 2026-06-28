@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"time"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/domain"
@@ -42,8 +43,8 @@ func (uc *ElectricMeterUseCase) GetByID(ctx context.Context, id string) (*domain
 	return d, nil
 }
 
-func (uc *ElectricMeterUseCase) GetLatestByRoomID(ctx context.Context, roomID string) (*domain.ElectricMeterDetail, error) {
-	d, err := uc.repo.FindLatestByRoomID(ctx, roomID)
+func (uc *ElectricMeterUseCase) GetLatestByRoomID(ctx context.Context, roomID string, billingMonth *time.Time) (*domain.ElectricMeterDetail, error) {
+	d, err := uc.repo.FindLatestByRoomID(ctx, roomID, billingMonth)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())

@@ -35,9 +35,11 @@ export const electricMeterService = {
     await api.delete(`/electric-meters/${id}`)
   },
 
-  async getLatestByRoomId(roomId: string): Promise<ApiElectricMeter | null> {
+  async getLatestByRoomId(roomId: string, billingMonth?: string): Promise<ApiElectricMeter | null> {
     try {
-      const { data } = await api.get<ApiResponse<ApiElectricMeter>>(`/electric-meters/latest?room_id=${roomId}`)
+      const params = new URLSearchParams({ room_id: roomId })
+      if (billingMonth) params.set('billing_month', `${billingMonth}-01`)
+      const { data } = await api.get<ApiResponse<ApiElectricMeter>>(`/electric-meters/latest?${params}`)
       return data.data
     } catch {
       return null

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"apigofiberhorpug/internal/database"
 	"apigofiberhorpug/internal/domain"
@@ -71,10 +72,15 @@ func (r *WaterMeterRepo) FindDetailByID(ctx context.Context, id string) (*domain
 	return d, err
 }
 
-func (r *WaterMeterRepo) FindLatestByRoomID(ctx context.Context, roomID string) (*domain.WaterMeterDetail, error) {
-	row := r.db.Pool.QueryRow(ctx,
-		waterMeterDetailSelect+` WHERE w.room_id = $1 AND w.deleted_at IS NULL ORDER BY w.reading_date DESC, w.created_at DESC LIMIT 1`,
-		roomID)
+func (r *WaterMeterRepo) FindLatestByRoomID(ctx context.Context, roomID string, billingMonth *time.Time) (*domain.WaterMeterDetail, error) {
+	q := waterMeterDetailSelect + ` WHERE w.room_id = $1 AND w.deleted_at IS NULL`
+	args := []any{roomID}
+	if billingMonth != nil {
+		q += ` AND DATE_TRUNC('month', w.billing_month) = DATE_TRUNC('month', $2::date)`
+		args = append(args, *billingMonth)
+	}
+	q += ` ORDER BY w.reading_date DESC, w.created_at DESC LIMIT 1`
+	row := r.db.Pool.QueryRow(ctx, q, args...)
 	d, err := scanWaterMeterDetail(row)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("water meter reading not found: %w", domain.ErrNotFound)

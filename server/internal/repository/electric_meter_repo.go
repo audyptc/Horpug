@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"apigofiberhorpug/internal/database"
 	"apigofiberhorpug/internal/domain"
@@ -71,10 +72,15 @@ func (r *ElectricMeterRepo) FindDetailByID(ctx context.Context, id string) (*dom
 	return d, err
 }
 
-func (r *ElectricMeterRepo) FindLatestByRoomID(ctx context.Context, roomID string) (*domain.ElectricMeterDetail, error) {
-	row := r.db.Pool.QueryRow(ctx,
-		electricMeterDetailSelect+` WHERE e.room_id = $1 AND e.deleted_at IS NULL ORDER BY e.reading_date DESC, e.created_at DESC LIMIT 1`,
-		roomID)
+func (r *ElectricMeterRepo) FindLatestByRoomID(ctx context.Context, roomID string, billingMonth *time.Time) (*domain.ElectricMeterDetail, error) {
+	q := electricMeterDetailSelect + ` WHERE e.room_id = $1 AND e.deleted_at IS NULL`
+	args := []any{roomID}
+	if billingMonth != nil {
+		q += ` AND DATE_TRUNC('month', e.billing_month) = DATE_TRUNC('month', $2::date)`
+		args = append(args, *billingMonth)
+	}
+	q += ` ORDER BY e.reading_date DESC, e.created_at DESC LIMIT 1`
+	row := r.db.Pool.QueryRow(ctx, q, args...)
 	d, err := scanElectricMeterDetail(row)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("electric meter reading not found: %w", domain.ErrNotFound)
