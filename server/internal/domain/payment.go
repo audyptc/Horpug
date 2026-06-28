@@ -11,7 +11,20 @@ const (
 	PaymentMethodCash     PaymentMethod = "cash"
 	PaymentMethodTransfer PaymentMethod = "transfer"
 	PaymentMethodQR       PaymentMethod = "qr"
+	PaymentMethodMixed    PaymentMethod = "mixed"
 )
+
+type PaymentSplit struct {
+	ID        string        `json:"id"`
+	PaymentID string        `json:"payment_id"`
+	Method    PaymentMethod `json:"method"`
+	Amount    float64       `json:"amount"`
+}
+
+type PaymentSplitRequest struct {
+	Method PaymentMethod `json:"method"`
+	Amount float64       `json:"amount"`
+}
 
 type Payment struct {
 	ID          string        `json:"id"`
@@ -20,6 +33,7 @@ type Payment struct {
 	Method      PaymentMethod `json:"method"`
 	PaymentDate time.Time     `json:"payment_date"`
 	Note        string        `json:"note"`
+	Splits      []PaymentSplit `json:"splits"`
 	CreatedAt   time.Time     `json:"created_at"`
 	UpdatedAt   time.Time     `json:"updated_at"`
 }
@@ -34,18 +48,16 @@ type PaymentDetail struct {
 }
 
 type CreatePaymentRequest struct {
-	BillID      string        `json:"bill_id"`
-	Amount      float64       `json:"amount"`
-	Method      PaymentMethod `json:"method"`
-	PaymentDate time.Time     `json:"payment_date"`
-	Note        string        `json:"note"`
+	BillID      string               `json:"bill_id"`
+	PaymentDate time.Time            `json:"payment_date"`
+	Note        string               `json:"note"`
+	Splits      []PaymentSplitRequest `json:"splits"`
 }
 
 type UpdatePaymentRequest struct {
-	Amount      float64       `json:"amount"`
-	Method      PaymentMethod `json:"method"`
-	PaymentDate time.Time     `json:"payment_date"`
-	Note        string        `json:"note"`
+	PaymentDate time.Time            `json:"payment_date"`
+	Note        string               `json:"note"`
+	Splits      []PaymentSplitRequest `json:"splits"`
 }
 
 type PaymentRepository interface {
@@ -53,7 +65,7 @@ type PaymentRepository interface {
 	FindDetailByID(ctx context.Context, id string) (*PaymentDetail, error)
 	List(ctx context.Context, limit, offset int) ([]*PaymentDetail, error)
 	Count(ctx context.Context) (int, error)
-	Create(ctx context.Context, p *Payment) error
-	Update(ctx context.Context, p *Payment) error
+	Create(ctx context.Context, p *Payment, splits []PaymentSplit) error
+	Update(ctx context.Context, p *Payment, splits []PaymentSplit) error
 	Delete(ctx context.Context, id string) error
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, ChevronDown, Search } from 'lucide-react'
+import { Check, ChevronDown, Search, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,15 +23,21 @@ import { DatePicker } from '@/components/ui/date-picker'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { billService } from '@/features/billing/billService'
-import type { ApiPayment, PaymentMethod, ApiBill } from '@/types'
+import type { ApiPayment, ApiBill } from '@/types'
 import { cn } from '@/lib/utils'
 
-type PaymentForm = {
-  bill_id: string
+type SplitMethod = 'cash' | 'transfer' | 'qr'
+
+export type PaymentFormSplit = {
+  method: SplitMethod
   amount: string
-  method: PaymentMethod
+}
+
+export type PaymentForm = {
+  bill_id: string
   payment_date: string
   note: string
+  splits: PaymentFormSplit[]
 }
 
 type Props = {
@@ -44,6 +50,8 @@ type Props = {
   saving: boolean
   error?: string
 }
+
+const ALL_METHODS: SplitMethod[] = ['cash', 'transfer', 'qr']
 
 function formatBaht(n: number) {
   return n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -66,11 +74,32 @@ export function PaymentDialog({
   const [billSearch, setBillSearch] = useState('')
   const [pickerOpen, setPickerOpen] = useState(false)
 
+  const totalAmount = form.splits.reduce((sum, s) => sum + (Number(s.amount) || 0), 0)
+
   const isSaveDisabled =
-    saving || !form.bill_id || !form.amount || Number(form.amount) <= 0 || !form.payment_date
+    saving ||
+    !form.bill_id ||
+    form.splits.length === 0 ||
+    form.splits.some((s) => !s.amount || Number(s.amount) <= 0) ||
+    !form.payment_date
 
   function set(patch: Partial<PaymentForm>) {
     onFormChange({ ...form, ...patch })
+  }
+
+  function updateSplit(idx: number, patch: Partial<PaymentFormSplit>) {
+    const splits = form.splits.map((s, i) => (i === idx ? { ...s, ...patch } : s))
+    set({ splits })
+  }
+
+  function removeSplit(idx: number) {
+    set({ splits: form.splits.filter((_, i) => i !== idx) })
+  }
+
+  function addSplit() {
+    const used = form.splits.map((s) => s.method)
+    const next = ALL_METHODS.find((m) => !used.includes(m))
+    if (next) set({ splits: [...form.splits, { method: next, amount: '' }] })
   }
 
   useEffect(() => {
@@ -95,7 +124,10 @@ export function PaymentDialog({
   }, [bills, billSearch])
 
   function selectBill(bill: ApiBill) {
-    set({ bill_id: bill.id, amount: String(bill.total_amount) })
+    set({
+      bill_id: bill.id,
+      splits: [{ method: 'cash', amount: String(bill.total_amount) }],
+    })
     setPickerOpen(false)
     setBillSearch('')
   }
@@ -230,35 +262,72 @@ export function PaymentDialog({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>{t('payments.amount')} *</Label>
-              <Input
-                className="text-right"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={form.amount}
-                onChange={(e) => set({ amount: e.target.value })}
-              />
+          <div className="space-y-1.5">
+            <Label>{t('payments.method')} *</Label>
+            <div className="space-y-2">
+              {form.splits.map((split, idx) => {
+                const usedMethods = form.splits.filter((_, i) => i !== idx).map((s) => s.method)
+                return (
+                  <div key={idx} className="flex gap-2 items-center">
+                    <Select
+                      value={split.method}
+                      onValueChange={(v) => updateSplit(idx, { method: v as SplitMethod })}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ALL_METHODS.map((m) => (
+                          <SelectItem key={m} value={m} disabled={usedMethods.includes(m)}>
+                            {t(`payments.methods.${m}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      className="w-28 text-right"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={split.amount}
+                      onChange={(e) => updateSplit(idx, { amount: e.target.value })}
+                    />
+                    {form.splits.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeSplit(idx)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                )
+              })}
             </div>
-            <div className="space-y-1.5">
-              <Label>{t('payments.method')} *</Label>
-              <Select
-                value={form.method}
-                onValueChange={(v) => set({ method: v as PaymentMethod })}
+
+            {form.splits.length < ALL_METHODS.length && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-8 mt-1"
+                onClick={addSplit}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">{t('payments.methods.cash')}</SelectItem>
-                  <SelectItem value="transfer">{t('payments.methods.transfer')}</SelectItem>
-                  <SelectItem value="qr">{t('payments.methods.qr')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                <Plus className="w-3.5 h-3.5" />
+                {t('payments.addSplit')}
+              </Button>
+            )}
+
+            {form.splits.length > 1 && (
+              <div className="flex justify-between text-sm pt-1">
+                <span className="text-muted-foreground">{t('payments.splitTotal')}</span>
+                <span className="font-semibold text-emerald-600">฿{formatBaht(totalAmount)}</span>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">

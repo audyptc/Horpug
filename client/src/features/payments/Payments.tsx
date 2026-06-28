@@ -15,6 +15,7 @@ import {
   Banknote,
   Smartphone,
   CreditCard,
+  Layers,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,6 +37,7 @@ import {
 } from '@/components/ui/select'
 import { paymentService } from '@/features/payments/paymentService'
 import { PaymentDialog } from '@/features/payments/components/PaymentDialog'
+import type { PaymentForm } from '@/features/payments/components/PaymentDialog'
 import { PaymentDeleteDialog } from '@/features/payments/components/PaymentDeleteDialog'
 import type { ApiPayment, PaymentMethod } from '@/types'
 import { cn } from '@/lib/utils'
@@ -48,6 +50,7 @@ const METHOD_ICONS: Record<PaymentMethod, React.ElementType> = {
   cash: Banknote,
   transfer: CreditCard,
   qr: Smartphone,
+  mixed: Layers,
 }
 
 function toDateInput(iso: string | null | undefined): string {
@@ -55,12 +58,11 @@ function toDateInput(iso: string | null | undefined): string {
   return iso.slice(0, 10)
 }
 
-const emptyForm = {
+const emptyForm: PaymentForm = {
   bill_id: '',
-  amount: '',
-  method: 'cash' as PaymentMethod,
   payment_date: '',
   note: '',
+  splits: [{ method: 'cash', amount: '' }],
 }
 
 function formatBaht(n: number) {
@@ -85,7 +87,7 @@ export function Payments() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<ApiPayment | null>(null)
   const [deletingItem, setDeletingItem] = useState<ApiPayment | null>(null)
-  const [form, setForm] = useState(emptyForm)
+  const [form, setForm] = useState<PaymentForm>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
 
@@ -121,7 +123,10 @@ export function Payments() {
         tenantName.includes(q) ||
         item.room_number.toLowerCase().includes(q) ||
         item.billing_month.includes(q)
-      const matchMethod = filterMethod === 'all' || item.method === filterMethod
+      const matchMethod =
+        filterMethod === 'all' ||
+        item.method === filterMethod ||
+        (item.method === 'mixed' && item.splits?.some((s) => s.method === filterMethod))
       return matchSearch && matchMethod
     })
   }, [items, search, filterMethod])
@@ -137,35 +142,36 @@ export function Payments() {
     setEditingItem(item)
     setForm({
       bill_id: item.bill_id,
-      amount: String(item.amount),
-      method: item.method,
       payment_date: toDateInput(item.payment_date),
       note: item.note,
+      splits:
+        item.splits && item.splits.length > 0
+          ? item.splits.map((s) => ({ method: s.method, amount: String(s.amount) }))
+          : [{ method: item.method === 'mixed' ? 'cash' : item.method as 'cash' | 'transfer' | 'qr', amount: String(item.amount) }],
     })
     setSaveError('')
     setDialogOpen(true)
   }
 
   async function handleSave() {
-    if (!form.bill_id || !form.amount || !form.payment_date) return
+    if (!form.bill_id || !form.payment_date) return
     setSaving(true)
     setSaveError('')
     try {
       const paymentDate = form.payment_date + 'T00:00:00Z'
+      const splits = form.splits.map((s) => ({ method: s.method, amount: Number(s.amount) }))
       if (editingItem) {
         await paymentService.update(editingItem.id, {
-          amount: Number(form.amount),
-          method: form.method,
           payment_date: paymentDate,
           note: form.note,
+          splits,
         })
       } else {
         await paymentService.create({
           bill_id: form.bill_id,
-          amount: Number(form.amount),
-          method: form.method,
           payment_date: paymentDate,
           note: form.note,
+          splits,
         })
       }
       setDialogOpen(false)

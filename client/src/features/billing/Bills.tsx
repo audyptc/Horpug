@@ -33,7 +33,8 @@ import { waterMeterService } from '@/features/water-meters/waterMeterService'
 import { parkingService } from '@/features/parking/parkingService'
 import { paymentService } from '@/features/payments/paymentService'
 import { PaymentDialog } from '@/features/payments/components/PaymentDialog'
-import type { ApiBill, ApiContract, ApiParkingSlot, PaymentMethod } from '@/types'
+import type { PaymentForm } from '@/features/payments/components/PaymentDialog'
+import type { ApiBill, ApiContract, ApiParkingSlot } from '@/types'
 
 const EMPTY_FORM: BillFormState = {
   contract_id: '',
@@ -79,12 +80,11 @@ export function Bills() {
   const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([])
 
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
-  const [paymentForm, setPaymentForm] = useState({
+  const [paymentForm, setPaymentForm] = useState<PaymentForm>({
     bill_id: '',
-    amount: '',
-    method: 'cash' as PaymentMethod,
     payment_date: '',
     note: '',
+    splits: [{ method: 'cash', amount: '' }],
   })
   const [paymentSaving, setPaymentSaving] = useState(false)
   const [paymentError, setPaymentError] = useState('')
@@ -278,26 +278,24 @@ export function Bills() {
   const handleMarkPaid = useCallback((bill: ApiBill) => {
     setPaymentForm({
       bill_id: bill.id,
-      amount: String(bill.total_amount),
-      method: 'cash',
       payment_date: new Date().toISOString().slice(0, 10),
       note: '',
+      splits: [{ method: 'cash', amount: String(bill.total_amount) }],
     })
     setPaymentError('')
     setPaymentDialogOpen(true)
   }, [])
 
   const handlePaymentSave = useCallback(async () => {
-    if (!paymentForm.bill_id || !paymentForm.amount || !paymentForm.payment_date) return
+    if (!paymentForm.bill_id || !paymentForm.payment_date) return
     setPaymentSaving(true)
     setPaymentError('')
     try {
       await paymentService.create({
         bill_id: paymentForm.bill_id,
-        amount: Number(paymentForm.amount),
-        method: paymentForm.method,
         payment_date: paymentForm.payment_date + 'T00:00:00Z',
         note: paymentForm.note,
+        splits: paymentForm.splits.map((s) => ({ method: s.method, amount: Number(s.amount) })),
       })
       setPaymentDialogOpen(false)
       refresh()

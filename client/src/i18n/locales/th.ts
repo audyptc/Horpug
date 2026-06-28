@@ -676,10 +676,13 @@ export default {
     deleteConfirm: 'คุณแน่ใจหรือไม่ว่าต้องการลบรายการชำระเงิน',
     deleteWarning: 'การดำเนินการนี้ไม่สามารถยกเลิกได้',
     loadError: 'ไม่สามารถโหลดข้อมูลการชำระเงินได้',
+    addSplit: 'เพิ่มวิธีชำระ',
+    splitTotal: 'รวมที่ชำระ',
     methods: {
       cash: 'เงินสด',
       transfer: 'โอนเงิน',
       qr: 'QR Code',
+      mixed: 'หลายวิธี',
     },
   },
   announcements: {

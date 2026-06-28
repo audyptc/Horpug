@@ -42,15 +42,35 @@ func (uc *PaymentUseCase) GetByID(ctx context.Context, id string) (*domain.Payme
 }
 
 func (uc *PaymentUseCase) Create(ctx context.Context, req *domain.CreatePaymentRequest) (*domain.PaymentDetail, error) {
+	var total float64
+	for _, s := range req.Splits {
+		total += s.Amount
+	}
+	method := req.Splits[0].Method
+	if len(req.Splits) > 1 {
+		method = domain.PaymentMethodMixed
+	}
+
 	p := &domain.Payment{
 		ID:          uuid.New().String(),
 		BillID:      req.BillID,
-		Amount:      req.Amount,
-		Method:      req.Method,
+		Amount:      total,
+		Method:      method,
 		PaymentDate: req.PaymentDate,
 		Note:        req.Note,
 	}
-	if err := uc.repo.Create(ctx, p); err != nil {
+
+	splits := make([]domain.PaymentSplit, len(req.Splits))
+	for i, s := range req.Splits {
+		splits[i] = domain.PaymentSplit{
+			ID:        uuid.New().String(),
+			PaymentID: p.ID,
+			Method:    s.Method,
+			Amount:    s.Amount,
+		}
+	}
+
+	if err := uc.repo.Create(ctx, p, splits); err != nil {
 		return nil, apierror.Internal(err)
 	}
 	return uc.repo.FindDetailByID(ctx, p.ID)
@@ -65,12 +85,31 @@ func (uc *PaymentUseCase) Update(ctx context.Context, id string, req *domain.Upd
 		return nil, apierror.Internal(err)
 	}
 
-	p.Amount = req.Amount
-	p.Method = req.Method
+	var total float64
+	for _, s := range req.Splits {
+		total += s.Amount
+	}
+	method := req.Splits[0].Method
+	if len(req.Splits) > 1 {
+		method = domain.PaymentMethodMixed
+	}
+
+	p.Amount = total
+	p.Method = method
 	p.PaymentDate = req.PaymentDate
 	p.Note = req.Note
 
-	if err := uc.repo.Update(ctx, p); err != nil {
+	splits := make([]domain.PaymentSplit, len(req.Splits))
+	for i, s := range req.Splits {
+		splits[i] = domain.PaymentSplit{
+			ID:        uuid.New().String(),
+			PaymentID: id,
+			Method:    s.Method,
+			Amount:    s.Amount,
+		}
+	}
+
+	if err := uc.repo.Update(ctx, p, splits); err != nil {
 		return nil, apierror.Internal(err)
 	}
 	return uc.repo.FindDetailByID(ctx, id)

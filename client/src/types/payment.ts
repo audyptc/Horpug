@@ -1,4 +1,11 @@
-export type PaymentMethod = 'cash' | 'transfer' | 'qr'
+export type PaymentMethod = 'cash' | 'transfer' | 'qr' | 'mixed'
+
+export interface PaymentSplit {
+  id: string
+  payment_id: string
+  method: Exclude<PaymentMethod, 'mixed'>
+  amount: number
+}
 
 export interface ApiPayment {
   id: string
@@ -7,6 +14,7 @@ export interface ApiPayment {
   method: PaymentMethod
   payment_date: string
   note: string
+  splits: PaymentSplit[]
   created_at: string
   updated_at: string
   room_number: string
@@ -18,15 +26,13 @@ export interface ApiPayment {
 
 export interface CreatePaymentPayload {
   bill_id: string
-  amount: number
-  method: PaymentMethod
   payment_date: string
   note: string
+  splits: { method: Exclude<PaymentMethod, 'mixed'>; amount: number }[]
 }
 
 export interface UpdatePaymentPayload {
-  amount: number
-  method: PaymentMethod
   payment_date: string
   note: string
+  splits: { method: Exclude<PaymentMethod, 'mixed'>; amount: number }[]
 }

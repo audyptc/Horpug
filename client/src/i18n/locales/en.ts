@@ -676,10 +676,13 @@ export default {
     deleteConfirm: 'Are you sure you want to delete payment of',
     deleteWarning: 'This action cannot be undone.',
     loadError: 'Failed to load payments.',
+    addSplit: 'Add payment method',
+    splitTotal: 'Total paid',
     methods: {
       cash: 'Cash',
       transfer: 'Transfer',
       qr: 'QR Code',
+      mixed: 'Split',
     },
   },
   announcements: {
