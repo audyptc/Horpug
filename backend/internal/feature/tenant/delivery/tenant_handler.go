@@ -1,14 +1,13 @@
-﻿package v1
+package delivery
 
 import (
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/delivery/http/httputil"
 	"apigofiberhorpug/internal/delivery/http/response"
-	"apigofiberhorpug/internal/domain"
 	aldomain "apigofiberhorpug/internal/feature/activitylog/domain"
 	alusecase "apigofiberhorpug/internal/feature/activitylog/usecase"
-	"apigofiberhorpug/internal/usecase"
-	"apigofiberhorpug/internal/validator"
+	"apigofiberhorpug/internal/feature/tenant/domain"
+	"apigofiberhorpug/internal/feature/tenant/usecase"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -47,7 +46,7 @@ func (h *TenantHandler) Create(c fiber.Ctx) error {
 	if err := c.Bind().JSON(&req); err != nil {
 		return apierror.BadRequest("invalid request body")
 	}
-	if err := validator.CreateTenantRequest(&req); err != nil {
+	if err := validateCreateTenantRequest(&req); err != nil {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)

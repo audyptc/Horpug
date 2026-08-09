@@ -5,17 +5,18 @@ import (
 	"errors"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/room/domain"
 
 	"github.com/google/uuid"
 )
 
 type RoomUseCase struct {
 	roomRepo     domain.RoomRepository
-	contractRepo domain.ContractRepository
+	contractRepo coredomain.ContractRepository
 }
 
-func NewRoomUseCase(roomRepo domain.RoomRepository, contractRepo domain.ContractRepository) *RoomUseCase {
+func NewRoomUseCase(roomRepo domain.RoomRepository, contractRepo coredomain.ContractRepository) *RoomUseCase {
 	return &RoomUseCase{roomRepo: roomRepo, contractRepo: contractRepo}
 }
 
@@ -34,7 +35,7 @@ func (uc *RoomUseCase) List(ctx context.Context, limit, offset int) ([]*domain.R
 func (uc *RoomUseCase) GetByID(ctx context.Context, id string) (*domain.Room, error) {
 	room, err := uc.roomRepo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -61,7 +62,7 @@ func (uc *RoomUseCase) Create(ctx context.Context, req *domain.CreateRoomRequest
 		room.Status = "available"
 	}
 	if err := uc.roomRepo.Create(ctx, room); err != nil {
-		if errors.Is(err, domain.ErrDuplicate) {
+		if errors.Is(err, coredomain.ErrDuplicate) {
 			return nil, apierror.Conflict("ห้องหมายเลขนี้มีอยู่แล้ว")
 		}
 		return nil, apierror.Internal(err)
@@ -72,7 +73,7 @@ func (uc *RoomUseCase) Create(ctx context.Context, req *domain.CreateRoomRequest
 func (uc *RoomUseCase) Update(ctx context.Context, id string, req *domain.UpdateRoomRequest, actorID string) (*domain.Room, error) {
 	room, err := uc.roomRepo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -95,7 +96,7 @@ func (uc *RoomUseCase) Update(ctx context.Context, id string, req *domain.Update
 	room.Description = req.Description
 	room.UpdatedBy = actorID
 	if err := uc.roomRepo.Update(ctx, room); err != nil {
-		if errors.Is(err, domain.ErrDuplicate) {
+		if errors.Is(err, coredomain.ErrDuplicate) {
 			return nil, apierror.Conflict("ห้องหมายเลขนี้มีอยู่แล้ว")
 		}
 		return nil, apierror.Internal(err)
@@ -105,7 +106,7 @@ func (uc *RoomUseCase) Update(ctx context.Context, id string, req *domain.Update
 
 func (uc *RoomUseCase) Delete(ctx context.Context, id string) error {
 	if _, err := uc.roomRepo.FindByID(ctx, id); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)

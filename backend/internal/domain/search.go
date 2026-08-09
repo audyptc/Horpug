@@ -1,6 +1,11 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	roomdomain "apigofiberhorpug/internal/feature/room/domain"
+	tenantdomain "apigofiberhorpug/internal/feature/tenant/domain"
+)
 
 type SearchBill struct {
 	ID              string     `json:"id"`
@@ -23,8 +28,8 @@ type SearchContract struct {
 }
 
 type SearchResults struct {
-	Tenants   []*Tenant         `json:"tenants"`
-	Rooms     []*Room           `json:"rooms"`
-	Bills     []*SearchBill     `json:"bills"`
-	Contracts []*SearchContract `json:"contracts"`
+	Tenants   []*tenantdomain.Tenant `json:"tenants"`
+	Rooms     []*roomdomain.Room     `json:"rooms"`
+	Bills     []*SearchBill          `json:"bills"`
+	Contracts []*SearchContract      `json:"contracts"`
 }

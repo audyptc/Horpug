@@ -5,7 +5,8 @@ import (
 	"fmt"
 
 	"apigofiberhorpug/internal/database"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/roomtype/domain"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -49,7 +50,7 @@ func (r *RoomTypeRepo) FindByID(ctx context.Context, id string) (*domain.RoomTyp
 		FROM room_types WHERE id = $1`, id).
 		Scan(&rt.ID, &rt.Name, &rt.SortOrder, &rt.CreatedAt, &rt.UpdatedAt)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("room type not found: %w", domain.ErrNotFound)
+		return nil, fmt.Errorf("room type not found: %w", coredomain.ErrNotFound)
 	}
 	return rt, err
 }

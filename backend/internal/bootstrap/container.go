@@ -7,6 +7,9 @@ import (
 	menuusecase "apigofiberhorpug/internal/feature/menu/usecase"
 	permissionusecase "apigofiberhorpug/internal/feature/permission/usecase"
 	roleusecase "apigofiberhorpug/internal/feature/role/usecase"
+	roomusecase "apigofiberhorpug/internal/feature/room/usecase"
+	roomtypeusecase "apigofiberhorpug/internal/feature/roomtype/usecase"
+	tenantusecase "apigofiberhorpug/internal/feature/tenant/usecase"
 	userusecase "apigofiberhorpug/internal/feature/user/usecase"
 	"apigofiberhorpug/internal/usecase"
 	"time"
@@ -18,9 +21,9 @@ type Container struct {
 	RoleUC         *roleusecase.RoleUseCase
 	PermUC         *permissionusecase.PermissionUseCase
 	MenuUC         *menuusecase.MenuUseCase
-	RoomUC         *usecase.RoomUseCase
-	RoomTypeUC     *usecase.RoomTypeUseCase
-	TenantUC       *usecase.TenantUseCase
+	RoomUC         *roomusecase.RoomUseCase
+	RoomTypeUC     *roomtypeusecase.RoomTypeUseCase
+	TenantUC       *tenantusecase.TenantUseCase
 	ContractUC     *usecase.ContractUseCase
 	ElectricMeterUC *usecase.ElectricMeterUseCase
 	WaterMeterUC    *usecase.WaterMeterUseCase
@@ -48,9 +51,9 @@ func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refres
 		RoleUC:         roleusecase.NewRoleUseCase(repos.role, repos.perm, repos.menu),
 		PermUC:         permissionusecase.NewPermissionUseCase(repos.perm),
 		MenuUC:         menuusecase.NewMenuUseCase(repos.menu),
-		RoomUC:         usecase.NewRoomUseCase(repos.room, repos.contract),
-		RoomTypeUC:     usecase.NewRoomTypeUseCase(repos.roomType),
-		TenantUC:       usecase.NewTenantUseCase(repos.tenant, repos.contract),
+		RoomUC:         roomusecase.NewRoomUseCase(repos.room, repos.contract),
+		RoomTypeUC:     roomtypeusecase.NewRoomTypeUseCase(repos.roomType),
+		TenantUC:       tenantusecase.NewTenantUseCase(repos.tenant, repos.contract),
 		ContractUC:     usecase.NewContractUseCase(repos.contract, repos.room, repos.tenant),
 		ElectricMeterUC: usecase.NewElectricMeterUseCase(repos.electricMeter, repos.room),
 		WaterMeterUC:    usecase.NewWaterMeterUseCase(repos.waterMeter, repos.room),

@@ -7,6 +7,9 @@ import (
 	menurepository "apigofiberhorpug/internal/feature/menu/repository"
 	permissionrepository "apigofiberhorpug/internal/feature/permission/repository"
 	rolerepository "apigofiberhorpug/internal/feature/role/repository"
+	roomrepository "apigofiberhorpug/internal/feature/room/repository"
+	roomtyperepository "apigofiberhorpug/internal/feature/roomtype/repository"
+	tenantrepository "apigofiberhorpug/internal/feature/tenant/repository"
 	userrepository "apigofiberhorpug/internal/feature/user/repository"
 	"apigofiberhorpug/internal/repository"
 )
@@ -17,9 +20,9 @@ type repositories struct {
 	perm         *permissionrepository.PermissionRepo
 	token        *authrepository.TokenRepo
 	menu         *menurepository.MenuRepo
-	room         *repository.RoomRepo
-	roomType     *repository.RoomTypeRepo
-	tenant       *repository.TenantRepo
+	room         *roomrepository.RoomRepo
+	roomType     *roomtyperepository.RoomTypeRepo
+	tenant       *tenantrepository.TenantRepo
 	contract     *repository.ContractRepo
 	electricMeter *repository.ElectricMeterRepo
 	waterMeter    *repository.WaterMeterRepo
@@ -46,9 +49,9 @@ func newRepositories(db *database.DB) repositories {
 		perm:         permissionrepository.NewPermissionRepo(db),
 		token:        authrepository.NewTokenRepo(db),
 		menu:         menurepository.NewMenuRepo(db),
-		room:         repository.NewRoomRepo(db),
-		roomType:     repository.NewRoomTypeRepo(db),
-		tenant:       repository.NewTenantRepo(db),
+		room:         roomrepository.NewRoomRepo(db),
+		roomType:     roomtyperepository.NewRoomTypeRepo(db),
+		tenant:       tenantrepository.NewTenantRepo(db),
 		contract:     repository.NewContractRepo(db),
 		electricMeter: repository.NewElectricMeterRepo(db),
 		waterMeter:    repository.NewWaterMeterRepo(db),

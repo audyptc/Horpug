@@ -5,6 +5,8 @@ import (
 
 	"apigofiberhorpug/internal/database"
 	"apigofiberhorpug/internal/domain"
+	roomdomain "apigofiberhorpug/internal/feature/room/domain"
+	tenantdomain "apigofiberhorpug/internal/feature/tenant/domain"
 )
 
 type SearchRepo struct {
@@ -46,7 +48,7 @@ func (r *SearchRepo) Search(ctx context.Context, q string) (*domain.SearchResult
 	return results, nil
 }
 
-func (r *SearchRepo) searchTenants(ctx context.Context, pattern string) ([]*domain.Tenant, error) {
+func (r *SearchRepo) searchTenants(ctx context.Context, pattern string) ([]*tenantdomain.Tenant, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, first_name, last_name, phone, id_card, email, emergency_contact, note, created_at, updated_at
 		FROM tenants
@@ -62,9 +64,9 @@ func (r *SearchRepo) searchTenants(ctx context.Context, pattern string) ([]*doma
 	}
 	defer rows.Close()
 
-	var list []*domain.Tenant
+	var list []*tenantdomain.Tenant
 	for rows.Next() {
-		t := &domain.Tenant{}
+		t := &tenantdomain.Tenant{}
 		if err := rows.Scan(&t.ID, &t.FirstName, &t.LastName, &t.Phone, &t.IDCard,
 			&t.Email, &t.EmergencyContact, &t.Note, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, err
@@ -72,12 +74,12 @@ func (r *SearchRepo) searchTenants(ctx context.Context, pattern string) ([]*doma
 		list = append(list, t)
 	}
 	if list == nil {
-		list = []*domain.Tenant{}
+		list = []*tenantdomain.Tenant{}
 	}
 	return list, rows.Err()
 }
 
-func (r *SearchRepo) searchRooms(ctx context.Context, pattern string) ([]*domain.Room, error) {
+func (r *SearchRepo) searchRooms(ctx context.Context, pattern string) ([]*roomdomain.Room, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, room_number, floor, type, status, rent_price, description, created_at, updated_at
 		FROM rooms
@@ -89,9 +91,9 @@ func (r *SearchRepo) searchRooms(ctx context.Context, pattern string) ([]*domain
 	}
 	defer rows.Close()
 
-	var list []*domain.Room
+	var list []*roomdomain.Room
 	for rows.Next() {
-		ro := &domain.Room{}
+		ro := &roomdomain.Room{}
 		if err := rows.Scan(&ro.ID, &ro.RoomNumber, &ro.Floor, &ro.Type, &ro.Status,
 			&ro.RentPrice, &ro.Description, &ro.CreatedAt, &ro.UpdatedAt); err != nil {
 			return nil, err
@@ -99,7 +101,7 @@ func (r *SearchRepo) searchRooms(ctx context.Context, pattern string) ([]*domain
 		list = append(list, ro)
 	}
 	if list == nil {
-		list = []*domain.Room{}
+		list = []*roomdomain.Room{}
 	}
 	return list, rows.Err()
 }

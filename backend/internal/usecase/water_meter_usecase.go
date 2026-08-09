@@ -7,16 +7,17 @@ import (
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/domain"
+	roomdomain "apigofiberhorpug/internal/feature/room/domain"
 
 	"github.com/google/uuid"
 )
 
 type WaterMeterUseCase struct {
 	repo     domain.WaterMeterRepository
-	roomRepo domain.RoomRepository
+	roomRepo roomdomain.RoomRepository
 }
 
-func NewWaterMeterUseCase(repo domain.WaterMeterRepository, roomRepo domain.RoomRepository) *WaterMeterUseCase {
+func NewWaterMeterUseCase(repo domain.WaterMeterRepository, roomRepo roomdomain.RoomRepository) *WaterMeterUseCase {
 	return &WaterMeterUseCase{repo: repo, roomRepo: roomRepo}
 }
 

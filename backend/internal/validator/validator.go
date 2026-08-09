@@ -5,16 +5,6 @@ import (
 	"apigofiberhorpug/internal/domain"
 )
 
-func CreateTenantRequest(req *domain.CreateTenantRequest) error {
-	if req.FirstName == "" || req.LastName == "" {
-		return apierror.BadRequest("first_name and last_name are required")
-	}
-	if req.IDCard == "" {
-		return apierror.BadRequest("id_card is required")
-	}
-	return nil
-}
-
 func CreateContractRequest(req *domain.CreateContractRequest) error {
 	if req.TenantID == "" {
 		return apierror.BadRequest("tenant_id is required")
@@ -24,19 +14,6 @@ func CreateContractRequest(req *domain.CreateContractRequest) error {
 	}
 	if req.StartDate.IsZero() {
 		return apierror.BadRequest("start_date is required")
-	}
-	if req.RentPrice <= 0 {
-		return apierror.BadRequest("rent_price must be greater than 0")
-	}
-	return nil
-}
-
-func CreateRoomRequest(req *domain.CreateRoomRequest) error {
-	if req.RoomNumber == "" {
-		return apierror.BadRequest("room_number is required")
-	}
-	if req.Floor <= 0 {
-		return apierror.BadRequest("floor must be greater than 0")
 	}
 	if req.RentPrice <= 0 {
 		return apierror.BadRequest("rent_price must be greater than 0")

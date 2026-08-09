@@ -6,7 +6,8 @@ import (
 	"fmt"
 
 	"apigofiberhorpug/internal/database"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/room/domain"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -34,7 +35,7 @@ func (r *RoomRepo) FindByID(ctx context.Context, id string) (*domain.Room, error
 			&room.RentPrice, &room.Description, &room.CreatedBy, &room.UpdatedBy,
 			&room.UpdatedByName, &room.CreatedAt, &room.UpdatedAt)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("room not found: %w", domain.ErrNotFound)
+		return nil, fmt.Errorf("room not found: %w", coredomain.ErrNotFound)
 	}
 	return room, err
 }
@@ -85,7 +86,7 @@ func (r *RoomRepo) Create(ctx context.Context, room *domain.Room) error {
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return fmt.Errorf("room number already exists: %w", domain.ErrDuplicate)
+			return fmt.Errorf("room number already exists: %w", coredomain.ErrDuplicate)
 		}
 	}
 	return err
@@ -101,7 +102,7 @@ func (r *RoomRepo) Update(ctx context.Context, room *domain.Room) error {
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return fmt.Errorf("room number already exists: %w", domain.ErrDuplicate)
+			return fmt.Errorf("room number already exists: %w", coredomain.ErrDuplicate)
 		}
 	}
 	return err

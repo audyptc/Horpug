@@ -5,17 +5,18 @@ import (
 	"errors"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/tenant/domain"
 
 	"github.com/google/uuid"
 )
 
 type TenantUseCase struct {
 	tenantRepo   domain.TenantRepository
-	contractRepo domain.ContractRepository
+	contractRepo coredomain.ContractRepository
 }
 
-func NewTenantUseCase(tenantRepo domain.TenantRepository, contractRepo domain.ContractRepository) *TenantUseCase {
+func NewTenantUseCase(tenantRepo domain.TenantRepository, contractRepo coredomain.ContractRepository) *TenantUseCase {
 	return &TenantUseCase{tenantRepo: tenantRepo, contractRepo: contractRepo}
 }
 
@@ -34,7 +35,7 @@ func (uc *TenantUseCase) List(ctx context.Context, limit, offset int) ([]*domain
 func (uc *TenantUseCase) GetByID(ctx context.Context, id string) (*domain.Tenant, error) {
 	t, err := uc.tenantRepo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -64,7 +65,7 @@ func (uc *TenantUseCase) Create(ctx context.Context, req *domain.CreateTenantReq
 func (uc *TenantUseCase) Update(ctx context.Context, id string, req *domain.UpdateTenantRequest, actorID string) (*domain.Tenant, error) {
 	t, err := uc.tenantRepo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -93,7 +94,7 @@ func (uc *TenantUseCase) Update(ctx context.Context, id string, req *domain.Upda
 
 func (uc *TenantUseCase) Delete(ctx context.Context, id string) error {
 	if _, err := uc.tenantRepo.FindByID(ctx, id); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)

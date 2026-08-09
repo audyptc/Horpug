@@ -5,7 +5,8 @@ import (
 	"fmt"
 
 	"apigofiberhorpug/internal/database"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/tenant/domain"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -41,7 +42,7 @@ func (r *TenantRepo) FindByID(ctx context.Context, id string) (*domain.Tenant, e
 			&t.CreatedBy, &t.UpdatedBy, &t.UpdatedByName,
 			&t.CreatedAt, &t.UpdatedAt)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("tenant not found: %w", domain.ErrNotFound)
+		return nil, fmt.Errorf("tenant not found: %w", coredomain.ErrNotFound)
 	}
 	return t, err
 }

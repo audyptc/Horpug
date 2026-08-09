@@ -13,6 +13,9 @@ import (
 	menudelivery "apigofiberhorpug/internal/feature/menu/delivery"
 	permissiondelivery "apigofiberhorpug/internal/feature/permission/delivery"
 	roledelivery "apigofiberhorpug/internal/feature/role/delivery"
+	roomdelivery "apigofiberhorpug/internal/feature/room/delivery"
+	roomtypedelivery "apigofiberhorpug/internal/feature/roomtype/delivery"
+	tenantdelivery "apigofiberhorpug/internal/feature/tenant/delivery"
 	userdelivery "apigofiberhorpug/internal/feature/user/delivery"
 
 	"github.com/gofiber/fiber/v3"
@@ -25,9 +28,9 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	roleH := roledelivery.NewRoleHandler(c.RoleUC, c.ActivityLogUC)
 	permH := permissiondelivery.NewPermissionHandler(c.PermUC)
 	menuH := menudelivery.NewMenuHandler(c.MenuUC)
-	roomH := v1.NewRoomHandler(c.RoomUC, c.ActivityLogUC)
-	roomTypeH := v1.NewRoomTypeHandler(c.RoomTypeUC)
-	tenantH := v1.NewTenantHandler(c.TenantUC, c.ActivityLogUC)
+	roomH := roomdelivery.NewRoomHandler(c.RoomUC, c.ActivityLogUC)
+	roomTypeH := roomtypedelivery.NewRoomTypeHandler(c.RoomTypeUC)
+	tenantH := tenantdelivery.NewTenantHandler(c.TenantUC, c.ActivityLogUC)
 	contractH := v1.NewContractHandler(c.ContractUC, c.ActivityLogUC)
 	electricMeterH := v1.NewElectricMeterHandler(c.ElectricMeterUC, c.ActivityLogUC)
 	waterMeterH := v1.NewWaterMeterHandler(c.WaterMeterUC, c.ActivityLogUC)

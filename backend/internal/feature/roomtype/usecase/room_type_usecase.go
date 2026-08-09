@@ -6,7 +6,8 @@ import (
 	"strings"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/roomtype/domain"
 )
 
 type RoomTypeUseCase struct {
@@ -28,7 +29,7 @@ func (uc *RoomTypeUseCase) List(ctx context.Context) ([]*domain.RoomType, error)
 func (uc *RoomTypeUseCase) GetByID(ctx context.Context, id string) (*domain.RoomType, error) {
 	rt, err := uc.repo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -58,7 +59,7 @@ func (uc *RoomTypeUseCase) Create(ctx context.Context, req *domain.CreateRoomTyp
 func (uc *RoomTypeUseCase) Update(ctx context.Context, id string, req *domain.UpdateRoomTypeRequest) (*domain.RoomType, error) {
 	rt, err := uc.repo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -75,7 +76,7 @@ func (uc *RoomTypeUseCase) Update(ctx context.Context, id string, req *domain.Up
 
 func (uc *RoomTypeUseCase) Delete(ctx context.Context, id string) error {
 	if _, err := uc.repo.FindByID(ctx, id); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)

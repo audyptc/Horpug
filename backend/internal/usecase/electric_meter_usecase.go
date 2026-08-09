@@ -7,16 +7,17 @@ import (
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/domain"
+	roomdomain "apigofiberhorpug/internal/feature/room/domain"
 
 	"github.com/google/uuid"
 )
 
 type ElectricMeterUseCase struct {
 	repo     domain.ElectricMeterRepository
-	roomRepo domain.RoomRepository
+	roomRepo roomdomain.RoomRepository
 }
 
-func NewElectricMeterUseCase(repo domain.ElectricMeterRepository, roomRepo domain.RoomRepository) *ElectricMeterUseCase {
+func NewElectricMeterUseCase(repo domain.ElectricMeterRepository, roomRepo roomdomain.RoomRepository) *ElectricMeterUseCase {
 	return &ElectricMeterUseCase{repo: repo, roomRepo: roomRepo}
 }
 
