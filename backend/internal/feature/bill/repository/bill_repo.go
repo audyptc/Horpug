@@ -5,7 +5,8 @@ import (
 	"fmt"
 
 	"apigofiberhorpug/internal/database"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/bill/domain"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -60,7 +61,7 @@ func (r *BillRepo) FindByID(ctx context.Context, id string) (*domain.Bill, error
 			&b.CreatedAt, &b.UpdatedAt,
 			&b.CreatedBy, &b.UpdatedBy)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("bill not found: %w", domain.ErrNotFound)
+		return nil, fmt.Errorf("bill not found: %w", coredomain.ErrNotFound)
 	}
 	return b, err
 }
@@ -69,7 +70,7 @@ func (r *BillRepo) FindDetailByID(ctx context.Context, id string) (*domain.BillD
 	row := r.db.Pool.QueryRow(ctx, billDetailSelect+` WHERE b.id = $1 AND b.deleted_at IS NULL`, id)
 	d, err := scanBillDetail(row)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("bill not found: %w", domain.ErrNotFound)
+		return nil, fmt.Errorf("bill not found: %w", coredomain.ErrNotFound)
 	}
 	if err != nil {
 		return nil, err

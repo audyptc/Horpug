@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/bill/domain"
 	contractdomain "apigofiberhorpug/internal/feature/contract/domain"
 
 	"github.com/google/uuid"
@@ -36,7 +37,7 @@ func (uc *BillUseCase) List(ctx context.Context, limit, offset int) ([]*domain.B
 func (uc *BillUseCase) GetByID(ctx context.Context, id string) (*domain.BillDetail, error) {
 	d, err := uc.billRepo.FindDetailByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -46,7 +47,7 @@ func (uc *BillUseCase) GetByID(ctx context.Context, id string) (*domain.BillDeta
 
 func (uc *BillUseCase) Create(ctx context.Context, req *domain.CreateBillRequest, actorID string) (*domain.BillDetail, error) {
 	if _, err := uc.contractRepo.FindByID(ctx, req.ContractID); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound("contract not found")
 		}
 		return nil, apierror.Internal(err)
@@ -97,7 +98,7 @@ func (uc *BillUseCase) Create(ctx context.Context, req *domain.CreateBillRequest
 func (uc *BillUseCase) Update(ctx context.Context, id string, req *domain.UpdateBillRequest, actorID string) (*domain.BillDetail, error) {
 	b, err := uc.billRepo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -159,7 +160,7 @@ func (uc *BillUseCase) Update(ctx context.Context, id string, req *domain.Update
 
 func (uc *BillUseCase) Delete(ctx context.Context, id string) error {
 	if _, err := uc.billRepo.FindByID(ctx, id); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)

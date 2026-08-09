@@ -4,6 +4,7 @@ import (
 	"apigofiberhorpug/internal/database"
 	alusecase "apigofiberhorpug/internal/feature/activitylog/usecase"
 	authusecase "apigofiberhorpug/internal/feature/auth/usecase"
+	billusecase "apigofiberhorpug/internal/feature/bill/usecase"
 	menuusecase "apigofiberhorpug/internal/feature/menu/usecase"
 	permissionusecase "apigofiberhorpug/internal/feature/permission/usecase"
 	contractusecase "apigofiberhorpug/internal/feature/contract/usecase"
@@ -30,7 +31,7 @@ type Container struct {
 	ContractUC     *contractusecase.ContractUseCase
 	ElectricMeterUC *electricmeterusecase.ElectricMeterUseCase
 	WaterMeterUC    *watermeterusecase.WaterMeterUseCase
-	BillUC         *usecase.BillUseCase
+	BillUC         *billusecase.BillUseCase
 	DashboardUC    *usecase.DashboardUseCase
 	AnalyticsUC    *usecase.AnalyticsUseCase
 	ExpenseUC      *usecase.ExpenseUseCase
@@ -60,7 +61,7 @@ func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refres
 		ContractUC:     contractusecase.NewContractUseCase(repos.contract, repos.room, repos.tenant),
 		ElectricMeterUC: electricmeterusecase.NewElectricMeterUseCase(repos.electricMeter, repos.room),
 		WaterMeterUC:    watermeterusecase.NewWaterMeterUseCase(repos.waterMeter, repos.room),
-		BillUC:         usecase.NewBillUseCase(repos.bill, repos.contract),
+		BillUC:         billusecase.NewBillUseCase(repos.bill, repos.contract),
 		DashboardUC:    usecase.NewDashboardUseCase(repos.dashboard),
 		AnalyticsUC:    usecase.NewAnalyticsUseCase(repos.analytics),
 		ExpenseUC:      usecase.NewExpenseUseCase(repos.expense),

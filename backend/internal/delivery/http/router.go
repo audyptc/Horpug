@@ -10,6 +10,7 @@ import (
 	v1 "apigofiberhorpug/internal/delivery/http/v1"
 	aldelivery "apigofiberhorpug/internal/feature/activitylog/delivery"
 	authdelivery "apigofiberhorpug/internal/feature/auth/delivery"
+	billdelivery "apigofiberhorpug/internal/feature/bill/delivery"
 	menudelivery "apigofiberhorpug/internal/feature/menu/delivery"
 	permissiondelivery "apigofiberhorpug/internal/feature/permission/delivery"
 	contractdelivery "apigofiberhorpug/internal/feature/contract/delivery"
@@ -37,7 +38,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	contractH := contractdelivery.NewContractHandler(c.ContractUC, c.ActivityLogUC)
 	electricMeterH := electricmeterdelivery.NewElectricMeterHandler(c.ElectricMeterUC, c.ActivityLogUC)
 	waterMeterH := watermeterdelivery.NewWaterMeterHandler(c.WaterMeterUC, c.ActivityLogUC)
-	billH := v1.NewBillHandler(c.BillUC, c.ActivityLogUC)
+	billH := billdelivery.NewBillHandler(c.BillUC, c.ActivityLogUC)
 	dashboardH := v1.NewDashboardHandler(c.DashboardUC)
 	analyticsH := v1.NewAnalyticsHandler(c.AnalyticsUC)
 	expenseH := v1.NewExpenseHandler(c.ExpenseUC)

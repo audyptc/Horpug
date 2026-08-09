@@ -4,6 +4,7 @@ import (
 	"apigofiberhorpug/internal/database"
 	alrepository "apigofiberhorpug/internal/feature/activitylog/repository"
 	authrepository "apigofiberhorpug/internal/feature/auth/repository"
+	billrepository "apigofiberhorpug/internal/feature/bill/repository"
 	menurepository "apigofiberhorpug/internal/feature/menu/repository"
 	permissionrepository "apigofiberhorpug/internal/feature/permission/repository"
 	contractrepository "apigofiberhorpug/internal/feature/contract/repository"
@@ -29,7 +30,7 @@ type repositories struct {
 	contract     *contractrepository.ContractRepo
 	electricMeter *electricmeterrepository.ElectricMeterRepo
 	waterMeter    *watermeterrepository.WaterMeterRepo
-	bill         *repository.BillRepo
+	bill         *billrepository.BillRepo
 	dashboard    *repository.DashboardRepo
 	analytics    *repository.AnalyticsRepo
 	expense      *repository.ExpenseRepo
@@ -58,7 +59,7 @@ func newRepositories(db *database.DB) repositories {
 		contract:     contractrepository.NewContractRepo(db),
 		electricMeter: electricmeterrepository.NewElectricMeterRepo(db),
 		waterMeter:    watermeterrepository.NewWaterMeterRepo(db),
-		bill:         repository.NewBillRepo(db),
+		bill:         billrepository.NewBillRepo(db),
 		dashboard:    repository.NewDashboardRepo(db),
 		analytics:    repository.NewAnalyticsRepo(db),
 		expense:      repository.NewExpenseRepo(db),
