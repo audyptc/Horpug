@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/usecase"
+	"apigofiberhorpug/internal/feature/auth/usecase"
 
 	"github.com/gofiber/fiber/v3"
 )

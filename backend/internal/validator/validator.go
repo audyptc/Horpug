@@ -5,20 +5,6 @@ import (
 	"apigofiberhorpug/internal/domain"
 )
 
-func LoginRequest(req *domain.LoginRequest) error {
-	if req.Email == "" || req.Password == "" {
-		return apierror.BadRequest("email and password are required")
-	}
-	return nil
-}
-
-func RefreshRequest(req *domain.RefreshRequest) error {
-	if req.RefreshToken == "" {
-		return apierror.BadRequest("refresh token is required")
-	}
-	return nil
-}
-
 func CreateTenantRequest(req *domain.CreateTenantRequest) error {
 	if req.FirstName == "" || req.LastName == "" {
 		return apierror.BadRequest("first_name and last_name are required")

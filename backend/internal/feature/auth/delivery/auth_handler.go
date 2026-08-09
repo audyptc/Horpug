@@ -1,11 +1,10 @@
-package v1
+package delivery
 
 import (
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/delivery/http/response"
-	"apigofiberhorpug/internal/domain"
-	"apigofiberhorpug/internal/usecase"
-	"apigofiberhorpug/internal/validator"
+	"apigofiberhorpug/internal/feature/auth/domain"
+	"apigofiberhorpug/internal/feature/auth/usecase"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -57,7 +56,7 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 	if err := c.Bind().JSON(&req); err != nil {
 		return apierror.BadRequest("invalid request body")
 	}
-	if err := validator.LoginRequest(&req); err != nil {
+	if err := validateLoginRequest(&req); err != nil {
 		return err
 	}
 	resp, err := h.auth.Login(c.Context(), &req)

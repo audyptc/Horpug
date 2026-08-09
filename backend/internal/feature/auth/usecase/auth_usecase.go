@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/auth/domain"
 	userdomain "apigofiberhorpug/internal/feature/user/domain"
 
 	"github.com/golang-jwt/jwt/v5"

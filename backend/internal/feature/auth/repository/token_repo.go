@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"apigofiberhorpug/internal/database"
-	"apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/auth/domain"
 
 	"github.com/jackc/pgx/v5"
 )
