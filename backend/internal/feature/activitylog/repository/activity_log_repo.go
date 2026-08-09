@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"apigofiberhorpug/internal/database"
-	"apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/activitylog/domain"
 )
 
 type ActivityLogRepo struct {

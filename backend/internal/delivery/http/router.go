@@ -8,6 +8,7 @@ import (
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/delivery/http/middleware"
 	v1 "apigofiberhorpug/internal/delivery/http/v1"
+	aldelivery "apigofiberhorpug/internal/feature/activitylog/delivery"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/limiter"
@@ -38,7 +39,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	documentH := v1.NewDocumentHandler(c.DocumentUC, cfg.UploadDir, cfg.UploadBaseURL)
 	notificationH := v1.NewNotificationHandler(c.NotificationUC)
 	searchH := v1.NewSearchHandler(c.SearchUC)
-	activityLogH := v1.NewActivityLogHandler(c.ActivityLogUC)
+	activityLogH := aldelivery.NewActivityLogHandler(c.ActivityLogUC)
 
 	api := app.Group("/api/v1")
 

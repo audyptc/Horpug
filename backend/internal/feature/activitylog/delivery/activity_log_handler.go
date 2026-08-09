@@ -1,12 +1,12 @@
-package v1
+package delivery
 
 import (
 	"time"
 
 	"apigofiberhorpug/internal/delivery/http/httputil"
 	"apigofiberhorpug/internal/delivery/http/response"
-	"apigofiberhorpug/internal/domain"
-	"apigofiberhorpug/internal/usecase"
+	"apigofiberhorpug/internal/feature/activitylog/domain"
+	"apigofiberhorpug/internal/feature/activitylog/usecase"
 
 	"github.com/gofiber/fiber/v3"
 )

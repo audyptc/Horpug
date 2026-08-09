@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/activitylog/domain"
 
 	"github.com/google/uuid"
 )

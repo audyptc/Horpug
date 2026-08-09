@@ -5,6 +5,8 @@ import (
 	"apigofiberhorpug/internal/delivery/http/httputil"
 	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/domain"
+	aldomain "apigofiberhorpug/internal/feature/activitylog/domain"
+	alusecase "apigofiberhorpug/internal/feature/activitylog/usecase"
 	"apigofiberhorpug/internal/usecase"
 	"apigofiberhorpug/internal/validator"
 
@@ -13,10 +15,10 @@ import (
 
 type ContractHandler struct {
 	contracts   *usecase.ContractUseCase
-	activityLog *usecase.ActivityLogUseCase
+	activityLog *alusecase.ActivityLogUseCase
 }
 
-func NewContractHandler(contracts *usecase.ContractUseCase, activityLog *usecase.ActivityLogUseCase) *ContractHandler {
+func NewContractHandler(contracts *usecase.ContractUseCase, activityLog *alusecase.ActivityLogUseCase) *ContractHandler {
 	return &ContractHandler{contracts: contracts, activityLog: activityLog}
 }
 
@@ -53,7 +55,7 @@ func (h *ContractHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityCreate, "contract", d.ID, d)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityCreate, "contract", d.ID, d)
 	return response.Created(c, d)
 }
 
@@ -67,7 +69,7 @@ func (h *ContractHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "contract", d.ID, d)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityUpdate, "contract", d.ID, d)
 	return response.OK(c, d)
 }
 
@@ -77,6 +79,6 @@ func (h *ContractHandler) Delete(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityDelete, "contract", id, nil)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityDelete, "contract", id, nil)
 	return response.Message(c, "contract deleted")
 }

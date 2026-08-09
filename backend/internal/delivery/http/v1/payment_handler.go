@@ -5,6 +5,8 @@ import (
 	"apigofiberhorpug/internal/delivery/http/httputil"
 	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/domain"
+	aldomain "apigofiberhorpug/internal/feature/activitylog/domain"
+	alusecase "apigofiberhorpug/internal/feature/activitylog/usecase"
 	"apigofiberhorpug/internal/usecase"
 	"apigofiberhorpug/internal/validator"
 
@@ -13,10 +15,10 @@ import (
 
 type PaymentHandler struct {
 	payment     *usecase.PaymentUseCase
-	activityLog *usecase.ActivityLogUseCase
+	activityLog *alusecase.ActivityLogUseCase
 }
 
-func NewPaymentHandler(payment *usecase.PaymentUseCase, activityLog *usecase.ActivityLogUseCase) *PaymentHandler {
+func NewPaymentHandler(payment *usecase.PaymentUseCase, activityLog *alusecase.ActivityLogUseCase) *PaymentHandler {
 	return &PaymentHandler{payment: payment, activityLog: activityLog}
 }
 
@@ -53,7 +55,7 @@ func (h *PaymentHandler) Create(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityCreate, "payment", p.ID, p)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityCreate, "payment", p.ID, p)
 	return response.Created(c, p)
 }
 
@@ -70,7 +72,7 @@ func (h *PaymentHandler) Update(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "payment", p.ID, p)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityUpdate, "payment", p.ID, p)
 	return response.OK(c, p)
 }
 
@@ -80,6 +82,6 @@ func (h *PaymentHandler) Delete(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityDelete, "payment", id, nil)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityDelete, "payment", id, nil)
 	return response.Message(c, "payment deleted")
 }

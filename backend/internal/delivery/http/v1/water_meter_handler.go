@@ -7,6 +7,8 @@ import (
 	"apigofiberhorpug/internal/delivery/http/httputil"
 	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/domain"
+	aldomain "apigofiberhorpug/internal/feature/activitylog/domain"
+	alusecase "apigofiberhorpug/internal/feature/activitylog/usecase"
 	"apigofiberhorpug/internal/usecase"
 	"apigofiberhorpug/internal/validator"
 
@@ -15,10 +17,10 @@ import (
 
 type WaterMeterHandler struct {
 	uc          *usecase.WaterMeterUseCase
-	activityLog *usecase.ActivityLogUseCase
+	activityLog *alusecase.ActivityLogUseCase
 }
 
-func NewWaterMeterHandler(uc *usecase.WaterMeterUseCase, activityLog *usecase.ActivityLogUseCase) *WaterMeterHandler {
+func NewWaterMeterHandler(uc *usecase.WaterMeterUseCase, activityLog *alusecase.ActivityLogUseCase) *WaterMeterHandler {
 	return &WaterMeterHandler{uc: uc, activityLog: activityLog}
 }
 
@@ -75,7 +77,7 @@ func (h *WaterMeterHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityCreate, "water_meter", d.ID, d)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityCreate, "water_meter", d.ID, d)
 	return response.Created(c, d)
 }
 
@@ -89,7 +91,7 @@ func (h *WaterMeterHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "water_meter", d.ID, d)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityUpdate, "water_meter", d.ID, d)
 	return response.OK(c, d)
 }
 
@@ -99,6 +101,6 @@ func (h *WaterMeterHandler) Delete(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityDelete, "water_meter", id, nil)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityDelete, "water_meter", id, nil)
 	return response.Message(c, "water meter reading deleted")
 }

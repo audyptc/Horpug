@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"apigofiberhorpug/internal/database"
+	alrepository "apigofiberhorpug/internal/feature/activitylog/repository"
 	"apigofiberhorpug/internal/repository"
 )
 
@@ -30,7 +31,7 @@ type repositories struct {
 	document     *repository.DocumentRepo
 	notification *repository.NotificationRepo
 	search       *repository.SearchRepo
-	activityLog  *repository.ActivityLogRepo
+	activityLog  *alrepository.ActivityLogRepo
 }
 
 func newRepositories(db *database.DB) repositories {
@@ -59,6 +60,6 @@ func newRepositories(db *database.DB) repositories {
 		document:     repository.NewDocumentRepo(db),
 		notification: repository.NewNotificationRepo(db),
 		search:       repository.NewSearchRepo(db),
-		activityLog:  repository.NewActivityLogRepo(db),
+		activityLog:  alrepository.NewActivityLogRepo(db),
 	}
 }

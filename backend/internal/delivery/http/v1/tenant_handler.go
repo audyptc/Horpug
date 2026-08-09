@@ -5,6 +5,8 @@ import (
 	"apigofiberhorpug/internal/delivery/http/httputil"
 	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/domain"
+	aldomain "apigofiberhorpug/internal/feature/activitylog/domain"
+	alusecase "apigofiberhorpug/internal/feature/activitylog/usecase"
 	"apigofiberhorpug/internal/usecase"
 	"apigofiberhorpug/internal/validator"
 
@@ -13,10 +15,10 @@ import (
 
 type TenantHandler struct {
 	tenants     *usecase.TenantUseCase
-	activityLog *usecase.ActivityLogUseCase
+	activityLog *alusecase.ActivityLogUseCase
 }
 
-func NewTenantHandler(tenants *usecase.TenantUseCase, activityLog *usecase.ActivityLogUseCase) *TenantHandler {
+func NewTenantHandler(tenants *usecase.TenantUseCase, activityLog *alusecase.ActivityLogUseCase) *TenantHandler {
 	return &TenantHandler{tenants: tenants, activityLog: activityLog}
 }
 
@@ -53,7 +55,7 @@ func (h *TenantHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityCreate, "tenant", t.ID, t)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityCreate, "tenant", t.ID, t)
 	return response.Created(c, t)
 }
 
@@ -67,7 +69,7 @@ func (h *TenantHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "tenant", t.ID, t)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityUpdate, "tenant", t.ID, t)
 	return response.OK(c, t)
 }
 
@@ -77,6 +79,6 @@ func (h *TenantHandler) Delete(c fiber.Ctx) error {
 	if err := h.tenants.Delete(c.Context(), id); err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityDelete, "tenant", id, nil)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityDelete, "tenant", id, nil)
 	return response.Message(c, "tenant deleted")
 }

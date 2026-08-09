@@ -5,6 +5,8 @@ import (
 	"apigofiberhorpug/internal/delivery/http/httputil"
 	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/domain"
+	aldomain "apigofiberhorpug/internal/feature/activitylog/domain"
+	alusecase "apigofiberhorpug/internal/feature/activitylog/usecase"
 	"apigofiberhorpug/internal/usecase"
 	"apigofiberhorpug/internal/validator"
 
@@ -13,10 +15,10 @@ import (
 
 type RoomHandler struct {
 	rooms       *usecase.RoomUseCase
-	activityLog *usecase.ActivityLogUseCase
+	activityLog *alusecase.ActivityLogUseCase
 }
 
-func NewRoomHandler(rooms *usecase.RoomUseCase, activityLog *usecase.ActivityLogUseCase) *RoomHandler {
+func NewRoomHandler(rooms *usecase.RoomUseCase, activityLog *alusecase.ActivityLogUseCase) *RoomHandler {
 	return &RoomHandler{rooms: rooms, activityLog: activityLog}
 }
 
@@ -53,7 +55,7 @@ func (h *RoomHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityCreate, "room", room.ID, room)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityCreate, "room", room.ID, room)
 	return response.Created(c, room)
 }
 
@@ -67,7 +69,7 @@ func (h *RoomHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "room", room.ID, room)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityUpdate, "room", room.ID, room)
 	return response.OK(c, room)
 }
 
@@ -77,6 +79,6 @@ func (h *RoomHandler) Delete(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityDelete, "room", id, nil)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityDelete, "room", id, nil)
 	return response.Message(c, "room deleted")
 }

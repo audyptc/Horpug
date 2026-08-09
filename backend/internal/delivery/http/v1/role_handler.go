@@ -5,6 +5,8 @@ import (
 	"apigofiberhorpug/internal/delivery/http/httputil"
 	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/domain"
+	aldomain "apigofiberhorpug/internal/feature/activitylog/domain"
+	alusecase "apigofiberhorpug/internal/feature/activitylog/usecase"
 	"apigofiberhorpug/internal/usecase"
 	"apigofiberhorpug/internal/validator"
 
@@ -13,10 +15,10 @@ import (
 
 type RoleHandler struct {
 	roles       *usecase.RoleUseCase
-	activityLog *usecase.ActivityLogUseCase
+	activityLog *alusecase.ActivityLogUseCase
 }
 
-func NewRoleHandler(roles *usecase.RoleUseCase, activityLog *usecase.ActivityLogUseCase) *RoleHandler {
+func NewRoleHandler(roles *usecase.RoleUseCase, activityLog *alusecase.ActivityLogUseCase) *RoleHandler {
 	return &RoleHandler{roles: roles, activityLog: activityLog}
 }
 
@@ -92,7 +94,7 @@ func (h *RoleHandler) Create(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityCreate, "role", role.ID, role)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityCreate, "role", role.ID, role)
 	return response.Created(c, role)
 }
 
@@ -116,7 +118,7 @@ func (h *RoleHandler) Update(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "role", role.ID, role)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityUpdate, "role", role.ID, role)
 	return response.OK(c, role)
 }
 
@@ -134,7 +136,7 @@ func (h *RoleHandler) Delete(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityDelete, "role", id, nil)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityDelete, "role", id, nil)
 	return response.Message(c, "role deleted")
 }
 
@@ -158,6 +160,6 @@ func (h *RoleHandler) AssignPermissions(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, domain.ActivityUpdate, "role_permissions", id, &req)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityUpdate, "role_permissions", id, &req)
 	return response.Message(c, "permissions assigned successfully")
 }

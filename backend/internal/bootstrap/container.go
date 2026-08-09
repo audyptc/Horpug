@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"apigofiberhorpug/internal/database"
+	alusecase "apigofiberhorpug/internal/feature/activitylog/usecase"
 	"apigofiberhorpug/internal/usecase"
 	"time"
 )
@@ -31,7 +32,7 @@ type Container struct {
 	DocumentUC      *usecase.DocumentUseCase
 	NotificationUC  *usecase.NotificationUseCase
 	SearchUC        *usecase.SearchUseCase
-	ActivityLogUC   *usecase.ActivityLogUseCase
+	ActivityLogUC   *alusecase.ActivityLogUseCase
 }
 
 func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refreshTokenDuration time.Duration) *Container {
@@ -61,6 +62,6 @@ func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refres
 		DocumentUC:     usecase.NewDocumentUseCase(repos.document),
 		NotificationUC: usecase.NewNotificationUseCase(repos.notification),
 		SearchUC:       usecase.NewSearchUseCase(repos.search),
-		ActivityLogUC:  usecase.NewActivityLogUseCase(repos.activityLog),
+		ActivityLogUC:  alusecase.NewActivityLogUseCase(repos.activityLog),
 	}
 }
