@@ -6,22 +6,23 @@ import (
 	"time"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
 	roomdomain "apigofiberhorpug/internal/feature/room/domain"
+	"apigofiberhorpug/internal/feature/watermeter/domain"
 
 	"github.com/google/uuid"
 )
 
-type ElectricMeterUseCase struct {
-	repo     domain.ElectricMeterRepository
+type WaterMeterUseCase struct {
+	repo     domain.WaterMeterRepository
 	roomRepo roomdomain.RoomRepository
 }
 
-func NewElectricMeterUseCase(repo domain.ElectricMeterRepository, roomRepo roomdomain.RoomRepository) *ElectricMeterUseCase {
-	return &ElectricMeterUseCase{repo: repo, roomRepo: roomRepo}
+func NewWaterMeterUseCase(repo domain.WaterMeterRepository, roomRepo roomdomain.RoomRepository) *WaterMeterUseCase {
+	return &WaterMeterUseCase{repo: repo, roomRepo: roomRepo}
 }
 
-func (uc *ElectricMeterUseCase) List(ctx context.Context, limit, offset int) ([]*domain.ElectricMeterDetail, int, error) {
+func (uc *WaterMeterUseCase) List(ctx context.Context, limit, offset int) ([]*domain.WaterMeterDetail, int, error) {
 	total, err := uc.repo.Count(ctx)
 	if err != nil {
 		return nil, 0, apierror.Internal(err)
@@ -33,10 +34,10 @@ func (uc *ElectricMeterUseCase) List(ctx context.Context, limit, offset int) ([]
 	return list, total, nil
 }
 
-func (uc *ElectricMeterUseCase) GetByID(ctx context.Context, id string) (*domain.ElectricMeterDetail, error) {
+func (uc *WaterMeterUseCase) GetByID(ctx context.Context, id string) (*domain.WaterMeterDetail, error) {
 	d, err := uc.repo.FindDetailByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -44,10 +45,10 @@ func (uc *ElectricMeterUseCase) GetByID(ctx context.Context, id string) (*domain
 	return d, nil
 }
 
-func (uc *ElectricMeterUseCase) GetLatestByRoomID(ctx context.Context, roomID string, billingMonth *time.Time) (*domain.ElectricMeterDetail, error) {
+func (uc *WaterMeterUseCase) GetLatestByRoomID(ctx context.Context, roomID string, billingMonth *time.Time) (*domain.WaterMeterDetail, error) {
 	d, err := uc.repo.FindLatestByRoomID(ctx, roomID, billingMonth)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -55,15 +56,15 @@ func (uc *ElectricMeterUseCase) GetLatestByRoomID(ctx context.Context, roomID st
 	return d, nil
 }
 
-func (uc *ElectricMeterUseCase) Create(ctx context.Context, req *domain.CreateElectricMeterRequest, actorID string) (*domain.ElectricMeterDetail, error) {
+func (uc *WaterMeterUseCase) Create(ctx context.Context, req *domain.CreateWaterMeterRequest, actorID string) (*domain.WaterMeterDetail, error) {
 	if _, err := uc.roomRepo.FindByID(ctx, req.RoomID); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound("room not found")
 		}
 		return nil, apierror.Internal(err)
 	}
 
-	m := &domain.ElectricMeter{
+	m := &domain.WaterMeter{
 		ID:              uuid.New().String(),
 		RoomID:          req.RoomID,
 		BillingType:     req.BillingType,
@@ -83,10 +84,10 @@ func (uc *ElectricMeterUseCase) Create(ctx context.Context, req *domain.CreateEl
 	return uc.repo.FindDetailByID(ctx, m.ID)
 }
 
-func (uc *ElectricMeterUseCase) Update(ctx context.Context, id string, req *domain.UpdateElectricMeterRequest, actorID string) (*domain.ElectricMeterDetail, error) {
+func (uc *WaterMeterUseCase) Update(ctx context.Context, id string, req *domain.UpdateWaterMeterRequest, actorID string) (*domain.WaterMeterDetail, error) {
 	m, err := uc.repo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -110,9 +111,9 @@ func (uc *ElectricMeterUseCase) Update(ctx context.Context, id string, req *doma
 	return uc.repo.FindDetailByID(ctx, id)
 }
 
-func (uc *ElectricMeterUseCase) Delete(ctx context.Context, id string) error {
+func (uc *WaterMeterUseCase) Delete(ctx context.Context, id string) error {
 	if _, err := uc.repo.FindByID(ctx, id); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)

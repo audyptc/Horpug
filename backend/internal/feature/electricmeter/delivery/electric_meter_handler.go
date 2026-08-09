@@ -1,4 +1,4 @@
-package v1
+package delivery
 
 import (
 	"time"
@@ -6,11 +6,10 @@ import (
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/delivery/http/httputil"
 	"apigofiberhorpug/internal/delivery/http/response"
-	"apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/electricmeter/domain"
+	"apigofiberhorpug/internal/feature/electricmeter/usecase"
 	aldomain "apigofiberhorpug/internal/feature/activitylog/domain"
 	alusecase "apigofiberhorpug/internal/feature/activitylog/usecase"
-	"apigofiberhorpug/internal/usecase"
-	"apigofiberhorpug/internal/validator"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -69,7 +68,7 @@ func (h *ElectricMeterHandler) Create(c fiber.Ctx) error {
 	if err := c.Bind().JSON(&req); err != nil {
 		return apierror.BadRequest("invalid request body")
 	}
-	if err := validator.CreateElectricMeterRequest(&req); err != nil {
+	if err := validateCreateElectricMeterRequest(&req); err != nil {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)

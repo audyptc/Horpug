@@ -7,11 +7,13 @@ import (
 	menuusecase "apigofiberhorpug/internal/feature/menu/usecase"
 	permissionusecase "apigofiberhorpug/internal/feature/permission/usecase"
 	contractusecase "apigofiberhorpug/internal/feature/contract/usecase"
+	electricmeterusecase "apigofiberhorpug/internal/feature/electricmeter/usecase"
 	roleusecase "apigofiberhorpug/internal/feature/role/usecase"
 	roomusecase "apigofiberhorpug/internal/feature/room/usecase"
 	roomtypeusecase "apigofiberhorpug/internal/feature/roomtype/usecase"
 	tenantusecase "apigofiberhorpug/internal/feature/tenant/usecase"
 	userusecase "apigofiberhorpug/internal/feature/user/usecase"
+	watermeterusecase "apigofiberhorpug/internal/feature/watermeter/usecase"
 	"apigofiberhorpug/internal/usecase"
 	"time"
 )
@@ -26,8 +28,8 @@ type Container struct {
 	RoomTypeUC     *roomtypeusecase.RoomTypeUseCase
 	TenantUC       *tenantusecase.TenantUseCase
 	ContractUC     *contractusecase.ContractUseCase
-	ElectricMeterUC *usecase.ElectricMeterUseCase
-	WaterMeterUC    *usecase.WaterMeterUseCase
+	ElectricMeterUC *electricmeterusecase.ElectricMeterUseCase
+	WaterMeterUC    *watermeterusecase.WaterMeterUseCase
 	BillUC         *usecase.BillUseCase
 	DashboardUC    *usecase.DashboardUseCase
 	AnalyticsUC    *usecase.AnalyticsUseCase
@@ -56,8 +58,8 @@ func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refres
 		RoomTypeUC:     roomtypeusecase.NewRoomTypeUseCase(repos.roomType),
 		TenantUC:       tenantusecase.NewTenantUseCase(repos.tenant, repos.contract),
 		ContractUC:     contractusecase.NewContractUseCase(repos.contract, repos.room, repos.tenant),
-		ElectricMeterUC: usecase.NewElectricMeterUseCase(repos.electricMeter, repos.room),
-		WaterMeterUC:    usecase.NewWaterMeterUseCase(repos.waterMeter, repos.room),
+		ElectricMeterUC: electricmeterusecase.NewElectricMeterUseCase(repos.electricMeter, repos.room),
+		WaterMeterUC:    watermeterusecase.NewWaterMeterUseCase(repos.waterMeter, repos.room),
 		BillUC:         usecase.NewBillUseCase(repos.bill, repos.contract),
 		DashboardUC:    usecase.NewDashboardUseCase(repos.dashboard),
 		AnalyticsUC:    usecase.NewAnalyticsUseCase(repos.analytics),

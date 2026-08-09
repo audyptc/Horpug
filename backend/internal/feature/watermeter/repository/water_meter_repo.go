@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"apigofiberhorpug/internal/database"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/watermeter/domain"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -58,7 +59,7 @@ func (r *WaterMeterRepo) FindByID(ctx context.Context, id string) (*domain.Water
 			&m.Note, &m.CreatedAt, &m.UpdatedAt,
 			&m.CreatedBy, &m.UpdatedBy)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("water meter reading not found: %w", domain.ErrNotFound)
+		return nil, fmt.Errorf("water meter reading not found: %w", coredomain.ErrNotFound)
 	}
 	return m, err
 }
@@ -67,7 +68,7 @@ func (r *WaterMeterRepo) FindDetailByID(ctx context.Context, id string) (*domain
 	row := r.db.Pool.QueryRow(ctx, waterMeterDetailSelect+` WHERE w.id = $1 AND w.deleted_at IS NULL`, id)
 	d, err := scanWaterMeterDetail(row)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("water meter reading not found: %w", domain.ErrNotFound)
+		return nil, fmt.Errorf("water meter reading not found: %w", coredomain.ErrNotFound)
 	}
 	return d, err
 }
@@ -83,7 +84,7 @@ func (r *WaterMeterRepo) FindLatestByRoomID(ctx context.Context, roomID string, 
 	row := r.db.Pool.QueryRow(ctx, q, args...)
 	d, err := scanWaterMeterDetail(row)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("water meter reading not found: %w", domain.ErrNotFound)
+		return nil, fmt.Errorf("water meter reading not found: %w", coredomain.ErrNotFound)
 	}
 	return d, err
 }

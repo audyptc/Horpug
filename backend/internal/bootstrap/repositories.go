@@ -7,11 +7,13 @@ import (
 	menurepository "apigofiberhorpug/internal/feature/menu/repository"
 	permissionrepository "apigofiberhorpug/internal/feature/permission/repository"
 	contractrepository "apigofiberhorpug/internal/feature/contract/repository"
+	electricmeterrepository "apigofiberhorpug/internal/feature/electricmeter/repository"
 	rolerepository "apigofiberhorpug/internal/feature/role/repository"
 	roomrepository "apigofiberhorpug/internal/feature/room/repository"
 	roomtyperepository "apigofiberhorpug/internal/feature/roomtype/repository"
 	tenantrepository "apigofiberhorpug/internal/feature/tenant/repository"
 	userrepository "apigofiberhorpug/internal/feature/user/repository"
+	watermeterrepository "apigofiberhorpug/internal/feature/watermeter/repository"
 	"apigofiberhorpug/internal/repository"
 )
 
@@ -25,8 +27,8 @@ type repositories struct {
 	roomType     *roomtyperepository.RoomTypeRepo
 	tenant       *tenantrepository.TenantRepo
 	contract     *contractrepository.ContractRepo
-	electricMeter *repository.ElectricMeterRepo
-	waterMeter    *repository.WaterMeterRepo
+	electricMeter *electricmeterrepository.ElectricMeterRepo
+	waterMeter    *watermeterrepository.WaterMeterRepo
 	bill         *repository.BillRepo
 	dashboard    *repository.DashboardRepo
 	analytics    *repository.AnalyticsRepo
@@ -54,8 +56,8 @@ func newRepositories(db *database.DB) repositories {
 		roomType:     roomtyperepository.NewRoomTypeRepo(db),
 		tenant:       tenantrepository.NewTenantRepo(db),
 		contract:     contractrepository.NewContractRepo(db),
-		electricMeter: repository.NewElectricMeterRepo(db),
-		waterMeter:    repository.NewWaterMeterRepo(db),
+		electricMeter: electricmeterrepository.NewElectricMeterRepo(db),
+		waterMeter:    watermeterrepository.NewWaterMeterRepo(db),
 		bill:         repository.NewBillRepo(db),
 		dashboard:    repository.NewDashboardRepo(db),
 		analytics:    repository.NewAnalyticsRepo(db),
