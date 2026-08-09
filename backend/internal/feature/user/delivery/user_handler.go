@@ -1,14 +1,13 @@
-package v1
+package delivery
 
 import (
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/delivery/http/httputil"
 	"apigofiberhorpug/internal/delivery/http/response"
-	"apigofiberhorpug/internal/domain"
 	aldomain "apigofiberhorpug/internal/feature/activitylog/domain"
 	alusecase "apigofiberhorpug/internal/feature/activitylog/usecase"
-	"apigofiberhorpug/internal/usecase"
-	"apigofiberhorpug/internal/validator"
+	"apigofiberhorpug/internal/feature/user/domain"
+	"apigofiberhorpug/internal/feature/user/usecase"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -71,7 +70,7 @@ func (h *UserHandler) Create(c fiber.Ctx) error {
 	if err := c.Bind().JSON(&req); err != nil {
 		return apierror.BadRequest("invalid request body")
 	}
-	if err := validator.CreateUserRequest(&req); err != nil {
+	if err := validateCreateUserRequest(&req); err != nil {
 		return err
 	}
 	user, err := h.users.Create(c.Context(), &req)
@@ -140,7 +139,7 @@ func (h *UserHandler) AssignRole(c fiber.Ctx) error {
 	if err := c.Bind().JSON(&req); err != nil {
 		return apierror.BadRequest("invalid request body")
 	}
-	if err := validator.AssignRoleRequest(&req); err != nil {
+	if err := validateAssignRoleRequest(&req); err != nil {
 		return err
 	}
 	id := c.Params("id")

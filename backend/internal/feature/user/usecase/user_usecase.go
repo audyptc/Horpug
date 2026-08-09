@@ -5,7 +5,8 @@ import (
 	"errors"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/user/domain"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -13,10 +14,10 @@ import (
 
 type UserUseCase struct {
 	userRepo domain.UserRepository
-	roleRepo domain.RoleRepository
+	roleRepo coredomain.RoleRepository
 }
 
-func NewUserUseCase(userRepo domain.UserRepository, roleRepo domain.RoleRepository) *UserUseCase {
+func NewUserUseCase(userRepo domain.UserRepository, roleRepo coredomain.RoleRepository) *UserUseCase {
 	return &UserUseCase{userRepo: userRepo, roleRepo: roleRepo}
 }
 
@@ -41,7 +42,7 @@ func (uc *UserUseCase) List(ctx context.Context, limit, offset int) ([]*domain.U
 func (uc *UserUseCase) GetByID(ctx context.Context, id string) (*domain.User, error) {
 	user, err := uc.userRepo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -76,7 +77,7 @@ func (uc *UserUseCase) Create(ctx context.Context, req *domain.CreateUserRequest
 func (uc *UserUseCase) Update(ctx context.Context, id string, req *domain.UpdateUserRequest) (*domain.User, error) {
 	user, err := uc.userRepo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -106,7 +107,7 @@ func (uc *UserUseCase) Update(ctx context.Context, id string, req *domain.Update
 
 func (uc *UserUseCase) Delete(ctx context.Context, id string) error {
 	if _, err := uc.userRepo.FindByID(ctx, id); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)
@@ -119,13 +120,13 @@ func (uc *UserUseCase) Delete(ctx context.Context, id string) error {
 
 func (uc *UserUseCase) AssignRole(ctx context.Context, userID string, req *domain.AssignRoleRequest) error {
 	if _, err := uc.userRepo.FindByID(ctx, userID); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)
 	}
 	if _, err := uc.roleRepo.FindByID(ctx, req.RoleID); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound("role not found")
 		}
 		return apierror.Internal(err)

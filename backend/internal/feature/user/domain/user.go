@@ -3,17 +3,19 @@ package domain
 import (
 	"context"
 	"time"
+
+	coredomain "apigofiberhorpug/internal/domain"
 )
 
 type User struct {
-	ID        string    `json:"id"`
-	FullName  string    `json:"full_name"`
-	Email     string    `json:"email"`
-	Password  string    `json:"-"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Role      *Role     `json:"role,omitempty"`
+	ID        string           `json:"id"`
+	FullName  string           `json:"full_name"`
+	Email     string           `json:"email"`
+	Password  string           `json:"-"`
+	IsActive  bool             `json:"is_active"`
+	CreatedAt time.Time        `json:"created_at"`
+	UpdatedAt time.Time        `json:"updated_at"`
+	Role      *coredomain.Role `json:"role,omitempty"`
 }
 
 type CreateUserRequest struct {
@@ -41,6 +43,6 @@ type UserRepository interface {
 	Update(ctx context.Context, user *User) error
 	Delete(ctx context.Context, id string) error
 	AssignRole(ctx context.Context, userID string, roleID string) error
-	GetRole(ctx context.Context, userID string) (*Role, error)
+	GetRole(ctx context.Context, userID string) (*coredomain.Role, error)
 	GetPermissions(ctx context.Context, userID string) ([]string, error)
 }

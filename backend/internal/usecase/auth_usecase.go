@@ -8,6 +8,7 @@ import (
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/domain"
+	userdomain "apigofiberhorpug/internal/feature/user/domain"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -28,7 +29,7 @@ type Claims struct {
 }
 
 type AuthUseCase struct {
-	userRepo             domain.UserRepository
+	userRepo             userdomain.UserRepository
 	tokenRepo            domain.RefreshTokenRepository
 	secretKey            []byte
 	accessTokenDuration  time.Duration
@@ -36,7 +37,7 @@ type AuthUseCase struct {
 }
 
 func NewAuthUseCase(
-	userRepo domain.UserRepository,
+	userRepo userdomain.UserRepository,
 	tokenRepo domain.RefreshTokenRepository,
 	secretKey string,
 	accessTokenDuration, refreshTokenDuration time.Duration,
@@ -199,7 +200,7 @@ func (uc *AuthUseCase) ValidateAccessToken(tokenString string) (*Claims, error) 
 	return claims, nil
 }
 
-func (uc *AuthUseCase) generateAccessToken(user *domain.User, roleName string, permissions []string) (string, error) {
+func (uc *AuthUseCase) generateAccessToken(user *userdomain.User, roleName string, permissions []string) (string, error) {
 	claims := &Claims{
 		UserID:      user.ID,
 		Email:       user.Email,

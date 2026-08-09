@@ -5,7 +5,8 @@ import (
 	"fmt"
 
 	"apigofiberhorpug/internal/database"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/user/domain"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -25,7 +26,7 @@ func (r *UserRepo) FindByID(ctx context.Context, id string) (*domain.User, error
 		FROM users WHERE id = $1 AND deleted_at IS NULL`, id).
 		Scan(&u.ID, &u.FullName, &u.Email, &u.Password, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("user not found: %w", domain.ErrNotFound)
+		return nil, fmt.Errorf("user not found: %w", coredomain.ErrNotFound)
 	}
 	return u, err
 }
@@ -37,7 +38,7 @@ func (r *UserRepo) FindByEmail(ctx context.Context, email string) (*domain.User,
 		FROM users WHERE email = $1 AND deleted_at IS NULL`, email).
 		Scan(&u.ID, &u.FullName, &u.Email, &u.Password, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("user not found: %w", domain.ErrNotFound)
+		return nil, fmt.Errorf("user not found: %w", coredomain.ErrNotFound)
 	}
 	return u, err
 }
@@ -104,8 +105,8 @@ func (r *UserRepo) AssignRole(ctx context.Context, userID string, roleID string)
 	return err
 }
 
-func (r *UserRepo) GetRole(ctx context.Context, userID string) (*domain.Role, error) {
-	role := &domain.Role{}
+func (r *UserRepo) GetRole(ctx context.Context, userID string) (*coredomain.Role, error) {
+	role := &coredomain.Role{}
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT r.id, r.name, r.description, r.created_at, r.updated_at
 		FROM roles r
