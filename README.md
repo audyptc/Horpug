@@ -15,8 +15,8 @@
 
 ```
 Horpug/
-├── client/           # React frontend
-├── server/           # Go backend
+├── frontend/         # React frontend
+├── backend/          # Go backend
 ├── nginx/            # Nginx config (reverse proxy)
 ├── docker-compose.yml
 └── .env.example
@@ -84,7 +84,7 @@ Swagger UI พร้อมใช้งานที่ `http://localhost/docs` �
 ### Frontend
 
 ```bash
-cd client
+cd frontend
 npm install
 npm run dev        # http://localhost:5173
 ```
@@ -92,6 +92,6 @@ npm run dev        # http://localhost:5173
 ### Backend
 
 ```bash
-cd server
+cd backend
 go run ./cmd/api
 ```

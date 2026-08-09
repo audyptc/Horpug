@@ -32,9 +32,9 @@ jobs:
             echo "==> Write root .env"
             printf 'DB_PASSWORD=%s\n' "$DB_PASSWORD" > .env
 
-            echo "==> Write server/.env"
+            echo "==> Write backend/.env"
             printf 'APP_SECRETKEY=%s\nCORS_ORIGINS=%s\n' \
-              "$APP_SECRETKEY" "$CORS_ORIGINS" > server/.env
+              "$APP_SECRETKEY" "$CORS_ORIGINS" > backend/.env
 
             echo "==> Build and restart containers"
             docker compose up --build -d --remove-orphans

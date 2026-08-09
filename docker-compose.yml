@@ -50,7 +50,7 @@ services:
 
   frontend:
     build:
-      context: ./client
+      context: ./frontend
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ""
@@ -71,7 +71,7 @@ services:
 
   backend:
     build:
-      context: ./server
+      context: ./backend
       dockerfile: Dockerfile
     depends_on:
       postgres:
@@ -79,7 +79,7 @@ services:
       pgbouncer:
         condition: service_started
     env_file:
-      - ./server/.env
+      - ./backend/.env
     environment:
       APP_PORT: 8080
       DB_HOST: pgbouncer
