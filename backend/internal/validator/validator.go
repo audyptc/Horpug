@@ -19,13 +19,6 @@ func RefreshRequest(req *domain.RefreshRequest) error {
 	return nil
 }
 
-func CreateRoleRequest(req *domain.CreateRoleRequest) error {
-	if req.Name == "" {
-		return apierror.BadRequest("name is required")
-	}
-	return nil
-}
-
 func CreateTenantRequest(req *domain.CreateTenantRequest) error {
 	if req.FirstName == "" || req.LastName == "" {
 		return apierror.BadRequest("first_name and last_name are required")

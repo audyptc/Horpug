@@ -9,6 +9,7 @@ import (
 	"apigofiberhorpug/internal/delivery/http/middleware"
 	v1 "apigofiberhorpug/internal/delivery/http/v1"
 	aldelivery "apigofiberhorpug/internal/feature/activitylog/delivery"
+	roledelivery "apigofiberhorpug/internal/feature/role/delivery"
 	userdelivery "apigofiberhorpug/internal/feature/user/delivery"
 
 	"github.com/gofiber/fiber/v3"
@@ -18,7 +19,7 @@ import (
 func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	authH := v1.NewAuthHandler(c.AuthUC)
 	userH := userdelivery.NewUserHandler(c.UserUC, c.ActivityLogUC)
-	roleH := v1.NewRoleHandler(c.RoleUC, c.ActivityLogUC)
+	roleH := roledelivery.NewRoleHandler(c.RoleUC, c.ActivityLogUC)
 	permH := v1.NewPermissionHandler(c.PermUC)
 	menuH := v1.NewMenuHandler(c.MenuUC)
 	roomH := v1.NewRoomHandler(c.RoomUC, c.ActivityLogUC)

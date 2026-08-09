@@ -6,18 +6,19 @@ import (
 	"strings"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/role/domain"
 
 	"github.com/google/uuid"
 )
 
 type RoleUseCase struct {
 	roleRepo domain.RoleRepository
-	permRepo domain.PermissionRepository
-	menuRepo domain.MenuRepository
+	permRepo coredomain.PermissionRepository
+	menuRepo coredomain.MenuRepository
 }
 
-func NewRoleUseCase(roleRepo domain.RoleRepository, permRepo domain.PermissionRepository, menuRepo domain.MenuRepository) *RoleUseCase {
+func NewRoleUseCase(roleRepo domain.RoleRepository, permRepo coredomain.PermissionRepository, menuRepo coredomain.MenuRepository) *RoleUseCase {
 	return &RoleUseCase{roleRepo: roleRepo, permRepo: permRepo, menuRepo: menuRepo}
 }
 
@@ -50,7 +51,7 @@ func (uc *RoleUseCase) ListActive(ctx context.Context) ([]*domain.Role, error) {
 func (uc *RoleUseCase) GetByID(ctx context.Context, id string) (*domain.Role, error) {
 	role, err := uc.roleRepo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -83,7 +84,7 @@ func (uc *RoleUseCase) Create(ctx context.Context, req *domain.CreateRoleRequest
 func (uc *RoleUseCase) Update(ctx context.Context, id string, req *domain.UpdateRoleRequest) (*domain.Role, error) {
 	role, err := uc.roleRepo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -111,7 +112,7 @@ func (uc *RoleUseCase) Update(ctx context.Context, id string, req *domain.Update
 func (uc *RoleUseCase) Delete(ctx context.Context, id string) error {
 	role, err := uc.roleRepo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)
@@ -128,7 +129,7 @@ func (uc *RoleUseCase) Delete(ctx context.Context, id string) error {
 func (uc *RoleUseCase) AssignPermissions(ctx context.Context, roleID string, req *domain.AssignPermissionsRequest) error {
 	role, err := uc.roleRepo.FindByID(ctx, roleID)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)
@@ -138,14 +139,14 @@ func (uc *RoleUseCase) AssignPermissions(ctx context.Context, roleID string, req
 	}
 	for _, item := range req.Items {
 		if _, err := uc.menuRepo.FindByID(ctx, item.MenuID); err != nil {
-			if errors.Is(err, domain.ErrNotFound) {
+			if errors.Is(err, coredomain.ErrNotFound) {
 				return apierror.NotFound("menu not found: " + item.MenuID)
 			}
 			return apierror.Internal(err)
 		}
 		for _, permID := range item.PermissionIDs {
 			if _, err := uc.permRepo.FindByID(ctx, permID); err != nil {
-				if errors.Is(err, domain.ErrNotFound) {
+				if errors.Is(err, coredomain.ErrNotFound) {
 					return apierror.NotFound("permission not found: " + permID)
 				}
 				return apierror.Internal(err)

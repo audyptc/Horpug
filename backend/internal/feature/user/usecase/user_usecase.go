@@ -6,6 +6,7 @@ import (
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	coredomain "apigofiberhorpug/internal/domain"
+	roledomain "apigofiberhorpug/internal/feature/role/domain"
 	"apigofiberhorpug/internal/feature/user/domain"
 
 	"github.com/google/uuid"
@@ -14,10 +15,10 @@ import (
 
 type UserUseCase struct {
 	userRepo domain.UserRepository
-	roleRepo coredomain.RoleRepository
+	roleRepo roledomain.RoleRepository
 }
 
-func NewUserUseCase(userRepo domain.UserRepository, roleRepo coredomain.RoleRepository) *UserUseCase {
+func NewUserUseCase(userRepo domain.UserRepository, roleRepo roledomain.RoleRepository) *UserUseCase {
 	return &UserUseCase{userRepo: userRepo, roleRepo: roleRepo}
 }
 

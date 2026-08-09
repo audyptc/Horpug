@@ -7,6 +7,7 @@ import (
 	"apigofiberhorpug/internal/database"
 	coredomain "apigofiberhorpug/internal/domain"
 	"apigofiberhorpug/internal/feature/user/domain"
+	roledomain "apigofiberhorpug/internal/feature/role/domain"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -105,8 +106,8 @@ func (r *UserRepo) AssignRole(ctx context.Context, userID string, roleID string)
 	return err
 }
 
-func (r *UserRepo) GetRole(ctx context.Context, userID string) (*coredomain.Role, error) {
-	role := &coredomain.Role{}
+func (r *UserRepo) GetRole(ctx context.Context, userID string) (*roledomain.Role, error) {
+	role := &roledomain.Role{}
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT r.id, r.name, r.description, r.created_at, r.updated_at
 		FROM roles r

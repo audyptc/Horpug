@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"apigofiberhorpug/internal/database"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/role/domain"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -26,7 +27,7 @@ func (r *RoleRepo) FindByID(ctx context.Context, id string) (*domain.Role, error
 		FROM roles WHERE id = $1`, id).
 		Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.CreatedAt, &role.UpdatedAt)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("role not found: %w", domain.ErrNotFound)
+		return nil, fmt.Errorf("role not found: %w", coredomain.ErrNotFound)
 	}
 	return role, err
 }
@@ -152,11 +153,11 @@ func (r *RoleRepo) GetMenuPermissions(ctx context.Context, roleID string) ([]dom
 			menuMap[menuID] = &domain.RoleMenuPermission{
 				MenuID:      menuID,
 				MenuName:    menuName,
-				Permissions: []domain.Permission{},
+				Permissions: []coredomain.Permission{},
 			}
 			menuOrder = append(menuOrder, menuID)
 		}
-		menuMap[menuID].Permissions = append(menuMap[menuID].Permissions, domain.Permission{
+		menuMap[menuID].Permissions = append(menuMap[menuID].Permissions, coredomain.Permission{
 			ID:          permID,
 			Name:        permName,
 			Description: permDesc,
