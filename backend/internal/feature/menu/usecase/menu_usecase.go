@@ -5,7 +5,8 @@ import (
 	"errors"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/menu/domain"
 )
 
 type MenuUseCase struct {
@@ -31,7 +32,7 @@ func (uc *MenuUseCase) List(ctx context.Context, limit, offset int) ([]*domain.M
 func (uc *MenuUseCase) GetByID(ctx context.Context, id string) (*domain.Menu, error) {
 	menu, err := uc.menuRepo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	coredomain "apigofiberhorpug/internal/domain"
+	permissiondomain "apigofiberhorpug/internal/feature/permission/domain"
 )
 
 type Role struct {
@@ -18,9 +18,9 @@ type Role struct {
 }
 
 type RoleMenuPermission struct {
-	MenuID      string                `json:"menu_id"`
-	MenuName    string                `json:"menu_name"`
-	Permissions []coredomain.Permission `json:"permissions"`
+	MenuID      string                     `json:"menu_id"`
+	MenuName    string                     `json:"menu_name"`
+	Permissions []permissiondomain.Permission `json:"permissions"`
 }
 
 type CreateRoleRequest struct {

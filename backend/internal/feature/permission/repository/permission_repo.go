@@ -5,7 +5,8 @@ import (
 	"fmt"
 
 	"apigofiberhorpug/internal/database"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/permission/domain"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -55,7 +56,7 @@ func (r *PermissionRepo) FindByID(ctx context.Context, id string) (*domain.Permi
 		FROM permissions WHERE id = $1`, id).
 		Scan(&p.ID, &p.Name, &p.Description, &p.CreatedAt, &p.UpdatedAt)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("permission not found: %w", domain.ErrNotFound)
+		return nil, fmt.Errorf("permission not found: %w", coredomain.ErrNotFound)
 	}
 	return p, err
 }

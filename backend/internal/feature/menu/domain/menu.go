@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-//go:generate go run ../../cmd/modelgen -input menu.go -type Menu -out ../database/migrations/001_create_menus.sql
+//go:generate go run ../../../../cmd/modelgen -input menu.go -type Menu -out ../../../database/migrations/001_create_menus.sql
 
 // Menu represents a navigation item stored in the menus table.
 type Menu struct {

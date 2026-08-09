@@ -8,6 +8,7 @@ import (
 	"apigofiberhorpug/internal/database"
 	coredomain "apigofiberhorpug/internal/domain"
 	"apigofiberhorpug/internal/feature/role/domain"
+	permissiondomain "apigofiberhorpug/internal/feature/permission/domain"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -153,11 +154,11 @@ func (r *RoleRepo) GetMenuPermissions(ctx context.Context, roleID string) ([]dom
 			menuMap[menuID] = &domain.RoleMenuPermission{
 				MenuID:      menuID,
 				MenuName:    menuName,
-				Permissions: []coredomain.Permission{},
+				Permissions: []permissiondomain.Permission{},
 			}
 			menuOrder = append(menuOrder, menuID)
 		}
-		menuMap[menuID].Permissions = append(menuMap[menuID].Permissions, coredomain.Permission{
+		menuMap[menuID].Permissions = append(menuMap[menuID].Permissions, permissiondomain.Permission{
 			ID:          permID,
 			Name:        permName,
 			Description: permDesc,

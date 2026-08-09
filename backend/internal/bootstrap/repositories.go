@@ -3,6 +3,8 @@ package bootstrap
 import (
 	"apigofiberhorpug/internal/database"
 	alrepository "apigofiberhorpug/internal/feature/activitylog/repository"
+	menurepository "apigofiberhorpug/internal/feature/menu/repository"
+	permissionrepository "apigofiberhorpug/internal/feature/permission/repository"
 	rolerepository "apigofiberhorpug/internal/feature/role/repository"
 	userrepository "apigofiberhorpug/internal/feature/user/repository"
 	"apigofiberhorpug/internal/repository"
@@ -11,9 +13,9 @@ import (
 type repositories struct {
 	user         *userrepository.UserRepo
 	role         *rolerepository.RoleRepo
-	perm         *repository.PermissionRepo
+	perm         *permissionrepository.PermissionRepo
 	token        *repository.TokenRepo
-	menu         *repository.MenuRepo
+	menu         *menurepository.MenuRepo
 	room         *repository.RoomRepo
 	roomType     *repository.RoomTypeRepo
 	tenant       *repository.TenantRepo
@@ -40,9 +42,9 @@ func newRepositories(db *database.DB) repositories {
 	return repositories{
 		user:         userrepository.NewUserRepo(db),
 		role:         rolerepository.NewRoleRepo(db),
-		perm:         repository.NewPermissionRepo(db),
+		perm:         permissionrepository.NewPermissionRepo(db),
 		token:        repository.NewTokenRepo(db),
-		menu:         repository.NewMenuRepo(db),
+		menu:         menurepository.NewMenuRepo(db),
 		room:         repository.NewRoomRepo(db),
 		roomType:     repository.NewRoomTypeRepo(db),
 		tenant:       repository.NewTenantRepo(db),

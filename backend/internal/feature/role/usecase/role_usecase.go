@@ -7,6 +7,8 @@ import (
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	coredomain "apigofiberhorpug/internal/domain"
+	menudomain "apigofiberhorpug/internal/feature/menu/domain"
+	permissiondomain "apigofiberhorpug/internal/feature/permission/domain"
 	"apigofiberhorpug/internal/feature/role/domain"
 
 	"github.com/google/uuid"
@@ -14,11 +16,11 @@ import (
 
 type RoleUseCase struct {
 	roleRepo domain.RoleRepository
-	permRepo coredomain.PermissionRepository
-	menuRepo coredomain.MenuRepository
+	permRepo permissiondomain.PermissionRepository
+	menuRepo menudomain.MenuRepository
 }
 
-func NewRoleUseCase(roleRepo domain.RoleRepository, permRepo coredomain.PermissionRepository, menuRepo coredomain.MenuRepository) *RoleUseCase {
+func NewRoleUseCase(roleRepo domain.RoleRepository, permRepo permissiondomain.PermissionRepository, menuRepo menudomain.MenuRepository) *RoleUseCase {
 	return &RoleUseCase{roleRepo: roleRepo, permRepo: permRepo, menuRepo: menuRepo}
 }
 

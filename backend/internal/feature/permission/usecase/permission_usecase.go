@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/permission/domain"
 )
 
 type PermissionUseCase struct {

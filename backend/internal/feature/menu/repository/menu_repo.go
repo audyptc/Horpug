@@ -5,7 +5,8 @@ import (
 	"fmt"
 
 	"apigofiberhorpug/internal/database"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/menu/domain"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -25,7 +26,7 @@ func (r *MenuRepo) FindByID(ctx context.Context, id string) (*domain.Menu, error
 		FROM menus WHERE id = $1`, id).
 		Scan(&m.ID, &m.Name, &m.Path, &m.CreatedAt, &m.UpdatedAt)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("menu not found: %w", domain.ErrNotFound)
+		return nil, fmt.Errorf("menu not found: %w", coredomain.ErrNotFound)
 	}
 	return m, err
 }

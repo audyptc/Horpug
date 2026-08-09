@@ -3,6 +3,8 @@ package bootstrap
 import (
 	"apigofiberhorpug/internal/database"
 	alusecase "apigofiberhorpug/internal/feature/activitylog/usecase"
+	menuusecase "apigofiberhorpug/internal/feature/menu/usecase"
+	permissionusecase "apigofiberhorpug/internal/feature/permission/usecase"
 	roleusecase "apigofiberhorpug/internal/feature/role/usecase"
 	userusecase "apigofiberhorpug/internal/feature/user/usecase"
 	"apigofiberhorpug/internal/usecase"
@@ -13,8 +15,8 @@ type Container struct {
 	AuthUC         *usecase.AuthUseCase
 	UserUC         *userusecase.UserUseCase
 	RoleUC         *roleusecase.RoleUseCase
-	PermUC         *usecase.PermissionUseCase
-	MenuUC         *usecase.MenuUseCase
+	PermUC         *permissionusecase.PermissionUseCase
+	MenuUC         *menuusecase.MenuUseCase
 	RoomUC         *usecase.RoomUseCase
 	RoomTypeUC     *usecase.RoomTypeUseCase
 	TenantUC       *usecase.TenantUseCase
@@ -43,8 +45,8 @@ func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refres
 		AuthUC:         usecase.NewAuthUseCase(repos.user, repos.token, secretKey, accessTokenDuration, refreshTokenDuration),
 		UserUC:         userusecase.NewUserUseCase(repos.user, repos.role),
 		RoleUC:         roleusecase.NewRoleUseCase(repos.role, repos.perm, repos.menu),
-		PermUC:         usecase.NewPermissionUseCase(repos.perm),
-		MenuUC:         usecase.NewMenuUseCase(repos.menu),
+		PermUC:         permissionusecase.NewPermissionUseCase(repos.perm),
+		MenuUC:         menuusecase.NewMenuUseCase(repos.menu),
 		RoomUC:         usecase.NewRoomUseCase(repos.room, repos.contract),
 		RoomTypeUC:     usecase.NewRoomTypeUseCase(repos.roomType),
 		TenantUC:       usecase.NewTenantUseCase(repos.tenant, repos.contract),
