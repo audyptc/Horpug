@@ -5,7 +5,8 @@ import (
 	"fmt"
 
 	"apigofiberhorpug/internal/database"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/contract/domain"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -53,7 +54,7 @@ func (r *ContractRepo) FindByID(ctx context.Context, id string) (*domain.Contrac
 			&c.RentPrice, &c.Deposit, &c.NumOccupants, &c.Status, &c.Note, &c.CreatedAt, &c.UpdatedAt,
 			&c.CreatedBy, &c.UpdatedBy)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("contract not found: %w", domain.ErrNotFound)
+		return nil, fmt.Errorf("contract not found: %w", coredomain.ErrNotFound)
 	}
 	return c, err
 }
@@ -62,7 +63,7 @@ func (r *ContractRepo) FindDetailByID(ctx context.Context, id string) (*domain.C
 	row := r.db.Pool.QueryRow(ctx, contractDetailSelect+` WHERE c.id = $1 AND c.deleted_at IS NULL`, id)
 	d, err := scanContractDetail(row)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("contract not found: %w", domain.ErrNotFound)
+		return nil, fmt.Errorf("contract not found: %w", coredomain.ErrNotFound)
 	}
 	return d, err
 }

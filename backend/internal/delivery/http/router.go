@@ -12,6 +12,7 @@ import (
 	authdelivery "apigofiberhorpug/internal/feature/auth/delivery"
 	menudelivery "apigofiberhorpug/internal/feature/menu/delivery"
 	permissiondelivery "apigofiberhorpug/internal/feature/permission/delivery"
+	contractdelivery "apigofiberhorpug/internal/feature/contract/delivery"
 	roledelivery "apigofiberhorpug/internal/feature/role/delivery"
 	roomdelivery "apigofiberhorpug/internal/feature/room/delivery"
 	roomtypedelivery "apigofiberhorpug/internal/feature/roomtype/delivery"
@@ -31,7 +32,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	roomH := roomdelivery.NewRoomHandler(c.RoomUC, c.ActivityLogUC)
 	roomTypeH := roomtypedelivery.NewRoomTypeHandler(c.RoomTypeUC)
 	tenantH := tenantdelivery.NewTenantHandler(c.TenantUC, c.ActivityLogUC)
-	contractH := v1.NewContractHandler(c.ContractUC, c.ActivityLogUC)
+	contractH := contractdelivery.NewContractHandler(c.ContractUC, c.ActivityLogUC)
 	electricMeterH := v1.NewElectricMeterHandler(c.ElectricMeterUC, c.ActivityLogUC)
 	waterMeterH := v1.NewWaterMeterHandler(c.WaterMeterUC, c.ActivityLogUC)
 	billH := v1.NewBillHandler(c.BillUC, c.ActivityLogUC)

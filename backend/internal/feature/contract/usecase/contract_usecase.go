@@ -5,7 +5,8 @@ import (
 	"errors"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/contract/domain"
 	roomdomain "apigofiberhorpug/internal/feature/room/domain"
 	tenantdomain "apigofiberhorpug/internal/feature/tenant/domain"
 
@@ -41,7 +42,7 @@ func (uc *ContractUseCase) List(ctx context.Context, limit, offset int) ([]*doma
 func (uc *ContractUseCase) GetByID(ctx context.Context, id string) (*domain.ContractDetail, error) {
 	d, err := uc.contractRepo.FindDetailByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -51,7 +52,7 @@ func (uc *ContractUseCase) GetByID(ctx context.Context, id string) (*domain.Cont
 
 func (uc *ContractUseCase) Create(ctx context.Context, req *domain.CreateContractRequest, actorID string) (*domain.ContractDetail, error) {
 	if _, err := uc.tenantRepo.FindByID(ctx, req.TenantID); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound("tenant not found")
 		}
 		return nil, apierror.Internal(err)
@@ -59,7 +60,7 @@ func (uc *ContractUseCase) Create(ctx context.Context, req *domain.CreateContrac
 
 	room, err := uc.roomRepo.FindByID(ctx, req.RoomID)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound("room not found")
 		}
 		return nil, apierror.Internal(err)
@@ -101,7 +102,7 @@ func (uc *ContractUseCase) Create(ctx context.Context, req *domain.CreateContrac
 func (uc *ContractUseCase) Update(ctx context.Context, id string, req *domain.UpdateContractRequest, actorID string) (*domain.ContractDetail, error) {
 	c, err := uc.contractRepo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -145,7 +146,7 @@ func (uc *ContractUseCase) Update(ctx context.Context, id string, req *domain.Up
 func (uc *ContractUseCase) Delete(ctx context.Context, id string) error {
 	c, err := uc.contractRepo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)

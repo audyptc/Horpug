@@ -3,6 +3,7 @@ package domain
 import (
 	"time"
 
+	contractdomain "apigofiberhorpug/internal/feature/contract/domain"
 	roomdomain "apigofiberhorpug/internal/feature/room/domain"
 	tenantdomain "apigofiberhorpug/internal/feature/tenant/domain"
 )
@@ -18,13 +19,13 @@ type SearchBill struct {
 }
 
 type SearchContract struct {
-	ID              string         `json:"id"`
-	StartDate       time.Time      `json:"start_date"`
-	EndDate         *time.Time     `json:"end_date"`
-	Status          ContractStatus `json:"status"`
-	TenantFirstName string         `json:"tenant_first_name"`
-	TenantLastName  string         `json:"tenant_last_name"`
-	RoomNumber      string         `json:"room_number"`
+	ID              string                       `json:"id"`
+	StartDate       time.Time                    `json:"start_date"`
+	EndDate         *time.Time                   `json:"end_date"`
+	Status          contractdomain.ContractStatus `json:"status"`
+	TenantFirstName string                       `json:"tenant_first_name"`
+	TenantLastName  string                       `json:"tenant_last_name"`
+	RoomNumber      string                       `json:"room_number"`
 }
 
 type SearchResults struct {

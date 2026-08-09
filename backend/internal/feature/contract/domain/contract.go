@@ -24,10 +24,10 @@ type Contract struct {
 	NumOccupants int            `json:"num_occupants"`
 	Status       ContractStatus `json:"status"`
 	Note         string         `json:"note"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	CreatedBy string         `json:"created_by"`
-	UpdatedBy string         `json:"updated_by"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+	CreatedBy    string         `json:"created_by"`
+	UpdatedBy    string         `json:"updated_by"`
 }
 
 type ContractDetail struct {

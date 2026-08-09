@@ -7,16 +7,17 @@ import (
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/domain"
+	contractdomain "apigofiberhorpug/internal/feature/contract/domain"
 
 	"github.com/google/uuid"
 )
 
 type BillUseCase struct {
 	billRepo     domain.BillRepository
-	contractRepo domain.ContractRepository
+	contractRepo contractdomain.ContractRepository
 }
 
-func NewBillUseCase(billRepo domain.BillRepository, contractRepo domain.ContractRepository) *BillUseCase {
+func NewBillUseCase(billRepo domain.BillRepository, contractRepo contractdomain.ContractRepository) *BillUseCase {
 	return &BillUseCase{billRepo: billRepo, contractRepo: contractRepo}
 }
 

@@ -6,6 +6,7 @@ import (
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	coredomain "apigofiberhorpug/internal/domain"
+	contractdomain "apigofiberhorpug/internal/feature/contract/domain"
 	"apigofiberhorpug/internal/feature/room/domain"
 
 	"github.com/google/uuid"
@@ -13,10 +14,10 @@ import (
 
 type RoomUseCase struct {
 	roomRepo     domain.RoomRepository
-	contractRepo coredomain.ContractRepository
+	contractRepo contractdomain.ContractRepository
 }
 
-func NewRoomUseCase(roomRepo domain.RoomRepository, contractRepo coredomain.ContractRepository) *RoomUseCase {
+func NewRoomUseCase(roomRepo domain.RoomRepository, contractRepo contractdomain.ContractRepository) *RoomUseCase {
 	return &RoomUseCase{roomRepo: roomRepo, contractRepo: contractRepo}
 }
 
