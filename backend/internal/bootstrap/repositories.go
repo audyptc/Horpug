@@ -6,6 +6,7 @@ import (
 	authrepository "apigofiberhorpug/internal/feature/auth/repository"
 	billrepository "apigofiberhorpug/internal/feature/bill/repository"
 	menurepository "apigofiberhorpug/internal/feature/menu/repository"
+	paymentrepository "apigofiberhorpug/internal/feature/payment/repository"
 	permissionrepository "apigofiberhorpug/internal/feature/permission/repository"
 	contractrepository "apigofiberhorpug/internal/feature/contract/repository"
 	electricmeterrepository "apigofiberhorpug/internal/feature/electricmeter/repository"
@@ -35,7 +36,7 @@ type repositories struct {
 	analytics    *repository.AnalyticsRepo
 	expense      *repository.ExpenseRepo
 	maintenance  *repository.MaintenanceRequestRepo
-	payment      *repository.PaymentRepo
+	payment      *paymentrepository.PaymentRepo
 	announcement *repository.AnnouncementRepo
 	report       *repository.ReportRepo
 	parking      *repository.ParkingRepo
@@ -64,7 +65,7 @@ func newRepositories(db *database.DB) repositories {
 		analytics:    repository.NewAnalyticsRepo(db),
 		expense:      repository.NewExpenseRepo(db),
 		maintenance:  repository.NewMaintenanceRequestRepo(db),
-		payment:      repository.NewPaymentRepo(db),
+		payment:      paymentrepository.NewPaymentRepo(db),
 		announcement: repository.NewAnnouncementRepo(db),
 		report:       repository.NewReportRepo(db),
 		parking:      repository.NewParkingRepo(db),

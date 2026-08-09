@@ -12,6 +12,7 @@ import (
 	authdelivery "apigofiberhorpug/internal/feature/auth/delivery"
 	billdelivery "apigofiberhorpug/internal/feature/bill/delivery"
 	menudelivery "apigofiberhorpug/internal/feature/menu/delivery"
+	paymentdelivery "apigofiberhorpug/internal/feature/payment/delivery"
 	permissiondelivery "apigofiberhorpug/internal/feature/permission/delivery"
 	contractdelivery "apigofiberhorpug/internal/feature/contract/delivery"
 	electricmeterdelivery "apigofiberhorpug/internal/feature/electricmeter/delivery"
@@ -43,7 +44,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	analyticsH := v1.NewAnalyticsHandler(c.AnalyticsUC)
 	expenseH := v1.NewExpenseHandler(c.ExpenseUC)
 	maintenanceH := v1.NewMaintenanceRequestHandler(c.MaintenanceUC)
-	paymentH := v1.NewPaymentHandler(c.PaymentUC, c.ActivityLogUC)
+	paymentH := paymentdelivery.NewPaymentHandler(c.PaymentUC, c.ActivityLogUC)
 	announcementH := v1.NewAnnouncementHandler(c.AnnouncementUC)
 	reportH := v1.NewReportHandler(c.ReportUC)
 	parkingH := v1.NewParkingHandler(c.ParkingUC)

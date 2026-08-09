@@ -5,7 +5,8 @@ import (
 	"errors"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/payment/domain"
 
 	"github.com/google/uuid"
 )
@@ -33,7 +34,7 @@ func (uc *PaymentUseCase) List(ctx context.Context, limit, offset int) ([]*domai
 func (uc *PaymentUseCase) GetByID(ctx context.Context, id string) (*domain.PaymentDetail, error) {
 	p, err := uc.repo.FindDetailByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -79,7 +80,7 @@ func (uc *PaymentUseCase) Create(ctx context.Context, req *domain.CreatePaymentR
 func (uc *PaymentUseCase) Update(ctx context.Context, id string, req *domain.UpdatePaymentRequest) (*domain.PaymentDetail, error) {
 	p, err := uc.repo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
@@ -117,7 +118,7 @@ func (uc *PaymentUseCase) Update(ctx context.Context, id string, req *domain.Upd
 
 func (uc *PaymentUseCase) Delete(ctx context.Context, id string) error {
 	if _, err := uc.repo.FindByID(ctx, id); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
+		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)

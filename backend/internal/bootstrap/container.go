@@ -6,6 +6,7 @@ import (
 	authusecase "apigofiberhorpug/internal/feature/auth/usecase"
 	billusecase "apigofiberhorpug/internal/feature/bill/usecase"
 	menuusecase "apigofiberhorpug/internal/feature/menu/usecase"
+	paymentusecase "apigofiberhorpug/internal/feature/payment/usecase"
 	permissionusecase "apigofiberhorpug/internal/feature/permission/usecase"
 	contractusecase "apigofiberhorpug/internal/feature/contract/usecase"
 	electricmeterusecase "apigofiberhorpug/internal/feature/electricmeter/usecase"
@@ -36,7 +37,7 @@ type Container struct {
 	AnalyticsUC    *usecase.AnalyticsUseCase
 	ExpenseUC      *usecase.ExpenseUseCase
 	MaintenanceUC  *usecase.MaintenanceRequestUseCase
-	PaymentUC      *usecase.PaymentUseCase
+	PaymentUC      *paymentusecase.PaymentUseCase
 	AnnouncementUC *usecase.AnnouncementUseCase
 	ReportUC       *usecase.ReportUseCase
 	ParkingUC       *usecase.ParkingUseCase
@@ -66,7 +67,7 @@ func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refres
 		AnalyticsUC:    usecase.NewAnalyticsUseCase(repos.analytics),
 		ExpenseUC:      usecase.NewExpenseUseCase(repos.expense),
 		MaintenanceUC:  usecase.NewMaintenanceRequestUseCase(repos.maintenance),
-		PaymentUC:      usecase.NewPaymentUseCase(repos.payment),
+		PaymentUC:      paymentusecase.NewPaymentUseCase(repos.payment),
 		AnnouncementUC: usecase.NewAnnouncementUseCase(repos.announcement),
 		ReportUC:       usecase.NewReportUseCase(repos.report),
 		ParkingUC:      usecase.NewParkingUseCase(repos.parking),

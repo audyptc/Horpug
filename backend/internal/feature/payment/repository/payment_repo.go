@@ -6,7 +6,8 @@ import (
 	"fmt"
 
 	"apigofiberhorpug/internal/database"
-	"apigofiberhorpug/internal/domain"
+	coredomain "apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/payment/domain"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -62,7 +63,7 @@ func (r *PaymentRepo) FindByID(ctx context.Context, id string) (*domain.Payment,
 		FROM payments WHERE id = $1 AND deleted_at IS NULL`, id).
 		Scan(&p.ID, &p.BillID, &p.Amount, &p.Method, &p.PaymentDate, &p.Note, &p.CreatedAt, &p.UpdatedAt)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("payment not found: %w", domain.ErrNotFound)
+		return nil, fmt.Errorf("payment not found: %w", coredomain.ErrNotFound)
 	}
 	return p, err
 }
@@ -74,7 +75,7 @@ func (r *PaymentRepo) FindDetailByID(ctx context.Context, id string) (*domain.Pa
 		GROUP BY p.id, r.room_number, t.first_name, t.last_name, b.billing_month, b.total_amount`, id)
 	d, err := scanPaymentDetail(row)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("payment not found: %w", domain.ErrNotFound)
+		return nil, fmt.Errorf("payment not found: %w", coredomain.ErrNotFound)
 	}
 	return d, err
 }

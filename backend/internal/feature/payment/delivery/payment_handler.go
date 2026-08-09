@@ -1,14 +1,13 @@
-package v1
+package delivery
 
 import (
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/delivery/http/httputil"
 	"apigofiberhorpug/internal/delivery/http/response"
-	"apigofiberhorpug/internal/domain"
 	aldomain "apigofiberhorpug/internal/feature/activitylog/domain"
 	alusecase "apigofiberhorpug/internal/feature/activitylog/usecase"
-	"apigofiberhorpug/internal/usecase"
-	"apigofiberhorpug/internal/validator"
+	"apigofiberhorpug/internal/feature/payment/domain"
+	"apigofiberhorpug/internal/feature/payment/usecase"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -47,7 +46,7 @@ func (h *PaymentHandler) Create(c fiber.Ctx) error {
 	if err := c.Bind().JSON(&req); err != nil {
 		return apierror.BadRequest("invalid request body")
 	}
-	if err := validator.CreatePaymentRequest(&req); err != nil {
+	if err := validateCreatePaymentRequest(&req); err != nil {
 		return err
 	}
 	p, err := h.payment.Create(c.Context(), &req)
@@ -64,7 +63,7 @@ func (h *PaymentHandler) Update(c fiber.Ctx) error {
 	if err := c.Bind().JSON(&req); err != nil {
 		return apierror.BadRequest("invalid request body")
 	}
-	if err := validator.UpdatePaymentRequest(&req); err != nil {
+	if err := validateUpdatePaymentRequest(&req); err != nil {
 		return err
 	}
 	p, err := h.payment.Update(c.Context(), c.Params("id"), &req)

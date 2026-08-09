@@ -27,15 +27,15 @@ type PaymentSplitRequest struct {
 }
 
 type Payment struct {
-	ID          string        `json:"id"`
-	BillID      string        `json:"bill_id"`
-	Amount      float64       `json:"amount"`
-	Method      PaymentMethod `json:"method"`
-	PaymentDate time.Time     `json:"payment_date"`
-	Note        string        `json:"note"`
+	ID          string         `json:"id"`
+	BillID      string         `json:"bill_id"`
+	Amount      float64        `json:"amount"`
+	Method      PaymentMethod  `json:"method"`
+	PaymentDate time.Time      `json:"payment_date"`
+	Note        string         `json:"note"`
 	Splits      []PaymentSplit `json:"splits"`
-	CreatedAt   time.Time     `json:"created_at"`
-	UpdatedAt   time.Time     `json:"updated_at"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
 }
 
 type PaymentDetail struct {
@@ -48,15 +48,15 @@ type PaymentDetail struct {
 }
 
 type CreatePaymentRequest struct {
-	BillID      string               `json:"bill_id"`
-	PaymentDate time.Time            `json:"payment_date"`
-	Note        string               `json:"note"`
+	BillID      string                `json:"bill_id"`
+	PaymentDate time.Time             `json:"payment_date"`
+	Note        string                `json:"note"`
 	Splits      []PaymentSplitRequest `json:"splits"`
 }
 
 type UpdatePaymentRequest struct {
-	PaymentDate time.Time            `json:"payment_date"`
-	Note        string               `json:"note"`
+	PaymentDate time.Time             `json:"payment_date"`
+	Note        string                `json:"note"`
 	Splits      []PaymentSplitRequest `json:"splits"`
 }
 
