@@ -38,5 +38,5 @@ type SearchResults struct {
 }
 
 type SearchRepository interface {
-	Search(ctx context.Context, q string) (*SearchResults, error)
+	Search(ctx context.Context, dormitoryID, q string) (*SearchResults, error)
 }

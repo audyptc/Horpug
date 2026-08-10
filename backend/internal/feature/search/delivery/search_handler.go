@@ -17,7 +17,8 @@ func NewSearchHandler(search *usecase.SearchUseCase) *SearchHandler {
 
 func (h *SearchHandler) Global(c fiber.Ctx) error {
 	q := c.Query("q")
-	results, err := h.search.Search(c.Context(), q)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	results, err := h.search.Search(c.Context(), dormitoryID, q)
 	if err != nil {
 		return err
 	}

@@ -27,5 +27,5 @@ type AnalyticsSummary struct {
 }
 
 type AnalyticsRepository interface {
-	Summary(ctx context.Context, months int) (*AnalyticsSummary, error)
+	Summary(ctx context.Context, dormitoryID string, months int) (*AnalyticsSummary, error)
 }

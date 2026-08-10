@@ -16,7 +16,8 @@ func NewDashboardHandler(dashboard *usecase.DashboardUseCase) *DashboardHandler 
 }
 
 func (h *DashboardHandler) Summary(c fiber.Ctx) error {
-	s, err := h.dashboard.Summary(c.Context())
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	s, err := h.dashboard.Summary(c.Context(), dormitoryID)
 	if err != nil {
 		return err
 	}

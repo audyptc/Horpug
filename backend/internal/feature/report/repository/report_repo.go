@@ -15,25 +15,28 @@ func NewReportRepo(db *database.DB) *ReportRepo {
 	return &ReportRepo{db: db}
 }
 
-func (r *ReportRepo) IncomeReport(ctx context.Context, from, to string) (*domain.IncomeReport, error) {
+func (r *ReportRepo) IncomeReport(ctx context.Context, dormitoryID, from, to string) (*domain.IncomeReport, error) {
 	report := &domain.IncomeReport{}
 
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT
-			TO_CHAR(DATE_TRUNC('month', billing_month), 'YYYY-MM') AS month,
-			COALESCE(SUM(rent_amount), 0)     AS rent_amount,
-			COALESCE(SUM(electric_amount), 0) AS electric_amount,
-			COALESCE(SUM(water_amount), 0)    AS water_amount,
-			COALESCE(SUM(other_amount), 0)    AS other_amount,
-			COALESCE(SUM(total_amount), 0)    AS total_amount,
+			TO_CHAR(DATE_TRUNC('month', b.billing_month), 'YYYY-MM') AS month,
+			COALESCE(SUM(b.rent_amount), 0)     AS rent_amount,
+			COALESCE(SUM(b.electric_amount), 0) AS electric_amount,
+			COALESCE(SUM(b.water_amount), 0)    AS water_amount,
+			COALESCE(SUM(b.other_amount), 0)    AS other_amount,
+			COALESCE(SUM(b.total_amount), 0)    AS total_amount,
 			COUNT(*) AS bill_count
-		FROM bills
-		WHERE status = 'paid'
-		  AND DATE_TRUNC('month', billing_month) >= DATE_TRUNC('month', $1::date)
-		  AND DATE_TRUNC('month', billing_month) <= DATE_TRUNC('month', $2::date)
-		GROUP BY DATE_TRUNC('month', billing_month)
-		ORDER BY DATE_TRUNC('month', billing_month)
-	`, from, to)
+		FROM bills b
+		JOIN contracts c ON c.id = b.contract_id
+		JOIN rooms r ON r.id = c.room_id
+		WHERE r.dormitory_id = $1
+		  AND b.status = 'paid'
+		  AND DATE_TRUNC('month', b.billing_month) >= DATE_TRUNC('month', $2::date)
+		  AND DATE_TRUNC('month', b.billing_month) <= DATE_TRUNC('month', $3::date)
+		GROUP BY DATE_TRUNC('month', b.billing_month)
+		ORDER BY DATE_TRUNC('month', b.billing_month)
+	`, dormitoryID, from, to)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +60,7 @@ func (r *ReportRepo) IncomeReport(ctx context.Context, from, to string) (*domain
 	return report, nil
 }
 
-func (r *ReportRepo) ExpenseReport(ctx context.Context, from, to string) (*domain.ExpenseReport, error) {
+func (r *ReportRepo) ExpenseReport(ctx context.Context, dormitoryID, from, to string) (*domain.ExpenseReport, error) {
 	report := &domain.ExpenseReport{}
 
 	rows, err := r.db.Pool.Query(ctx, `
@@ -67,11 +70,12 @@ func (r *ReportRepo) ExpenseReport(ctx context.Context, from, to string) (*domai
 			COALESCE(SUM(amount), 0) AS total_amount,
 			COUNT(*) AS count
 		FROM expenses
-		WHERE DATE_TRUNC('month', expense_date) >= DATE_TRUNC('month', $1::date)
-		  AND DATE_TRUNC('month', expense_date) <= DATE_TRUNC('month', $2::date)
+		WHERE dormitory_id = $1
+		  AND DATE_TRUNC('month', expense_date) >= DATE_TRUNC('month', $2::date)
+		  AND DATE_TRUNC('month', expense_date) <= DATE_TRUNC('month', $3::date)
 		GROUP BY DATE_TRUNC('month', expense_date), category
 		ORDER BY DATE_TRUNC('month', expense_date), category
-	`, from, to)
+	`, dormitoryID, from, to)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +95,7 @@ func (r *ReportRepo) ExpenseReport(ctx context.Context, from, to string) (*domai
 	return report, nil
 }
 
-func (r *ReportRepo) OccupancyReport(ctx context.Context) (*domain.OccupancyReport, error) {
+func (r *ReportRepo) OccupancyReport(ctx context.Context, dormitoryID string) (*domain.OccupancyReport, error) {
 	report := &domain.OccupancyReport{}
 
 	rows, err := r.db.Pool.Query(ctx, `
@@ -105,8 +109,9 @@ func (r *ReportRepo) OccupancyReport(ctx context.Context) (*domain.OccupancyRepo
 		FROM rooms r
 		LEFT JOIN contracts c ON c.room_id = r.id AND c.status = 'active'
 		LEFT JOIN tenants t ON t.id = c.tenant_id
+		WHERE r.dormitory_id = $1
 		ORDER BY r.id, r.floor, r.room_number
-	`)
+	`, dormitoryID)
 	if err != nil {
 		return nil, err
 	}

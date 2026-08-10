@@ -16,7 +16,7 @@ func NewAnalyticsRepo(db *database.DB) *AnalyticsRepo {
 	return &AnalyticsRepo{db: db}
 }
 
-func (r *AnalyticsRepo) Summary(ctx context.Context, months int) (*domain.AnalyticsSummary, error) {
+func (r *AnalyticsRepo) Summary(ctx context.Context, dormitoryID string, months int) (*domain.AnalyticsSummary, error) {
 	s := &domain.AnalyticsSummary{}
 
 	// Monthly revenue (paid bills) for last N months
@@ -32,9 +32,12 @@ func (r *AnalyticsRepo) Summary(ctx context.Context, months int) (*domain.Analyt
 		LEFT JOIN bills b
 			ON DATE_TRUNC('month', b.billing_month) = gs.month
 			AND b.status = 'paid'
+			AND b.contract_id IN (
+				SELECT c.id FROM contracts c JOIN rooms r ON r.id = c.room_id WHERE r.dormitory_id = $1
+			)
 		GROUP BY gs.month
 		ORDER BY gs.month
-	`, months-1))
+	`, months-1), dormitoryID)
 	if err != nil {
 		return nil, err
 	}
@@ -66,9 +69,10 @@ func (r *AnalyticsRepo) Summary(ctx context.Context, months int) (*domain.Analyt
 		) AS gs(month)
 		LEFT JOIN tenants t
 			ON DATE_TRUNC('month', t.created_at) = gs.month
+			AND t.dormitory_id = $1
 		GROUP BY gs.month
 		ORDER BY gs.month
-	`, months-1))
+	`, months-1), dormitoryID)
 	if err != nil {
 		return nil, err
 	}
@@ -87,11 +91,14 @@ func (r *AnalyticsRepo) Summary(ctx context.Context, months int) (*domain.Analyt
 	// Bill status counts
 	err = r.db.Pool.QueryRow(ctx, `
 		SELECT
-			COUNT(*) FILTER (WHERE status = 'unpaid')  AS unpaid,
-			COUNT(*) FILTER (WHERE status = 'paid')    AS paid,
-			COUNT(*) FILTER (WHERE status = 'overdue') AS overdue
-		FROM bills
-	`).Scan(&s.BillStatus.Unpaid, &s.BillStatus.Paid, &s.BillStatus.Overdue)
+			COUNT(*) FILTER (WHERE b.status = 'unpaid')  AS unpaid,
+			COUNT(*) FILTER (WHERE b.status = 'paid')    AS paid,
+			COUNT(*) FILTER (WHERE b.status = 'overdue') AS overdue
+		FROM bills b
+		JOIN contracts c ON c.id = b.contract_id
+		JOIN rooms r ON r.id = c.room_id
+		WHERE r.dormitory_id = $1
+	`, dormitoryID).Scan(&s.BillStatus.Unpaid, &s.BillStatus.Paid, &s.BillStatus.Overdue)
 	if err != nil {
 		return nil, err
 	}

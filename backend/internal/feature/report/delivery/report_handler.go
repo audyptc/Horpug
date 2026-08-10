@@ -18,7 +18,8 @@ func NewReportHandler(reports *usecase.ReportUseCase) *ReportHandler {
 func (h *ReportHandler) Income(c fiber.Ctx) error {
 	from := c.Query("from")
 	to := c.Query("to")
-	data, err := h.reports.IncomeReport(c.Context(), from, to)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	data, err := h.reports.IncomeReport(c.Context(), dormitoryID, from, to)
 	if err != nil {
 		return err
 	}
@@ -28,7 +29,8 @@ func (h *ReportHandler) Income(c fiber.Ctx) error {
 func (h *ReportHandler) Expenses(c fiber.Ctx) error {
 	from := c.Query("from")
 	to := c.Query("to")
-	data, err := h.reports.ExpenseReport(c.Context(), from, to)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	data, err := h.reports.ExpenseReport(c.Context(), dormitoryID, from, to)
 	if err != nil {
 		return err
 	}
@@ -36,7 +38,8 @@ func (h *ReportHandler) Expenses(c fiber.Ctx) error {
 }
 
 func (h *ReportHandler) Occupancy(c fiber.Ctx) error {
-	data, err := h.reports.OccupancyReport(c.Context())
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	data, err := h.reports.OccupancyReport(c.Context(), dormitoryID)
 	if err != nil {
 		return err
 	}

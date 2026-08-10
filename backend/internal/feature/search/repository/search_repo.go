@@ -17,29 +17,29 @@ func NewSearchRepo(db *database.DB) *SearchRepo {
 	return &SearchRepo{db: db}
 }
 
-func (r *SearchRepo) Search(ctx context.Context, q string) (*domain.SearchResults, error) {
+func (r *SearchRepo) Search(ctx context.Context, dormitoryID, q string) (*domain.SearchResults, error) {
 	pattern := "%" + q + "%"
 	results := &domain.SearchResults{}
 
-	tenants, err := r.searchTenants(ctx, pattern)
+	tenants, err := r.searchTenants(ctx, dormitoryID, pattern)
 	if err != nil {
 		return nil, err
 	}
 	results.Tenants = tenants
 
-	rooms, err := r.searchRooms(ctx, pattern)
+	rooms, err := r.searchRooms(ctx, dormitoryID, pattern)
 	if err != nil {
 		return nil, err
 	}
 	results.Rooms = rooms
 
-	bills, err := r.searchBills(ctx, pattern)
+	bills, err := r.searchBills(ctx, dormitoryID, pattern)
 	if err != nil {
 		return nil, err
 	}
 	results.Bills = bills
 
-	contracts, err := r.searchContracts(ctx, pattern)
+	contracts, err := r.searchContracts(ctx, dormitoryID, pattern)
 	if err != nil {
 		return nil, err
 	}
@@ -48,17 +48,18 @@ func (r *SearchRepo) Search(ctx context.Context, q string) (*domain.SearchResult
 	return results, nil
 }
 
-func (r *SearchRepo) searchTenants(ctx context.Context, pattern string) ([]*tenantdomain.Tenant, error) {
+func (r *SearchRepo) searchTenants(ctx context.Context, dormitoryID, pattern string) ([]*tenantdomain.Tenant, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, first_name, last_name, phone, id_card, email, emergency_contact, note, created_at, updated_at
 		FROM tenants
-		WHERE (first_name || ' ' || last_name) ILIKE $1
+		WHERE dormitory_id = $2
+		  AND ((first_name || ' ' || last_name) ILIKE $1
 		   OR first_name ILIKE $1
 		   OR last_name ILIKE $1
 		   OR phone ILIKE $1
-		   OR id_card ILIKE $1
+		   OR id_card ILIKE $1)
 		ORDER BY first_name, last_name
-		LIMIT 5`, pattern)
+		LIMIT 5`, pattern, dormitoryID)
 	if err != nil {
 		return nil, err
 	}
@@ -79,13 +80,13 @@ func (r *SearchRepo) searchTenants(ctx context.Context, pattern string) ([]*tena
 	return list, rows.Err()
 }
 
-func (r *SearchRepo) searchRooms(ctx context.Context, pattern string) ([]*roomdomain.Room, error) {
+func (r *SearchRepo) searchRooms(ctx context.Context, dormitoryID, pattern string) ([]*roomdomain.Room, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, room_number, floor, type, status, rent_price, description, created_at, updated_at
 		FROM rooms
-		WHERE room_number ILIKE $1
+		WHERE dormitory_id = $2 AND room_number ILIKE $1
 		ORDER BY floor, room_number
-		LIMIT 5`, pattern)
+		LIMIT 5`, pattern, dormitoryID)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +107,7 @@ func (r *SearchRepo) searchRooms(ctx context.Context, pattern string) ([]*roomdo
 	return list, rows.Err()
 }
 
-func (r *SearchRepo) searchBills(ctx context.Context, pattern string) ([]*domain.SearchBill, error) {
+func (r *SearchRepo) searchBills(ctx context.Context, dormitoryID, pattern string) ([]*domain.SearchBill, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT b.id, b.billing_month, b.total_amount, b.status,
 		       t.first_name, t.last_name, r.room_number
@@ -114,12 +115,13 @@ func (r *SearchRepo) searchBills(ctx context.Context, pattern string) ([]*domain
 		JOIN contracts c ON c.id = b.contract_id
 		JOIN tenants t ON t.id = c.tenant_id
 		JOIN rooms r ON r.id = c.room_id
-		WHERE (t.first_name || ' ' || t.last_name) ILIKE $1
+		WHERE r.dormitory_id = $2
+		  AND ((t.first_name || ' ' || t.last_name) ILIKE $1
 		   OR t.first_name ILIKE $1
 		   OR t.last_name ILIKE $1
-		   OR r.room_number ILIKE $1
+		   OR r.room_number ILIKE $1)
 		ORDER BY b.billing_month DESC
-		LIMIT 5`, pattern)
+		LIMIT 5`, pattern, dormitoryID)
 	if err != nil {
 		return nil, err
 	}
@@ -140,19 +142,20 @@ func (r *SearchRepo) searchBills(ctx context.Context, pattern string) ([]*domain
 	return list, rows.Err()
 }
 
-func (r *SearchRepo) searchContracts(ctx context.Context, pattern string) ([]*domain.SearchContract, error) {
+func (r *SearchRepo) searchContracts(ctx context.Context, dormitoryID, pattern string) ([]*domain.SearchContract, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT c.id, c.start_date, c.end_date, c.status,
 		       t.first_name, t.last_name, r.room_number
 		FROM contracts c
 		JOIN tenants t ON t.id = c.tenant_id
 		JOIN rooms r ON r.id = c.room_id
-		WHERE (t.first_name || ' ' || t.last_name) ILIKE $1
+		WHERE r.dormitory_id = $2
+		  AND ((t.first_name || ' ' || t.last_name) ILIKE $1
 		   OR t.first_name ILIKE $1
 		   OR t.last_name ILIKE $1
-		   OR r.room_number ILIKE $1
+		   OR r.room_number ILIKE $1)
 		ORDER BY c.created_at DESC
-		LIMIT 5`, pattern)
+		LIMIT 5`, pattern, dormitoryID)
 	if err != nil {
 		return nil, err
 	}

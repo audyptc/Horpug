@@ -24,7 +24,8 @@ func (h *AnalyticsHandler) Summary(c fiber.Ctx) error {
 			months = v
 		}
 	}
-	s, err := h.analytics.Summary(c.Context(), months)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	s, err := h.analytics.Summary(c.Context(), dormitoryID, months)
 	if err != nil {
 		return err
 	}

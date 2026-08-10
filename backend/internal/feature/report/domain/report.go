@@ -52,7 +52,7 @@ type OccupancyReport struct {
 }
 
 type ReportRepository interface {
-	IncomeReport(ctx context.Context, from, to string) (*IncomeReport, error)
-	ExpenseReport(ctx context.Context, from, to string) (*ExpenseReport, error)
-	OccupancyReport(ctx context.Context) (*OccupancyReport, error)
+	IncomeReport(ctx context.Context, dormitoryID, from, to string) (*IncomeReport, error)
+	ExpenseReport(ctx context.Context, dormitoryID, from, to string) (*ExpenseReport, error)
+	OccupancyReport(ctx context.Context, dormitoryID string) (*OccupancyReport, error)
 }

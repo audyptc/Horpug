@@ -14,9 +14,9 @@ func NewAnalyticsUseCase(repo domain.AnalyticsRepository) *AnalyticsUseCase {
 	return &AnalyticsUseCase{repo: repo}
 }
 
-func (uc *AnalyticsUseCase) Summary(ctx context.Context, months int) (*domain.AnalyticsSummary, error) {
+func (uc *AnalyticsUseCase) Summary(ctx context.Context, dormitoryID string, months int) (*domain.AnalyticsSummary, error) {
 	if months <= 0 || months > 24 {
 		months = 12
 	}
-	return uc.repo.Summary(ctx, months)
+	return uc.repo.Summary(ctx, dormitoryID, months)
 }

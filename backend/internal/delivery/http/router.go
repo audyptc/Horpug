@@ -188,10 +188,10 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	billsGroup.Delete("/:id", middleware.RequirePermission("bills.delete"), billH.Delete)
 
 	// Dashboard
-	protected.Get("/dashboard/summary", middleware.RequirePermission(".read"), dashboardH.Summary)
+	scoped.Get("/dashboard/summary", middleware.RequirePermission(".read"), dashboardH.Summary)
 
 	// Analytics
-	protected.Get("/analytics/summary", middleware.RequirePermission("analytics.read"), analyticsH.Summary)
+	scoped.Get("/analytics/summary", middleware.RequirePermission("analytics.read"), analyticsH.Summary)
 
 	// Maintenance Requests
 	maintenanceGroup := scoped.Group("/maintenance")
@@ -226,7 +226,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	announcementsGroup.Delete("/:id", middleware.RequirePermission("announcements.delete"), announcementH.Delete)
 
 	// Reports
-	reportsGroup := protected.Group("/reports")
+	reportsGroup := scoped.Group("/reports")
 	reportsGroup.Get("/income", middleware.RequirePermission("reports.read"), reportH.Income)
 	reportsGroup.Get("/expenses", middleware.RequirePermission("reports.read"), reportH.Expenses)
 	reportsGroup.Get("/occupancy", middleware.RequirePermission("reports.read"), reportH.Occupancy)
@@ -260,7 +260,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	protected.Get("/notifications", notificationH.List)
 
 	// Search
-	protected.Get("/search", searchH.Global)
+	scoped.Get("/search", searchH.Global)
 
 	// Activity Logs
 	protected.Get("/activity-logs", middleware.RequirePermission("activity-logs.read"), activityLogH.List)

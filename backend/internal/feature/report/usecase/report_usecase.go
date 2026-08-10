@@ -16,24 +16,24 @@ func NewReportUseCase(repo domain.ReportRepository) *ReportUseCase {
 	return &ReportUseCase{repo: repo}
 }
 
-func (uc *ReportUseCase) IncomeReport(ctx context.Context, from, to string) (*domain.IncomeReport, error) {
+func (uc *ReportUseCase) IncomeReport(ctx context.Context, dormitoryID, from, to string) (*domain.IncomeReport, error) {
 	from, to, err := normalizeDateRange(from, to)
 	if err != nil {
 		return nil, err
 	}
-	return uc.repo.IncomeReport(ctx, from, to)
+	return uc.repo.IncomeReport(ctx, dormitoryID, from, to)
 }
 
-func (uc *ReportUseCase) ExpenseReport(ctx context.Context, from, to string) (*domain.ExpenseReport, error) {
+func (uc *ReportUseCase) ExpenseReport(ctx context.Context, dormitoryID, from, to string) (*domain.ExpenseReport, error) {
 	from, to, err := normalizeDateRange(from, to)
 	if err != nil {
 		return nil, err
 	}
-	return uc.repo.ExpenseReport(ctx, from, to)
+	return uc.repo.ExpenseReport(ctx, dormitoryID, from, to)
 }
 
-func (uc *ReportUseCase) OccupancyReport(ctx context.Context) (*domain.OccupancyReport, error) {
-	return uc.repo.OccupancyReport(ctx)
+func (uc *ReportUseCase) OccupancyReport(ctx context.Context, dormitoryID string) (*domain.OccupancyReport, error) {
+	return uc.repo.OccupancyReport(ctx, dormitoryID)
 }
 
 func normalizeDateRange(from, to string) (string, string, error) {

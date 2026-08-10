@@ -19,5 +19,5 @@ type DashboardSummary struct {
 }
 
 type DashboardRepository interface {
-	Summary(ctx context.Context) (*DashboardSummary, error)
+	Summary(ctx context.Context, dormitoryID string) (*DashboardSummary, error)
 }
