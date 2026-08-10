@@ -34,12 +34,14 @@ func scanDetail(row pgx.Row) (*domain.MaintenanceRequestDetail, error) {
 	return d, err
 }
 
-func (r *MaintenanceRequestRepo) FindByID(ctx context.Context, id string) (*domain.MaintenanceRequest, error) {
+func (r *MaintenanceRequestRepo) FindByID(ctx context.Context, dormitoryID, id string) (*domain.MaintenanceRequest, error) {
 	m := &domain.MaintenanceRequest{}
 	err := r.db.Pool.QueryRow(ctx, `
-		SELECT id, room_id, title, description, status, priority,
-		       reported_date, resolved_date, note, created_at, updated_at
-		FROM maintenance_requests WHERE id = $1`, id).
+		SELECT m.id, m.room_id, m.title, m.description, m.status, m.priority,
+		       m.reported_date, m.resolved_date, m.note, m.created_at, m.updated_at
+		FROM maintenance_requests m
+		JOIN rooms r ON r.id = m.room_id
+		WHERE m.id = $1 AND r.dormitory_id = $2`, id, dormitoryID).
 		Scan(&m.ID, &m.RoomID, &m.Title, &m.Description, &m.Status, &m.Priority,
 			&m.ReportedDate, &m.ResolvedDate, &m.Note, &m.CreatedAt, &m.UpdatedAt)
 	if err == pgx.ErrNoRows {
@@ -48,12 +50,12 @@ func (r *MaintenanceRequestRepo) FindByID(ctx context.Context, id string) (*doma
 	return m, err
 }
 
-func (r *MaintenanceRequestRepo) FindDetailByID(ctx context.Context, id string) (*domain.MaintenanceRequestDetail, error) {
+func (r *MaintenanceRequestRepo) FindDetailByID(ctx context.Context, dormitoryID, id string) (*domain.MaintenanceRequestDetail, error) {
 	row := r.db.Pool.QueryRow(ctx, `
 		SELECT `+maintenanceCols+`
 		FROM maintenance_requests m
 		JOIN rooms r ON r.id = m.room_id
-		WHERE m.id = $1`, id)
+		WHERE m.id = $1 AND r.dormitory_id = $2`, id, dormitoryID)
 	d, err := scanDetail(row)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("maintenance request not found: %w", coredomain.ErrNotFound)
@@ -61,11 +63,12 @@ func (r *MaintenanceRequestRepo) FindDetailByID(ctx context.Context, id string) 
 	return d, err
 }
 
-func (r *MaintenanceRequestRepo) List(ctx context.Context, limit, offset int) ([]*domain.MaintenanceRequestDetail, error) {
+func (r *MaintenanceRequestRepo) List(ctx context.Context, dormitoryID string, limit, offset int) ([]*domain.MaintenanceRequestDetail, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT `+maintenanceCols+`
 		FROM maintenance_requests m
 		JOIN rooms r ON r.id = m.room_id
+		WHERE r.dormitory_id = $1
 		ORDER BY
 			CASE m.status
 				WHEN 'open'        THEN 1
@@ -80,7 +83,7 @@ func (r *MaintenanceRequestRepo) List(ctx context.Context, limit, offset int) ([
 				WHEN 'low'    THEN 4
 			END,
 			m.reported_date DESC
-		LIMIT $1 OFFSET $2`, limit, offset)
+		LIMIT $2 OFFSET $3`, dormitoryID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -100,9 +103,12 @@ func (r *MaintenanceRequestRepo) List(ctx context.Context, limit, offset int) ([
 	return list, rows.Err()
 }
 
-func (r *MaintenanceRequestRepo) Count(ctx context.Context) (int, error) {
+func (r *MaintenanceRequestRepo) Count(ctx context.Context, dormitoryID string) (int, error) {
 	var total int
-	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM maintenance_requests`).Scan(&total)
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM maintenance_requests m
+		JOIN rooms r ON r.id = m.room_id
+		WHERE r.dormitory_id = $1`, dormitoryID).Scan(&total)
 	return total, err
 }
 
@@ -116,18 +122,22 @@ func (r *MaintenanceRequestRepo) Create(ctx context.Context, m *domain.Maintenan
 	return err
 }
 
-func (r *MaintenanceRequestRepo) Update(ctx context.Context, m *domain.MaintenanceRequest) error {
+func (r *MaintenanceRequestRepo) Update(ctx context.Context, dormitoryID string, m *domain.MaintenanceRequest) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		UPDATE maintenance_requests
-		SET room_id=$2, title=$3, description=$4, status=$5, priority=$6,
-		    reported_date=$7, resolved_date=$8, note=$9, updated_at=NOW()
-		WHERE id=$1`,
-		m.ID, m.RoomID, m.Title, m.Description, m.Status, m.Priority,
+		SET room_id=$3, title=$4, description=$5, status=$6, priority=$7,
+		    reported_date=$8, resolved_date=$9, note=$10, updated_at=NOW()
+		FROM rooms r
+		WHERE maintenance_requests.id = $1 AND r.id = maintenance_requests.room_id AND r.dormitory_id = $2`,
+		m.ID, dormitoryID, m.RoomID, m.Title, m.Description, m.Status, m.Priority,
 		m.ReportedDate, m.ResolvedDate, m.Note)
 	return err
 }
 
-func (r *MaintenanceRequestRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.db.Pool.Exec(ctx, `DELETE FROM maintenance_requests WHERE id = $1`, id)
+func (r *MaintenanceRequestRepo) Delete(ctx context.Context, dormitoryID, id string) error {
+	_, err := r.db.Pool.Exec(ctx, `
+		DELETE FROM maintenance_requests m
+		USING rooms r
+		WHERE m.id = $1 AND r.id = m.room_id AND r.dormitory_id = $2`, id, dormitoryID)
 	return err
 }

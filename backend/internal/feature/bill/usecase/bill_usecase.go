@@ -22,20 +22,20 @@ func NewBillUseCase(billRepo domain.BillRepository, contractRepo contractdomain.
 	return &BillUseCase{billRepo: billRepo, contractRepo: contractRepo}
 }
 
-func (uc *BillUseCase) List(ctx context.Context, limit, offset int) ([]*domain.BillDetail, int, error) {
-	total, err := uc.billRepo.Count(ctx)
+func (uc *BillUseCase) List(ctx context.Context, dormitoryID string, limit, offset int) ([]*domain.BillDetail, int, error) {
+	total, err := uc.billRepo.Count(ctx, dormitoryID)
 	if err != nil {
 		return nil, 0, apierror.Internal(err)
 	}
-	list, err := uc.billRepo.List(ctx, limit, offset)
+	list, err := uc.billRepo.List(ctx, dormitoryID, limit, offset)
 	if err != nil {
 		return nil, 0, apierror.Internal(err)
 	}
 	return list, total, nil
 }
 
-func (uc *BillUseCase) GetByID(ctx context.Context, id string) (*domain.BillDetail, error) {
-	d, err := uc.billRepo.FindDetailByID(ctx, id)
+func (uc *BillUseCase) GetByID(ctx context.Context, dormitoryID, id string) (*domain.BillDetail, error) {
+	d, err := uc.billRepo.FindDetailByID(ctx, dormitoryID, id)
 	if err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
@@ -45,8 +45,8 @@ func (uc *BillUseCase) GetByID(ctx context.Context, id string) (*domain.BillDeta
 	return d, nil
 }
 
-func (uc *BillUseCase) Create(ctx context.Context, req *domain.CreateBillRequest, actorID string) (*domain.BillDetail, error) {
-	if _, err := uc.contractRepo.FindByIDAny(ctx, req.ContractID); err != nil {
+func (uc *BillUseCase) Create(ctx context.Context, dormitoryID string, req *domain.CreateBillRequest, actorID string) (*domain.BillDetail, error) {
+	if _, err := uc.contractRepo.FindByID(ctx, dormitoryID, req.ContractID); err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound("contract not found")
 		}
@@ -92,11 +92,11 @@ func (uc *BillUseCase) Create(ctx context.Context, req *domain.CreateBillRequest
 		return nil, apierror.Internal(err)
 	}
 
-	return uc.billRepo.FindDetailByID(ctx, b.ID)
+	return uc.billRepo.FindDetailByID(ctx, dormitoryID, b.ID)
 }
 
-func (uc *BillUseCase) Update(ctx context.Context, id string, req *domain.UpdateBillRequest, actorID string) (*domain.BillDetail, error) {
-	b, err := uc.billRepo.FindByID(ctx, id)
+func (uc *BillUseCase) Update(ctx context.Context, dormitoryID, id string, req *domain.UpdateBillRequest, actorID string) (*domain.BillDetail, error) {
+	b, err := uc.billRepo.FindByID(ctx, dormitoryID, id)
 	if err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
@@ -135,7 +135,7 @@ func (uc *BillUseCase) Update(ctx context.Context, id string, req *domain.Update
 
 	b.UpdatedBy = actorID
 
-	if err := uc.billRepo.Update(ctx, b); err != nil {
+	if err := uc.billRepo.Update(ctx, dormitoryID, b); err != nil {
 		return nil, apierror.Internal(err)
 	}
 
@@ -155,17 +155,17 @@ func (uc *BillUseCase) Update(ctx context.Context, id string, req *domain.Update
 		}
 	}
 
-	return uc.billRepo.FindDetailByID(ctx, id)
+	return uc.billRepo.FindDetailByID(ctx, dormitoryID, id)
 }
 
-func (uc *BillUseCase) Delete(ctx context.Context, id string) error {
-	if _, err := uc.billRepo.FindByID(ctx, id); err != nil {
+func (uc *BillUseCase) Delete(ctx context.Context, dormitoryID, id string) error {
+	if _, err := uc.billRepo.FindByID(ctx, dormitoryID, id); err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)
 	}
-	if err := uc.billRepo.Delete(ctx, id); err != nil {
+	if err := uc.billRepo.Delete(ctx, dormitoryID, id); err != nil {
 		return apierror.Internal(err)
 	}
 	return nil

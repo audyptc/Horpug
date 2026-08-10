@@ -16,16 +16,17 @@ const (
 )
 
 type Document struct {
-	ID         string           `json:"id"`
-	Title      string           `json:"title"`
-	Category   DocumentCategory `json:"category"`
-	TenantID   *string          `json:"tenant_id"`
-	FileURL    string           `json:"file_url"`
-	IssueDate  *time.Time       `json:"issue_date"`
-	ExpiryDate *time.Time       `json:"expiry_date"`
-	Note       string           `json:"note"`
-	CreatedAt  time.Time        `json:"created_at"`
-	UpdatedAt  time.Time        `json:"updated_at"`
+	ID          string           `json:"id"`
+	DormitoryID string           `json:"dormitory_id"`
+	Title       string           `json:"title"`
+	Category    DocumentCategory `json:"category"`
+	TenantID    *string          `json:"tenant_id"`
+	FileURL     string           `json:"file_url"`
+	IssueDate   *time.Time       `json:"issue_date"`
+	ExpiryDate  *time.Time       `json:"expiry_date"`
+	Note        string           `json:"note"`
+	CreatedAt   time.Time        `json:"created_at"`
+	UpdatedAt   time.Time        `json:"updated_at"`
 }
 
 type DocumentDetail struct {
@@ -55,10 +56,10 @@ type UpdateDocumentRequest struct {
 }
 
 type DocumentRepository interface {
-	FindByID(ctx context.Context, id string) (*DocumentDetail, error)
-	List(ctx context.Context, limit, offset int) ([]*DocumentDetail, error)
-	Count(ctx context.Context) (int, error)
+	FindByID(ctx context.Context, dormitoryID, id string) (*DocumentDetail, error)
+	List(ctx context.Context, dormitoryID string, limit, offset int) ([]*DocumentDetail, error)
+	Count(ctx context.Context, dormitoryID string) (int, error)
 	Create(ctx context.Context, d *Document) error
 	Update(ctx context.Context, d *Document) error
-	Delete(ctx context.Context, id string) error
+	Delete(ctx context.Context, dormitoryID, id string) error
 }

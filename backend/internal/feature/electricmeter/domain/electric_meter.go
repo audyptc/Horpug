@@ -61,12 +61,12 @@ type UpdateElectricMeterRequest struct {
 }
 
 type ElectricMeterRepository interface {
-	FindByID(ctx context.Context, id string) (*ElectricMeter, error)
-	FindDetailByID(ctx context.Context, id string) (*ElectricMeterDetail, error)
-	FindLatestByRoomID(ctx context.Context, roomID string, billingMonth *time.Time) (*ElectricMeterDetail, error)
-	List(ctx context.Context, limit, offset int) ([]*ElectricMeterDetail, error)
-	Count(ctx context.Context) (int, error)
+	FindByID(ctx context.Context, dormitoryID, id string) (*ElectricMeter, error)
+	FindDetailByID(ctx context.Context, dormitoryID, id string) (*ElectricMeterDetail, error)
+	FindLatestByRoomID(ctx context.Context, dormitoryID, roomID string, billingMonth *time.Time) (*ElectricMeterDetail, error)
+	List(ctx context.Context, dormitoryID string, limit, offset int) ([]*ElectricMeterDetail, error)
+	Count(ctx context.Context, dormitoryID string) (int, error)
 	Create(ctx context.Context, m *ElectricMeter) error
-	Update(ctx context.Context, m *ElectricMeter) error
-	Delete(ctx context.Context, id string) error
+	Update(ctx context.Context, dormitoryID string, m *ElectricMeter) error
+	Delete(ctx context.Context, dormitoryID, id string) error
 }

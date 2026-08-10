@@ -46,9 +46,4 @@ type RoomRepository interface {
 	Create(ctx context.Context, room *Room) error
 	Update(ctx context.Context, room *Room) error
 	Delete(ctx context.Context, dormitoryID, id string) error
-
-	// FindByIDAny looks up a room without dormitory scoping. It exists for
-	// features that are not yet dormitory-scoped themselves (electric/water
-	// meters); prefer FindByID wherever a dormitory context is available.
-	FindByIDAny(ctx context.Context, id string) (*Room, error)
 }

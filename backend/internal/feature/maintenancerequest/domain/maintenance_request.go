@@ -64,11 +64,11 @@ type UpdateMaintenanceRequestRequest struct {
 }
 
 type MaintenanceRequestRepository interface {
-	FindByID(ctx context.Context, id string) (*MaintenanceRequest, error)
-	FindDetailByID(ctx context.Context, id string) (*MaintenanceRequestDetail, error)
-	List(ctx context.Context, limit, offset int) ([]*MaintenanceRequestDetail, error)
-	Count(ctx context.Context) (int, error)
+	FindByID(ctx context.Context, dormitoryID, id string) (*MaintenanceRequest, error)
+	FindDetailByID(ctx context.Context, dormitoryID, id string) (*MaintenanceRequestDetail, error)
+	List(ctx context.Context, dormitoryID string, limit, offset int) ([]*MaintenanceRequestDetail, error)
+	Count(ctx context.Context, dormitoryID string) (int, error)
 	Create(ctx context.Context, m *MaintenanceRequest) error
-	Update(ctx context.Context, m *MaintenanceRequest) error
-	Delete(ctx context.Context, id string) error
+	Update(ctx context.Context, dormitoryID string, m *MaintenanceRequest) error
+	Delete(ctx context.Context, dormitoryID, id string) error
 }

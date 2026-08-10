@@ -61,12 +61,12 @@ type UpdateWaterMeterRequest struct {
 }
 
 type WaterMeterRepository interface {
-	FindByID(ctx context.Context, id string) (*WaterMeter, error)
-	FindDetailByID(ctx context.Context, id string) (*WaterMeterDetail, error)
-	FindLatestByRoomID(ctx context.Context, roomID string, billingMonth *time.Time) (*WaterMeterDetail, error)
-	List(ctx context.Context, limit, offset int) ([]*WaterMeterDetail, error)
-	Count(ctx context.Context) (int, error)
+	FindByID(ctx context.Context, dormitoryID, id string) (*WaterMeter, error)
+	FindDetailByID(ctx context.Context, dormitoryID, id string) (*WaterMeterDetail, error)
+	FindLatestByRoomID(ctx context.Context, dormitoryID, roomID string, billingMonth *time.Time) (*WaterMeterDetail, error)
+	List(ctx context.Context, dormitoryID string, limit, offset int) ([]*WaterMeterDetail, error)
+	Count(ctx context.Context, dormitoryID string) (int, error)
 	Create(ctx context.Context, m *WaterMeter) error
-	Update(ctx context.Context, m *WaterMeter) error
-	Delete(ctx context.Context, id string) error
+	Update(ctx context.Context, dormitoryID string, m *WaterMeter) error
+	Delete(ctx context.Context, dormitoryID, id string) error
 }

@@ -79,13 +79,13 @@ type UpdateBillRequest struct {
 }
 
 type BillRepository interface {
-	FindByID(ctx context.Context, id string) (*Bill, error)
-	FindDetailByID(ctx context.Context, id string) (*BillDetail, error)
-	List(ctx context.Context, limit, offset int) ([]*BillDetail, error)
-	Count(ctx context.Context) (int, error)
+	FindByID(ctx context.Context, dormitoryID, id string) (*Bill, error)
+	FindDetailByID(ctx context.Context, dormitoryID, id string) (*BillDetail, error)
+	List(ctx context.Context, dormitoryID string, limit, offset int) ([]*BillDetail, error)
+	Count(ctx context.Context, dormitoryID string) (int, error)
 	Create(ctx context.Context, b *Bill) error
-	Update(ctx context.Context, b *Bill) error
-	Delete(ctx context.Context, id string) error
+	Update(ctx context.Context, dormitoryID string, b *Bill) error
+	Delete(ctx context.Context, dormitoryID, id string) error
 	ReplaceOtherItems(ctx context.Context, billID string, items []BillOtherItem) error
 	FindOtherItems(ctx context.Context, billID string) ([]BillOtherItem, error)
 }

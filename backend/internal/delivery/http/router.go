@@ -162,7 +162,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	contractsGroup.Delete("/:id", middleware.RequirePermission("contracts.delete"), contractH.Delete)
 
 	// Electric Meter Readings
-	electricMetersGroup := protected.Group("/electric-meters")
+	electricMetersGroup := scoped.Group("/electric-meters")
 	electricMetersGroup.Get("/", middleware.RequirePermission("electric-meters.read"), electricMeterH.List)
 	electricMetersGroup.Post("/", middleware.RequirePermission("electric-meters.create"), electricMeterH.Create)
 	electricMetersGroup.Get("/latest", middleware.RequirePermission("electric-meters.read"), electricMeterH.GetLatestByRoomID)
@@ -171,7 +171,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	electricMetersGroup.Delete("/:id", middleware.RequirePermission("electric-meters.delete"), electricMeterH.Delete)
 
 	// Water Meter Readings
-	waterMetersGroup := protected.Group("/water-meters")
+	waterMetersGroup := scoped.Group("/water-meters")
 	waterMetersGroup.Get("/", middleware.RequirePermission("water-meters.read"), waterMeterH.List)
 	waterMetersGroup.Post("/", middleware.RequirePermission("water-meters.create"), waterMeterH.Create)
 	waterMetersGroup.Get("/latest", middleware.RequirePermission("water-meters.read"), waterMeterH.GetLatestByRoomID)
@@ -180,7 +180,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	waterMetersGroup.Delete("/:id", middleware.RequirePermission("water-meters.delete"), waterMeterH.Delete)
 
 	// Bills
-	billsGroup := protected.Group("/bills")
+	billsGroup := scoped.Group("/bills")
 	billsGroup.Get("/", middleware.RequirePermission("bills.read"), billH.List)
 	billsGroup.Post("/", middleware.RequirePermission("bills.create"), billH.Create)
 	billsGroup.Get("/:id", middleware.RequirePermission("bills.read"), billH.GetByID)
@@ -194,7 +194,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	protected.Get("/analytics/summary", middleware.RequirePermission("analytics.read"), analyticsH.Summary)
 
 	// Maintenance Requests
-	maintenanceGroup := protected.Group("/maintenance")
+	maintenanceGroup := scoped.Group("/maintenance")
 	maintenanceGroup.Get("/", middleware.RequirePermission("maintenance.read"), maintenanceH.List)
 	maintenanceGroup.Post("/", middleware.RequirePermission("maintenance.create"), maintenanceH.Create)
 	maintenanceGroup.Get("/:id", middleware.RequirePermission("maintenance.read"), maintenanceH.GetByID)
@@ -202,7 +202,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	maintenanceGroup.Delete("/:id", middleware.RequirePermission("maintenance.delete"), maintenanceH.Delete)
 
 	// Expenses
-	expensesGroup := protected.Group("/expenses")
+	expensesGroup := scoped.Group("/expenses")
 	expensesGroup.Get("/", middleware.RequirePermission("expenses.read"), expenseH.List)
 	expensesGroup.Post("/", middleware.RequirePermission("expenses.create"), expenseH.Create)
 	expensesGroup.Get("/:id", middleware.RequirePermission("expenses.read"), expenseH.GetByID)
@@ -210,7 +210,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	expensesGroup.Delete("/:id", middleware.RequirePermission("expenses.delete"), expenseH.Delete)
 
 	// Payments
-	paymentsGroup := protected.Group("/payments")
+	paymentsGroup := scoped.Group("/payments")
 	paymentsGroup.Get("/", middleware.RequirePermission("payments.read"), paymentH.List)
 	paymentsGroup.Post("/", middleware.RequirePermission("payments.create"), paymentH.Create)
 	paymentsGroup.Get("/:id", middleware.RequirePermission("payments.read"), paymentH.GetByID)
@@ -218,7 +218,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	paymentsGroup.Delete("/:id", middleware.RequirePermission("payments.delete"), paymentH.Delete)
 
 	// Announcements
-	announcementsGroup := protected.Group("/announcements")
+	announcementsGroup := scoped.Group("/announcements")
 	announcementsGroup.Get("/", middleware.RequirePermission("announcements.read"), announcementH.List)
 	announcementsGroup.Post("/", middleware.RequirePermission("announcements.create"), announcementH.Create)
 	announcementsGroup.Get("/:id", middleware.RequirePermission("announcements.read"), announcementH.GetByID)
@@ -232,7 +232,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	reportsGroup.Get("/occupancy", middleware.RequirePermission("reports.read"), reportH.Occupancy)
 
 	// Parking
-	parkingGroup := protected.Group("/parking")
+	parkingGroup := scoped.Group("/parking")
 	parkingGroup.Get("/", middleware.RequirePermission("parking.read"), parkingH.List)
 	parkingGroup.Post("/", middleware.RequirePermission("parking.create"), parkingH.Create)
 	parkingGroup.Get("/:id", middleware.RequirePermission("parking.read"), parkingH.GetByID)
@@ -248,7 +248,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	parcelsGroup.Delete("/:id", middleware.RequirePermission("parcels.delete"), parcelH.Delete)
 
 	// Documents
-	documentsGroup := protected.Group("/documents")
+	documentsGroup := scoped.Group("/documents")
 	documentsGroup.Get("/", middleware.RequirePermission("documents.read"), documentH.List)
 	documentsGroup.Post("/", middleware.RequirePermission("documents.create"), documentH.Create)
 	documentsGroup.Post("/upload", middleware.RequirePermission("documents.create"), documentH.Upload)

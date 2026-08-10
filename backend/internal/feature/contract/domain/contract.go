@@ -70,9 +70,4 @@ type ContractRepository interface {
 	Delete(ctx context.Context, dormitoryID, id string) error
 	HasActiveContractForRoom(ctx context.Context, roomID string) (bool, error)
 	HasActiveContractForTenant(ctx context.Context, tenantID string) (bool, error)
-
-	// FindByIDAny looks up a contract without dormitory scoping, for features
-	// that are not yet dormitory-scoped themselves (bill). Prefer FindByID
-	// wherever a dormitory context is available.
-	FindByIDAny(ctx context.Context, id string) (*Contract, error)
 }

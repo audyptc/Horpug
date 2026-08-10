@@ -61,11 +61,11 @@ type UpdatePaymentRequest struct {
 }
 
 type PaymentRepository interface {
-	FindByID(ctx context.Context, id string) (*Payment, error)
-	FindDetailByID(ctx context.Context, id string) (*PaymentDetail, error)
-	List(ctx context.Context, limit, offset int) ([]*PaymentDetail, error)
-	Count(ctx context.Context) (int, error)
+	FindByID(ctx context.Context, dormitoryID, id string) (*Payment, error)
+	FindDetailByID(ctx context.Context, dormitoryID, id string) (*PaymentDetail, error)
+	List(ctx context.Context, dormitoryID string, limit, offset int) ([]*PaymentDetail, error)
+	Count(ctx context.Context, dormitoryID string) (int, error)
 	Create(ctx context.Context, p *Payment, splits []PaymentSplit) error
-	Update(ctx context.Context, p *Payment, splits []PaymentSplit) error
-	Delete(ctx context.Context, id string) error
+	Update(ctx context.Context, dormitoryID string, p *Payment, splits []PaymentSplit) error
+	Delete(ctx context.Context, dormitoryID, id string) error
 }

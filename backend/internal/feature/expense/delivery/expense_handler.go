@@ -23,7 +23,8 @@ func (h *ExpenseHandler) List(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	list, total, err := h.expenses.List(c.Context(), perPage, offset)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	list, total, err := h.expenses.List(c.Context(), dormitoryID, perPage, offset)
 	if err != nil {
 		return err
 	}
@@ -31,7 +32,8 @@ func (h *ExpenseHandler) List(c fiber.Ctx) error {
 }
 
 func (h *ExpenseHandler) GetByID(c fiber.Ctx) error {
-	e, err := h.expenses.GetByID(c.Context(), c.Params("id"))
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	e, err := h.expenses.GetByID(c.Context(), dormitoryID, c.Params("id"))
 	if err != nil {
 		return err
 	}
@@ -46,7 +48,8 @@ func (h *ExpenseHandler) Create(c fiber.Ctx) error {
 	if err := validateCreateExpenseRequest(&req); err != nil {
 		return err
 	}
-	e, err := h.expenses.Create(c.Context(), &req)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	e, err := h.expenses.Create(c.Context(), dormitoryID, &req)
 	if err != nil {
 		return err
 	}
@@ -61,7 +64,8 @@ func (h *ExpenseHandler) Update(c fiber.Ctx) error {
 	if err := validateUpdateExpenseRequest(&req); err != nil {
 		return err
 	}
-	e, err := h.expenses.Update(c.Context(), c.Params("id"), &req)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	e, err := h.expenses.Update(c.Context(), dormitoryID, c.Params("id"), &req)
 	if err != nil {
 		return err
 	}
@@ -69,7 +73,8 @@ func (h *ExpenseHandler) Update(c fiber.Ctx) error {
 }
 
 func (h *ExpenseHandler) Delete(c fiber.Ctx) error {
-	if err := h.expenses.Delete(c.Context(), c.Params("id")); err != nil {
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	if err := h.expenses.Delete(c.Context(), dormitoryID, c.Params("id")); err != nil {
 		return err
 	}
 	return response.Message(c, "expense deleted")

@@ -17,6 +17,7 @@ const (
 
 type Expense struct {
 	ID          string          `json:"id"`
+	DormitoryID string          `json:"dormitory_id"`
 	ExpenseDate time.Time       `json:"expense_date"`
 	Category    ExpenseCategory `json:"category"`
 	Description string          `json:"description"`
@@ -43,10 +44,10 @@ type UpdateExpenseRequest struct {
 }
 
 type ExpenseRepository interface {
-	FindByID(ctx context.Context, id string) (*Expense, error)
-	List(ctx context.Context, limit, offset int) ([]*Expense, error)
-	Count(ctx context.Context) (int, error)
+	FindByID(ctx context.Context, dormitoryID, id string) (*Expense, error)
+	List(ctx context.Context, dormitoryID string, limit, offset int) ([]*Expense, error)
+	Count(ctx context.Context, dormitoryID string) (int, error)
 	Create(ctx context.Context, e *Expense) error
 	Update(ctx context.Context, e *Expense) error
-	Delete(ctx context.Context, id string) error
+	Delete(ctx context.Context, dormitoryID, id string) error
 }

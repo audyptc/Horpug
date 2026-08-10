@@ -21,6 +21,7 @@ const (
 
 type ParkingSlot struct {
 	ID           string        `json:"id"`
+	DormitoryID  string        `json:"dormitory_id"`
 	SlotNumber   string        `json:"slot_number"`
 	VehicleType  VehicleType   `json:"vehicle_type"`
 	Status       ParkingStatus `json:"status"`
@@ -59,10 +60,10 @@ type UpdateParkingSlotRequest struct {
 }
 
 type ParkingSlotRepository interface {
-	FindByID(ctx context.Context, id string) (*ParkingSlot, error)
-	List(ctx context.Context, limit, offset int) ([]*ParkingSlot, error)
-	Count(ctx context.Context) (int, error)
+	FindByID(ctx context.Context, dormitoryID, id string) (*ParkingSlot, error)
+	List(ctx context.Context, dormitoryID string, limit, offset int) ([]*ParkingSlot, error)
+	Count(ctx context.Context, dormitoryID string) (int, error)
 	Create(ctx context.Context, p *ParkingSlot) error
 	Update(ctx context.Context, p *ParkingSlot) error
-	Delete(ctx context.Context, id string) error
+	Delete(ctx context.Context, dormitoryID, id string) error
 }

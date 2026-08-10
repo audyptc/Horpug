@@ -26,7 +26,8 @@ func (h *PaymentHandler) List(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	list, total, err := h.payment.List(c.Context(), perPage, offset)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	list, total, err := h.payment.List(c.Context(), dormitoryID, perPage, offset)
 	if err != nil {
 		return err
 	}
@@ -34,7 +35,8 @@ func (h *PaymentHandler) List(c fiber.Ctx) error {
 }
 
 func (h *PaymentHandler) GetByID(c fiber.Ctx) error {
-	p, err := h.payment.GetByID(c.Context(), c.Params("id"))
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	p, err := h.payment.GetByID(c.Context(), dormitoryID, c.Params("id"))
 	if err != nil {
 		return err
 	}
@@ -49,7 +51,8 @@ func (h *PaymentHandler) Create(c fiber.Ctx) error {
 	if err := validateCreatePaymentRequest(&req); err != nil {
 		return err
 	}
-	p, err := h.payment.Create(c.Context(), &req)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	p, err := h.payment.Create(c.Context(), dormitoryID, &req)
 	if err != nil {
 		return err
 	}
@@ -66,7 +69,8 @@ func (h *PaymentHandler) Update(c fiber.Ctx) error {
 	if err := validateUpdatePaymentRequest(&req); err != nil {
 		return err
 	}
-	p, err := h.payment.Update(c.Context(), c.Params("id"), &req)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	p, err := h.payment.Update(c.Context(), dormitoryID, c.Params("id"), &req)
 	if err != nil {
 		return err
 	}
@@ -77,7 +81,8 @@ func (h *PaymentHandler) Update(c fiber.Ctx) error {
 
 func (h *PaymentHandler) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
-	if err := h.payment.Delete(c.Context(), id); err != nil {
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	if err := h.payment.Delete(c.Context(), dormitoryID, id); err != nil {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)

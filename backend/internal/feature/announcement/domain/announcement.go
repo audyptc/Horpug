@@ -16,6 +16,7 @@ const (
 
 type Announcement struct {
 	ID          string           `json:"id"`
+	DormitoryID string           `json:"dormitory_id"`
 	Title       string           `json:"title"`
 	Content     string           `json:"content"`
 	Type        AnnouncementType `json:"type"`
@@ -45,10 +46,10 @@ type UpdateAnnouncementRequest struct {
 }
 
 type AnnouncementRepository interface {
-	FindByID(ctx context.Context, id string) (*Announcement, error)
-	List(ctx context.Context, limit, offset int) ([]*Announcement, error)
-	Count(ctx context.Context) (int, error)
+	FindByID(ctx context.Context, dormitoryID, id string) (*Announcement, error)
+	List(ctx context.Context, dormitoryID string, limit, offset int) ([]*Announcement, error)
+	Count(ctx context.Context, dormitoryID string) (int, error)
 	Create(ctx context.Context, a *Announcement) error
 	Update(ctx context.Context, a *Announcement) error
-	Delete(ctx context.Context, id string) error
+	Delete(ctx context.Context, dormitoryID, id string) error
 }

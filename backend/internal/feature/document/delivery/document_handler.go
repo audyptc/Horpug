@@ -30,7 +30,8 @@ func (h *DocumentHandler) List(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	list, total, err := h.documents.List(c.Context(), perPage, offset)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	list, total, err := h.documents.List(c.Context(), dormitoryID, perPage, offset)
 	if err != nil {
 		return err
 	}
@@ -38,7 +39,8 @@ func (h *DocumentHandler) List(c fiber.Ctx) error {
 }
 
 func (h *DocumentHandler) GetByID(c fiber.Ctx) error {
-	d, err := h.documents.GetByID(c.Context(), c.Params("id"))
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	d, err := h.documents.GetByID(c.Context(), dormitoryID, c.Params("id"))
 	if err != nil {
 		return err
 	}
@@ -53,7 +55,8 @@ func (h *DocumentHandler) Create(c fiber.Ctx) error {
 	if err := validateCreateDocumentRequest(&req); err != nil {
 		return err
 	}
-	d, err := h.documents.Create(c.Context(), &req)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	d, err := h.documents.Create(c.Context(), dormitoryID, &req)
 	if err != nil {
 		return err
 	}
@@ -68,11 +71,12 @@ func (h *DocumentHandler) Update(c fiber.Ctx) error {
 	if err := validateUpdateDocumentRequest(&req); err != nil {
 		return err
 	}
-	old, err := h.documents.GetByID(c.Context(), c.Params("id"))
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	old, err := h.documents.GetByID(c.Context(), dormitoryID, c.Params("id"))
 	if err != nil {
 		return err
 	}
-	d, err := h.documents.Update(c.Context(), c.Params("id"), &req)
+	d, err := h.documents.Update(c.Context(), dormitoryID, c.Params("id"), &req)
 	if err != nil {
 		return err
 	}
@@ -91,11 +95,12 @@ func (h *DocumentHandler) removeUploadedFile(fileURL string) {
 }
 
 func (h *DocumentHandler) Delete(c fiber.Ctx) error {
-	d, err := h.documents.GetByID(c.Context(), c.Params("id"))
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	d, err := h.documents.GetByID(c.Context(), dormitoryID, c.Params("id"))
 	if err != nil {
 		return err
 	}
-	if err := h.documents.Delete(c.Context(), c.Params("id")); err != nil {
+	if err := h.documents.Delete(c.Context(), dormitoryID, c.Params("id")); err != nil {
 		return err
 	}
 	if d.FileURL != "" {

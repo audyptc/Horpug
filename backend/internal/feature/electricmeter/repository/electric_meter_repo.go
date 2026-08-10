@@ -47,13 +47,15 @@ func scanElectricMeterDetail(row pgx.Row) (*domain.ElectricMeterDetail, error) {
 	return d, err
 }
 
-func (r *ElectricMeterRepo) FindByID(ctx context.Context, id string) (*domain.ElectricMeter, error) {
+func (r *ElectricMeterRepo) FindByID(ctx context.Context, dormitoryID, id string) (*domain.ElectricMeter, error) {
 	m := &domain.ElectricMeter{}
 	err := r.db.Pool.QueryRow(ctx, `
-		SELECT id, room_id, billing_type, billing_month, reading_date,
-		       previous_reading, current_reading, unit_price, flat_amount, note, created_at, updated_at,
-		       COALESCE(created_by::text, ''), COALESCE(updated_by::text, '')
-		FROM electric_meter_readings WHERE id = $1 AND deleted_at IS NULL`, id).
+		SELECT e.id, e.room_id, e.billing_type, e.billing_month, e.reading_date,
+		       e.previous_reading, e.current_reading, e.unit_price, e.flat_amount, e.note, e.created_at, e.updated_at,
+		       COALESCE(e.created_by::text, ''), COALESCE(e.updated_by::text, '')
+		FROM electric_meter_readings e
+		JOIN rooms r ON r.id = e.room_id
+		WHERE e.id = $1 AND r.dormitory_id = $2 AND e.deleted_at IS NULL`, id, dormitoryID).
 		Scan(&m.ID, &m.RoomID, &m.BillingType, &m.BillingMonth, &m.ReadingDate,
 			&m.PreviousReading, &m.CurrentReading, &m.UnitPrice, &m.FlatAmount,
 			&m.Note, &m.CreatedAt, &m.UpdatedAt,
@@ -64,8 +66,8 @@ func (r *ElectricMeterRepo) FindByID(ctx context.Context, id string) (*domain.El
 	return m, err
 }
 
-func (r *ElectricMeterRepo) FindDetailByID(ctx context.Context, id string) (*domain.ElectricMeterDetail, error) {
-	row := r.db.Pool.QueryRow(ctx, electricMeterDetailSelect+` WHERE e.id = $1 AND e.deleted_at IS NULL`, id)
+func (r *ElectricMeterRepo) FindDetailByID(ctx context.Context, dormitoryID, id string) (*domain.ElectricMeterDetail, error) {
+	row := r.db.Pool.QueryRow(ctx, electricMeterDetailSelect+` WHERE e.id = $1 AND r.dormitory_id = $2 AND e.deleted_at IS NULL`, id, dormitoryID)
 	d, err := scanElectricMeterDetail(row)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("electric meter reading not found: %w", coredomain.ErrNotFound)
@@ -73,11 +75,11 @@ func (r *ElectricMeterRepo) FindDetailByID(ctx context.Context, id string) (*dom
 	return d, err
 }
 
-func (r *ElectricMeterRepo) FindLatestByRoomID(ctx context.Context, roomID string, billingMonth *time.Time) (*domain.ElectricMeterDetail, error) {
-	q := electricMeterDetailSelect + ` WHERE e.room_id = $1 AND e.deleted_at IS NULL`
-	args := []any{roomID}
+func (r *ElectricMeterRepo) FindLatestByRoomID(ctx context.Context, dormitoryID, roomID string, billingMonth *time.Time) (*domain.ElectricMeterDetail, error) {
+	q := electricMeterDetailSelect + ` WHERE e.room_id = $1 AND r.dormitory_id = $2 AND e.deleted_at IS NULL`
+	args := []any{roomID, dormitoryID}
 	if billingMonth != nil {
-		q += ` AND DATE_TRUNC('month', e.billing_month) = DATE_TRUNC('month', $2::date)`
+		q += ` AND DATE_TRUNC('month', e.billing_month) = DATE_TRUNC('month', $3::date)`
 		args = append(args, *billingMonth)
 	}
 	q += ` ORDER BY e.reading_date DESC, e.created_at DESC LIMIT 1`
@@ -89,10 +91,10 @@ func (r *ElectricMeterRepo) FindLatestByRoomID(ctx context.Context, roomID strin
 	return d, err
 }
 
-func (r *ElectricMeterRepo) List(ctx context.Context, limit, offset int) ([]*domain.ElectricMeterDetail, error) {
+func (r *ElectricMeterRepo) List(ctx context.Context, dormitoryID string, limit, offset int) ([]*domain.ElectricMeterDetail, error) {
 	rows, err := r.db.Pool.Query(ctx,
-		electricMeterDetailSelect+` WHERE e.deleted_at IS NULL ORDER BY e.reading_date DESC, e.created_at DESC LIMIT $1 OFFSET $2`,
-		limit, offset)
+		electricMeterDetailSelect+` WHERE r.dormitory_id = $1 AND e.deleted_at IS NULL ORDER BY e.reading_date DESC, e.created_at DESC LIMIT $2 OFFSET $3`,
+		dormitoryID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -112,9 +114,12 @@ func (r *ElectricMeterRepo) List(ctx context.Context, limit, offset int) ([]*dom
 	return list, rows.Err()
 }
 
-func (r *ElectricMeterRepo) Count(ctx context.Context) (int, error) {
+func (r *ElectricMeterRepo) Count(ctx context.Context, dormitoryID string) (int, error) {
 	var total int
-	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM electric_meter_readings WHERE deleted_at IS NULL`).Scan(&total)
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM electric_meter_readings e
+		JOIN rooms r ON r.id = e.room_id
+		WHERE r.dormitory_id = $1 AND e.deleted_at IS NULL`, dormitoryID).Scan(&total)
 	return total, err
 }
 
@@ -128,19 +133,23 @@ func (r *ElectricMeterRepo) Create(ctx context.Context, m *domain.ElectricMeter)
 	return err
 }
 
-func (r *ElectricMeterRepo) Update(ctx context.Context, m *domain.ElectricMeter) error {
+func (r *ElectricMeterRepo) Update(ctx context.Context, dormitoryID string, m *domain.ElectricMeter) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		UPDATE electric_meter_readings
-		SET billing_type = $2, billing_month = $3, reading_date = $4, previous_reading = $5, current_reading = $6,
-		    unit_price = $7, flat_amount = $8, note = $9, updated_by = NULLIF($10, '')::uuid, updated_at = NOW()
-		WHERE id = $1`,
-		m.ID, m.BillingType, m.BillingMonth, m.ReadingDate,
+		SET billing_type = $3, billing_month = $4, reading_date = $5, previous_reading = $6, current_reading = $7,
+		    unit_price = $8, flat_amount = $9, note = $10, updated_by = NULLIF($11, '')::uuid, updated_at = NOW()
+		FROM rooms r
+		WHERE electric_meter_readings.id = $1 AND r.id = electric_meter_readings.room_id AND r.dormitory_id = $2`,
+		m.ID, dormitoryID, m.BillingType, m.BillingMonth, m.ReadingDate,
 		m.PreviousReading, m.CurrentReading, m.UnitPrice, m.FlatAmount, m.Note, m.UpdatedBy)
 	return err
 }
 
-func (r *ElectricMeterRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.db.Pool.Exec(ctx,
-		`UPDATE electric_meter_readings SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
+func (r *ElectricMeterRepo) Delete(ctx context.Context, dormitoryID, id string) error {
+	_, err := r.db.Pool.Exec(ctx, `
+		UPDATE electric_meter_readings SET deleted_at = NOW(), updated_at = NOW()
+		FROM rooms r
+		WHERE electric_meter_readings.id = $1 AND r.id = electric_meter_readings.room_id
+		  AND r.dormitory_id = $2 AND electric_meter_readings.deleted_at IS NULL`, id, dormitoryID)
 	return err
 }

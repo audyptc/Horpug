@@ -23,7 +23,8 @@ func (h *AnnouncementHandler) List(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	list, total, err := h.announcement.List(c.Context(), perPage, offset)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	list, total, err := h.announcement.List(c.Context(), dormitoryID, perPage, offset)
 	if err != nil {
 		return err
 	}
@@ -31,7 +32,8 @@ func (h *AnnouncementHandler) List(c fiber.Ctx) error {
 }
 
 func (h *AnnouncementHandler) GetByID(c fiber.Ctx) error {
-	a, err := h.announcement.GetByID(c.Context(), c.Params("id"))
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	a, err := h.announcement.GetByID(c.Context(), dormitoryID, c.Params("id"))
 	if err != nil {
 		return err
 	}
@@ -46,7 +48,8 @@ func (h *AnnouncementHandler) Create(c fiber.Ctx) error {
 	if err := validateCreateAnnouncementRequest(&req); err != nil {
 		return err
 	}
-	a, err := h.announcement.Create(c.Context(), &req)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	a, err := h.announcement.Create(c.Context(), dormitoryID, &req)
 	if err != nil {
 		return err
 	}
@@ -61,7 +64,8 @@ func (h *AnnouncementHandler) Update(c fiber.Ctx) error {
 	if err := validateUpdateAnnouncementRequest(&req); err != nil {
 		return err
 	}
-	a, err := h.announcement.Update(c.Context(), c.Params("id"), &req)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	a, err := h.announcement.Update(c.Context(), dormitoryID, c.Params("id"), &req)
 	if err != nil {
 		return err
 	}
@@ -69,7 +73,8 @@ func (h *AnnouncementHandler) Update(c fiber.Ctx) error {
 }
 
 func (h *AnnouncementHandler) Delete(c fiber.Ctx) error {
-	if err := h.announcement.Delete(c.Context(), c.Params("id")); err != nil {
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	if err := h.announcement.Delete(c.Context(), dormitoryID, c.Params("id")); err != nil {
 		return err
 	}
 	return response.Message(c, "announcement deleted")

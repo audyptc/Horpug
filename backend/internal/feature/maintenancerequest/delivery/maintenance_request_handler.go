@@ -23,7 +23,8 @@ func (h *MaintenanceRequestHandler) List(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	list, total, err := h.maintenance.List(c.Context(), perPage, offset)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	list, total, err := h.maintenance.List(c.Context(), dormitoryID, perPage, offset)
 	if err != nil {
 		return err
 	}
@@ -31,7 +32,8 @@ func (h *MaintenanceRequestHandler) List(c fiber.Ctx) error {
 }
 
 func (h *MaintenanceRequestHandler) GetByID(c fiber.Ctx) error {
-	m, err := h.maintenance.GetByID(c.Context(), c.Params("id"))
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	m, err := h.maintenance.GetByID(c.Context(), dormitoryID, c.Params("id"))
 	if err != nil {
 		return err
 	}
@@ -46,7 +48,8 @@ func (h *MaintenanceRequestHandler) Create(c fiber.Ctx) error {
 	if err := validateCreateMaintenanceRequestRequest(&req); err != nil {
 		return err
 	}
-	m, err := h.maintenance.Create(c.Context(), &req)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	m, err := h.maintenance.Create(c.Context(), dormitoryID, &req)
 	if err != nil {
 		return err
 	}
@@ -61,7 +64,8 @@ func (h *MaintenanceRequestHandler) Update(c fiber.Ctx) error {
 	if err := validateUpdateMaintenanceRequestRequest(&req); err != nil {
 		return err
 	}
-	m, err := h.maintenance.Update(c.Context(), c.Params("id"), &req)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	m, err := h.maintenance.Update(c.Context(), dormitoryID, c.Params("id"), &req)
 	if err != nil {
 		return err
 	}
@@ -69,7 +73,8 @@ func (h *MaintenanceRequestHandler) Update(c fiber.Ctx) error {
 }
 
 func (h *MaintenanceRequestHandler) Delete(c fiber.Ctx) error {
-	if err := h.maintenance.Delete(c.Context(), c.Params("id")); err != nil {
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	if err := h.maintenance.Delete(c.Context(), dormitoryID, c.Params("id")); err != nil {
 		return err
 	}
 	return response.Message(c, "maintenance request deleted")

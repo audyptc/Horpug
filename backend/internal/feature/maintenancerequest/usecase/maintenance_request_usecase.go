@@ -7,32 +7,34 @@ import (
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	coredomain "apigofiberhorpug/internal/domain"
 	"apigofiberhorpug/internal/feature/maintenancerequest/domain"
+	roomdomain "apigofiberhorpug/internal/feature/room/domain"
 
 	"github.com/google/uuid"
 )
 
 type MaintenanceRequestUseCase struct {
-	repo domain.MaintenanceRequestRepository
+	repo     domain.MaintenanceRequestRepository
+	roomRepo roomdomain.RoomRepository
 }
 
-func NewMaintenanceRequestUseCase(repo domain.MaintenanceRequestRepository) *MaintenanceRequestUseCase {
-	return &MaintenanceRequestUseCase{repo: repo}
+func NewMaintenanceRequestUseCase(repo domain.MaintenanceRequestRepository, roomRepo roomdomain.RoomRepository) *MaintenanceRequestUseCase {
+	return &MaintenanceRequestUseCase{repo: repo, roomRepo: roomRepo}
 }
 
-func (uc *MaintenanceRequestUseCase) List(ctx context.Context, limit, offset int) ([]*domain.MaintenanceRequestDetail, int, error) {
-	total, err := uc.repo.Count(ctx)
+func (uc *MaintenanceRequestUseCase) List(ctx context.Context, dormitoryID string, limit, offset int) ([]*domain.MaintenanceRequestDetail, int, error) {
+	total, err := uc.repo.Count(ctx, dormitoryID)
 	if err != nil {
 		return nil, 0, apierror.Internal(err)
 	}
-	list, err := uc.repo.List(ctx, limit, offset)
+	list, err := uc.repo.List(ctx, dormitoryID, limit, offset)
 	if err != nil {
 		return nil, 0, apierror.Internal(err)
 	}
 	return list, total, nil
 }
 
-func (uc *MaintenanceRequestUseCase) GetByID(ctx context.Context, id string) (*domain.MaintenanceRequestDetail, error) {
-	m, err := uc.repo.FindDetailByID(ctx, id)
+func (uc *MaintenanceRequestUseCase) GetByID(ctx context.Context, dormitoryID, id string) (*domain.MaintenanceRequestDetail, error) {
+	m, err := uc.repo.FindDetailByID(ctx, dormitoryID, id)
 	if err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
@@ -42,7 +44,20 @@ func (uc *MaintenanceRequestUseCase) GetByID(ctx context.Context, id string) (*d
 	return m, nil
 }
 
-func (uc *MaintenanceRequestUseCase) Create(ctx context.Context, req *domain.CreateMaintenanceRequestRequest) (*domain.MaintenanceRequestDetail, error) {
+func (uc *MaintenanceRequestUseCase) validateRoom(ctx context.Context, dormitoryID, roomID string) error {
+	if _, err := uc.roomRepo.FindByID(ctx, dormitoryID, roomID); err != nil {
+		if errors.Is(err, coredomain.ErrNotFound) {
+			return apierror.NotFound("room not found")
+		}
+		return apierror.Internal(err)
+	}
+	return nil
+}
+
+func (uc *MaintenanceRequestUseCase) Create(ctx context.Context, dormitoryID string, req *domain.CreateMaintenanceRequestRequest) (*domain.MaintenanceRequestDetail, error) {
+	if err := uc.validateRoom(ctx, dormitoryID, req.RoomID); err != nil {
+		return nil, err
+	}
 	m := &domain.MaintenanceRequest{
 		ID:           uuid.New().String(),
 		RoomID:       req.RoomID,
@@ -57,16 +72,21 @@ func (uc *MaintenanceRequestUseCase) Create(ctx context.Context, req *domain.Cre
 	if err := uc.repo.Create(ctx, m); err != nil {
 		return nil, apierror.Internal(err)
 	}
-	return uc.repo.FindDetailByID(ctx, m.ID)
+	return uc.repo.FindDetailByID(ctx, dormitoryID, m.ID)
 }
 
-func (uc *MaintenanceRequestUseCase) Update(ctx context.Context, id string, req *domain.UpdateMaintenanceRequestRequest) (*domain.MaintenanceRequestDetail, error) {
-	m, err := uc.repo.FindByID(ctx, id)
+func (uc *MaintenanceRequestUseCase) Update(ctx context.Context, dormitoryID, id string, req *domain.UpdateMaintenanceRequestRequest) (*domain.MaintenanceRequestDetail, error) {
+	m, err := uc.repo.FindByID(ctx, dormitoryID, id)
 	if err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
 		}
 		return nil, apierror.Internal(err)
+	}
+	if req.RoomID != m.RoomID {
+		if err := uc.validateRoom(ctx, dormitoryID, req.RoomID); err != nil {
+			return nil, err
+		}
 	}
 
 	m.RoomID = req.RoomID
@@ -78,20 +98,20 @@ func (uc *MaintenanceRequestUseCase) Update(ctx context.Context, id string, req 
 	m.ResolvedDate = req.ResolvedDate
 	m.Note = req.Note
 
-	if err := uc.repo.Update(ctx, m); err != nil {
+	if err := uc.repo.Update(ctx, dormitoryID, m); err != nil {
 		return nil, apierror.Internal(err)
 	}
-	return uc.repo.FindDetailByID(ctx, id)
+	return uc.repo.FindDetailByID(ctx, dormitoryID, id)
 }
 
-func (uc *MaintenanceRequestUseCase) Delete(ctx context.Context, id string) error {
-	if _, err := uc.repo.FindByID(ctx, id); err != nil {
+func (uc *MaintenanceRequestUseCase) Delete(ctx context.Context, dormitoryID, id string) error {
+	if _, err := uc.repo.FindByID(ctx, dormitoryID, id); err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)
 	}
-	if err := uc.repo.Delete(ctx, id); err != nil {
+	if err := uc.repo.Delete(ctx, dormitoryID, id); err != nil {
 		return apierror.Internal(err)
 	}
 	return nil

@@ -47,14 +47,17 @@ func scanBillDetail(row pgx.Row) (*domain.BillDetail, error) {
 	return d, err
 }
 
-func (r *BillRepo) FindByID(ctx context.Context, id string) (*domain.Bill, error) {
+func (r *BillRepo) FindByID(ctx context.Context, dormitoryID, id string) (*domain.Bill, error) {
 	b := &domain.Bill{}
 	err := r.db.Pool.QueryRow(ctx, `
-		SELECT id, contract_id, billing_month,
-		       rent_amount, electric_amount, water_amount, parking_amount, other_amount,
-		       total_amount, status, due_date, paid_at, note, created_at, updated_at,
-		       COALESCE(created_by::text, ''), COALESCE(updated_by::text, '')
-		FROM bills WHERE id = $1 AND deleted_at IS NULL`, id).
+		SELECT b.id, b.contract_id, b.billing_month,
+		       b.rent_amount, b.electric_amount, b.water_amount, b.parking_amount, b.other_amount,
+		       b.total_amount, b.status, b.due_date, b.paid_at, b.note, b.created_at, b.updated_at,
+		       COALESCE(b.created_by::text, ''), COALESCE(b.updated_by::text, '')
+		FROM bills b
+		JOIN contracts c ON c.id = b.contract_id
+		JOIN rooms r ON r.id = c.room_id
+		WHERE b.id = $1 AND r.dormitory_id = $2 AND b.deleted_at IS NULL`, id, dormitoryID).
 		Scan(&b.ID, &b.ContractID, &b.BillingMonth,
 			&b.RentAmount, &b.ElectricAmount, &b.WaterAmount, &b.ParkingAmount, &b.OtherAmount,
 			&b.TotalAmount, &b.Status, &b.DueDate, &b.PaidAt, &b.Note,
@@ -66,8 +69,8 @@ func (r *BillRepo) FindByID(ctx context.Context, id string) (*domain.Bill, error
 	return b, err
 }
 
-func (r *BillRepo) FindDetailByID(ctx context.Context, id string) (*domain.BillDetail, error) {
-	row := r.db.Pool.QueryRow(ctx, billDetailSelect+` WHERE b.id = $1 AND b.deleted_at IS NULL`, id)
+func (r *BillRepo) FindDetailByID(ctx context.Context, dormitoryID, id string) (*domain.BillDetail, error) {
+	row := r.db.Pool.QueryRow(ctx, billDetailSelect+` WHERE b.id = $1 AND r.dormitory_id = $2 AND b.deleted_at IS NULL`, id, dormitoryID)
 	d, err := scanBillDetail(row)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("bill not found: %w", coredomain.ErrNotFound)
@@ -83,10 +86,10 @@ func (r *BillRepo) FindDetailByID(ctx context.Context, id string) (*domain.BillD
 	return d, nil
 }
 
-func (r *BillRepo) List(ctx context.Context, limit, offset int) ([]*domain.BillDetail, error) {
+func (r *BillRepo) List(ctx context.Context, dormitoryID string, limit, offset int) ([]*domain.BillDetail, error) {
 	rows, err := r.db.Pool.Query(ctx,
-		billDetailSelect+` WHERE b.deleted_at IS NULL ORDER BY b.billing_month DESC, b.created_at DESC LIMIT $1 OFFSET $2`,
-		limit, offset)
+		billDetailSelect+` WHERE r.dormitory_id = $1 AND b.deleted_at IS NULL ORDER BY b.billing_month DESC, b.created_at DESC LIMIT $2 OFFSET $3`,
+		dormitoryID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -134,9 +137,13 @@ func (r *BillRepo) List(ctx context.Context, limit, offset int) ([]*domain.BillD
 	return list, itemRows.Err()
 }
 
-func (r *BillRepo) Count(ctx context.Context) (int, error) {
+func (r *BillRepo) Count(ctx context.Context, dormitoryID string) (int, error) {
 	var total int
-	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM bills WHERE deleted_at IS NULL`).Scan(&total)
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM bills b
+		JOIN contracts c ON c.id = b.contract_id
+		JOIN rooms r ON r.id = c.room_id
+		WHERE r.dormitory_id = $1 AND b.deleted_at IS NULL`, dormitoryID).Scan(&total)
 	return total, err
 }
 
@@ -153,23 +160,27 @@ func (r *BillRepo) Create(ctx context.Context, b *domain.Bill) error {
 	return err
 }
 
-func (r *BillRepo) Update(ctx context.Context, b *domain.Bill) error {
+func (r *BillRepo) Update(ctx context.Context, dormitoryID string, b *domain.Bill) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		UPDATE bills
-		SET rent_amount=$2, electric_amount=$3, water_amount=$4, parking_amount=$5,
-		    other_amount=$6, total_amount=$7,
-		    status=$8, due_date=$9, paid_at=$10, note=$11,
-		    updated_by=NULLIF($12,'')::uuid, updated_at=NOW()
-		WHERE id=$1`,
-		b.ID, b.RentAmount, b.ElectricAmount, b.WaterAmount, b.ParkingAmount,
+		SET rent_amount=$3, electric_amount=$4, water_amount=$5, parking_amount=$6,
+		    other_amount=$7, total_amount=$8,
+		    status=$9, due_date=$10, paid_at=$11, note=$12,
+		    updated_by=NULLIF($13,'')::uuid, updated_at=NOW()
+		FROM contracts c, rooms r
+		WHERE bills.id = $1 AND c.id = bills.contract_id AND r.id = c.room_id AND r.dormitory_id = $2`,
+		b.ID, dormitoryID, b.RentAmount, b.ElectricAmount, b.WaterAmount, b.ParkingAmount,
 		b.OtherAmount, b.TotalAmount,
 		b.Status, b.DueDate, b.PaidAt, b.Note, b.UpdatedBy)
 	return err
 }
 
-func (r *BillRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.db.Pool.Exec(ctx,
-		`UPDATE bills SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
+func (r *BillRepo) Delete(ctx context.Context, dormitoryID, id string) error {
+	_, err := r.db.Pool.Exec(ctx, `
+		UPDATE bills SET deleted_at = NOW(), updated_at = NOW()
+		FROM contracts c, rooms r
+		WHERE bills.id = $1 AND c.id = bills.contract_id AND r.id = c.room_id
+		  AND r.dormitory_id = $2 AND bills.deleted_at IS NULL`, id, dormitoryID)
 	return err
 }
 

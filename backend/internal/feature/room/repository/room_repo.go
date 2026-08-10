@@ -40,25 +40,6 @@ func (r *RoomRepo) FindByID(ctx context.Context, dormitoryID, id string) (*domai
 	return room, err
 }
 
-func (r *RoomRepo) FindByIDAny(ctx context.Context, id string) (*domain.Room, error) {
-	room := &domain.Room{}
-	err := r.db.Pool.QueryRow(ctx, `
-		SELECT r.id, r.dormitory_id, r.room_number, r.floor, r.type, r.status, r.rent_price, r.description,
-		       COALESCE(r.created_by::text, ''), COALESCE(r.updated_by::text, ''),
-		       COALESCE(u.full_name, ''),
-		       r.created_at, r.updated_at
-		FROM rooms r
-		LEFT JOIN users u ON u.id = r.updated_by
-		WHERE r.id = $1 AND r.deleted_at IS NULL`, id).
-		Scan(&room.ID, &room.DormitoryID, &room.RoomNumber, &room.Floor, &room.Type, &room.Status,
-			&room.RentPrice, &room.Description, &room.CreatedBy, &room.UpdatedBy,
-			&room.UpdatedByName, &room.CreatedAt, &room.UpdatedAt)
-	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("room not found: %w", coredomain.ErrNotFound)
-	}
-	return room, err
-}
-
 func (r *RoomRepo) List(ctx context.Context, dormitoryID string, limit, offset int) ([]*domain.Room, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT r.id, r.dormitory_id, r.room_number, r.floor, r.type, r.status, r.rent_price, r.description,

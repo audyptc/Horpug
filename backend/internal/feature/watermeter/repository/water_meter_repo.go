@@ -47,13 +47,15 @@ func scanWaterMeterDetail(row pgx.Row) (*domain.WaterMeterDetail, error) {
 	return d, err
 }
 
-func (r *WaterMeterRepo) FindByID(ctx context.Context, id string) (*domain.WaterMeter, error) {
+func (r *WaterMeterRepo) FindByID(ctx context.Context, dormitoryID, id string) (*domain.WaterMeter, error) {
 	m := &domain.WaterMeter{}
 	err := r.db.Pool.QueryRow(ctx, `
-		SELECT id, room_id, billing_type, billing_month, reading_date,
-		       previous_reading, current_reading, unit_price, flat_amount, note, created_at, updated_at,
-		       COALESCE(created_by::text, ''), COALESCE(updated_by::text, '')
-		FROM water_meter_readings WHERE id = $1 AND deleted_at IS NULL`, id).
+		SELECT w.id, w.room_id, w.billing_type, w.billing_month, w.reading_date,
+		       w.previous_reading, w.current_reading, w.unit_price, w.flat_amount, w.note, w.created_at, w.updated_at,
+		       COALESCE(w.created_by::text, ''), COALESCE(w.updated_by::text, '')
+		FROM water_meter_readings w
+		JOIN rooms r ON r.id = w.room_id
+		WHERE w.id = $1 AND r.dormitory_id = $2 AND w.deleted_at IS NULL`, id, dormitoryID).
 		Scan(&m.ID, &m.RoomID, &m.BillingType, &m.BillingMonth, &m.ReadingDate,
 			&m.PreviousReading, &m.CurrentReading, &m.UnitPrice, &m.FlatAmount,
 			&m.Note, &m.CreatedAt, &m.UpdatedAt,
@@ -64,8 +66,8 @@ func (r *WaterMeterRepo) FindByID(ctx context.Context, id string) (*domain.Water
 	return m, err
 }
 
-func (r *WaterMeterRepo) FindDetailByID(ctx context.Context, id string) (*domain.WaterMeterDetail, error) {
-	row := r.db.Pool.QueryRow(ctx, waterMeterDetailSelect+` WHERE w.id = $1 AND w.deleted_at IS NULL`, id)
+func (r *WaterMeterRepo) FindDetailByID(ctx context.Context, dormitoryID, id string) (*domain.WaterMeterDetail, error) {
+	row := r.db.Pool.QueryRow(ctx, waterMeterDetailSelect+` WHERE w.id = $1 AND r.dormitory_id = $2 AND w.deleted_at IS NULL`, id, dormitoryID)
 	d, err := scanWaterMeterDetail(row)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("water meter reading not found: %w", coredomain.ErrNotFound)
@@ -73,11 +75,11 @@ func (r *WaterMeterRepo) FindDetailByID(ctx context.Context, id string) (*domain
 	return d, err
 }
 
-func (r *WaterMeterRepo) FindLatestByRoomID(ctx context.Context, roomID string, billingMonth *time.Time) (*domain.WaterMeterDetail, error) {
-	q := waterMeterDetailSelect + ` WHERE w.room_id = $1 AND w.deleted_at IS NULL`
-	args := []any{roomID}
+func (r *WaterMeterRepo) FindLatestByRoomID(ctx context.Context, dormitoryID, roomID string, billingMonth *time.Time) (*domain.WaterMeterDetail, error) {
+	q := waterMeterDetailSelect + ` WHERE w.room_id = $1 AND r.dormitory_id = $2 AND w.deleted_at IS NULL`
+	args := []any{roomID, dormitoryID}
 	if billingMonth != nil {
-		q += ` AND DATE_TRUNC('month', w.billing_month) = DATE_TRUNC('month', $2::date)`
+		q += ` AND DATE_TRUNC('month', w.billing_month) = DATE_TRUNC('month', $3::date)`
 		args = append(args, *billingMonth)
 	}
 	q += ` ORDER BY w.reading_date DESC, w.created_at DESC LIMIT 1`
@@ -89,10 +91,10 @@ func (r *WaterMeterRepo) FindLatestByRoomID(ctx context.Context, roomID string, 
 	return d, err
 }
 
-func (r *WaterMeterRepo) List(ctx context.Context, limit, offset int) ([]*domain.WaterMeterDetail, error) {
+func (r *WaterMeterRepo) List(ctx context.Context, dormitoryID string, limit, offset int) ([]*domain.WaterMeterDetail, error) {
 	rows, err := r.db.Pool.Query(ctx,
-		waterMeterDetailSelect+` WHERE w.deleted_at IS NULL ORDER BY w.reading_date DESC, w.created_at DESC LIMIT $1 OFFSET $2`,
-		limit, offset)
+		waterMeterDetailSelect+` WHERE r.dormitory_id = $1 AND w.deleted_at IS NULL ORDER BY w.reading_date DESC, w.created_at DESC LIMIT $2 OFFSET $3`,
+		dormitoryID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -112,9 +114,12 @@ func (r *WaterMeterRepo) List(ctx context.Context, limit, offset int) ([]*domain
 	return list, rows.Err()
 }
 
-func (r *WaterMeterRepo) Count(ctx context.Context) (int, error) {
+func (r *WaterMeterRepo) Count(ctx context.Context, dormitoryID string) (int, error) {
 	var total int
-	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM water_meter_readings WHERE deleted_at IS NULL`).Scan(&total)
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM water_meter_readings w
+		JOIN rooms r ON r.id = w.room_id
+		WHERE r.dormitory_id = $1 AND w.deleted_at IS NULL`, dormitoryID).Scan(&total)
 	return total, err
 }
 
@@ -128,19 +133,23 @@ func (r *WaterMeterRepo) Create(ctx context.Context, m *domain.WaterMeter) error
 	return err
 }
 
-func (r *WaterMeterRepo) Update(ctx context.Context, m *domain.WaterMeter) error {
+func (r *WaterMeterRepo) Update(ctx context.Context, dormitoryID string, m *domain.WaterMeter) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		UPDATE water_meter_readings
-		SET billing_type = $2, billing_month = $3, reading_date = $4, previous_reading = $5, current_reading = $6,
-		    unit_price = $7, flat_amount = $8, note = $9, updated_by = NULLIF($10, '')::uuid, updated_at = NOW()
-		WHERE id = $1`,
-		m.ID, m.BillingType, m.BillingMonth, m.ReadingDate,
+		SET billing_type = $3, billing_month = $4, reading_date = $5, previous_reading = $6, current_reading = $7,
+		    unit_price = $8, flat_amount = $9, note = $10, updated_by = NULLIF($11, '')::uuid, updated_at = NOW()
+		FROM rooms r
+		WHERE water_meter_readings.id = $1 AND r.id = water_meter_readings.room_id AND r.dormitory_id = $2`,
+		m.ID, dormitoryID, m.BillingType, m.BillingMonth, m.ReadingDate,
 		m.PreviousReading, m.CurrentReading, m.UnitPrice, m.FlatAmount, m.Note, m.UpdatedBy)
 	return err
 }
 
-func (r *WaterMeterRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.db.Pool.Exec(ctx,
-		`UPDATE water_meter_readings SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
+func (r *WaterMeterRepo) Delete(ctx context.Context, dormitoryID, id string) error {
+	_, err := r.db.Pool.Exec(ctx, `
+		UPDATE water_meter_readings SET deleted_at = NOW(), updated_at = NOW()
+		FROM rooms r
+		WHERE water_meter_readings.id = $1 AND r.id = water_meter_readings.room_id
+		  AND r.dormitory_id = $2 AND water_meter_readings.deleted_at IS NULL`, id, dormitoryID)
 	return err
 }

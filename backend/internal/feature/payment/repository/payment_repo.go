@@ -56,11 +56,15 @@ func scanPaymentDetail(row pgx.Row) (*domain.PaymentDetail, error) {
 	return d, nil
 }
 
-func (r *PaymentRepo) FindByID(ctx context.Context, id string) (*domain.Payment, error) {
+func (r *PaymentRepo) FindByID(ctx context.Context, dormitoryID, id string) (*domain.Payment, error) {
 	p := &domain.Payment{}
 	err := r.db.Pool.QueryRow(ctx, `
-		SELECT id, bill_id, amount, method, payment_date, note, created_at, updated_at
-		FROM payments WHERE id = $1 AND deleted_at IS NULL`, id).
+		SELECT p.id, p.bill_id, p.amount, p.method, p.payment_date, p.note, p.created_at, p.updated_at
+		FROM payments p
+		JOIN bills b ON b.id = p.bill_id
+		JOIN contracts c ON c.id = b.contract_id
+		JOIN rooms r ON r.id = c.room_id
+		WHERE p.id = $1 AND r.dormitory_id = $2 AND p.deleted_at IS NULL`, id, dormitoryID).
 		Scan(&p.ID, &p.BillID, &p.Amount, &p.Method, &p.PaymentDate, &p.Note, &p.CreatedAt, &p.UpdatedAt)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("payment not found: %w", coredomain.ErrNotFound)
@@ -68,11 +72,11 @@ func (r *PaymentRepo) FindByID(ctx context.Context, id string) (*domain.Payment,
 	return p, err
 }
 
-func (r *PaymentRepo) FindDetailByID(ctx context.Context, id string) (*domain.PaymentDetail, error) {
+func (r *PaymentRepo) FindDetailByID(ctx context.Context, dormitoryID, id string) (*domain.PaymentDetail, error) {
 	row := r.db.Pool.QueryRow(ctx,
 		paymentDetailQuery+`
-		WHERE p.id = $1 AND p.deleted_at IS NULL
-		GROUP BY p.id, r.room_number, t.first_name, t.last_name, b.billing_month, b.total_amount`, id)
+		WHERE p.id = $1 AND r.dormitory_id = $2 AND p.deleted_at IS NULL
+		GROUP BY p.id, r.room_number, t.first_name, t.last_name, b.billing_month, b.total_amount`, id, dormitoryID)
 	d, err := scanPaymentDetail(row)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("payment not found: %w", coredomain.ErrNotFound)
@@ -80,13 +84,13 @@ func (r *PaymentRepo) FindDetailByID(ctx context.Context, id string) (*domain.Pa
 	return d, err
 }
 
-func (r *PaymentRepo) List(ctx context.Context, limit, offset int) ([]*domain.PaymentDetail, error) {
+func (r *PaymentRepo) List(ctx context.Context, dormitoryID string, limit, offset int) ([]*domain.PaymentDetail, error) {
 	rows, err := r.db.Pool.Query(ctx,
 		paymentDetailQuery+`
-		WHERE p.deleted_at IS NULL
+		WHERE r.dormitory_id = $1 AND p.deleted_at IS NULL
 		GROUP BY p.id, r.room_number, t.first_name, t.last_name, b.billing_month, b.total_amount
 		ORDER BY p.payment_date DESC, p.created_at DESC
-		LIMIT $1 OFFSET $2`, limit, offset)
+		LIMIT $2 OFFSET $3`, dormitoryID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -106,9 +110,14 @@ func (r *PaymentRepo) List(ctx context.Context, limit, offset int) ([]*domain.Pa
 	return list, rows.Err()
 }
 
-func (r *PaymentRepo) Count(ctx context.Context) (int, error) {
+func (r *PaymentRepo) Count(ctx context.Context, dormitoryID string) (int, error) {
 	var total int
-	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM payments WHERE deleted_at IS NULL`).Scan(&total)
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM payments p
+		JOIN bills b ON b.id = p.bill_id
+		JOIN contracts c ON c.id = b.contract_id
+		JOIN rooms r ON r.id = c.room_id
+		WHERE r.dormitory_id = $1 AND p.deleted_at IS NULL`, dormitoryID).Scan(&total)
 	return total, err
 }
 
@@ -154,20 +163,25 @@ func (r *PaymentRepo) Create(ctx context.Context, p *domain.Payment, splits []do
 	return tx.Commit(ctx)
 }
 
-func (r *PaymentRepo) Update(ctx context.Context, p *domain.Payment, splits []domain.PaymentSplit) error {
+func (r *PaymentRepo) Update(ctx context.Context, dormitoryID string, p *domain.Payment, splits []domain.PaymentSplit) error {
 	tx, err := r.db.Pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
 
-	_, err = tx.Exec(ctx, `
+	tag, err := tx.Exec(ctx, `
 		UPDATE payments
-		SET amount=$2, method=$3, payment_date=$4, note=$5, updated_at=NOW()
-		WHERE id=$1`,
-		p.ID, p.Amount, p.Method, p.PaymentDate, p.Note)
+		SET amount=$3, method=$4, payment_date=$5, note=$6, updated_at=NOW()
+		FROM bills b, contracts c, rooms r
+		WHERE payments.id = $1 AND b.id = payments.bill_id AND c.id = b.contract_id
+		  AND r.id = c.room_id AND r.dormitory_id = $2`,
+		p.ID, dormitoryID, p.Amount, p.Method, p.PaymentDate, p.Note)
 	if err != nil {
 		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("payment not found: %w", coredomain.ErrNotFound)
 	}
 
 	_, err = tx.Exec(ctx, `DELETE FROM payment_splits WHERE payment_id = $1`, p.ID)
@@ -188,8 +202,11 @@ func (r *PaymentRepo) Update(ctx context.Context, p *domain.Payment, splits []do
 	return tx.Commit(ctx)
 }
 
-func (r *PaymentRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.db.Pool.Exec(ctx,
-		`UPDATE payments SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
+func (r *PaymentRepo) Delete(ctx context.Context, dormitoryID, id string) error {
+	_, err := r.db.Pool.Exec(ctx, `
+		UPDATE payments SET deleted_at = NOW(), updated_at = NOW()
+		FROM bills b, contracts c, rooms r
+		WHERE payments.id = $1 AND b.id = payments.bill_id AND c.id = b.contract_id
+		  AND r.id = c.room_id AND r.dormitory_id = $2 AND payments.deleted_at IS NULL`, id, dormitoryID)
 	return err
 }

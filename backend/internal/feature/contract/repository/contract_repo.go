@@ -61,22 +61,6 @@ func (r *ContractRepo) FindByID(ctx context.Context, dormitoryID, id string) (*d
 	return c, err
 }
 
-func (r *ContractRepo) FindByIDAny(ctx context.Context, id string) (*domain.Contract, error) {
-	c := &domain.Contract{}
-	err := r.db.Pool.QueryRow(ctx, `
-		SELECT id, tenant_id, room_id, start_date, end_date,
-		       rent_price, deposit, num_occupants, status, note, created_at, updated_at,
-		       COALESCE(created_by::text, ''), COALESCE(updated_by::text, '')
-		FROM contracts WHERE id = $1 AND deleted_at IS NULL`, id).
-		Scan(&c.ID, &c.TenantID, &c.RoomID, &c.StartDate, &c.EndDate,
-			&c.RentPrice, &c.Deposit, &c.NumOccupants, &c.Status, &c.Note, &c.CreatedAt, &c.UpdatedAt,
-			&c.CreatedBy, &c.UpdatedBy)
-	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("contract not found: %w", coredomain.ErrNotFound)
-	}
-	return c, err
-}
-
 func (r *ContractRepo) FindDetailByID(ctx context.Context, dormitoryID, id string) (*domain.ContractDetail, error) {
 	row := r.db.Pool.QueryRow(ctx,
 		contractDetailSelect+` WHERE c.id = $1 AND r.dormitory_id = $2 AND c.deleted_at IS NULL`, id, dormitoryID)

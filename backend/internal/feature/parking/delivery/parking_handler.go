@@ -23,7 +23,8 @@ func (h *ParkingHandler) List(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	list, total, err := h.parking.List(c.Context(), perPage, offset)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	list, total, err := h.parking.List(c.Context(), dormitoryID, perPage, offset)
 	if err != nil {
 		return err
 	}
@@ -31,7 +32,8 @@ func (h *ParkingHandler) List(c fiber.Ctx) error {
 }
 
 func (h *ParkingHandler) GetByID(c fiber.Ctx) error {
-	p, err := h.parking.GetByID(c.Context(), c.Params("id"))
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	p, err := h.parking.GetByID(c.Context(), dormitoryID, c.Params("id"))
 	if err != nil {
 		return err
 	}
@@ -46,7 +48,8 @@ func (h *ParkingHandler) Create(c fiber.Ctx) error {
 	if err := validateCreateParkingSlotRequest(&req); err != nil {
 		return err
 	}
-	p, err := h.parking.Create(c.Context(), &req)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	p, err := h.parking.Create(c.Context(), dormitoryID, &req)
 	if err != nil {
 		return err
 	}
@@ -61,7 +64,8 @@ func (h *ParkingHandler) Update(c fiber.Ctx) error {
 	if err := validateUpdateParkingSlotRequest(&req); err != nil {
 		return err
 	}
-	p, err := h.parking.Update(c.Context(), c.Params("id"), &req)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	p, err := h.parking.Update(c.Context(), dormitoryID, c.Params("id"), &req)
 	if err != nil {
 		return err
 	}
@@ -69,7 +73,8 @@ func (h *ParkingHandler) Update(c fiber.Ctx) error {
 }
 
 func (h *ParkingHandler) Delete(c fiber.Ctx) error {
-	if err := h.parking.Delete(c.Context(), c.Params("id")); err != nil {
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	if err := h.parking.Delete(c.Context(), dormitoryID, c.Params("id")); err != nil {
 		return err
 	}
 	return response.Message(c, "parking slot deleted")

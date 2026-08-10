@@ -6,10 +6,10 @@ import (
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/delivery/http/httputil"
 	"apigofiberhorpug/internal/delivery/http/response"
-	"apigofiberhorpug/internal/feature/electricmeter/domain"
-	"apigofiberhorpug/internal/feature/electricmeter/usecase"
 	aldomain "apigofiberhorpug/internal/feature/activitylog/domain"
 	alusecase "apigofiberhorpug/internal/feature/activitylog/usecase"
+	"apigofiberhorpug/internal/feature/electricmeter/domain"
+	"apigofiberhorpug/internal/feature/electricmeter/usecase"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -28,7 +28,8 @@ func (h *ElectricMeterHandler) List(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	list, total, err := h.uc.List(c.Context(), perPage, offset)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	list, total, err := h.uc.List(c.Context(), dormitoryID, perPage, offset)
 	if err != nil {
 		return err
 	}
@@ -36,7 +37,8 @@ func (h *ElectricMeterHandler) List(c fiber.Ctx) error {
 }
 
 func (h *ElectricMeterHandler) GetByID(c fiber.Ctx) error {
-	d, err := h.uc.GetByID(c.Context(), c.Params("id"))
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	d, err := h.uc.GetByID(c.Context(), dormitoryID, c.Params("id"))
 	if err != nil {
 		return err
 	}
@@ -56,7 +58,8 @@ func (h *ElectricMeterHandler) GetLatestByRoomID(c fiber.Ctx) error {
 		}
 		billingMonth = &t
 	}
-	d, err := h.uc.GetLatestByRoomID(c.Context(), roomID, billingMonth)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	d, err := h.uc.GetLatestByRoomID(c.Context(), dormitoryID, roomID, billingMonth)
 	if err != nil {
 		return err
 	}
@@ -72,7 +75,8 @@ func (h *ElectricMeterHandler) Create(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	d, err := h.uc.Create(c.Context(), &req, actorID)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	d, err := h.uc.Create(c.Context(), dormitoryID, &req, actorID)
 	if err != nil {
 		return err
 	}
@@ -86,7 +90,8 @@ func (h *ElectricMeterHandler) Update(c fiber.Ctx) error {
 		return apierror.BadRequest("invalid request body")
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	d, err := h.uc.Update(c.Context(), c.Params("id"), &req, actorID)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	d, err := h.uc.Update(c.Context(), dormitoryID, c.Params("id"), &req, actorID)
 	if err != nil {
 		return err
 	}
@@ -96,7 +101,8 @@ func (h *ElectricMeterHandler) Update(c fiber.Ctx) error {
 
 func (h *ElectricMeterHandler) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
-	if err := h.uc.Delete(c.Context(), id); err != nil {
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	if err := h.uc.Delete(c.Context(), dormitoryID, id); err != nil {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
