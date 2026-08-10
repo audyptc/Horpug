@@ -7,12 +7,13 @@ import (
 	"apigofiberhorpug/internal/bootstrap"
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/delivery/http/middleware"
-	v1 "apigofiberhorpug/internal/delivery/http/v1"
 	aldelivery "apigofiberhorpug/internal/feature/activitylog/delivery"
+	analyticsdelivery "apigofiberhorpug/internal/feature/analytics/delivery"
 	announcementdelivery "apigofiberhorpug/internal/feature/announcement/delivery"
 	authdelivery "apigofiberhorpug/internal/feature/auth/delivery"
 	billdelivery "apigofiberhorpug/internal/feature/bill/delivery"
 	contractdelivery "apigofiberhorpug/internal/feature/contract/delivery"
+	dashboarddelivery "apigofiberhorpug/internal/feature/dashboard/delivery"
 	documentdelivery "apigofiberhorpug/internal/feature/document/delivery"
 	electricmeterdelivery "apigofiberhorpug/internal/feature/electricmeter/delivery"
 	expensedelivery "apigofiberhorpug/internal/feature/expense/delivery"
@@ -23,9 +24,11 @@ import (
 	parkingdelivery "apigofiberhorpug/internal/feature/parking/delivery"
 	paymentdelivery "apigofiberhorpug/internal/feature/payment/delivery"
 	permissiondelivery "apigofiberhorpug/internal/feature/permission/delivery"
+	reportdelivery "apigofiberhorpug/internal/feature/report/delivery"
 	roledelivery "apigofiberhorpug/internal/feature/role/delivery"
 	roomdelivery "apigofiberhorpug/internal/feature/room/delivery"
 	roomtypedelivery "apigofiberhorpug/internal/feature/roomtype/delivery"
+	searchdelivery "apigofiberhorpug/internal/feature/search/delivery"
 	tenantdelivery "apigofiberhorpug/internal/feature/tenant/delivery"
 	userdelivery "apigofiberhorpug/internal/feature/user/delivery"
 	watermeterdelivery "apigofiberhorpug/internal/feature/watermeter/delivery"
@@ -47,18 +50,18 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	electricMeterH := electricmeterdelivery.NewElectricMeterHandler(c.ElectricMeterUC, c.ActivityLogUC)
 	waterMeterH := watermeterdelivery.NewWaterMeterHandler(c.WaterMeterUC, c.ActivityLogUC)
 	billH := billdelivery.NewBillHandler(c.BillUC, c.ActivityLogUC)
-	dashboardH := v1.NewDashboardHandler(c.DashboardUC)
-	analyticsH := v1.NewAnalyticsHandler(c.AnalyticsUC)
+	dashboardH := dashboarddelivery.NewDashboardHandler(c.DashboardUC)
+	analyticsH := analyticsdelivery.NewAnalyticsHandler(c.AnalyticsUC)
 	expenseH := expensedelivery.NewExpenseHandler(c.ExpenseUC)
 	maintenanceH := maintenancerequestdelivery.NewMaintenanceRequestHandler(c.MaintenanceUC)
 	paymentH := paymentdelivery.NewPaymentHandler(c.PaymentUC, c.ActivityLogUC)
 	announcementH := announcementdelivery.NewAnnouncementHandler(c.AnnouncementUC)
-	reportH := v1.NewReportHandler(c.ReportUC)
+	reportH := reportdelivery.NewReportHandler(c.ReportUC)
 	parkingH := parkingdelivery.NewParkingHandler(c.ParkingUC)
 	parcelH := parceldelivery.NewParcelHandler(c.ParcelUC)
 	documentH := documentdelivery.NewDocumentHandler(c.DocumentUC, cfg.UploadDir, cfg.UploadBaseURL)
 	notificationH := notificationdelivery.NewNotificationHandler(c.NotificationUC)
-	searchH := v1.NewSearchHandler(c.SearchUC)
+	searchH := searchdelivery.NewSearchHandler(c.SearchUC)
 	activityLogH := aldelivery.NewActivityLogHandler(c.ActivityLogUC)
 
 	api := app.Group("/api/v1")

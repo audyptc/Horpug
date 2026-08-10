@@ -3,10 +3,12 @@ package bootstrap
 import (
 	"apigofiberhorpug/internal/database"
 	alrepository "apigofiberhorpug/internal/feature/activitylog/repository"
+	analyticsrepository "apigofiberhorpug/internal/feature/analytics/repository"
 	announcementrepository "apigofiberhorpug/internal/feature/announcement/repository"
 	authrepository "apigofiberhorpug/internal/feature/auth/repository"
 	billrepository "apigofiberhorpug/internal/feature/bill/repository"
 	contractrepository "apigofiberhorpug/internal/feature/contract/repository"
+	dashboardrepository "apigofiberhorpug/internal/feature/dashboard/repository"
 	documentrepository "apigofiberhorpug/internal/feature/document/repository"
 	electricmeterrepository "apigofiberhorpug/internal/feature/electricmeter/repository"
 	expenserepository "apigofiberhorpug/internal/feature/expense/repository"
@@ -17,13 +19,14 @@ import (
 	parkingrepository "apigofiberhorpug/internal/feature/parking/repository"
 	paymentrepository "apigofiberhorpug/internal/feature/payment/repository"
 	permissionrepository "apigofiberhorpug/internal/feature/permission/repository"
+	reportrepository "apigofiberhorpug/internal/feature/report/repository"
 	rolerepository "apigofiberhorpug/internal/feature/role/repository"
 	roomrepository "apigofiberhorpug/internal/feature/room/repository"
 	roomtyperepository "apigofiberhorpug/internal/feature/roomtype/repository"
+	searchrepository "apigofiberhorpug/internal/feature/search/repository"
 	tenantrepository "apigofiberhorpug/internal/feature/tenant/repository"
 	userrepository "apigofiberhorpug/internal/feature/user/repository"
 	watermeterrepository "apigofiberhorpug/internal/feature/watermeter/repository"
-	"apigofiberhorpug/internal/repository"
 )
 
 type repositories struct {
@@ -39,18 +42,18 @@ type repositories struct {
 	electricMeter *electricmeterrepository.ElectricMeterRepo
 	waterMeter    *watermeterrepository.WaterMeterRepo
 	bill          *billrepository.BillRepo
-	dashboard     *repository.DashboardRepo
-	analytics     *repository.AnalyticsRepo
+	dashboard     *dashboardrepository.DashboardRepo
+	analytics     *analyticsrepository.AnalyticsRepo
 	expense       *expenserepository.ExpenseRepo
 	maintenance   *maintenancerequestrepository.MaintenanceRequestRepo
 	payment       *paymentrepository.PaymentRepo
 	announcement  *announcementrepository.AnnouncementRepo
-	report        *repository.ReportRepo
+	report        *reportrepository.ReportRepo
 	parking       *parkingrepository.ParkingRepo
 	parcel        *parcelrepository.ParcelRepo
 	document      *documentrepository.DocumentRepo
 	notification  *notificationrepository.NotificationRepo
-	search        *repository.SearchRepo
+	search        *searchrepository.SearchRepo
 	activityLog   *alrepository.ActivityLogRepo
 }
 
@@ -68,18 +71,18 @@ func newRepositories(db *database.DB) repositories {
 		electricMeter: electricmeterrepository.NewElectricMeterRepo(db),
 		waterMeter:    watermeterrepository.NewWaterMeterRepo(db),
 		bill:          billrepository.NewBillRepo(db),
-		dashboard:     repository.NewDashboardRepo(db),
-		analytics:     repository.NewAnalyticsRepo(db),
+		dashboard:     dashboardrepository.NewDashboardRepo(db),
+		analytics:     analyticsrepository.NewAnalyticsRepo(db),
 		expense:       expenserepository.NewExpenseRepo(db),
 		maintenance:   maintenancerequestrepository.NewMaintenanceRequestRepo(db),
 		payment:       paymentrepository.NewPaymentRepo(db),
 		announcement:  announcementrepository.NewAnnouncementRepo(db),
-		report:        repository.NewReportRepo(db),
+		report:        reportrepository.NewReportRepo(db),
 		parking:       parkingrepository.NewParkingRepo(db),
 		parcel:        parcelrepository.NewParcelRepo(db),
 		document:      documentrepository.NewDocumentRepo(db),
 		notification:  notificationrepository.NewNotificationRepo(db),
-		search:        repository.NewSearchRepo(db),
+		search:        searchrepository.NewSearchRepo(db),
 		activityLog:   alrepository.NewActivityLogRepo(db),
 	}
 }

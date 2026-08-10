@@ -3,10 +3,12 @@ package bootstrap
 import (
 	"apigofiberhorpug/internal/database"
 	alusecase "apigofiberhorpug/internal/feature/activitylog/usecase"
+	analyticsusecase "apigofiberhorpug/internal/feature/analytics/usecase"
 	announcementusecase "apigofiberhorpug/internal/feature/announcement/usecase"
 	authusecase "apigofiberhorpug/internal/feature/auth/usecase"
 	billusecase "apigofiberhorpug/internal/feature/bill/usecase"
 	contractusecase "apigofiberhorpug/internal/feature/contract/usecase"
+	dashboardusecase "apigofiberhorpug/internal/feature/dashboard/usecase"
 	documentusecase "apigofiberhorpug/internal/feature/document/usecase"
 	electricmeterusecase "apigofiberhorpug/internal/feature/electricmeter/usecase"
 	expenseusecase "apigofiberhorpug/internal/feature/expense/usecase"
@@ -17,13 +19,14 @@ import (
 	parkingusecase "apigofiberhorpug/internal/feature/parking/usecase"
 	paymentusecase "apigofiberhorpug/internal/feature/payment/usecase"
 	permissionusecase "apigofiberhorpug/internal/feature/permission/usecase"
+	reportusecase "apigofiberhorpug/internal/feature/report/usecase"
 	roleusecase "apigofiberhorpug/internal/feature/role/usecase"
 	roomusecase "apigofiberhorpug/internal/feature/room/usecase"
 	roomtypeusecase "apigofiberhorpug/internal/feature/roomtype/usecase"
+	searchusecase "apigofiberhorpug/internal/feature/search/usecase"
 	tenantusecase "apigofiberhorpug/internal/feature/tenant/usecase"
 	userusecase "apigofiberhorpug/internal/feature/user/usecase"
 	watermeterusecase "apigofiberhorpug/internal/feature/watermeter/usecase"
-	"apigofiberhorpug/internal/usecase"
 	"time"
 )
 
@@ -40,18 +43,18 @@ type Container struct {
 	ElectricMeterUC *electricmeterusecase.ElectricMeterUseCase
 	WaterMeterUC    *watermeterusecase.WaterMeterUseCase
 	BillUC          *billusecase.BillUseCase
-	DashboardUC     *usecase.DashboardUseCase
-	AnalyticsUC     *usecase.AnalyticsUseCase
+	DashboardUC     *dashboardusecase.DashboardUseCase
+	AnalyticsUC     *analyticsusecase.AnalyticsUseCase
 	ExpenseUC       *expenseusecase.ExpenseUseCase
 	MaintenanceUC   *maintenancerequestusecase.MaintenanceRequestUseCase
 	PaymentUC       *paymentusecase.PaymentUseCase
 	AnnouncementUC  *announcementusecase.AnnouncementUseCase
-	ReportUC        *usecase.ReportUseCase
+	ReportUC        *reportusecase.ReportUseCase
 	ParkingUC       *parkingusecase.ParkingUseCase
 	ParcelUC        *parcelusecase.ParcelUseCase
 	DocumentUC      *documentusecase.DocumentUseCase
 	NotificationUC  *notificationusecase.NotificationUseCase
-	SearchUC        *usecase.SearchUseCase
+	SearchUC        *searchusecase.SearchUseCase
 	ActivityLogUC   *alusecase.ActivityLogUseCase
 }
 
@@ -70,18 +73,18 @@ func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refres
 		ElectricMeterUC: electricmeterusecase.NewElectricMeterUseCase(repos.electricMeter, repos.room),
 		WaterMeterUC:    watermeterusecase.NewWaterMeterUseCase(repos.waterMeter, repos.room),
 		BillUC:          billusecase.NewBillUseCase(repos.bill, repos.contract),
-		DashboardUC:     usecase.NewDashboardUseCase(repos.dashboard),
-		AnalyticsUC:     usecase.NewAnalyticsUseCase(repos.analytics),
+		DashboardUC:     dashboardusecase.NewDashboardUseCase(repos.dashboard),
+		AnalyticsUC:     analyticsusecase.NewAnalyticsUseCase(repos.analytics),
 		ExpenseUC:       expenseusecase.NewExpenseUseCase(repos.expense),
 		MaintenanceUC:   maintenancerequestusecase.NewMaintenanceRequestUseCase(repos.maintenance),
 		PaymentUC:       paymentusecase.NewPaymentUseCase(repos.payment),
 		AnnouncementUC:  announcementusecase.NewAnnouncementUseCase(repos.announcement),
-		ReportUC:        usecase.NewReportUseCase(repos.report),
+		ReportUC:        reportusecase.NewReportUseCase(repos.report),
 		ParkingUC:       parkingusecase.NewParkingUseCase(repos.parking),
 		ParcelUC:        parcelusecase.NewParcelUseCase(repos.parcel),
 		DocumentUC:      documentusecase.NewDocumentUseCase(repos.document),
 		NotificationUC:  notificationusecase.NewNotificationUseCase(repos.notification),
-		SearchUC:        usecase.NewSearchUseCase(repos.search),
+		SearchUC:        searchusecase.NewSearchUseCase(repos.search),
 		ActivityLogUC:   alusecase.NewActivityLogUseCase(repos.activityLog),
 	}
 }

@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"apigofiberhorpug/internal/database"
-	"apigofiberhorpug/internal/domain"
 	roomdomain "apigofiberhorpug/internal/feature/room/domain"
+	"apigofiberhorpug/internal/feature/search/domain"
 	tenantdomain "apigofiberhorpug/internal/feature/tenant/domain"
 )
 

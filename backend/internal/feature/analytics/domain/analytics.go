@@ -19,11 +19,11 @@ type BillStatusCount struct {
 }
 
 type AnalyticsSummary struct {
-	MonthlyRevenue  []MonthlyRevenue `json:"monthly_revenue"`
-	MonthlyTenants  []MonthlyCount   `json:"monthly_tenants"`
-	BillStatus      BillStatusCount  `json:"bill_status"`
-	TotalRevenue    float64          `json:"total_revenue"`
-	AvgMonthly      float64          `json:"avg_monthly"`
+	MonthlyRevenue []MonthlyRevenue `json:"monthly_revenue"`
+	MonthlyTenants []MonthlyCount   `json:"monthly_tenants"`
+	BillStatus     BillStatusCount  `json:"bill_status"`
+	TotalRevenue   float64          `json:"total_revenue"`
+	AvgMonthly     float64          `json:"avg_monthly"`
 }
 
 type AnalyticsRepository interface {

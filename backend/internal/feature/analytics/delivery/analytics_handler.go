@@ -1,10 +1,10 @@
-package v1
+package delivery
 
 import (
 	"strconv"
 
 	"apigofiberhorpug/internal/delivery/http/response"
-	"apigofiberhorpug/internal/usecase"
+	"apigofiberhorpug/internal/feature/analytics/usecase"
 
 	"github.com/gofiber/fiber/v3"
 )

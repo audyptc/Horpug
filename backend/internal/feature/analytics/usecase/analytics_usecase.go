@@ -3,7 +3,7 @@ package usecase
 import (
 	"context"
 
-	"apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/analytics/domain"
 )
 
 type AnalyticsUseCase struct {

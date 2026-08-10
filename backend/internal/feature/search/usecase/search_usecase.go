@@ -5,18 +5,14 @@ import (
 	"strings"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/search/domain"
 )
 
-type searchRepository interface {
-	Search(ctx context.Context, q string) (*domain.SearchResults, error)
-}
-
 type SearchUseCase struct {
-	repo searchRepository
+	repo domain.SearchRepository
 }
 
-func NewSearchUseCase(repo searchRepository) *SearchUseCase {
+func NewSearchUseCase(repo domain.SearchRepository) *SearchUseCase {
 	return &SearchUseCase{repo: repo}
 }
 

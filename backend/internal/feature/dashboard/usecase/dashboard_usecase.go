@@ -3,7 +3,7 @@ package usecase
 import (
 	"context"
 
-	"apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/dashboard/domain"
 )
 
 type DashboardUseCase struct {

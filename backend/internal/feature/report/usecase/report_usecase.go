@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/report/domain"
 )
 
 type ReportUseCase struct {

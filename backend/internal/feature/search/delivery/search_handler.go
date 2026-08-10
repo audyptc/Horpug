@@ -1,8 +1,8 @@
-package v1
+package delivery
 
 import (
 	"apigofiberhorpug/internal/delivery/http/response"
-	"apigofiberhorpug/internal/usecase"
+	"apigofiberhorpug/internal/feature/search/usecase"
 
 	"github.com/gofiber/fiber/v3"
 )

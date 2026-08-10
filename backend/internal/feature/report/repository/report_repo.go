@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"apigofiberhorpug/internal/database"
-	"apigofiberhorpug/internal/domain"
+	"apigofiberhorpug/internal/feature/report/domain"
 )
 
 type ReportRepo struct {
