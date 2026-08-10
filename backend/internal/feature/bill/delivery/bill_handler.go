@@ -57,7 +57,7 @@ func (h *BillHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityCreate, "bill", d.ID, d)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityCreate, "bill", d.ID, d)
 	return response.Created(c, d)
 }
 
@@ -72,7 +72,7 @@ func (h *BillHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityUpdate, "bill", d.ID, d)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityUpdate, "bill", d.ID, d)
 	return response.OK(c, d)
 }
 
@@ -83,6 +83,6 @@ func (h *BillHandler) Delete(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityDelete, "bill", id, nil)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityDelete, "bill", id, nil)
 	return response.Message(c, "bill deleted")
 }

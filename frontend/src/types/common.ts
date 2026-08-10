@@ -3,6 +3,11 @@ export interface ApiResponse<T> {
   data: T
 }
 
+export interface ApiErrorResponse {
+  success: false
+  message: string
+}
+
 export interface ApiPaginatedResponse<T> {
   success: boolean
   data: T[]

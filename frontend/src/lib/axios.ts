@@ -3,6 +3,13 @@ import { SESSION_TIMEOUT_MS } from '@/lib/authConstants'
 
 const BASE_URL = (import.meta.env.VITE_API_URL ?? '') + '/api/v1'
 const ACCESS_TOKEN_EXPIRES_AT_KEY = 'access_token_expires_at'
+const SELECTED_DORMITORY_KEY = 'selected_dormitory_id'
+
+const DORMITORY_SCOPE_ERROR_MESSAGES = new Set([
+  'X-Dormitory-Id header is required',
+  'dormitory is inactive',
+  'no access to this dormitory',
+])
 
 function setAccessTokenExpiresAt(expiresInSeconds: number | undefined) {
   if (!Number.isFinite(expiresInSeconds) || !expiresInSeconds || expiresInSeconds <= 0) {
@@ -23,7 +30,7 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
-  const dormitoryId = localStorage.getItem('selected_dormitory_id')
+  const dormitoryId = localStorage.getItem(SELECTED_DORMITORY_KEY)
   if (dormitoryId) config.headers['X-Dormitory-Id'] = dormitoryId
   return config
 })
@@ -40,6 +47,19 @@ api.interceptors.response.use(
   (res) => res,
   async (err) => {
     const original = err.config
+
+    const responseMessage = typeof err.response?.data?.message === 'string'
+      ? err.response.data.message
+      : ''
+
+    if ((err.response?.status === 400 || err.response?.status === 403) && DORMITORY_SCOPE_ERROR_MESSAGES.has(responseMessage)) {
+      localStorage.removeItem(SELECTED_DORMITORY_KEY)
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/'
+      }
+      return Promise.reject(err)
+    }
+
     if (err.response?.status !== 401 || original._retry) {
       return Promise.reject(err)
     }

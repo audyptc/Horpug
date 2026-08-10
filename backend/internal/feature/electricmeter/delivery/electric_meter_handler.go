@@ -80,7 +80,7 @@ func (h *ElectricMeterHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityCreate, "electric_meter", d.ID, d)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityCreate, "electric_meter", d.ID, d)
 	return response.Created(c, d)
 }
 
@@ -95,7 +95,7 @@ func (h *ElectricMeterHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityUpdate, "electric_meter", d.ID, d)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityUpdate, "electric_meter", d.ID, d)
 	return response.OK(c, d)
 }
 
@@ -106,6 +106,6 @@ func (h *ElectricMeterHandler) Delete(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityDelete, "electric_meter", id, nil)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityDelete, "electric_meter", id, nil)
 	return response.Message(c, "electric meter reading deleted")
 }

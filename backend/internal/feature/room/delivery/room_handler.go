@@ -57,7 +57,7 @@ func (h *RoomHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityCreate, "room", room.ID, room)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityCreate, "room", room.ID, room)
 	return response.Created(c, room)
 }
 
@@ -72,7 +72,7 @@ func (h *RoomHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityUpdate, "room", room.ID, room)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityUpdate, "room", room.ID, room)
 	return response.OK(c, room)
 }
 
@@ -83,6 +83,6 @@ func (h *RoomHandler) Delete(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityDelete, "room", id, nil)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityDelete, "room", id, nil)
 	return response.Message(c, "room deleted")
 }

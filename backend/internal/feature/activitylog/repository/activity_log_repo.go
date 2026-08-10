@@ -19,9 +19,9 @@ func NewActivityLogRepo(db *database.DB) *ActivityLogRepo {
 
 func (r *ActivityLogRepo) Create(ctx context.Context, log *domain.ActivityLog) error {
 	_, err := r.db.Pool.Exec(ctx, `
-		INSERT INTO activity_logs (id, actor_id, action, entity_type, entity_id, new_value, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		log.ID, log.ActorID, log.Action, log.EntityType, log.EntityID, log.NewValue, log.CreatedAt)
+		INSERT INTO activity_logs (id, actor_id, dormitory_id, action, entity_type, entity_id, new_value, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		log.ID, log.ActorID, log.DormitoryID, log.Action, log.EntityType, log.EntityID, log.NewValue, log.CreatedAt)
 	return err
 }
 
@@ -30,6 +30,11 @@ func (r *ActivityLogRepo) buildFilter(filter domain.ActivityLogFilter) (string, 
 	var args []interface{}
 	n := 1
 
+	if filter.DormitoryID != "" {
+		where = append(where, fmt.Sprintf("al.dormitory_id = $%d", n))
+		args = append(args, filter.DormitoryID)
+		n++
+	}
 	if filter.EntityType != "" {
 		where = append(where, fmt.Sprintf("al.entity_type = $%d", n))
 		args = append(args, filter.EntityType)
@@ -62,7 +67,7 @@ func (r *ActivityLogRepo) List(ctx context.Context, filter domain.ActivityLogFil
 	n := len(args) + 1
 
 	query := fmt.Sprintf(`
-		SELECT al.id, al.actor_id, COALESCE(u.full_name, ''), al.action, al.entity_type, al.entity_id, al.new_value, al.created_at
+		SELECT al.id, al.actor_id, COALESCE(u.full_name, ''), al.dormitory_id, al.action, al.entity_type, al.entity_id, al.new_value, al.created_at
 		FROM activity_logs al
 		LEFT JOIN users u ON u.id = al.actor_id
 		%s
@@ -80,7 +85,7 @@ func (r *ActivityLogRepo) List(ctx context.Context, filter domain.ActivityLogFil
 	var list []*domain.ActivityLog
 	for rows.Next() {
 		l := &domain.ActivityLog{}
-		if err := rows.Scan(&l.ID, &l.ActorID, &l.ActorName, &l.Action, &l.EntityType, &l.EntityID, &l.NewValue, &l.CreatedAt); err != nil {
+		if err := rows.Scan(&l.ID, &l.ActorID, &l.ActorName, &l.DormitoryID, &l.Action, &l.EntityType, &l.EntityID, &l.NewValue, &l.CreatedAt); err != nil {
 			return nil, err
 		}
 		list = append(list, l)

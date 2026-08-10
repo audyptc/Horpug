@@ -3,6 +3,7 @@ import { Suspense, lazy } from 'react'
 import type { ReactNode } from 'react'
 import { NotFound } from '@/components/shared/NotFound'
 import { useAuth } from '@/features/auth/AuthContext'
+import { useDormitory } from '@/features/dormitory/DormitoryContext'
 
 const Layout = lazy(() => import('@/components/layout/Layout').then((m) => ({ default: m.Layout })))
 const Login = lazy(() => import('@/features/auth/Login').then((m) => ({ default: m.Login })))
@@ -62,6 +63,26 @@ const ROUTE_CANDIDATES = [
   '/settings/dormitories',
 ] as const
 
+const DORMITORY_SCOPED_PATHS = new Set([
+  '/',
+  '/rooms',
+  '/tenants',
+  '/contracts',
+  '/electric-meters',
+  '/water-meters',
+  '/bills',
+  '/payments',
+  '/expenses',
+  '/maintenance',
+  '/announcements',
+  '/parking',
+  '/parcels',
+  '/documents',
+  '/analytics',
+  '/reports',
+  '/activity-logs',
+])
+
 function normalizePath(path: string): string {
   const base = path.split(/[?#]/, 1)[0].trim()
   if (!base || base === '/') return '/'
@@ -91,9 +112,22 @@ function getFirstAccessiblePath(allowedPaths: Set<string> | null, excludeRoot = 
   return null
 }
 
+function getFirstAccessibleGlobalPath(allowedPaths: Set<string> | null): string | null {
+  return getFirstAccessiblePath(
+    allowedPaths === null
+      ? null
+      : new Set(Array.from(allowedPaths).filter((path) => !DORMITORY_SCOPED_PATHS.has(normalizePath(path)))),
+    true,
+  )
+}
+
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth()
+  const { isReady } = useDormitory()
   if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (!isReady) {
+    return <div className="p-6 text-sm text-muted-foreground">Loading...</div>
+  }
   return <Outlet />
 }
 
@@ -108,12 +142,23 @@ function GuestRoute() {
 
 function PermissionRoute({ requiredPath, element }: { requiredPath: string; element: ReactNode }) {
   const { allowedPaths } = useAuth()
+  const { selectedDormitoryId } = useDormitory()
   if (!canAccessPath(allowedPaths, requiredPath)) return <NotFound />
+  if (DORMITORY_SCOPED_PATHS.has(normalizePath(requiredPath)) && !selectedDormitoryId) {
+    const redirectTo = getFirstAccessibleGlobalPath(allowedPaths)
+    return redirectTo ? <Navigate to={redirectTo} replace /> : <NotFound />
+  }
   return element
 }
 
 function RootIndexRoute() {
   const { allowedPaths } = useAuth()
+  const { selectedDormitoryId } = useDormitory()
+  if (!selectedDormitoryId) {
+    const redirectTo = getFirstAccessibleGlobalPath(allowedPaths)
+    if (redirectTo) return <Navigate to={redirectTo} replace />
+    return <NotFound />
+  }
   if (canAccessPath(allowedPaths, '/')) return withSuspense(<Dashboard />)
 
   const redirectTo = getFirstAccessiblePath(allowedPaths, true)

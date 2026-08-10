@@ -6,8 +6,8 @@ import (
 
 	"apigofiberhorpug/internal/database"
 	coredomain "apigofiberhorpug/internal/domain"
-	"apigofiberhorpug/internal/feature/user/domain"
 	roledomain "apigofiberhorpug/internal/feature/role/domain"
+	"apigofiberhorpug/internal/feature/user/domain"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -109,11 +109,11 @@ func (r *UserRepo) AssignRole(ctx context.Context, userID string, roleID string)
 func (r *UserRepo) GetRole(ctx context.Context, userID string) (*roledomain.Role, error) {
 	role := &roledomain.Role{}
 	err := r.db.Pool.QueryRow(ctx, `
-		SELECT r.id, r.name, r.description, r.created_at, r.updated_at
+		SELECT r.id, r.name, r.description, r.is_active, r.created_at, r.updated_at
 		FROM roles r
 		JOIN user_roles ur ON ur.role_id = r.id
-		WHERE ur.user_id = $1`, userID).
-		Scan(&role.ID, &role.Name, &role.Description, &role.CreatedAt, &role.UpdatedAt)
+		WHERE ur.user_id = $1 AND r.is_active = TRUE`, userID).
+		Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.CreatedAt, &role.UpdatedAt)
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}
@@ -127,7 +127,8 @@ func (r *UserRepo) GetPermissions(ctx context.Context, userID string) ([]string,
 		JOIN menus m ON m.id = rmp.menu_id
 		JOIN permissions p ON p.id = rmp.permission_id
 		JOIN user_roles ur ON ur.role_id = rmp.role_id
-		WHERE ur.user_id = $1
+		JOIN roles r ON r.id = ur.role_id
+		WHERE ur.user_id = $1 AND r.is_active = TRUE
 		ORDER BY permission_name`, userID)
 	if err != nil {
 		return nil, err

@@ -80,7 +80,7 @@ func (h *WaterMeterHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityCreate, "water_meter", d.ID, d)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityCreate, "water_meter", d.ID, d)
 	return response.Created(c, d)
 }
 
@@ -95,7 +95,7 @@ func (h *WaterMeterHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityUpdate, "water_meter", d.ID, d)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityUpdate, "water_meter", d.ID, d)
 	return response.OK(c, d)
 }
 
@@ -106,6 +106,6 @@ func (h *WaterMeterHandler) Delete(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityDelete, "water_meter", id, nil)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityDelete, "water_meter", id, nil)
 	return response.Message(c, "water meter reading deleted")
 }

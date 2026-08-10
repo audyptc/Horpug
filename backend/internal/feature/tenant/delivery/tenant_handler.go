@@ -57,7 +57,7 @@ func (h *TenantHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityCreate, "tenant", t.ID, t)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityCreate, "tenant", t.ID, t)
 	return response.Created(c, t)
 }
 
@@ -72,7 +72,7 @@ func (h *TenantHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityUpdate, "tenant", t.ID, t)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityUpdate, "tenant", t.ID, t)
 	return response.OK(c, t)
 }
 
@@ -83,6 +83,6 @@ func (h *TenantHandler) Delete(c fiber.Ctx) error {
 	if err := h.tenants.Delete(c.Context(), dormitoryID, id); err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityDelete, "tenant", id, nil)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityDelete, "tenant", id, nil)
 	return response.Message(c, "tenant deleted")
 }

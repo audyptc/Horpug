@@ -18,22 +18,23 @@ func RequireDormitory(dormitories *usecase.DormitoryUseCase) fiber.Handler {
 		dormitoryID := c.Get("X-Dormitory-Id")
 
 		if dormitoryID == "" {
-			accessible, err := dormitories.ListAccessible(c.Context(), userID, roleName)
-			if err != nil {
-				return err
-			}
-			if len(accessible) == 0 {
-				return apierror.Forbidden("no accessible dormitory")
-			}
-			dormitoryID = accessible[0].ID
-		} else {
-			ok, err := dormitories.CheckAccess(c.Context(), userID, roleName, dormitoryID)
-			if err != nil {
-				return err
-			}
-			if !ok {
-				return apierror.Forbidden("no access to this dormitory")
-			}
+			return apierror.BadRequest("X-Dormitory-Id header is required")
+		}
+
+		ok, err := dormitories.CheckAccess(c.Context(), userID, roleName, dormitoryID)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return apierror.Forbidden("no access to this dormitory")
+		}
+
+		dormitory, err := dormitories.GetByID(c.Context(), dormitoryID)
+		if err != nil {
+			return err
+		}
+		if !dormitory.IsActive {
+			return apierror.Forbidden("dormitory is inactive")
 		}
 
 		c.Locals("dormitory_id", dormitoryID)

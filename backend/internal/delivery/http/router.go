@@ -121,14 +121,14 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	rolesGroup.Delete("/:id", middleware.RequirePermission("roles.delete"), roleH.Delete)
 	rolesGroup.Put("/:id/permissions", middleware.RequirePermission("roles.update"), roleH.AssignPermissions)
 
-	// Permissions (read-only metadata — no specific permission required beyond auth)
+	// Permissions metadata
 	permGroup := protected.Group("/permissions")
-	permGroup.Get("/", permH.List)
+	permGroup.Get("/", middleware.RequirePermission("settings/roles.read"), permH.List)
 
-	// Menus (read-only metadata — no specific permission required beyond auth)
+	// Menus metadata
 	menusGroup := protected.Group("/menus")
-	menusGroup.Get("/", menuH.List)
-	menusGroup.Get("/:id", menuH.GetByID)
+	menusGroup.Get("/", middleware.RequirePermission("settings/roles.read"), menuH.List)
+	menusGroup.Get("/:id", middleware.RequirePermission("settings/roles.read"), menuH.GetByID)
 
 	// Rooms
 	roomsGroup := scoped.Group("/rooms")
@@ -264,5 +264,5 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	scoped.Get("/search", searchH.Global)
 
 	// Activity Logs
-	protected.Get("/activity-logs", middleware.RequirePermission("activity-logs.read"), activityLogH.List)
+	scoped.Get("/activity-logs", middleware.RequirePermission("activity-logs.read"), activityLogH.List)
 }

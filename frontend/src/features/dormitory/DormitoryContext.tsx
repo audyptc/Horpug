@@ -6,6 +6,7 @@ import type { ApiDormitory } from '@/types'
 interface DormitoryContextValue {
   dormitories: ApiDormitory[]
   selectedDormitoryId: string | null
+  isReady: boolean
   selectDormitory: (id: string) => void
 }
 
@@ -16,6 +17,7 @@ const SELECTED_DORMITORY_KEY = 'selected_dormitory_id'
 export function DormitoryProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
   const [dormitories, setDormitories] = useState<ApiDormitory[]>([])
+  const [isReady, setIsReady] = useState(() => !isAuthenticated)
   const [selectedDormitoryId, setSelectedDormitoryId] = useState<string | null>(() =>
     localStorage.getItem(SELECTED_DORMITORY_KEY)
   )
@@ -23,10 +25,13 @@ export function DormitoryProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated) {
       setDormitories([])
+      setSelectedDormitoryId(null)
+      setIsReady(true)
       return
     }
 
     let cancelled = false
+    setIsReady(false)
     dormitoryService
       .mine()
       .then((list) => {
@@ -38,11 +43,19 @@ export function DormitoryProvider({ children }: { children: ReactNode }) {
         if (!stillValid) {
           const fallback = list[0]?.id ?? null
           if (fallback) localStorage.setItem(SELECTED_DORMITORY_KEY, fallback)
+          else localStorage.removeItem(SELECTED_DORMITORY_KEY)
           setSelectedDormitoryId(fallback)
+        } else {
+          setSelectedDormitoryId(storedId)
         }
+        setIsReady(true)
       })
       .catch(() => {
-        // ไม่บล็อก UI ถ้าดึงรายชื่อหอไม่สำเร็จ — backend จะ fallback ให้เอง
+        if (cancelled) return
+        setDormitories([])
+        setSelectedDormitoryId(null)
+        localStorage.removeItem(SELECTED_DORMITORY_KEY)
+        setIsReady(true)
       })
 
     return () => {
@@ -56,7 +69,7 @@ export function DormitoryProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <DormitoryContext.Provider value={{ dormitories, selectedDormitoryId, selectDormitory }}>
+    <DormitoryContext.Provider value={{ dormitories, selectedDormitoryId, isReady, selectDormitory }}>
       {children}
     </DormitoryContext.Provider>
   )

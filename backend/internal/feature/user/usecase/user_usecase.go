@@ -126,11 +126,15 @@ func (uc *UserUseCase) AssignRole(ctx context.Context, userID string, req *domai
 		}
 		return apierror.Internal(err)
 	}
-	if _, err := uc.roleRepo.FindByID(ctx, req.RoleID); err != nil {
+	role, err := uc.roleRepo.FindByID(ctx, req.RoleID)
+	if err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound("role not found")
 		}
 		return apierror.Internal(err)
+	}
+	if !role.IsActive {
+		return apierror.BadRequest("role is inactive")
 	}
 	if err := uc.userRepo.AssignRole(ctx, userID, req.RoleID); err != nil {
 		return apierror.Internal(err)

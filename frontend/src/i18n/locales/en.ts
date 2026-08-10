@@ -1056,6 +1056,8 @@ export default {
     password: 'Password',
     signIn: 'Sign In',
     invalidCredentials: 'Invalid email or password.',
+    noActiveRole: 'This account has no active role.',
+    accountDisabled: 'This account is disabled.',
   },
   notFound: {
     title: 'Page not found',

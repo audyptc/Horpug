@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff, Building2, Lock, Mail, AlertCircle } from 'lucide-react'
@@ -6,6 +7,20 @@ import { useAuth } from '@/features/auth/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import type { ApiErrorResponse } from '@/types'
+
+function mapLoginErrorMessage(message: string, t: (key: string) => string): string {
+  switch (message) {
+    case 'invalid credentials':
+      return t('login.invalidCredentials')
+    case 'account has no active role':
+      return t('login.noActiveRole')
+    case 'account is disabled':
+      return t('login.accountDisabled')
+    default:
+      return message || t('login.invalidCredentials')
+  }
+}
 
 export function Login() {
   const { t } = useTranslation()
@@ -32,8 +47,12 @@ export function Login() {
     setLoading(true)
     try {
       await login(email, password)
-    } catch {
-      setError(t('login.invalidCredentials'))
+    } catch (err) {
+      if (axios.isAxiosError<ApiErrorResponse>(err)) {
+        setError(mapLoginErrorMessage(err.response?.data?.message ?? '', t))
+      } else {
+        setError(t('login.invalidCredentials'))
+      }
     } finally {
       setLoading(false)
       submittingRef.current = false

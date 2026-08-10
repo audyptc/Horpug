@@ -23,6 +23,7 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 const ACCESS_TOKEN_KEY = 'access_token'
 const ACCESS_TOKEN_EXPIRES_AT_KEY = 'access_token_expires_at'
 const LAST_ACTIVITY_AT_KEY = 'last_activity_at'
+const SELECTED_DORMITORY_KEY = 'selected_dormitory_id'
 
 function getStoredToken() {
   return localStorage.getItem(ACCESS_TOKEN_KEY)
@@ -32,6 +33,7 @@ function clearStoredAuth() {
   localStorage.removeItem(ACCESS_TOKEN_KEY)
   localStorage.removeItem(ACCESS_TOKEN_EXPIRES_AT_KEY)
   localStorage.removeItem(LAST_ACTIVITY_AT_KEY)
+  localStorage.removeItem(SELECTED_DORMITORY_KEY)
 }
 
 function touchLastActivity() {
@@ -160,6 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const resp = await authService.login(email, password)
     // Fix 1: refresh_token ถูก set เป็น HttpOnly cookie โดย server แล้ว ไม่ต้อง store ใน localStorage
+    localStorage.removeItem(SELECTED_DORMITORY_KEY)
     localStorage.setItem(ACCESS_TOKEN_KEY, resp.access_token)
     setStoredExpiresAt(resp.expires_in)
     touchLastActivity()

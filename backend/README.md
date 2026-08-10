@@ -67,6 +67,27 @@ On startup, the service will:
 - `GET /docs/swagger.json` - generated Swagger JSON
 - API base path: `/api/v1`
 
+## Multi-Dormitory Request Scope
+
+- Every dormitory-scoped endpoint now requires the `X-Dormitory-Id` header.
+- The backend no longer auto-falls back to a user's first dormitory.
+- Inactive dormitories are blocked for operational routes even if a user is assigned to them.
+- Activity logs are now scoped by dormitory for operational endpoints.
+
+Example:
+
+```http
+GET /api/v1/rooms
+Authorization: Bearer <token>
+X-Dormitory-Id: <dormitory-uuid>
+```
+
+## Permission Notes
+
+- Users must have an active role to log in.
+- Inactive roles cannot be assigned to users.
+- Metadata endpoints such as `/api/v1/menus` and `/api/v1/permissions` now require role-management read permission.
+
 ## Swagger
 
 Generate docs from `server/` directory:

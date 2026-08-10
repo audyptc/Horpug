@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
@@ -96,18 +97,24 @@ func (uc *DormitoryUseCase) Delete(ctx context.Context, id string) error {
 // ListAccessible returns every dormitory the given user may operate against.
 // Admins can access every dormitory; everyone else is limited to their assignments.
 func (uc *DormitoryUseCase) ListAccessible(ctx context.Context, userID, roleName string) ([]*domain.Dormitory, error) {
+	filterActive := func(dormitories []*domain.Dormitory) []*domain.Dormitory {
+		return slices.DeleteFunc(dormitories, func(d *domain.Dormitory) bool {
+			return d == nil || !d.IsActive
+		})
+	}
+
 	if strings.EqualFold(roleName, "admin") {
 		dormitories, err := uc.dormitoryRepo.List(ctx, 1000, 0)
 		if err != nil {
 			return nil, apierror.Internal(err)
 		}
-		return dormitories, nil
+		return filterActive(dormitories), nil
 	}
 	dormitories, err := uc.dormitoryRepo.ListForUser(ctx, userID)
 	if err != nil {
 		return nil, apierror.Internal(err)
 	}
-	return dormitories, nil
+	return filterActive(dormitories), nil
 }
 
 // ListForUser returns the raw set of dormitories a user is explicitly assigned to,

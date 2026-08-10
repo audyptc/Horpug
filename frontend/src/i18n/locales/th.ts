@@ -1056,6 +1056,8 @@ export default {
     password: 'รหัสผ่าน',
     signIn: 'เข้าสู่ระบบ',
     invalidCredentials: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
+    noActiveRole: 'บัญชีนี้ยังไม่มีบทบาทที่ใช้งานได้',
+    accountDisabled: 'บัญชีนี้ถูกปิดการใช้งาน',
   },
   notFound: {
     title: 'ไม่พบหน้าที่ต้องการ',

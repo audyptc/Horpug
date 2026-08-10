@@ -57,7 +57,7 @@ func (h *PaymentHandler) Create(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityCreate, "payment", p.ID, p)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityCreate, "payment", p.ID, p)
 	return response.Created(c, p)
 }
 
@@ -75,7 +75,7 @@ func (h *PaymentHandler) Update(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityUpdate, "payment", p.ID, p)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityUpdate, "payment", p.ID, p)
 	return response.OK(c, p)
 }
 
@@ -86,6 +86,6 @@ func (h *PaymentHandler) Delete(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityDelete, "payment", id, nil)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityDelete, "payment", id, nil)
 	return response.Message(c, "payment deleted")
 }

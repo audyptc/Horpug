@@ -83,6 +83,9 @@ func (uc *AuthUseCase) Login(ctx context.Context, req *domain.LoginRequest) (*do
 	if role != nil {
 		roleName = role.Name
 	}
+	if roleName == "" {
+		return nil, apierror.Forbidden("account has no active role")
+	}
 
 	accessToken, err := uc.generateAccessToken(user, roleName, permissions)
 	if err != nil {
@@ -146,6 +149,9 @@ func (uc *AuthUseCase) Refresh(ctx context.Context, rawToken string) (*domain.Lo
 	refreshRoleName := ""
 	if refreshRole != nil {
 		refreshRoleName = refreshRole.Name
+	}
+	if refreshRoleName == "" {
+		return nil, apierror.Forbidden("account has no active role")
 	}
 
 	accessToken, err := uc.generateAccessToken(user, refreshRoleName, permissions)

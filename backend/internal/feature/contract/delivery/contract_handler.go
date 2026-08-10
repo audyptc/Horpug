@@ -57,7 +57,7 @@ func (h *ContractHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityCreate, "contract", d.ID, d)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityCreate, "contract", d.ID, d)
 	return response.Created(c, d)
 }
 
@@ -72,7 +72,7 @@ func (h *ContractHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityUpdate, "contract", d.ID, d)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityUpdate, "contract", d.ID, d)
 	return response.OK(c, d)
 }
 
@@ -83,6 +83,6 @@ func (h *ContractHandler) Delete(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityDelete, "contract", id, nil)
+	h.activityLog.LogForDormitory(c.Context(), actorID, dormitoryID, aldomain.ActivityDelete, "contract", id, nil)
 	return response.Message(c, "contract deleted")
 }

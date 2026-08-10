@@ -21,6 +21,10 @@ func NewActivityLogUseCase(repo domain.ActivityLogRepository) *ActivityLogUseCas
 
 // Log บันทึก activity เงียบ ๆ (ไม่ return error เพื่อไม่ให้กระทบ main operation)
 func (uc *ActivityLogUseCase) Log(ctx context.Context, actorID string, action domain.ActivityAction, entityType, entityID string, newValue interface{}) {
+	uc.LogForDormitory(ctx, actorID, "", action, entityType, entityID, newValue)
+}
+
+func (uc *ActivityLogUseCase) LogForDormitory(ctx context.Context, actorID, dormitoryID string, action domain.ActivityAction, entityType, entityID string, newValue interface{}) {
 	var raw json.RawMessage
 	if newValue != nil {
 		if b, err := json.Marshal(newValue); err == nil {
@@ -33,15 +37,21 @@ func (uc *ActivityLogUseCase) Log(ctx context.Context, actorID string, action do
 		aid = &actorID
 	}
 
+	var did *string
+	if dormitoryID != "" {
+		did = &dormitoryID
+	}
+
 	now := time.Now()
 	_ = uc.repo.Create(ctx, &domain.ActivityLog{
-		ID:         uuid.New().String(),
-		ActorID:    aid,
-		Action:     action,
-		EntityType: entityType,
-		EntityID:   entityID,
-		NewValue:   raw,
-		CreatedAt:  now,
+		ID:          uuid.New().String(),
+		ActorID:     aid,
+		DormitoryID: did,
+		Action:      action,
+		EntityType:  entityType,
+		EntityID:    entityID,
+		NewValue:    raw,
+		CreatedAt:   now,
 	})
 }
 

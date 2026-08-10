@@ -26,8 +26,9 @@ func (h *ActivityLogHandler) List(c fiber.Ctx) error {
 	}
 
 	filter := domain.ActivityLogFilter{
-		EntityType: c.Query("entity_type"),
-		ActorID:    c.Query("actor_id"),
+		DormitoryID: c.Locals("dormitory_id", "").(string),
+		EntityType:  c.Query("entity_type"),
+		ActorID:     c.Query("actor_id"),
 	}
 	if fromStr := c.Query("from"); fromStr != "" {
 		if t, err := time.Parse(time.RFC3339, fromStr); err == nil {
