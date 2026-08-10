@@ -91,10 +91,11 @@ func (r *DormitoryRepo) Delete(ctx context.Context, id string) error {
 
 func (r *DormitoryRepo) ListForUser(ctx context.Context, userID string) ([]*domain.Dormitory, error) {
 	rows, err := r.db.Pool.Query(ctx, `
-		SELECT d.id, d.name, d.address, d.is_active, d.created_at, d.updated_at
+		SELECT DISTINCT d.id, d.name, d.address, d.is_active, d.created_at, d.updated_at
 		FROM dormitories d
-		JOIN user_dormitories ud ON ud.dormitory_id = d.id
-		WHERE ud.user_id = $1
+		JOIN user_dormitory_roles udr ON udr.dormitory_id = d.id
+		JOIN roles r ON r.id = udr.role_id
+		WHERE udr.user_id = $1 AND r.is_active = TRUE
 		ORDER BY d.name`, userID)
 	if err != nil {
 		return nil, err
@@ -115,28 +116,69 @@ func (r *DormitoryRepo) ListForUser(ctx context.Context, userID string) ([]*doma
 	return dormitories, rows.Err()
 }
 
+func (r *DormitoryRepo) ListAssignmentsForUser(ctx context.Context, userID string) ([]*domain.DormitoryRoleAssignment, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT d.id, d.name, r.id, r.name
+		FROM user_dormitory_roles udr
+		JOIN dormitories d ON d.id = udr.dormitory_id
+		JOIN roles r ON r.id = udr.role_id
+		WHERE udr.user_id = $1
+		ORDER BY d.name`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []*domain.DormitoryRoleAssignment
+	for rows.Next() {
+		item := &domain.DormitoryRoleAssignment{}
+		if err := rows.Scan(&item.DormitoryID, &item.DormitoryName, &item.RoleID, &item.RoleName); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	if items == nil {
+		items = []*domain.DormitoryRoleAssignment{}
+	}
+	return items, rows.Err()
+}
+
 func (r *DormitoryRepo) HasAccess(ctx context.Context, userID, dormitoryID string) (bool, error) {
 	var exists bool
 	err := r.db.Pool.QueryRow(ctx, `
-		SELECT EXISTS(SELECT 1 FROM user_dormitories WHERE user_id = $1 AND dormitory_id = $2)`,
+		SELECT EXISTS(
+			SELECT 1
+			FROM user_dormitory_roles udr
+			JOIN roles r ON r.id = udr.role_id
+			WHERE udr.user_id = $1 AND udr.dormitory_id = $2 AND r.is_active = TRUE
+		)`,
 		userID, dormitoryID).Scan(&exists)
 	return exists, err
 }
 
-func (r *DormitoryRepo) SetUserDormitories(ctx context.Context, userID string, dormitoryIDs []string) error {
+func (r *DormitoryRepo) SetUserDormitoryRoles(ctx context.Context, userID string, items []domain.DormitoryRoleAssignmentItem) error {
 	tx, err := r.db.Pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
 
+	if _, err := tx.Exec(ctx, `DELETE FROM user_dormitory_roles WHERE user_id = $1`, userID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `DELETE FROM user_dormitories WHERE user_id = $1`, userID); err != nil {
 		return err
 	}
-	for _, dormitoryID := range dormitoryIDs {
+	for _, item := range items {
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO user_dormitory_roles (user_id, dormitory_id, role_id) VALUES ($1, $2, $3)
+			 ON CONFLICT (user_id, dormitory_id) DO UPDATE SET role_id = EXCLUDED.role_id, created_at = NOW()`,
+			userID, item.DormitoryID, item.RoleID); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO user_dormitories (user_id, dormitory_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-			userID, dormitoryID); err != nil {
+			userID, item.DormitoryID); err != nil {
 			return err
 		}
 	}

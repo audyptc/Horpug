@@ -25,8 +25,20 @@ type UpdateDormitoryRequest struct {
 	IsActive *bool  `json:"is_active"`
 }
 
+type DormitoryRoleAssignment struct {
+	DormitoryID   string `json:"dormitory_id"`
+	DormitoryName string `json:"dormitory_name"`
+	RoleID        string `json:"role_id"`
+	RoleName      string `json:"role_name"`
+}
+
+type DormitoryRoleAssignmentItem struct {
+	DormitoryID string `json:"dormitory_id"`
+	RoleID      string `json:"role_id"`
+}
+
 type AssignDormitoriesRequest struct {
-	DormitoryIDs []string `json:"dormitory_ids"`
+	Items []DormitoryRoleAssignmentItem `json:"items"`
 }
 
 type DormitoryRepository interface {
@@ -38,6 +50,7 @@ type DormitoryRepository interface {
 	Delete(ctx context.Context, id string) error
 
 	ListForUser(ctx context.Context, userID string) ([]*Dormitory, error)
+	ListAssignmentsForUser(ctx context.Context, userID string) ([]*DormitoryRoleAssignment, error)
 	HasAccess(ctx context.Context, userID, dormitoryID string) (bool, error)
-	SetUserDormitories(ctx context.Context, userID string, dormitoryIDs []string) error
+	SetUserDormitoryRoles(ctx context.Context, userID string, items []DormitoryRoleAssignmentItem) error
 }

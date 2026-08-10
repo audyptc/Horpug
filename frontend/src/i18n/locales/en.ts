@@ -1012,6 +1012,8 @@ export default {
     assignTitle: 'Manage Branches for',
     assignDesc: 'Choose which branches this user can access.',
     assignSelectAll: 'Select all',
+    assignRolePlaceholder: 'Select role',
+    assignNoRoles: 'No active roles available',
     assignLoadError: 'Failed to load branches',
     assignSaveSuccess: 'Branch access updated',
     assignSaveError: 'Failed to update branch access',

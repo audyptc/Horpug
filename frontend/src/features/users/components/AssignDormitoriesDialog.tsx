@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { roleService } from '@/features/roles/roleService'
 import {
   Dialog,
   DialogContent,
@@ -10,9 +11,16 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { dormitoryService } from '@/features/dormitory/dormitoryService'
 import { useToast } from '@/components/ui/toast'
-import type { ApiUser, ApiDormitory } from '@/types'
+import type { ApiUser, ApiDormitory, ApiDormitoryRoleAssignment, ApiRole } from '@/types'
 
 interface Props {
   user: ApiUser | null
@@ -25,7 +33,8 @@ export function AssignDormitoriesDialog({ user, open, onOpenChange }: Props) {
   const toast = useToast()
 
   const [allDormitories, setAllDormitories] = useState<ApiDormitory[]>([])
-  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [roles, setRoles] = useState<ApiRole[]>([])
+  const [selected, setSelected] = useState<Map<string, string>>(new Map())
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -34,10 +43,11 @@ export function AssignDormitoriesDialog({ user, open, onOpenChange }: Props) {
     if (!open || !user) return
     setLoading(true)
     setError('')
-    Promise.all([dormitoryService.list(), dormitoryService.getForUser(user.id)])
-      .then(([all, assigned]) => {
+    Promise.all([dormitoryService.list(), dormitoryService.getForUser(user.id), roleService.listActive()])
+      .then(([all, assigned, activeRoles]) => {
         setAllDormitories(all)
-        setSelected(new Set(assigned.map((d) => d.id)))
+        setRoles(activeRoles)
+        setSelected(new Map(assigned.map((item: ApiDormitoryRoleAssignment) => [item.dormitory_id, item.role_id])))
       })
       .catch(() => setError(t('dormitories.assignLoadError')))
       .finally(() => setLoading(false))
@@ -45,24 +55,46 @@ export function AssignDormitoriesDialog({ user, open, onOpenChange }: Props) {
 
   function toggle(id: string) {
     setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      const next = new Map(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else if (roles[0]?.id) {
+        next.set(id, roles[0].id)
+      }
+      return next
+    })
+  }
+
+  function setRole(dormitoryId: string, roleId: string) {
+    setSelected((prev) => {
+      const next = new Map(prev)
+      next.set(dormitoryId, roleId)
       return next
     })
   }
 
   function toggleAll() {
-    setSelected((prev) =>
-      prev.size === allDormitories.length ? new Set() : new Set(allDormitories.map((d) => d.id))
-    )
+    setSelected((prev) => {
+      if (prev.size === allDormitories.length) {
+        return new Map()
+      }
+
+      const next = new Map<string, string>()
+      const defaultRoleID = roles[0]?.id ?? ''
+      allDormitories.forEach((d) => {
+        next.set(d.id, prev.get(d.id) ?? defaultRoleID)
+      })
+      return next
+    })
   }
 
   async function handleSave() {
     if (!user) return
     setSaving(true)
     try {
-      await dormitoryService.assignToUser(user.id, { dormitory_ids: Array.from(selected) })
+      await dormitoryService.assignToUser(user.id, {
+        items: Array.from(selected.entries()).map(([dormitory_id, role_id]) => ({ dormitory_id, role_id })),
+      })
       toast.success(t('dormitories.assignSaveSuccess'))
       onOpenChange(false)
     } catch {
@@ -73,6 +105,7 @@ export function AssignDormitoriesDialog({ user, open, onOpenChange }: Props) {
   }
 
   const allChecked = allDormitories.length > 0 && selected.size === allDormitories.length
+  const saveDisabled = saving || loading || (selected.size > 0 && Array.from(selected.values()).some((roleId) => !roleId))
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -94,6 +127,8 @@ export function AssignDormitoriesDialog({ user, open, onOpenChange }: Props) {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {error}
             </div>
+          ) : roles.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">{t('dormitories.assignNoRoles')}</p>
           ) : allDormitories.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">{t('dormitories.noDormitories')}</p>
           ) : (
@@ -103,6 +138,7 @@ export function AssignDormitoriesDialog({ user, open, onOpenChange }: Props) {
                   type="checkbox"
                   className="h-4 w-4 cursor-pointer accent-primary"
                   checked={allChecked}
+                  disabled={roles.length === 0}
                   onChange={toggleAll}
                 />
                 {t('dormitories.assignSelectAll')}
@@ -110,7 +146,7 @@ export function AssignDormitoriesDialog({ user, open, onOpenChange }: Props) {
               {allDormitories.map((d) => (
                 <label
                   key={d.id}
-                  className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-muted/30 cursor-pointer text-sm"
+                  className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-muted/30 cursor-pointer text-sm"
                 >
                   <input
                     type="checkbox"
@@ -118,7 +154,28 @@ export function AssignDormitoriesDialog({ user, open, onOpenChange }: Props) {
                     checked={selected.has(d.id)}
                     onChange={() => toggle(d.id)}
                   />
-                  {d.name}
+                  <div className="flex-1 min-w-0">
+                    <div>{d.name}</div>
+                    <div className="text-xs text-muted-foreground truncate">{d.address}</div>
+                  </div>
+                  <div className="w-40 shrink-0" onClick={(e) => e.preventDefault()}>
+                    <Select
+                      value={selected.get(d.id) ?? ''}
+                      onValueChange={(value) => setRole(d.id, value)}
+                      disabled={!selected.has(d.id)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('dormitories.assignRolePlaceholder')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roles.map((role) => (
+                          <SelectItem key={role.id} value={role.id}>
+                            {role.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </label>
               ))}
             </div>
@@ -129,7 +186,7 @@ export function AssignDormitoriesDialog({ user, open, onOpenChange }: Props) {
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t('common.cancel')}
           </Button>
-          <Button onClick={handleSave} disabled={saving || loading}>
+          <Button onClick={handleSave} disabled={saveDisabled}>
             {saving ? t('common.loading') : t('common.save')}
           </Button>
         </DialogFooter>

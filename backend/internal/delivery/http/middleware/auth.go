@@ -24,7 +24,9 @@ func RequireAuth(auth *usecase.AuthUseCase) fiber.Handler {
 		c.Locals("user_id", claims.UserID)
 		c.Locals("email", claims.Email)
 		c.Locals("role_name", claims.RoleName)
-		c.Locals("permissions", claims.Permissions)
+		c.Locals("permissions", claims.GlobalPermissions)
+		c.Locals("global_permissions", claims.GlobalPermissions)
+		c.Locals("dormitory_permissions", claims.DormitoryPermissions)
 		return c.Next()
 	}
 }

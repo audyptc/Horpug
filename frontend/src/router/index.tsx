@@ -83,6 +83,14 @@ const DORMITORY_SCOPED_PATHS = new Set([
   '/activity-logs',
 ])
 
+const GLOBAL_ROUTE_CANDIDATES = [
+  '/settings/dormitories',
+  '/settings/users',
+  '/settings/roles',
+  '/settings/room-types',
+  '/settings/general',
+] as const
+
 function normalizePath(path: string): string {
   const base = path.split(/[?#]/, 1)[0].trim()
   if (!base || base === '/') return '/'
@@ -113,12 +121,13 @@ function getFirstAccessiblePath(allowedPaths: Set<string> | null, excludeRoot = 
 }
 
 function getFirstAccessibleGlobalPath(allowedPaths: Set<string> | null): string | null {
-  return getFirstAccessiblePath(
-    allowedPaths === null
-      ? null
-      : new Set(Array.from(allowedPaths).filter((path) => !DORMITORY_SCOPED_PATHS.has(normalizePath(path)))),
-    true,
-  )
+  for (const path of GLOBAL_ROUTE_CANDIDATES) {
+    if (canAccessPath(allowedPaths, path)) {
+      return path
+    }
+  }
+
+  return null
 }
 
 function ProtectedRoute() {

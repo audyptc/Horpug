@@ -44,14 +44,13 @@ func (h *DormitoryHandler) Mine(c fiber.Ctx) error {
 	return response.OK(c, dormitories)
 }
 
-// GetForUser returns the raw dormitory assignments for a given user, used by the
-// user-management "manage branches" dialog to show current checkbox state.
+// GetForUser returns the raw dormitory-role assignments for a given user.
 func (h *DormitoryHandler) GetForUser(c fiber.Ctx) error {
-	dormitories, err := h.dormitories.ListForUser(c.Context(), c.Params("userId"))
+	assignments, err := h.dormitories.ListAssignmentsForUser(c.Context(), c.Params("userId"))
 	if err != nil {
 		return err
 	}
-	return response.OK(c, dormitories)
+	return response.OK(c, assignments)
 }
 
 func (h *DormitoryHandler) GetByID(c fiber.Ctx) error {
@@ -114,6 +113,6 @@ func (h *DormitoryHandler) AssignToUser(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityUpdate, "user_dormitories", userID, req)
+	h.activityLog.Log(c.Context(), actorID, aldomain.ActivityUpdate, "user_dormitory_roles", userID, req)
 	return response.Message(c, "dormitories assigned")
 }

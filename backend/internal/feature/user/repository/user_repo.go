@@ -148,3 +148,30 @@ func (r *UserRepo) GetPermissions(ctx context.Context, userID string) ([]string,
 	}
 	return permissions, rows.Err()
 }
+
+func (r *UserRepo) GetDormitoryPermissions(ctx context.Context, userID string) (map[string][]string, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT DISTINCT udr.dormitory_id, TRIM(BOTH '/' FROM m.path) || '.' || p.name AS permission_name
+		FROM user_dormitory_roles udr
+		JOIN roles r ON r.id = udr.role_id
+		JOIN role_menu_permissions rmp ON rmp.role_id = r.id
+		JOIN menus m ON m.id = rmp.menu_id
+		JOIN permissions p ON p.id = rmp.permission_id
+		WHERE udr.user_id = $1 AND r.is_active = TRUE
+		ORDER BY udr.dormitory_id, permission_name`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	permissionsByDormitory := map[string][]string{}
+	for rows.Next() {
+		var dormitoryID string
+		var permissionName string
+		if err := rows.Scan(&dormitoryID, &permissionName); err != nil {
+			return nil, err
+		}
+		permissionsByDormitory[dormitoryID] = append(permissionsByDormitory[dormitoryID], permissionName)
+	}
+	return permissionsByDormitory, rows.Err()
+}

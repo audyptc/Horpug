@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"strings"
+
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/dormitory/usecase"
 
@@ -35,6 +37,15 @@ func RequireDormitory(dormitories *usecase.DormitoryUseCase) fiber.Handler {
 		}
 		if !dormitory.IsActive {
 			return apierror.Forbidden("dormitory is inactive")
+		}
+
+		if !strings.EqualFold(roleName, "admin") {
+			permissionsByDormitory, _ := c.Locals("dormitory_permissions").(map[string][]string)
+			permissions := []string{}
+			if permissionsByDormitory != nil {
+				permissions = permissionsByDormitory[dormitoryID]
+			}
+			c.Locals("permissions", permissions)
 		}
 
 		c.Locals("dormitory_id", dormitoryID)

@@ -45,4 +45,5 @@ type UserRepository interface {
 	AssignRole(ctx context.Context, userID string, roleID string) error
 	GetRole(ctx context.Context, userID string) (*roledomain.Role, error)
 	GetPermissions(ctx context.Context, userID string) ([]string, error)
+	GetDormitoryPermissions(ctx context.Context, userID string) (map[string][]string, error)
 }

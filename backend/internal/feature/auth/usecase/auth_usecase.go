@@ -21,10 +21,12 @@ const (
 )
 
 type Claims struct {
-	UserID      string   `json:"user_id"`
-	Email       string   `json:"email"`
-	RoleName    string   `json:"role_name"`
-	Permissions []string `json:"permissions"`
+	UserID               string              `json:"user_id"`
+	Email                string              `json:"email"`
+	RoleName             string              `json:"role_name"`
+	Permissions          []string            `json:"permissions"`
+	GlobalPermissions    []string            `json:"global_permissions"`
+	DormitoryPermissions map[string][]string `json:"dormitory_permissions"`
 	jwt.RegisteredClaims
 }
 
@@ -70,7 +72,11 @@ func (uc *AuthUseCase) Login(ctx context.Context, req *domain.LoginRequest) (*do
 		return nil, apierror.Unauthorized("invalid credentials")
 	}
 
-	permissions, err := uc.userRepo.GetPermissions(ctx, user.ID)
+	globalPermissions, err := uc.userRepo.GetPermissions(ctx, user.ID)
+	if err != nil {
+		return nil, apierror.Internal(err)
+	}
+	dormitoryPermissions, err := uc.userRepo.GetDormitoryPermissions(ctx, user.ID)
 	if err != nil {
 		return nil, apierror.Internal(err)
 	}
@@ -83,11 +89,12 @@ func (uc *AuthUseCase) Login(ctx context.Context, req *domain.LoginRequest) (*do
 	if role != nil {
 		roleName = role.Name
 	}
-	if roleName == "" {
+	mergedPermissions := mergePermissions(globalPermissions, dormitoryPermissions)
+	if roleName == "" && len(dormitoryPermissions) == 0 {
 		return nil, apierror.Forbidden("account has no active role")
 	}
 
-	accessToken, err := uc.generateAccessToken(user, roleName, permissions)
+	accessToken, err := uc.generateAccessToken(user, roleName, mergedPermissions, globalPermissions, dormitoryPermissions)
 	if err != nil {
 		return nil, apierror.Internal(err)
 	}
@@ -137,7 +144,11 @@ func (uc *AuthUseCase) Refresh(ctx context.Context, rawToken string) (*domain.Lo
 		return nil, apierror.Forbidden("account is disabled")
 	}
 
-	permissions, err := uc.userRepo.GetPermissions(ctx, user.ID)
+	globalPermissions, err := uc.userRepo.GetPermissions(ctx, user.ID)
+	if err != nil {
+		return nil, apierror.Internal(err)
+	}
+	dormitoryPermissions, err := uc.userRepo.GetDormitoryPermissions(ctx, user.ID)
 	if err != nil {
 		return nil, apierror.Internal(err)
 	}
@@ -150,11 +161,12 @@ func (uc *AuthUseCase) Refresh(ctx context.Context, rawToken string) (*domain.Lo
 	if refreshRole != nil {
 		refreshRoleName = refreshRole.Name
 	}
-	if refreshRoleName == "" {
+	mergedPermissions := mergePermissions(globalPermissions, dormitoryPermissions)
+	if refreshRoleName == "" && len(dormitoryPermissions) == 0 {
 		return nil, apierror.Forbidden("account has no active role")
 	}
 
-	accessToken, err := uc.generateAccessToken(user, refreshRoleName, permissions)
+	accessToken, err := uc.generateAccessToken(user, refreshRoleName, mergedPermissions, globalPermissions, dormitoryPermissions)
 	if err != nil {
 		return nil, apierror.Internal(err)
 	}
@@ -206,18 +218,42 @@ func (uc *AuthUseCase) ValidateAccessToken(tokenString string) (*Claims, error) 
 	return claims, nil
 }
 
-func (uc *AuthUseCase) generateAccessToken(user *userdomain.User, roleName string, permissions []string) (string, error) {
+func (uc *AuthUseCase) generateAccessToken(user *userdomain.User, roleName string, permissions, globalPermissions []string, dormitoryPermissions map[string][]string) (string, error) {
 	claims := &Claims{
-		UserID:      user.ID,
-		Email:       user.Email,
-		RoleName:    roleName,
-		Permissions: permissions,
+		UserID:               user.ID,
+		Email:                user.Email,
+		RoleName:             roleName,
+		Permissions:          permissions,
+		GlobalPermissions:    globalPermissions,
+		DormitoryPermissions: dormitoryPermissions,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(uc.accessTokenDuration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(uc.secretKey)
+}
+
+func mergePermissions(globalPermissions []string, dormitoryPermissions map[string][]string) []string {
+	seen := make(map[string]struct{}, len(globalPermissions))
+	merged := make([]string, 0, len(globalPermissions))
+
+	appendUnique := func(values []string) {
+		for _, value := range values {
+			if _, exists := seen[value]; exists {
+				continue
+			}
+			seen[value] = struct{}{}
+			merged = append(merged, value)
+		}
+	}
+
+	appendUnique(globalPermissions)
+	for _, permissions := range dormitoryPermissions {
+		appendUnique(permissions)
+	}
+
+	return merged
 }
 
 func hashString(s string) string {

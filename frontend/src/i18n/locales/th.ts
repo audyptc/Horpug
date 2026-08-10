@@ -1012,6 +1012,8 @@ export default {
     assignTitle: 'จัดการสาขาสำหรับ',
     assignDesc: 'เลือกสาขาที่ผู้ใช้นี้สามารถเข้าถึงได้',
     assignSelectAll: 'เลือกทั้งหมด',
+    assignRolePlaceholder: 'เลือกบทบาท',
+    assignNoRoles: 'ไม่พบบทบาทที่พร้อมใช้งาน',
     assignLoadError: 'ไม่สามารถโหลดข้อมูลสาขาได้',
     assignSaveSuccess: 'อัปเดตสิทธิ์การเข้าถึงสาขาแล้ว',
     assignSaveError: 'ไม่สามารถอัปเดตสิทธิ์การเข้าถึงสาขาได้',

@@ -3,22 +3,25 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	coredomain "apigofiberhorpug/internal/domain"
 	"apigofiberhorpug/internal/feature/dormitory/domain"
+	roledomain "apigofiberhorpug/internal/feature/role/domain"
 
 	"github.com/google/uuid"
 )
 
 type DormitoryUseCase struct {
 	dormitoryRepo domain.DormitoryRepository
+	roleRepo      roledomain.RoleRepository
 }
 
-func NewDormitoryUseCase(dormitoryRepo domain.DormitoryRepository) *DormitoryUseCase {
-	return &DormitoryUseCase{dormitoryRepo: dormitoryRepo}
+func NewDormitoryUseCase(dormitoryRepo domain.DormitoryRepository, roleRepo roledomain.RoleRepository) *DormitoryUseCase {
+	return &DormitoryUseCase{dormitoryRepo: dormitoryRepo, roleRepo: roleRepo}
 }
 
 func (uc *DormitoryUseCase) List(ctx context.Context, limit, offset int) ([]*domain.Dormitory, int, error) {
@@ -117,14 +120,13 @@ func (uc *DormitoryUseCase) ListAccessible(ctx context.Context, userID, roleName
 	return filterActive(dormitories), nil
 }
 
-// ListForUser returns the raw set of dormitories a user is explicitly assigned to,
-// with no admin bypass — used to show real state in an assignment-editing UI.
-func (uc *DormitoryUseCase) ListForUser(ctx context.Context, userID string) ([]*domain.Dormitory, error) {
-	dormitories, err := uc.dormitoryRepo.ListForUser(ctx, userID)
+// ListAssignmentsForUser returns the raw dormitory-role assignments for a user.
+func (uc *DormitoryUseCase) ListAssignmentsForUser(ctx context.Context, userID string) ([]*domain.DormitoryRoleAssignment, error) {
+	assignments, err := uc.dormitoryRepo.ListAssignmentsForUser(ctx, userID)
 	if err != nil {
 		return nil, apierror.Internal(err)
 	}
-	return dormitories, nil
+	return assignments, nil
 }
 
 // CheckAccess reports whether the given user may operate against dormitoryID.
@@ -141,7 +143,29 @@ func (uc *DormitoryUseCase) CheckAccess(ctx context.Context, userID, roleName, d
 
 // AssignDormitoriesToUser replaces the full set of dormitories a user may access.
 func (uc *DormitoryUseCase) AssignDormitoriesToUser(ctx context.Context, userID string, req *domain.AssignDormitoriesRequest) error {
-	if err := uc.dormitoryRepo.SetUserDormitories(ctx, userID, req.DormitoryIDs); err != nil {
+	for _, item := range req.Items {
+		if item.DormitoryID == "" {
+			return apierror.BadRequest("dormitory_id is required")
+		}
+		if item.RoleID == "" {
+			return apierror.BadRequest(fmt.Sprintf("role_id is required for dormitory %s", item.DormitoryID))
+		}
+		if _, err := uc.GetByID(ctx, item.DormitoryID); err != nil {
+			return err
+		}
+		role, err := uc.roleRepo.FindByID(ctx, item.RoleID)
+		if err != nil {
+			if errors.Is(err, coredomain.ErrNotFound) {
+				return apierror.NotFound("role not found")
+			}
+			return apierror.Internal(err)
+		}
+		if !role.IsActive {
+			return apierror.BadRequest("role is inactive")
+		}
+	}
+
+	if err := uc.dormitoryRepo.SetUserDormitoryRoles(ctx, userID, req.Items); err != nil {
 		return apierror.Internal(err)
 	}
 	return nil

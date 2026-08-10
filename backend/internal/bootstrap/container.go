@@ -72,7 +72,7 @@ func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refres
 		RoomTypeUC:      roomtypeusecase.NewRoomTypeUseCase(repos.roomType),
 		TenantUC:        tenantusecase.NewTenantUseCase(repos.tenant, repos.contract),
 		ContractUC:      contractusecase.NewContractUseCase(repos.contract, repos.room, repos.tenant),
-		DormitoryUC:     dormitoryusecase.NewDormitoryUseCase(repos.dormitory),
+		DormitoryUC:     dormitoryusecase.NewDormitoryUseCase(repos.dormitory, repos.role),
 		ElectricMeterUC: electricmeterusecase.NewElectricMeterUseCase(repos.electricMeter, repos.room),
 		WaterMeterUC:    watermeterusecase.NewWaterMeterUseCase(repos.waterMeter, repos.room),
 		BillUC:          billusecase.NewBillUseCase(repos.bill, repos.contract),

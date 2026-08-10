@@ -258,10 +258,10 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	documentsGroup.Delete("/:id", middleware.RequirePermission("documents.delete"), documentH.Delete)
 
 	// Notifications
-	scoped.Get("/notifications", notificationH.List)
+	scoped.Get("/notifications", middleware.RequirePermission("notifications.read"), notificationH.List)
 
 	// Search
-	scoped.Get("/search", searchH.Global)
+	scoped.Get("/search", middleware.RequirePermission("search.read"), searchH.Global)
 
 	// Activity Logs
 	scoped.Get("/activity-logs", middleware.RequirePermission("activity-logs.read"), activityLogH.List)

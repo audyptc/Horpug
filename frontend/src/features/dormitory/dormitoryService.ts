@@ -1,6 +1,7 @@
 import api from '@/lib/axios'
 import type {
   ApiDormitory,
+  ApiDormitoryRoleAssignment,
   ApiResponse,
   ApiPaginatedResponse,
   CreateDormitoryPayload,
@@ -38,8 +39,8 @@ export const dormitoryService = {
     await api.delete(`/dormitories/${id}`)
   },
 
-  async getForUser(userId: string): Promise<ApiDormitory[]> {
-    const { data } = await api.get<ApiResponse<ApiDormitory[]>>(`/dormitories/users/${userId}`)
+  async getForUser(userId: string): Promise<ApiDormitoryRoleAssignment[]> {
+    const { data } = await api.get<ApiResponse<ApiDormitoryRoleAssignment[]>>(`/dormitories/users/${userId}`)
     return data.data
   },
 
