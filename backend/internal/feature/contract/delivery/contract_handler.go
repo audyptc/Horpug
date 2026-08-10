@@ -21,6 +21,13 @@ func NewContractHandler(contracts *usecase.ContractUseCase, activityLog *aluseca
 	return &ContractHandler{contracts: contracts, activityLog: activityLog}
 }
 
+// List godoc
+// @Summary      รายชื่อสัญญาเช่า
+// @Tags         contracts
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {array}  domain.Contract
+// @Router       /contracts [get]
 func (h *ContractHandler) List(c fiber.Ctx) error {
 	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
 	if err != nil {
@@ -34,6 +41,14 @@ func (h *ContractHandler) List(c fiber.Ctx) error {
 	return response.Paginated(c, list, page, perPage, total)
 }
 
+// GetByID godoc
+// @Summary      ดูข้อมูลสัญญาเช่าตาม ID
+// @Tags         contracts
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Contract ID"
+// @Success      200  {object}  domain.ContractDetail
+// @Router       /contracts/{id} [get]
 func (h *ContractHandler) GetByID(c fiber.Ctx) error {
 	dormitoryID, _ := c.Locals("dormitory_id").(string)
 	d, err := h.contracts.GetByID(c.Context(), dormitoryID, c.Params("id"))
@@ -43,6 +58,15 @@ func (h *ContractHandler) GetByID(c fiber.Ctx) error {
 	return response.OK(c, d)
 }
 
+// Create godoc
+// @Summary      สร้างสัญญาเช่า
+// @Tags         contracts
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        body body domain.CreateContractRequest true "Contract payload"
+// @Success      201  {object}  domain.Contract
+// @Router       /contracts [post]
 func (h *ContractHandler) Create(c fiber.Ctx) error {
 	var req domain.CreateContractRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -61,6 +85,16 @@ func (h *ContractHandler) Create(c fiber.Ctx) error {
 	return response.Created(c, d)
 }
 
+// Update godoc
+// @Summary      แก้ไขสัญญาเช่า
+// @Tags         contracts
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Contract ID"
+// @Param        body body domain.UpdateContractRequest true "Contract payload"
+// @Success      200  {object}  domain.Contract
+// @Router       /contracts/{id} [put]
 func (h *ContractHandler) Update(c fiber.Ctx) error {
 	var req domain.UpdateContractRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -76,6 +110,14 @@ func (h *ContractHandler) Update(c fiber.Ctx) error {
 	return response.OK(c, d)
 }
 
+// Delete godoc
+// @Summary      ลบสัญญาเช่า
+// @Tags         contracts
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Contract ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /contracts/{id} [delete]
 func (h *ContractHandler) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
 	dormitoryID, _ := c.Locals("dormitory_id").(string)

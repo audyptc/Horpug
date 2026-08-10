@@ -18,6 +18,13 @@ func NewAnnouncementHandler(announcement *usecase.AnnouncementUseCase) *Announce
 	return &AnnouncementHandler{announcement: announcement}
 }
 
+// List godoc
+// @Summary      รายการประกาศ
+// @Tags         announcements
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {array}  domain.Announcement
+// @Router       /announcements [get]
 func (h *AnnouncementHandler) List(c fiber.Ctx) error {
 	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
 	if err != nil {
@@ -31,6 +38,14 @@ func (h *AnnouncementHandler) List(c fiber.Ctx) error {
 	return response.Paginated(c, list, page, perPage, total)
 }
 
+// GetByID godoc
+// @Summary      ดูข้อมูลประกาศตาม ID
+// @Tags         announcements
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Announcement ID"
+// @Success      200  {object}  domain.Announcement
+// @Router       /announcements/{id} [get]
 func (h *AnnouncementHandler) GetByID(c fiber.Ctx) error {
 	dormitoryID, _ := c.Locals("dormitory_id").(string)
 	a, err := h.announcement.GetByID(c.Context(), dormitoryID, c.Params("id"))
@@ -40,6 +55,15 @@ func (h *AnnouncementHandler) GetByID(c fiber.Ctx) error {
 	return response.OK(c, a)
 }
 
+// Create godoc
+// @Summary      สร้างประกาศ
+// @Tags         announcements
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        body body domain.CreateAnnouncementRequest true "Announcement payload"
+// @Success      201  {object}  domain.Announcement
+// @Router       /announcements [post]
 func (h *AnnouncementHandler) Create(c fiber.Ctx) error {
 	var req domain.CreateAnnouncementRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -56,6 +80,16 @@ func (h *AnnouncementHandler) Create(c fiber.Ctx) error {
 	return response.Created(c, a)
 }
 
+// Update godoc
+// @Summary      แก้ไขประกาศ
+// @Tags         announcements
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Announcement ID"
+// @Param        body body domain.UpdateAnnouncementRequest true "Announcement payload"
+// @Success      200  {object}  domain.Announcement
+// @Router       /announcements/{id} [put]
 func (h *AnnouncementHandler) Update(c fiber.Ctx) error {
 	var req domain.UpdateAnnouncementRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -72,6 +106,14 @@ func (h *AnnouncementHandler) Update(c fiber.Ctx) error {
 	return response.OK(c, a)
 }
 
+// Delete godoc
+// @Summary      ลบประกาศ
+// @Tags         announcements
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Announcement ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /announcements/{id} [delete]
 func (h *AnnouncementHandler) Delete(c fiber.Ctx) error {
 	dormitoryID, _ := c.Locals("dormitory_id").(string)
 	if err := h.announcement.Delete(c.Context(), dormitoryID, c.Params("id")); err != nil {

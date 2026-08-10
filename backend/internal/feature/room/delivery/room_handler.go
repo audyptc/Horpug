@@ -21,6 +21,13 @@ func NewRoomHandler(rooms *usecase.RoomUseCase, activityLog *alusecase.ActivityL
 	return &RoomHandler{rooms: rooms, activityLog: activityLog}
 }
 
+// List godoc
+// @Summary      รายชื่อห้องพัก
+// @Tags         rooms
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {array}  domain.Room
+// @Router       /rooms [get]
 func (h *RoomHandler) List(c fiber.Ctx) error {
 	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
 	if err != nil {
@@ -34,6 +41,14 @@ func (h *RoomHandler) List(c fiber.Ctx) error {
 	return response.Paginated(c, rooms, page, perPage, total)
 }
 
+// GetByID godoc
+// @Summary      ดูข้อมูลห้องพักตาม ID
+// @Tags         rooms
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Room ID"
+// @Success      200  {object}  domain.Room
+// @Router       /rooms/{id} [get]
 func (h *RoomHandler) GetByID(c fiber.Ctx) error {
 	dormitoryID, _ := c.Locals("dormitory_id").(string)
 	room, err := h.rooms.GetByID(c.Context(), dormitoryID, c.Params("id"))
@@ -43,6 +58,15 @@ func (h *RoomHandler) GetByID(c fiber.Ctx) error {
 	return response.OK(c, room)
 }
 
+// Create godoc
+// @Summary      สร้างห้องพัก
+// @Tags         rooms
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        body body domain.CreateRoomRequest true "Room payload"
+// @Success      201  {object}  domain.Room
+// @Router       /rooms [post]
 func (h *RoomHandler) Create(c fiber.Ctx) error {
 	var req domain.CreateRoomRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -61,6 +85,16 @@ func (h *RoomHandler) Create(c fiber.Ctx) error {
 	return response.Created(c, room)
 }
 
+// Update godoc
+// @Summary      แก้ไขห้องพัก
+// @Tags         rooms
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Room ID"
+// @Param        body body domain.UpdateRoomRequest true "Room payload"
+// @Success      200  {object}  domain.Room
+// @Router       /rooms/{id} [put]
 func (h *RoomHandler) Update(c fiber.Ctx) error {
 	var req domain.UpdateRoomRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -76,6 +110,14 @@ func (h *RoomHandler) Update(c fiber.Ctx) error {
 	return response.OK(c, room)
 }
 
+// Delete godoc
+// @Summary      ลบห้องพัก
+// @Tags         rooms
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Room ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /rooms/{id} [delete]
 func (h *RoomHandler) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
 	dormitoryID, _ := c.Locals("dormitory_id").(string)

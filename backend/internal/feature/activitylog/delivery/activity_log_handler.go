@@ -19,6 +19,17 @@ func NewActivityLogHandler(activityLog *usecase.ActivityLogUseCase) *ActivityLog
 	return &ActivityLogHandler{activityLog: activityLog}
 }
 
+// List godoc
+// @Summary      รายการประวัติกิจกรรม
+// @Tags         activity-logs
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        entity_type query string false "Filter by entity type"
+// @Param        actor_id query string false "Filter by actor (user) ID"
+// @Param        from query string false "From timestamp (RFC3339)"
+// @Param        to query string false "To timestamp (RFC3339)"
+// @Success      200  {array}  domain.ActivityLog
+// @Router       /activity-logs [get]
 func (h *ActivityLogHandler) List(c fiber.Ctx) error {
 	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
 	if err != nil {

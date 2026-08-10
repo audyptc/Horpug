@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"apigofiberhorpug/internal/delivery/http/response"
+	"apigofiberhorpug/internal/feature/notification/domain"
 	"apigofiberhorpug/internal/feature/notification/usecase"
 
 	"github.com/gofiber/fiber/v3"
@@ -15,8 +16,16 @@ func NewNotificationHandler(notifs *usecase.NotificationUseCase) *NotificationHa
 	return &NotificationHandler{notifs: notifs}
 }
 
+// List godoc
+// @Summary      รายการแจ้งเตือน
+// @Tags         notifications
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {array}  domain.NotificationItem
+// @Router       /notifications [get]
 func (h *NotificationHandler) List(c fiber.Ctx) error {
 	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	var items []*domain.NotificationItem
 	items, err := h.notifs.List(c.Context(), dormitoryID)
 	if err != nil {
 		return err

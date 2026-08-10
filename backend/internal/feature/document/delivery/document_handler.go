@@ -25,6 +25,13 @@ func NewDocumentHandler(documents *usecase.DocumentUseCase, uploadDir, uploadBas
 	return &DocumentHandler{documents: documents, uploadDir: uploadDir, uploadBaseURL: uploadBaseURL}
 }
 
+// List godoc
+// @Summary      รายการเอกสาร
+// @Tags         documents
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {array}  domain.Document
+// @Router       /documents [get]
 func (h *DocumentHandler) List(c fiber.Ctx) error {
 	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
 	if err != nil {
@@ -38,6 +45,14 @@ func (h *DocumentHandler) List(c fiber.Ctx) error {
 	return response.Paginated(c, list, page, perPage, total)
 }
 
+// GetByID godoc
+// @Summary      ดูข้อมูลเอกสารตาม ID
+// @Tags         documents
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Document ID"
+// @Success      200  {object}  domain.DocumentDetail
+// @Router       /documents/{id} [get]
 func (h *DocumentHandler) GetByID(c fiber.Ctx) error {
 	dormitoryID, _ := c.Locals("dormitory_id").(string)
 	d, err := h.documents.GetByID(c.Context(), dormitoryID, c.Params("id"))
@@ -47,6 +62,15 @@ func (h *DocumentHandler) GetByID(c fiber.Ctx) error {
 	return response.OK(c, d)
 }
 
+// Create godoc
+// @Summary      สร้างเอกสาร
+// @Tags         documents
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        body body domain.CreateDocumentRequest true "Document payload"
+// @Success      201  {object}  domain.Document
+// @Router       /documents [post]
 func (h *DocumentHandler) Create(c fiber.Ctx) error {
 	var req domain.CreateDocumentRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -63,6 +87,16 @@ func (h *DocumentHandler) Create(c fiber.Ctx) error {
 	return response.Created(c, d)
 }
 
+// Update godoc
+// @Summary      แก้ไขเอกสาร
+// @Tags         documents
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Document ID"
+// @Param        body body domain.UpdateDocumentRequest true "Document payload"
+// @Success      200  {object}  domain.Document
+// @Router       /documents/{id} [put]
 func (h *DocumentHandler) Update(c fiber.Ctx) error {
 	var req domain.UpdateDocumentRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -94,6 +128,14 @@ func (h *DocumentHandler) removeUploadedFile(fileURL string) {
 	}
 }
 
+// Delete godoc
+// @Summary      ลบเอกสาร
+// @Tags         documents
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Document ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /documents/{id} [delete]
 func (h *DocumentHandler) Delete(c fiber.Ctx) error {
 	dormitoryID, _ := c.Locals("dormitory_id").(string)
 	d, err := h.documents.GetByID(c.Context(), dormitoryID, c.Params("id"))
@@ -115,6 +157,15 @@ var allowedExtensions = map[string]bool{
 	".doc": true, ".docx": true,
 }
 
+// Upload godoc
+// @Summary      อัปโหลดไฟล์เอกสาร
+// @Tags         documents
+// @Security     ApiKeyAuth
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        file formData file true "Document file (PDF, image, or Word, max 10MB)"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /documents/upload [post]
 func (h *DocumentHandler) Upload(c fiber.Ctx) error {
 	file, err := c.FormFile("file")
 	if err != nil {

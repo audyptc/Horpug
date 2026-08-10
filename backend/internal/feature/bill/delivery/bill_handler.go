@@ -21,6 +21,13 @@ func NewBillHandler(bills *usecase.BillUseCase, activityLog *alusecase.ActivityL
 	return &BillHandler{bills: bills, activityLog: activityLog}
 }
 
+// List godoc
+// @Summary      รายการบิล
+// @Tags         bills
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {array}  domain.Bill
+// @Router       /bills [get]
 func (h *BillHandler) List(c fiber.Ctx) error {
 	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
 	if err != nil {
@@ -34,6 +41,14 @@ func (h *BillHandler) List(c fiber.Ctx) error {
 	return response.Paginated(c, list, page, perPage, total)
 }
 
+// GetByID godoc
+// @Summary      ดูข้อมูลบิลตาม ID
+// @Tags         bills
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Bill ID"
+// @Success      200  {object}  domain.BillDetail
+// @Router       /bills/{id} [get]
 func (h *BillHandler) GetByID(c fiber.Ctx) error {
 	dormitoryID, _ := c.Locals("dormitory_id").(string)
 	d, err := h.bills.GetByID(c.Context(), dormitoryID, c.Params("id"))
@@ -43,6 +58,15 @@ func (h *BillHandler) GetByID(c fiber.Ctx) error {
 	return response.OK(c, d)
 }
 
+// Create godoc
+// @Summary      สร้างบิล
+// @Tags         bills
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        body body domain.CreateBillRequest true "Bill payload"
+// @Success      201  {object}  domain.Bill
+// @Router       /bills [post]
 func (h *BillHandler) Create(c fiber.Ctx) error {
 	var req domain.CreateBillRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -61,6 +85,16 @@ func (h *BillHandler) Create(c fiber.Ctx) error {
 	return response.Created(c, d)
 }
 
+// Update godoc
+// @Summary      แก้ไขบิล
+// @Tags         bills
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Bill ID"
+// @Param        body body domain.UpdateBillRequest true "Bill payload"
+// @Success      200  {object}  domain.Bill
+// @Router       /bills/{id} [put]
 func (h *BillHandler) Update(c fiber.Ctx) error {
 	var req domain.UpdateBillRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -76,6 +110,14 @@ func (h *BillHandler) Update(c fiber.Ctx) error {
 	return response.OK(c, d)
 }
 
+// Delete godoc
+// @Summary      ลบบิล
+// @Tags         bills
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Bill ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /bills/{id} [delete]
 func (h *BillHandler) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
 	dormitoryID, _ := c.Locals("dormitory_id").(string)

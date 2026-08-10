@@ -1,5 +1,97 @@
 basePath: /api/v1
 definitions:
+  ActivityAction:
+    enum:
+    - create
+    - update
+    - delete
+    type: string
+    x-enum-varnames:
+    - ActivityCreate
+    - ActivityUpdate
+    - ActivityDelete
+  ActivityLog:
+    properties:
+      action:
+        $ref: '#/definitions/ActivityAction'
+      actor_id:
+        type: string
+      actor_name:
+        type: string
+      created_at:
+        type: string
+      dormitory_id:
+        type: string
+      entity_id:
+        type: string
+      entity_type:
+        type: string
+      id:
+        type: string
+      new_value:
+        items:
+          type: integer
+        type: array
+    type: object
+  AnalyticsSummary:
+    properties:
+      avg_monthly:
+        type: number
+      bill_status:
+        $ref: '#/definitions/BillStatusCount'
+      monthly_revenue:
+        items:
+          $ref: '#/definitions/MonthlyRevenue'
+        type: array
+      monthly_tenants:
+        items:
+          $ref: '#/definitions/MonthlyCount'
+        type: array
+      total_revenue:
+        type: number
+    type: object
+  Announcement:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      dormitory_id:
+        type: string
+      expired_at:
+        type: string
+      id:
+        type: string
+      is_pinned:
+        type: boolean
+      published_at:
+        type: string
+      title:
+        type: string
+      type:
+        $ref: '#/definitions/AnnouncementType'
+      updated_at:
+        type: string
+    type: object
+  AnnouncementType:
+    enum:
+    - general
+    - maintenance
+    - payment
+    - emergency
+    type: string
+    x-enum-varnames:
+    - AnnouncementTypeGeneral
+    - AnnouncementTypeMaintenance
+    - AnnouncementTypePayment
+    - AnnouncementTypeEmergency
+  AssignDormitoriesRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/DormitoryRoleAssignmentItem'
+        type: array
+    type: object
   AssignPermissionsRequest:
     properties:
       items:
@@ -12,6 +104,396 @@ definitions:
       role_id:
         type: string
     type: object
+  Bill:
+    properties:
+      billing_month:
+        type: string
+      contract_id:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      due_date:
+        type: string
+      electric_amount:
+        type: number
+      id:
+        type: string
+      note:
+        type: string
+      other_amount:
+        description: cached sum of other items
+        type: number
+      paid_at:
+        type: string
+      parking_amount:
+        type: number
+      rent_amount:
+        type: number
+      status:
+        $ref: '#/definitions/BillStatus'
+      total_amount:
+        type: number
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      water_amount:
+        type: number
+    type: object
+  BillDetail:
+    properties:
+      billing_month:
+        type: string
+      contract_id:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      due_date:
+        type: string
+      electric_amount:
+        type: number
+      id:
+        type: string
+      note:
+        type: string
+      other_amount:
+        description: cached sum of other items
+        type: number
+      other_items:
+        items:
+          $ref: '#/definitions/BillOtherItem'
+        type: array
+      paid_at:
+        type: string
+      parking_amount:
+        type: number
+      rent_amount:
+        type: number
+      room_number:
+        type: string
+      status:
+        $ref: '#/definitions/BillStatus'
+      tenant_first_name:
+        type: string
+      tenant_last_name:
+        type: string
+      total_amount:
+        type: number
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      updated_by_name:
+        type: string
+      water_amount:
+        type: number
+    type: object
+  BillOtherItem:
+    properties:
+      amount:
+        type: number
+      bill_id:
+        type: string
+      id:
+        type: string
+      label:
+        type: string
+      sort_order:
+        type: integer
+    type: object
+  BillOtherItemInput:
+    properties:
+      amount:
+        type: number
+      label:
+        type: string
+    type: object
+  BillStatus:
+    enum:
+    - unpaid
+    - paid
+    - overdue
+    type: string
+    x-enum-varnames:
+    - BillStatusUnpaid
+    - BillStatusPaid
+    - BillStatusOverdue
+  BillStatusCount:
+    properties:
+      overdue:
+        type: integer
+      paid:
+        type: integer
+      unpaid:
+        type: integer
+    type: object
+  Contract:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      deposit:
+        type: number
+      end_date:
+        type: string
+      id:
+        type: string
+      note:
+        type: string
+      num_occupants:
+        type: integer
+      rent_price:
+        type: number
+      room_id:
+        type: string
+      start_date:
+        type: string
+      status:
+        $ref: '#/definitions/ContractStatus'
+      tenant_id:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  ContractDetail:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      deposit:
+        type: number
+      end_date:
+        type: string
+      id:
+        type: string
+      note:
+        type: string
+      num_occupants:
+        type: integer
+      rent_price:
+        type: number
+      room_id:
+        type: string
+      room_number:
+        type: string
+      start_date:
+        type: string
+      status:
+        $ref: '#/definitions/ContractStatus'
+      tenant_first_name:
+        type: string
+      tenant_id:
+        type: string
+      tenant_last_name:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      updated_by_name:
+        type: string
+    type: object
+  ContractStatus:
+    enum:
+    - active
+    - expired
+    - terminated
+    type: string
+    x-enum-varnames:
+    - ContractStatusActive
+    - ContractStatusExpired
+    - ContractStatusTerminated
+  CreateAnnouncementRequest:
+    properties:
+      content:
+        type: string
+      expired_at:
+        type: string
+      is_pinned:
+        type: boolean
+      published_at:
+        type: string
+      title:
+        type: string
+      type:
+        $ref: '#/definitions/AnnouncementType'
+    type: object
+  CreateBillRequest:
+    properties:
+      billing_month:
+        type: string
+      contract_id:
+        type: string
+      due_date:
+        type: string
+      electric_amount:
+        type: number
+      note:
+        type: string
+      other_items:
+        items:
+          $ref: '#/definitions/BillOtherItemInput'
+        type: array
+      parking_amount:
+        type: number
+      rent_amount:
+        type: number
+      water_amount:
+        type: number
+    type: object
+  CreateContractRequest:
+    properties:
+      deposit:
+        type: number
+      end_date:
+        type: string
+      note:
+        type: string
+      num_occupants:
+        type: integer
+      rent_price:
+        type: number
+      room_id:
+        type: string
+      start_date:
+        type: string
+      tenant_id:
+        type: string
+    type: object
+  CreateDocumentRequest:
+    properties:
+      category:
+        $ref: '#/definitions/DocumentCategory'
+      expiry_date:
+        type: string
+      file_url:
+        type: string
+      issue_date:
+        type: string
+      note:
+        type: string
+      tenant_id:
+        type: string
+      title:
+        type: string
+    type: object
+  CreateDormitoryRequest:
+    properties:
+      address:
+        type: string
+      name:
+        type: string
+    type: object
+  CreateElectricMeterRequest:
+    properties:
+      billing_month:
+        type: string
+      billing_type:
+        $ref: '#/definitions/ElectricBillingType'
+      current_reading:
+        type: number
+      flat_amount:
+        type: number
+      note:
+        type: string
+      previous_reading:
+        type: number
+      reading_date:
+        type: string
+      room_id:
+        type: string
+      unit_price:
+        type: number
+    type: object
+  CreateExpenseRequest:
+    properties:
+      amount:
+        type: number
+      category:
+        $ref: '#/definitions/ExpenseCategory'
+      description:
+        type: string
+      expense_date:
+        type: string
+      note:
+        type: string
+    type: object
+  CreateMaintenanceRequestRequest:
+    properties:
+      description:
+        type: string
+      note:
+        type: string
+      priority:
+        $ref: '#/definitions/MaintenancePriority'
+      reported_date:
+        type: string
+      resolved_date:
+        type: string
+      room_id:
+        type: string
+      status:
+        $ref: '#/definitions/MaintenanceStatus'
+      title:
+        type: string
+    type: object
+  CreateParcelRequest:
+    properties:
+      note:
+        type: string
+      picked_up_date:
+        type: string
+      received_date:
+        type: string
+      recipient_name:
+        type: string
+      room_number:
+        type: string
+      status:
+        $ref: '#/definitions/ParcelStatus'
+      tracking_number:
+        type: string
+    type: object
+  CreateParkingSlotRequest:
+    properties:
+      license_plate:
+        type: string
+      monthly_fee:
+        type: number
+      note:
+        type: string
+      slot_number:
+        type: string
+      start_date:
+        type: string
+      status:
+        $ref: '#/definitions/ParkingStatus'
+      tenant_id:
+        type: string
+      vehicle_type:
+        $ref: '#/definitions/VehicleType'
+    type: object
+  CreatePaymentRequest:
+    properties:
+      bill_id:
+        type: string
+      note:
+        type: string
+      payment_date:
+        type: string
+      splits:
+        items:
+          $ref: '#/definitions/PaymentSplitRequest'
+        type: array
+    type: object
   CreateRoleRequest:
     properties:
       description:
@@ -19,6 +501,47 @@ definitions:
       is_active:
         type: boolean
       name:
+        type: string
+    type: object
+  CreateRoomRequest:
+    properties:
+      description:
+        type: string
+      floor:
+        type: integer
+      rent_price:
+        type: number
+      room_number:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+    type: object
+  CreateRoomTypeRequest:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      sort_order:
+        type: integer
+    type: object
+  CreateTenantRequest:
+    properties:
+      email:
+        type: string
+      emergency_contact:
+        type: string
+      first_name:
+        type: string
+      id_card:
+        type: string
+      last_name:
+        type: string
+      note:
+        type: string
+      phone:
         type: string
     type: object
   CreateUserRequest:
@@ -29,6 +552,326 @@ definitions:
         type: string
       password:
         type: string
+    type: object
+  CreateWaterMeterRequest:
+    properties:
+      billing_month:
+        type: string
+      billing_type:
+        $ref: '#/definitions/WaterBillingType'
+      current_reading:
+        type: number
+      flat_amount:
+        type: number
+      note:
+        type: string
+      previous_reading:
+        type: number
+      reading_date:
+        type: string
+      room_id:
+        type: string
+      unit_price:
+        type: number
+    type: object
+  DashboardSummary:
+    properties:
+      active_contracts:
+        type: integer
+      available_rooms:
+        type: integer
+      expiring_contracts:
+        type: integer
+      maintenance_rooms:
+        type: integer
+      occupancy_rate:
+        type: number
+      occupied_rooms:
+        type: integer
+      overdue_amount:
+        type: number
+      overdue_bills:
+        type: integer
+      revenue_this_month:
+        type: number
+      total_rooms:
+        type: integer
+      total_tenants:
+        type: integer
+      unpaid_amount:
+        type: number
+      unpaid_bills:
+        type: integer
+    type: object
+  Document:
+    properties:
+      category:
+        $ref: '#/definitions/DocumentCategory'
+      created_at:
+        type: string
+      dormitory_id:
+        type: string
+      expiry_date:
+        type: string
+      file_url:
+        type: string
+      id:
+        type: string
+      issue_date:
+        type: string
+      note:
+        type: string
+      tenant_id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  DocumentCategory:
+    enum:
+    - contract
+    - id_card
+    - house_registration
+    - receipt
+    - other
+    type: string
+    x-enum-varnames:
+    - DocumentCategoryContract
+    - DocumentCategoryIDCard
+    - DocumentCategoryHouseRegistration
+    - DocumentCategoryReceipt
+    - DocumentCategoryOther
+  DocumentDetail:
+    properties:
+      category:
+        $ref: '#/definitions/DocumentCategory'
+      created_at:
+        type: string
+      dormitory_id:
+        type: string
+      expiry_date:
+        type: string
+      file_url:
+        type: string
+      id:
+        type: string
+      issue_date:
+        type: string
+      note:
+        type: string
+      tenant_first_name:
+        type: string
+      tenant_id:
+        type: string
+      tenant_last_name:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  Dormitory:
+    properties:
+      address:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  DormitoryRoleAssignment:
+    properties:
+      dormitory_id:
+        type: string
+      dormitory_name:
+        type: string
+      role_id:
+        type: string
+      role_name:
+        type: string
+    type: object
+  DormitoryRoleAssignmentItem:
+    properties:
+      dormitory_id:
+        type: string
+      role_id:
+        type: string
+    type: object
+  ElectricBillingType:
+    enum:
+    - meter
+    - flat
+    type: string
+    x-enum-varnames:
+    - ElectricBillingTypeMeter
+    - ElectricBillingTypeFlat
+  ElectricMeter:
+    properties:
+      billing_month:
+        type: string
+      billing_type:
+        $ref: '#/definitions/ElectricBillingType'
+      created_at:
+        type: string
+      created_by:
+        type: string
+      current_reading:
+        type: number
+      flat_amount:
+        type: number
+      id:
+        type: string
+      note:
+        type: string
+      previous_reading:
+        type: number
+      reading_date:
+        type: string
+      room_id:
+        type: string
+      unit_price:
+        type: number
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      updated_by_name:
+        type: string
+    type: object
+  ElectricMeterDetail:
+    properties:
+      billing_month:
+        type: string
+      billing_type:
+        $ref: '#/definitions/ElectricBillingType'
+      created_at:
+        type: string
+      created_by:
+        type: string
+      current_reading:
+        type: number
+      flat_amount:
+        type: number
+      id:
+        type: string
+      note:
+        type: string
+      previous_reading:
+        type: number
+      reading_date:
+        type: string
+      room_id:
+        type: string
+      room_number:
+        type: string
+      total_amount:
+        type: number
+      unit_price:
+        type: number
+      unit_used:
+        type: number
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      updated_by_name:
+        type: string
+    type: object
+  Expense:
+    properties:
+      amount:
+        type: number
+      category:
+        $ref: '#/definitions/ExpenseCategory'
+      created_at:
+        type: string
+      description:
+        type: string
+      dormitory_id:
+        type: string
+      expense_date:
+        type: string
+      id:
+        type: string
+      note:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  ExpenseCategory:
+    enum:
+    - repair
+    - utilities
+    - supplies
+    - salary
+    - other
+    type: string
+    x-enum-varnames:
+    - ExpenseCategoryRepair
+    - ExpenseCategoryUtilities
+    - ExpenseCategorySupplies
+    - ExpenseCategorySalary
+    - ExpenseCategoryOther
+  ExpenseReport:
+    properties:
+      grand_total:
+        type: number
+      rows:
+        items:
+          $ref: '#/definitions/ExpenseReportRow'
+        type: array
+    type: object
+  ExpenseReportRow:
+    properties:
+      category:
+        type: string
+      count:
+        type: integer
+      month:
+        type: string
+      total_amount:
+        type: number
+    type: object
+  IncomeReport:
+    properties:
+      grand_total:
+        type: number
+      rows:
+        items:
+          $ref: '#/definitions/IncomeReportRow'
+        type: array
+      total_electric:
+        type: number
+      total_other:
+        type: number
+      total_rent:
+        type: number
+      total_water:
+        type: number
+    type: object
+  IncomeReportRow:
+    properties:
+      bill_count:
+        type: integer
+      electric_amount:
+        type: number
+      month:
+        type: string
+      other_amount:
+        type: number
+      rent_amount:
+        type: number
+      total_amount:
+        type: number
+      water_amount:
+        type: number
     type: object
   LoginRequest:
     properties:
@@ -51,6 +894,82 @@ definitions:
       refresh_token:
         type: string
     type: object
+  MaintenancePriority:
+    enum:
+    - low
+    - normal
+    - high
+    - urgent
+    type: string
+    x-enum-varnames:
+    - MaintenancePriorityLow
+    - MaintenancePriorityNormal
+    - MaintenancePriorityHigh
+    - MaintenancePriorityUrgent
+  MaintenanceRequest:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      note:
+        type: string
+      priority:
+        $ref: '#/definitions/MaintenancePriority'
+      reported_date:
+        type: string
+      resolved_date:
+        type: string
+      room_id:
+        type: string
+      status:
+        $ref: '#/definitions/MaintenanceStatus'
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  MaintenanceRequestDetail:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      note:
+        type: string
+      priority:
+        $ref: '#/definitions/MaintenancePriority'
+      reported_date:
+        type: string
+      resolved_date:
+        type: string
+      room_id:
+        type: string
+      room_number:
+        type: string
+      status:
+        $ref: '#/definitions/MaintenanceStatus'
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  MaintenanceStatus:
+    enum:
+    - open
+    - in_progress
+    - done
+    - cancelled
+    type: string
+    x-enum-varnames:
+    - MaintenanceStatusOpen
+    - MaintenanceStatusInProgress
+    - MaintenanceStatusDone
+    - MaintenanceStatusCancelled
   Menu:
     properties:
       created_at:
@@ -63,6 +982,244 @@ definitions:
         type: string
       updated_at:
         type: string
+    type: object
+  MonthlyCount:
+    properties:
+      count:
+        type: integer
+      month:
+        type: string
+    type: object
+  MonthlyRevenue:
+    properties:
+      month:
+        type: string
+      revenue:
+        type: number
+    type: object
+  NotificationItem:
+    properties:
+      created_at:
+        type: string
+      days_overdue:
+        type: integer
+      days_remaining:
+        type: integer
+      id:
+        type: string
+      priority:
+        type: string
+      room_number:
+        type: string
+      tenant_name:
+        type: string
+      title:
+        type: string
+      total_amount:
+        type: number
+      type:
+        $ref: '#/definitions/NotificationType'
+    type: object
+  NotificationType:
+    enum:
+    - overdue_bill
+    - expiring_contract
+    - open_maintenance
+    type: string
+    x-enum-varnames:
+    - NotificationTypeOverdueBill
+    - NotificationTypeExpiringContract
+    - NotificationTypeOpenMaintenance
+  OccupancyReport:
+    properties:
+      available:
+        type: integer
+      maintenance:
+        type: integer
+      occupancy_rate:
+        type: number
+      occupied:
+        type: integer
+      rows:
+        items:
+          $ref: '#/definitions/OccupancyRow'
+        type: array
+      total:
+        type: integer
+    type: object
+  OccupancyRow:
+    properties:
+      floor:
+        type: integer
+      rent_price:
+        type: number
+      room_number:
+        type: string
+      status:
+        type: string
+      tenant_name:
+        type: string
+      type:
+        type: string
+    type: object
+  Parcel:
+    properties:
+      created_at:
+        type: string
+      dormitory_id:
+        type: string
+      id:
+        type: string
+      note:
+        type: string
+      picked_up_date:
+        type: string
+      received_date:
+        type: string
+      recipient_name:
+        type: string
+      room_number:
+        type: string
+      status:
+        $ref: '#/definitions/ParcelStatus'
+      tracking_number:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  ParcelStatus:
+    enum:
+    - pending
+    - picked_up
+    type: string
+    x-enum-varnames:
+    - ParcelStatusPending
+    - ParcelStatusPickedUp
+  ParkingSlot:
+    properties:
+      created_at:
+        type: string
+      dormitory_id:
+        type: string
+      id:
+        type: string
+      license_plate:
+        type: string
+      monthly_fee:
+        type: number
+      note:
+        type: string
+      slot_number:
+        type: string
+      start_date:
+        type: string
+      status:
+        $ref: '#/definitions/ParkingStatus'
+      tenant_first_name:
+        description: joined
+        type: string
+      tenant_id:
+        type: string
+      tenant_last_name:
+        type: string
+      updated_at:
+        type: string
+      vehicle_type:
+        $ref: '#/definitions/VehicleType'
+    type: object
+  ParkingStatus:
+    enum:
+    - available
+    - occupied
+    type: string
+    x-enum-varnames:
+    - ParkingStatusAvailable
+    - ParkingStatusOccupied
+  Payment:
+    properties:
+      amount:
+        type: number
+      bill_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      method:
+        $ref: '#/definitions/PaymentMethod'
+      note:
+        type: string
+      payment_date:
+        type: string
+      splits:
+        items:
+          $ref: '#/definitions/PaymentSplit'
+        type: array
+      updated_at:
+        type: string
+    type: object
+  PaymentDetail:
+    properties:
+      amount:
+        type: number
+      bill_id:
+        type: string
+      bill_total:
+        type: number
+      billing_month:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      method:
+        $ref: '#/definitions/PaymentMethod'
+      note:
+        type: string
+      payment_date:
+        type: string
+      room_number:
+        type: string
+      splits:
+        items:
+          $ref: '#/definitions/PaymentSplit'
+        type: array
+      tenant_first_name:
+        type: string
+      tenant_last_name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  PaymentMethod:
+    enum:
+    - cash
+    - transfer
+    - qr
+    - mixed
+    type: string
+    x-enum-varnames:
+    - PaymentMethodCash
+    - PaymentMethodTransfer
+    - PaymentMethodQR
+    - PaymentMethodMixed
+  PaymentSplit:
+    properties:
+      amount:
+        type: number
+      id:
+        type: string
+      method:
+        $ref: '#/definitions/PaymentMethod'
+      payment_id:
+        type: string
+    type: object
+  PaymentSplitRequest:
+    properties:
+      amount:
+        type: number
+      method:
+        $ref: '#/definitions/PaymentMethod'
     type: object
   Permission:
     properties:
@@ -121,6 +1278,312 @@ definitions:
           type: string
         type: array
     type: object
+  Room:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      dormitory_id:
+        type: string
+      floor:
+        type: integer
+      id:
+        type: string
+      rent_price:
+        type: number
+      room_number:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      updated_by_name:
+        type: string
+    type: object
+  RoomType:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      sort_order:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  SearchBill:
+    properties:
+      billing_month:
+        type: string
+      id:
+        type: string
+      room_number:
+        type: string
+      status:
+        $ref: '#/definitions/BillStatus'
+      tenant_first_name:
+        type: string
+      tenant_last_name:
+        type: string
+      total_amount:
+        type: number
+    type: object
+  SearchContract:
+    properties:
+      end_date:
+        type: string
+      id:
+        type: string
+      room_number:
+        type: string
+      start_date:
+        type: string
+      status:
+        $ref: '#/definitions/ContractStatus'
+      tenant_first_name:
+        type: string
+      tenant_last_name:
+        type: string
+    type: object
+  SearchResults:
+    properties:
+      bills:
+        items:
+          $ref: '#/definitions/SearchBill'
+        type: array
+      contracts:
+        items:
+          $ref: '#/definitions/SearchContract'
+        type: array
+      rooms:
+        items:
+          $ref: '#/definitions/Room'
+        type: array
+      tenants:
+        items:
+          $ref: '#/definitions/Tenant'
+        type: array
+    type: object
+  Tenant:
+    properties:
+      active_room_numbers:
+        items:
+          type: string
+        type: array
+      created_at:
+        type: string
+      created_by:
+        type: string
+      dormitory_id:
+        type: string
+      email:
+        type: string
+      emergency_contact:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      id_card:
+        type: string
+      last_name:
+        type: string
+      note:
+        type: string
+      phone:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      updated_by_name:
+        type: string
+    type: object
+  UpdateAnnouncementRequest:
+    properties:
+      content:
+        type: string
+      expired_at:
+        type: string
+      is_pinned:
+        type: boolean
+      published_at:
+        type: string
+      title:
+        type: string
+      type:
+        $ref: '#/definitions/AnnouncementType'
+    type: object
+  UpdateBillRequest:
+    properties:
+      due_date:
+        type: string
+      electric_amount:
+        type: number
+      note:
+        type: string
+      other_items:
+        description: nil = keep existing
+        items:
+          $ref: '#/definitions/BillOtherItemInput'
+        type: array
+      parking_amount:
+        type: number
+      rent_amount:
+        type: number
+      status:
+        $ref: '#/definitions/BillStatus'
+      water_amount:
+        type: number
+    type: object
+  UpdateContractRequest:
+    properties:
+      deposit:
+        type: number
+      end_date:
+        type: string
+      note:
+        type: string
+      num_occupants:
+        type: integer
+      rent_price:
+        type: number
+      status:
+        $ref: '#/definitions/ContractStatus'
+    type: object
+  UpdateDocumentRequest:
+    properties:
+      category:
+        $ref: '#/definitions/DocumentCategory'
+      expiry_date:
+        type: string
+      file_url:
+        type: string
+      issue_date:
+        type: string
+      note:
+        type: string
+      tenant_id:
+        type: string
+      title:
+        type: string
+    type: object
+  UpdateDormitoryRequest:
+    properties:
+      address:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+    type: object
+  UpdateElectricMeterRequest:
+    properties:
+      billing_month:
+        type: string
+      billing_type:
+        $ref: '#/definitions/ElectricBillingType'
+      current_reading:
+        type: number
+      flat_amount:
+        type: number
+      note:
+        type: string
+      previous_reading:
+        type: number
+      reading_date:
+        type: string
+      unit_price:
+        type: number
+    type: object
+  UpdateExpenseRequest:
+    properties:
+      amount:
+        type: number
+      category:
+        $ref: '#/definitions/ExpenseCategory'
+      description:
+        type: string
+      expense_date:
+        type: string
+      note:
+        type: string
+    type: object
+  UpdateMaintenanceRequestRequest:
+    properties:
+      description:
+        type: string
+      note:
+        type: string
+      priority:
+        $ref: '#/definitions/MaintenancePriority'
+      reported_date:
+        type: string
+      resolved_date:
+        type: string
+      room_id:
+        type: string
+      status:
+        $ref: '#/definitions/MaintenanceStatus'
+      title:
+        type: string
+    type: object
+  UpdateParcelRequest:
+    properties:
+      note:
+        type: string
+      picked_up_date:
+        type: string
+      received_date:
+        type: string
+      recipient_name:
+        type: string
+      room_number:
+        type: string
+      status:
+        $ref: '#/definitions/ParcelStatus'
+      tracking_number:
+        type: string
+    type: object
+  UpdateParkingSlotRequest:
+    properties:
+      license_plate:
+        type: string
+      monthly_fee:
+        type: number
+      note:
+        type: string
+      slot_number:
+        type: string
+      start_date:
+        type: string
+      status:
+        $ref: '#/definitions/ParkingStatus'
+      tenant_id:
+        type: string
+      vehicle_type:
+        $ref: '#/definitions/VehicleType'
+    type: object
+  UpdatePaymentRequest:
+    properties:
+      note:
+        type: string
+      payment_date:
+        type: string
+      splits:
+        items:
+          $ref: '#/definitions/PaymentSplitRequest'
+        type: array
+    type: object
   UpdateRoleRequest:
     properties:
       description:
@@ -128,6 +1591,45 @@ definitions:
       is_active:
         type: boolean
       name:
+        type: string
+    type: object
+  UpdateRoomRequest:
+    properties:
+      description:
+        type: string
+      floor:
+        type: integer
+      rent_price:
+        type: number
+      room_number:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+    type: object
+  UpdateRoomTypeRequest:
+    properties:
+      name:
+        type: string
+      sort_order:
+        type: integer
+    type: object
+  UpdateTenantRequest:
+    properties:
+      email:
+        type: string
+      emergency_contact:
+        type: string
+      first_name:
+        type: string
+      id_card:
+        type: string
+      last_name:
+        type: string
+      note:
+        type: string
+      phone:
         type: string
     type: object
   UpdateUserRequest:
@@ -138,6 +1640,25 @@ definitions:
         type: boolean
       password:
         type: string
+    type: object
+  UpdateWaterMeterRequest:
+    properties:
+      billing_month:
+        type: string
+      billing_type:
+        $ref: '#/definitions/WaterBillingType'
+      current_reading:
+        type: number
+      flat_amount:
+        type: number
+      note:
+        type: string
+      previous_reading:
+        type: number
+      reading_date:
+        type: string
+      unit_price:
+        type: number
     type: object
   User:
     properties:
@@ -156,10 +1677,255 @@ definitions:
       updated_at:
         type: string
     type: object
+  VehicleType:
+    enum:
+    - car
+    - motorcycle
+    type: string
+    x-enum-varnames:
+    - VehicleTypeCar
+    - VehicleTypeMotorcycle
+  WaterBillingType:
+    enum:
+    - meter
+    - flat
+    type: string
+    x-enum-varnames:
+    - WaterBillingTypeMeter
+    - WaterBillingTypeFlat
+  WaterMeter:
+    properties:
+      billing_month:
+        type: string
+      billing_type:
+        $ref: '#/definitions/WaterBillingType'
+      created_at:
+        type: string
+      created_by:
+        type: string
+      current_reading:
+        type: number
+      flat_amount:
+        type: number
+      id:
+        type: string
+      note:
+        type: string
+      previous_reading:
+        type: number
+      reading_date:
+        type: string
+      room_id:
+        type: string
+      unit_price:
+        type: number
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      updated_by_name:
+        type: string
+    type: object
+  WaterMeterDetail:
+    properties:
+      billing_month:
+        type: string
+      billing_type:
+        $ref: '#/definitions/WaterBillingType'
+      created_at:
+        type: string
+      created_by:
+        type: string
+      current_reading:
+        type: number
+      flat_amount:
+        type: number
+      id:
+        type: string
+      note:
+        type: string
+      previous_reading:
+        type: number
+      reading_date:
+        type: string
+      room_id:
+        type: string
+      room_number:
+        type: string
+      total_amount:
+        type: number
+      unit_price:
+        type: number
+      unit_used:
+        type: number
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      updated_by_name:
+        type: string
+    type: object
 info:
   contact: {}
   title: API
 paths:
+  /activity-logs:
+    get:
+      parameters:
+      - description: Filter by entity type
+        in: query
+        name: entity_type
+        type: string
+      - description: Filter by actor (user) ID
+        in: query
+        name: actor_id
+        type: string
+      - description: From timestamp (RFC3339)
+        in: query
+        name: from
+        type: string
+      - description: To timestamp (RFC3339)
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/ActivityLog'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายการประวัติกิจกรรม
+      tags:
+      - activity-logs
+  /analytics/summary:
+    get:
+      parameters:
+      - description: Number of months to include (default 12)
+        in: query
+        name: months
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/AnalyticsSummary'
+      security:
+      - ApiKeyAuth: []
+      summary: สรุปข้อมูลเชิงวิเคราะห์
+      tags:
+      - analytics
+  /announcements:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Announcement'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายการประกาศ
+      tags:
+      - announcements
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Announcement payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateAnnouncementRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/Announcement'
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างประกาศ
+      tags:
+      - announcements
+  /announcements/{id}:
+    delete:
+      parameters:
+      - description: Announcement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบประกาศ
+      tags:
+      - announcements
+    get:
+      parameters:
+      - description: Announcement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Announcement'
+      security:
+      - ApiKeyAuth: []
+      summary: ดูข้อมูลประกาศตาม ID
+      tags:
+      - announcements
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Announcement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Announcement payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateAnnouncementRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Announcement'
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขประกาศ
+      tags:
+      - announcements
   /auth/login:
     post:
       consumes:
@@ -224,6 +1990,868 @@ paths:
       summary: ต่ออายุโทเค็น
       tags:
       - auth
+  /bills:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Bill'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายการบิล
+      tags:
+      - bills
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Bill payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateBillRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/Bill'
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างบิล
+      tags:
+      - bills
+  /bills/{id}:
+    delete:
+      parameters:
+      - description: Bill ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบบิล
+      tags:
+      - bills
+    get:
+      parameters:
+      - description: Bill ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/BillDetail'
+      security:
+      - ApiKeyAuth: []
+      summary: ดูข้อมูลบิลตาม ID
+      tags:
+      - bills
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Bill ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Bill payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateBillRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Bill'
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขบิล
+      tags:
+      - bills
+  /contracts:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Contract'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายชื่อสัญญาเช่า
+      tags:
+      - contracts
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Contract payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateContractRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/Contract'
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างสัญญาเช่า
+      tags:
+      - contracts
+  /contracts/{id}:
+    delete:
+      parameters:
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบสัญญาเช่า
+      tags:
+      - contracts
+    get:
+      parameters:
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ContractDetail'
+      security:
+      - ApiKeyAuth: []
+      summary: ดูข้อมูลสัญญาเช่าตาม ID
+      tags:
+      - contracts
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Contract payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateContractRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Contract'
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขสัญญาเช่า
+      tags:
+      - contracts
+  /dashboard/summary:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/DashboardSummary'
+      security:
+      - ApiKeyAuth: []
+      summary: สรุปข้อมูลแดชบอร์ด
+      tags:
+      - dashboard
+  /documents:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Document'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายการเอกสาร
+      tags:
+      - documents
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Document payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateDocumentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/Document'
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างเอกสาร
+      tags:
+      - documents
+  /documents/{id}:
+    delete:
+      parameters:
+      - description: Document ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบเอกสาร
+      tags:
+      - documents
+    get:
+      parameters:
+      - description: Document ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/DocumentDetail'
+      security:
+      - ApiKeyAuth: []
+      summary: ดูข้อมูลเอกสารตาม ID
+      tags:
+      - documents
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Document ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Document payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateDocumentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Document'
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขเอกสาร
+      tags:
+      - documents
+  /documents/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: Document file (PDF, image, or Word, max 10MB)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: อัปโหลดไฟล์เอกสาร
+      tags:
+      - documents
+  /dormitories:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Dormitory'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายชื่อหอพัก (สาขา)
+      tags:
+      - dormitories
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dormitory payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateDormitoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/Dormitory'
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างหอพัก (สาขา)
+      tags:
+      - dormitories
+  /dormitories/{id}:
+    delete:
+      parameters:
+      - description: Dormitory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบหอพัก (สาขา)
+      tags:
+      - dormitories
+    get:
+      parameters:
+      - description: Dormitory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Dormitory'
+      security:
+      - ApiKeyAuth: []
+      summary: ดูข้อมูลหอพักตาม ID
+      tags:
+      - dormitories
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dormitory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dormitory payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateDormitoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Dormitory'
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขหอพัก (สาขา)
+      tags:
+      - dormitories
+  /dormitories/mine:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Dormitory'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายชื่อหอพักที่ผู้ใช้ปัจจุบันเข้าถึงได้
+      tags:
+      - dormitories
+  /dormitories/users/{userId}:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/DormitoryRoleAssignment'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: ดูรายการหอพัก/บทบาทที่ผู้ใช้ถูกกำหนดสิทธิ์
+      tags:
+      - dormitories
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      - description: Dormitory assignment payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/AssignDormitoriesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: กำหนดหอพักที่ผู้ใช้เข้าถึงได้ (แทนที่ทั้งหมด)
+      tags:
+      - dormitories
+  /electric-meters:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/ElectricMeter'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายการค่ามิเตอร์ไฟฟ้า
+      tags:
+      - electric-meters
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Electric meter payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateElectricMeterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ElectricMeter'
+      security:
+      - ApiKeyAuth: []
+      summary: บันทึกค่ามิเตอร์ไฟฟ้า
+      tags:
+      - electric-meters
+  /electric-meters/{id}:
+    delete:
+      parameters:
+      - description: Electric Meter Reading ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบค่ามิเตอร์ไฟฟ้า
+      tags:
+      - electric-meters
+    get:
+      parameters:
+      - description: Electric Meter Reading ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ElectricMeterDetail'
+      security:
+      - ApiKeyAuth: []
+      summary: ดูค่ามิเตอร์ไฟฟ้าตาม ID
+      tags:
+      - electric-meters
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Electric Meter Reading ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Electric meter payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateElectricMeterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ElectricMeter'
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขค่ามิเตอร์ไฟฟ้า
+      tags:
+      - electric-meters
+  /electric-meters/latest:
+    get:
+      parameters:
+      - description: Room ID
+        in: query
+        name: room_id
+        required: true
+        type: string
+      - description: Billing month (YYYY-MM-DD)
+        in: query
+        name: billing_month
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ElectricMeterDetail'
+      security:
+      - ApiKeyAuth: []
+      summary: ดูค่ามิเตอร์ไฟฟ้าล่าสุดของห้อง
+      tags:
+      - electric-meters
+  /expenses:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Expense'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายการค่าใช้จ่าย
+      tags:
+      - expenses
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Expense payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateExpenseRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/Expense'
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างค่าใช้จ่าย
+      tags:
+      - expenses
+  /expenses/{id}:
+    delete:
+      parameters:
+      - description: Expense ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบค่าใช้จ่าย
+      tags:
+      - expenses
+    get:
+      parameters:
+      - description: Expense ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Expense'
+      security:
+      - ApiKeyAuth: []
+      summary: ดูข้อมูลค่าใช้จ่ายตาม ID
+      tags:
+      - expenses
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Expense ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Expense payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateExpenseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Expense'
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขค่าใช้จ่าย
+      tags:
+      - expenses
+  /maintenance:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/MaintenanceRequest'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายการแจ้งซ่อม
+      tags:
+      - maintenance
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Maintenance request payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateMaintenanceRequestRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/MaintenanceRequest'
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างรายการแจ้งซ่อม
+      tags:
+      - maintenance
+  /maintenance/{id}:
+    delete:
+      parameters:
+      - description: Maintenance Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบรายการแจ้งซ่อม
+      tags:
+      - maintenance
+    get:
+      parameters:
+      - description: Maintenance Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/MaintenanceRequestDetail'
+      security:
+      - ApiKeyAuth: []
+      summary: ดูข้อมูลแจ้งซ่อมตาม ID
+      tags:
+      - maintenance
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Maintenance Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Maintenance request payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateMaintenanceRequestRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/MaintenanceRequest'
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขรายการแจ้งซ่อม
+      tags:
+      - maintenance
   /menus:
     get:
       produces:
@@ -260,6 +2888,337 @@ paths:
       summary: ดูเมนูตาม ID
       tags:
       - menus
+  /notifications:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/NotificationItem'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายการแจ้งเตือน
+      tags:
+      - notifications
+  /parcels:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Parcel'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายการพัสดุ
+      tags:
+      - parcels
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Parcel payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateParcelRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/Parcel'
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างรายการพัสดุ
+      tags:
+      - parcels
+  /parcels/{id}:
+    delete:
+      parameters:
+      - description: Parcel ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบรายการพัสดุ
+      tags:
+      - parcels
+    get:
+      parameters:
+      - description: Parcel ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Parcel'
+      security:
+      - ApiKeyAuth: []
+      summary: ดูข้อมูลพัสดุตาม ID
+      tags:
+      - parcels
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Parcel ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Parcel payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateParcelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Parcel'
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขรายการพัสดุ
+      tags:
+      - parcels
+  /parking:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/ParkingSlot'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายการที่จอดรถ
+      tags:
+      - parking
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Parking slot payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateParkingSlotRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ParkingSlot'
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างที่จอดรถ
+      tags:
+      - parking
+  /parking/{id}:
+    delete:
+      parameters:
+      - description: Parking Slot ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบที่จอดรถ
+      tags:
+      - parking
+    get:
+      parameters:
+      - description: Parking Slot ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ParkingSlot'
+      security:
+      - ApiKeyAuth: []
+      summary: ดูข้อมูลที่จอดรถตาม ID
+      tags:
+      - parking
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Parking Slot ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Parking slot payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateParkingSlotRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ParkingSlot'
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขที่จอดรถ
+      tags:
+      - parking
+  /payments:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Payment'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายการชำระเงิน
+      tags:
+      - payments
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Payment payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreatePaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/Payment'
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างรายการชำระเงิน
+      tags:
+      - payments
+  /payments/{id}:
+    delete:
+      parameters:
+      - description: Payment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบรายการชำระเงิน
+      tags:
+      - payments
+    get:
+      parameters:
+      - description: Payment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/PaymentDetail'
+      security:
+      - ApiKeyAuth: []
+      summary: ดูข้อมูลการชำระเงินตาม ID
+      tags:
+      - payments
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Payment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Payment payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdatePaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Payment'
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขรายการชำระเงิน
+      tags:
+      - payments
   /permissions:
     get:
       produces:
@@ -276,6 +3235,66 @@ paths:
       summary: รายชื่อสิทธิ์
       tags:
       - permissions
+  /reports/expenses:
+    get:
+      parameters:
+      - description: From date (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: To date (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ExpenseReport'
+      security:
+      - ApiKeyAuth: []
+      summary: รายงานรายจ่าย
+      tags:
+      - reports
+  /reports/income:
+    get:
+      parameters:
+      - description: From date (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: To date (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/IncomeReport'
+      security:
+      - ApiKeyAuth: []
+      summary: รายงานรายรับ
+      tags:
+      - reports
+  /reports/occupancy:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/OccupancyReport'
+      security:
+      - ApiKeyAuth: []
+      summary: รายงานอัตราการเข้าพัก
+      tags:
+      - reports
   /roles:
     get:
       produces:
@@ -426,6 +3445,341 @@ paths:
       summary: รายชื่อบทบาทที่เปิดใช้งาน
       tags:
       - roles
+  /room-types:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/RoomType'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายชื่อประเภทห้องพัก
+      tags:
+      - room-types
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Room type payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateRoomTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/RoomType'
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างประเภทห้องพัก
+      tags:
+      - room-types
+  /room-types/{id}:
+    delete:
+      parameters:
+      - description: Room Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบประเภทห้องพัก
+      tags:
+      - room-types
+    get:
+      parameters:
+      - description: Room Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/RoomType'
+      security:
+      - ApiKeyAuth: []
+      summary: ดูข้อมูลประเภทห้องพักตาม ID
+      tags:
+      - room-types
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Room Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Room type payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateRoomTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/RoomType'
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขประเภทห้องพัก
+      tags:
+      - room-types
+  /rooms:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Room'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายชื่อห้องพัก
+      tags:
+      - rooms
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Room payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateRoomRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/Room'
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างห้องพัก
+      tags:
+      - rooms
+  /rooms/{id}:
+    delete:
+      parameters:
+      - description: Room ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบห้องพัก
+      tags:
+      - rooms
+    get:
+      parameters:
+      - description: Room ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Room'
+      security:
+      - ApiKeyAuth: []
+      summary: ดูข้อมูลห้องพักตาม ID
+      tags:
+      - rooms
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Room ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Room payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateRoomRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Room'
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขห้องพัก
+      tags:
+      - rooms
+  /search:
+    get:
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/SearchResults'
+      security:
+      - ApiKeyAuth: []
+      summary: ค้นหาข้อมูลทั่วทั้งระบบ
+      tags:
+      - search
+  /tenants:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Tenant'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายชื่อผู้เช่า
+      tags:
+      - tenants
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Tenant payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateTenantRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/Tenant'
+      security:
+      - ApiKeyAuth: []
+      summary: สร้างผู้เช่า
+      tags:
+      - tenants
+  /tenants/{id}:
+    delete:
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบผู้เช่า
+      tags:
+      - tenants
+    get:
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Tenant'
+      security:
+      - ApiKeyAuth: []
+      summary: ดูข้อมูลผู้เช่าตาม ID
+      tags:
+      - tenants
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Tenant payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateTenantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Tenant'
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขผู้เช่า
+      tags:
+      - tenants
   /users:
     get:
       produces:
@@ -560,6 +3914,135 @@ paths:
       summary: กำหนดบทบาทให้ผู้ใช้
       tags:
       - users
+  /water-meters:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/WaterMeter'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: รายการค่ามิเตอร์น้ำ
+      tags:
+      - water-meters
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Water meter payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateWaterMeterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/WaterMeter'
+      security:
+      - ApiKeyAuth: []
+      summary: บันทึกค่ามิเตอร์น้ำ
+      tags:
+      - water-meters
+  /water-meters/{id}:
+    delete:
+      parameters:
+      - description: Water Meter Reading ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: ลบค่ามิเตอร์น้ำ
+      tags:
+      - water-meters
+    get:
+      parameters:
+      - description: Water Meter Reading ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/WaterMeterDetail'
+      security:
+      - ApiKeyAuth: []
+      summary: ดูค่ามิเตอร์น้ำตาม ID
+      tags:
+      - water-meters
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Water Meter Reading ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Water meter payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateWaterMeterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/WaterMeter'
+      security:
+      - ApiKeyAuth: []
+      summary: แก้ไขค่ามิเตอร์น้ำ
+      tags:
+      - water-meters
+  /water-meters/latest:
+    get:
+      parameters:
+      - description: Room ID
+        in: query
+        name: room_id
+        required: true
+        type: string
+      - description: Billing month (YYYY-MM-DD)
+        in: query
+        name: billing_month
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/WaterMeterDetail'
+      security:
+      - ApiKeyAuth: []
+      summary: ดูค่ามิเตอร์น้ำล่าสุดของห้อง
+      tags:
+      - water-meters
 schemes:
 - http
 - https

@@ -23,6 +23,13 @@ func NewWaterMeterHandler(uc *usecase.WaterMeterUseCase, activityLog *alusecase.
 	return &WaterMeterHandler{uc: uc, activityLog: activityLog}
 }
 
+// List godoc
+// @Summary      รายการค่ามิเตอร์น้ำ
+// @Tags         water-meters
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {array}  domain.WaterMeter
+// @Router       /water-meters [get]
 func (h *WaterMeterHandler) List(c fiber.Ctx) error {
 	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
 	if err != nil {
@@ -36,6 +43,14 @@ func (h *WaterMeterHandler) List(c fiber.Ctx) error {
 	return response.Paginated(c, list, page, perPage, total)
 }
 
+// GetByID godoc
+// @Summary      ดูค่ามิเตอร์น้ำตาม ID
+// @Tags         water-meters
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Water Meter Reading ID"
+// @Success      200  {object}  domain.WaterMeterDetail
+// @Router       /water-meters/{id} [get]
 func (h *WaterMeterHandler) GetByID(c fiber.Ctx) error {
 	dormitoryID, _ := c.Locals("dormitory_id").(string)
 	d, err := h.uc.GetByID(c.Context(), dormitoryID, c.Params("id"))
@@ -45,6 +60,15 @@ func (h *WaterMeterHandler) GetByID(c fiber.Ctx) error {
 	return response.OK(c, d)
 }
 
+// GetLatestByRoomID godoc
+// @Summary      ดูค่ามิเตอร์น้ำล่าสุดของห้อง
+// @Tags         water-meters
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        room_id query string true "Room ID"
+// @Param        billing_month query string false "Billing month (YYYY-MM-DD)"
+// @Success      200  {object}  domain.WaterMeterDetail
+// @Router       /water-meters/latest [get]
 func (h *WaterMeterHandler) GetLatestByRoomID(c fiber.Ctx) error {
 	roomID := c.Query("room_id")
 	if roomID == "" {
@@ -66,6 +90,15 @@ func (h *WaterMeterHandler) GetLatestByRoomID(c fiber.Ctx) error {
 	return response.OK(c, d)
 }
 
+// Create godoc
+// @Summary      บันทึกค่ามิเตอร์น้ำ
+// @Tags         water-meters
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        body body domain.CreateWaterMeterRequest true "Water meter payload"
+// @Success      201  {object}  domain.WaterMeter
+// @Router       /water-meters [post]
 func (h *WaterMeterHandler) Create(c fiber.Ctx) error {
 	var req domain.CreateWaterMeterRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -84,6 +117,16 @@ func (h *WaterMeterHandler) Create(c fiber.Ctx) error {
 	return response.Created(c, d)
 }
 
+// Update godoc
+// @Summary      แก้ไขค่ามิเตอร์น้ำ
+// @Tags         water-meters
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Water Meter Reading ID"
+// @Param        body body domain.UpdateWaterMeterRequest true "Water meter payload"
+// @Success      200  {object}  domain.WaterMeter
+// @Router       /water-meters/{id} [put]
 func (h *WaterMeterHandler) Update(c fiber.Ctx) error {
 	var req domain.UpdateWaterMeterRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -99,6 +142,14 @@ func (h *WaterMeterHandler) Update(c fiber.Ctx) error {
 	return response.OK(c, d)
 }
 
+// Delete godoc
+// @Summary      ลบค่ามิเตอร์น้ำ
+// @Tags         water-meters
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Water Meter Reading ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /water-meters/{id} [delete]
 func (h *WaterMeterHandler) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
 	dormitoryID, _ := c.Locals("dormitory_id").(string)

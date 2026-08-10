@@ -23,6 +23,13 @@ func NewElectricMeterHandler(uc *usecase.ElectricMeterUseCase, activityLog *alus
 	return &ElectricMeterHandler{uc: uc, activityLog: activityLog}
 }
 
+// List godoc
+// @Summary      รายการค่ามิเตอร์ไฟฟ้า
+// @Tags         electric-meters
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {array}  domain.ElectricMeter
+// @Router       /electric-meters [get]
 func (h *ElectricMeterHandler) List(c fiber.Ctx) error {
 	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
 	if err != nil {
@@ -36,6 +43,14 @@ func (h *ElectricMeterHandler) List(c fiber.Ctx) error {
 	return response.Paginated(c, list, page, perPage, total)
 }
 
+// GetByID godoc
+// @Summary      ดูค่ามิเตอร์ไฟฟ้าตาม ID
+// @Tags         electric-meters
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Electric Meter Reading ID"
+// @Success      200  {object}  domain.ElectricMeterDetail
+// @Router       /electric-meters/{id} [get]
 func (h *ElectricMeterHandler) GetByID(c fiber.Ctx) error {
 	dormitoryID, _ := c.Locals("dormitory_id").(string)
 	d, err := h.uc.GetByID(c.Context(), dormitoryID, c.Params("id"))
@@ -45,6 +60,15 @@ func (h *ElectricMeterHandler) GetByID(c fiber.Ctx) error {
 	return response.OK(c, d)
 }
 
+// GetLatestByRoomID godoc
+// @Summary      ดูค่ามิเตอร์ไฟฟ้าล่าสุดของห้อง
+// @Tags         electric-meters
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        room_id query string true "Room ID"
+// @Param        billing_month query string false "Billing month (YYYY-MM-DD)"
+// @Success      200  {object}  domain.ElectricMeterDetail
+// @Router       /electric-meters/latest [get]
 func (h *ElectricMeterHandler) GetLatestByRoomID(c fiber.Ctx) error {
 	roomID := c.Query("room_id")
 	if roomID == "" {
@@ -66,6 +90,15 @@ func (h *ElectricMeterHandler) GetLatestByRoomID(c fiber.Ctx) error {
 	return response.OK(c, d)
 }
 
+// Create godoc
+// @Summary      บันทึกค่ามิเตอร์ไฟฟ้า
+// @Tags         electric-meters
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        body body domain.CreateElectricMeterRequest true "Electric meter payload"
+// @Success      201  {object}  domain.ElectricMeter
+// @Router       /electric-meters [post]
 func (h *ElectricMeterHandler) Create(c fiber.Ctx) error {
 	var req domain.CreateElectricMeterRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -84,6 +117,16 @@ func (h *ElectricMeterHandler) Create(c fiber.Ctx) error {
 	return response.Created(c, d)
 }
 
+// Update godoc
+// @Summary      แก้ไขค่ามิเตอร์ไฟฟ้า
+// @Tags         electric-meters
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Electric Meter Reading ID"
+// @Param        body body domain.UpdateElectricMeterRequest true "Electric meter payload"
+// @Success      200  {object}  domain.ElectricMeter
+// @Router       /electric-meters/{id} [put]
 func (h *ElectricMeterHandler) Update(c fiber.Ctx) error {
 	var req domain.UpdateElectricMeterRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -99,6 +142,14 @@ func (h *ElectricMeterHandler) Update(c fiber.Ctx) error {
 	return response.OK(c, d)
 }
 
+// Delete godoc
+// @Summary      ลบค่ามิเตอร์ไฟฟ้า
+// @Tags         electric-meters
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Electric Meter Reading ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /electric-meters/{id} [delete]
 func (h *ElectricMeterHandler) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
 	dormitoryID, _ := c.Locals("dormitory_id").(string)

@@ -21,6 +21,13 @@ func NewTenantHandler(tenants *usecase.TenantUseCase, activityLog *alusecase.Act
 	return &TenantHandler{tenants: tenants, activityLog: activityLog}
 }
 
+// List godoc
+// @Summary      รายชื่อผู้เช่า
+// @Tags         tenants
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {array}  domain.Tenant
+// @Router       /tenants [get]
 func (h *TenantHandler) List(c fiber.Ctx) error {
 	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
 	if err != nil {
@@ -34,6 +41,14 @@ func (h *TenantHandler) List(c fiber.Ctx) error {
 	return response.Paginated(c, tenants, page, perPage, total)
 }
 
+// GetByID godoc
+// @Summary      ดูข้อมูลผู้เช่าตาม ID
+// @Tags         tenants
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Tenant ID"
+// @Success      200  {object}  domain.Tenant
+// @Router       /tenants/{id} [get]
 func (h *TenantHandler) GetByID(c fiber.Ctx) error {
 	dormitoryID, _ := c.Locals("dormitory_id").(string)
 	t, err := h.tenants.GetByID(c.Context(), dormitoryID, c.Params("id"))
@@ -43,6 +58,15 @@ func (h *TenantHandler) GetByID(c fiber.Ctx) error {
 	return response.OK(c, t)
 }
 
+// Create godoc
+// @Summary      สร้างผู้เช่า
+// @Tags         tenants
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        body body domain.CreateTenantRequest true "Tenant payload"
+// @Success      201  {object}  domain.Tenant
+// @Router       /tenants [post]
 func (h *TenantHandler) Create(c fiber.Ctx) error {
 	var req domain.CreateTenantRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -61,6 +85,16 @@ func (h *TenantHandler) Create(c fiber.Ctx) error {
 	return response.Created(c, t)
 }
 
+// Update godoc
+// @Summary      แก้ไขผู้เช่า
+// @Tags         tenants
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Tenant ID"
+// @Param        body body domain.UpdateTenantRequest true "Tenant payload"
+// @Success      200  {object}  domain.Tenant
+// @Router       /tenants/{id} [put]
 func (h *TenantHandler) Update(c fiber.Ctx) error {
 	var req domain.UpdateTenantRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -76,6 +110,14 @@ func (h *TenantHandler) Update(c fiber.Ctx) error {
 	return response.OK(c, t)
 }
 
+// Delete godoc
+// @Summary      ลบผู้เช่า
+// @Tags         tenants
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Tenant ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /tenants/{id} [delete]
 func (h *TenantHandler) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
 	actorID, _ := c.Locals("user_id").(string)

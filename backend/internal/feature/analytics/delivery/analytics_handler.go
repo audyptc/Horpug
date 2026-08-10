@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"apigofiberhorpug/internal/delivery/http/response"
+	"apigofiberhorpug/internal/feature/analytics/domain"
 	"apigofiberhorpug/internal/feature/analytics/usecase"
 
 	"github.com/gofiber/fiber/v3"
@@ -17,6 +18,14 @@ func NewAnalyticsHandler(analytics *usecase.AnalyticsUseCase) *AnalyticsHandler 
 	return &AnalyticsHandler{analytics: analytics}
 }
 
+// Summary godoc
+// @Summary      สรุปข้อมูลเชิงวิเคราะห์
+// @Tags         analytics
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        months query int false "Number of months to include (default 12)"
+// @Success      200  {object}  domain.AnalyticsSummary
+// @Router       /analytics/summary [get]
 func (h *AnalyticsHandler) Summary(c fiber.Ctx) error {
 	months := 12
 	if m := c.Query("months"); m != "" {
@@ -25,6 +34,7 @@ func (h *AnalyticsHandler) Summary(c fiber.Ctx) error {
 		}
 	}
 	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	var s *domain.AnalyticsSummary
 	s, err := h.analytics.Summary(c.Context(), dormitoryID, months)
 	if err != nil {
 		return err

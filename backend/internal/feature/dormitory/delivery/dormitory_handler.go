@@ -21,6 +21,13 @@ func NewDormitoryHandler(dormitories *usecase.DormitoryUseCase, activityLog *alu
 	return &DormitoryHandler{dormitories: dormitories, activityLog: activityLog}
 }
 
+// List godoc
+// @Summary      รายชื่อหอพัก (สาขา)
+// @Tags         dormitories
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {array}  domain.Dormitory
+// @Router       /dormitories [get]
 func (h *DormitoryHandler) List(c fiber.Ctx) error {
 	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
 	if err != nil {
@@ -33,7 +40,13 @@ func (h *DormitoryHandler) List(c fiber.Ctx) error {
 	return response.Paginated(c, dormitories, page, perPage, total)
 }
 
-// Mine returns the dormitories the current user can access, used by the frontend branch switcher.
+// Mine godoc
+// @Summary      รายชื่อหอพักที่ผู้ใช้ปัจจุบันเข้าถึงได้
+// @Tags         dormitories
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {array}  domain.Dormitory
+// @Router       /dormitories/mine [get]
 func (h *DormitoryHandler) Mine(c fiber.Ctx) error {
 	userID, _ := c.Locals("user_id").(string)
 	roleName, _ := c.Locals("role_name").(string)
@@ -44,7 +57,14 @@ func (h *DormitoryHandler) Mine(c fiber.Ctx) error {
 	return response.OK(c, dormitories)
 }
 
-// GetForUser returns the raw dormitory-role assignments for a given user.
+// GetForUser godoc
+// @Summary      ดูรายการหอพัก/บทบาทที่ผู้ใช้ถูกกำหนดสิทธิ์
+// @Tags         dormitories
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        userId path string true "User ID"
+// @Success      200  {array}  domain.DormitoryRoleAssignment
+// @Router       /dormitories/users/{userId} [get]
 func (h *DormitoryHandler) GetForUser(c fiber.Ctx) error {
 	assignments, err := h.dormitories.ListAssignmentsForUser(c.Context(), c.Params("userId"))
 	if err != nil {
@@ -53,6 +73,14 @@ func (h *DormitoryHandler) GetForUser(c fiber.Ctx) error {
 	return response.OK(c, assignments)
 }
 
+// GetByID godoc
+// @Summary      ดูข้อมูลหอพักตาม ID
+// @Tags         dormitories
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Dormitory ID"
+// @Success      200  {object}  domain.Dormitory
+// @Router       /dormitories/{id} [get]
 func (h *DormitoryHandler) GetByID(c fiber.Ctx) error {
 	dormitory, err := h.dormitories.GetByID(c.Context(), c.Params("id"))
 	if err != nil {
@@ -61,6 +89,15 @@ func (h *DormitoryHandler) GetByID(c fiber.Ctx) error {
 	return response.OK(c, dormitory)
 }
 
+// Create godoc
+// @Summary      สร้างหอพัก (สาขา)
+// @Tags         dormitories
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        body body domain.CreateDormitoryRequest true "Dormitory payload"
+// @Success      201  {object}  domain.Dormitory
+// @Router       /dormitories [post]
 func (h *DormitoryHandler) Create(c fiber.Ctx) error {
 	var req domain.CreateDormitoryRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -78,6 +115,16 @@ func (h *DormitoryHandler) Create(c fiber.Ctx) error {
 	return response.Created(c, dormitory)
 }
 
+// Update godoc
+// @Summary      แก้ไขหอพัก (สาขา)
+// @Tags         dormitories
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Dormitory ID"
+// @Param        body body domain.UpdateDormitoryRequest true "Dormitory payload"
+// @Success      200  {object}  domain.Dormitory
+// @Router       /dormitories/{id} [put]
 func (h *DormitoryHandler) Update(c fiber.Ctx) error {
 	var req domain.UpdateDormitoryRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -92,6 +139,14 @@ func (h *DormitoryHandler) Update(c fiber.Ctx) error {
 	return response.OK(c, dormitory)
 }
 
+// Delete godoc
+// @Summary      ลบหอพัก (สาขา)
+// @Tags         dormitories
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Dormitory ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /dormitories/{id} [delete]
 func (h *DormitoryHandler) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
 	if err := h.dormitories.Delete(c.Context(), id); err != nil {
@@ -102,7 +157,16 @@ func (h *DormitoryHandler) Delete(c fiber.Ctx) error {
 	return response.Message(c, "dormitory deleted")
 }
 
-// AssignToUser replaces the full set of dormitories a given user can access.
+// AssignToUser godoc
+// @Summary      กำหนดหอพักที่ผู้ใช้เข้าถึงได้ (แทนที่ทั้งหมด)
+// @Tags         dormitories
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        userId path string true "User ID"
+// @Param        body body domain.AssignDormitoriesRequest true "Dormitory assignment payload"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /dormitories/users/{userId} [put]
 func (h *DormitoryHandler) AssignToUser(c fiber.Ctx) error {
 	var req domain.AssignDormitoriesRequest
 	if err := c.Bind().JSON(&req); err != nil {

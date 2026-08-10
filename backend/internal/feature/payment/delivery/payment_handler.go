@@ -21,6 +21,13 @@ func NewPaymentHandler(payment *usecase.PaymentUseCase, activityLog *alusecase.A
 	return &PaymentHandler{payment: payment, activityLog: activityLog}
 }
 
+// List godoc
+// @Summary      รายการชำระเงิน
+// @Tags         payments
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Success      200  {array}  domain.Payment
+// @Router       /payments [get]
 func (h *PaymentHandler) List(c fiber.Ctx) error {
 	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
 	if err != nil {
@@ -34,6 +41,14 @@ func (h *PaymentHandler) List(c fiber.Ctx) error {
 	return response.Paginated(c, list, page, perPage, total)
 }
 
+// GetByID godoc
+// @Summary      ดูข้อมูลการชำระเงินตาม ID
+// @Tags         payments
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Payment ID"
+// @Success      200  {object}  domain.PaymentDetail
+// @Router       /payments/{id} [get]
 func (h *PaymentHandler) GetByID(c fiber.Ctx) error {
 	dormitoryID, _ := c.Locals("dormitory_id").(string)
 	p, err := h.payment.GetByID(c.Context(), dormitoryID, c.Params("id"))
@@ -43,6 +58,15 @@ func (h *PaymentHandler) GetByID(c fiber.Ctx) error {
 	return response.OK(c, p)
 }
 
+// Create godoc
+// @Summary      สร้างรายการชำระเงิน
+// @Tags         payments
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        body body domain.CreatePaymentRequest true "Payment payload"
+// @Success      201  {object}  domain.Payment
+// @Router       /payments [post]
 func (h *PaymentHandler) Create(c fiber.Ctx) error {
 	var req domain.CreatePaymentRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -61,6 +85,16 @@ func (h *PaymentHandler) Create(c fiber.Ctx) error {
 	return response.Created(c, p)
 }
 
+// Update godoc
+// @Summary      แก้ไขรายการชำระเงิน
+// @Tags         payments
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Payment ID"
+// @Param        body body domain.UpdatePaymentRequest true "Payment payload"
+// @Success      200  {object}  domain.Payment
+// @Router       /payments/{id} [put]
 func (h *PaymentHandler) Update(c fiber.Ctx) error {
 	var req domain.UpdatePaymentRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -79,6 +113,14 @@ func (h *PaymentHandler) Update(c fiber.Ctx) error {
 	return response.OK(c, p)
 }
 
+// Delete godoc
+// @Summary      ลบรายการชำระเงิน
+// @Tags         payments
+// @Security     ApiKeyAuth
+// @Produce      json
+// @Param        id path string true "Payment ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /payments/{id} [delete]
 func (h *PaymentHandler) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
 	dormitoryID, _ := c.Locals("dormitory_id").(string)
