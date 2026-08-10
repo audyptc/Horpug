@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Bell, Search, Menu, Globe, Sun, Moon, UserCircle } from 'lucide-react'
+import { Bell, Search, Menu, Globe, Sun, Moon, UserCircle, Building2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useTheme } from '@/lib/theme'
 import { useAuth } from '@/features/auth/AuthContext'
+import { useDormitory } from '@/features/dormitory/DormitoryContext'
 import { useNotifications } from '@/hooks/useNotifications'
 import { SearchDialog } from '@/components/shared/search/SearchDialog'
 
@@ -26,6 +27,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   const { t, i18n } = useTranslation()
   const { theme, toggleTheme } = useTheme()
   const { logout } = useAuth()
+  const { dormitories, selectedDormitoryId, selectDormitory } = useDormitory()
   const navigate = useNavigate()
   const notifications = useNotifications()
   const [searchOpen, setSearchOpen] = useState(false)
@@ -81,6 +83,33 @@ export function Header({ onMenuClick }: HeaderProps) {
         <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className="h-11 w-11 [&_svg]:size-6">
           {theme === 'dark' ? <Sun /> : <Moon />}
         </Button>
+
+        {/* Branch switcher */}
+        {dormitories.length > 1 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-11 w-11 [&_svg]:size-6">
+                <Building2 />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>
+                <Building2 className="w-3.5 h-3.5 inline mr-1.5" />
+                {t('header.switchBranch')}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {dormitories.map((d) => (
+                <DropdownMenuItem
+                  key={d.id}
+                  onClick={() => selectDormitory(d.id)}
+                  className={d.id === selectedDormitoryId ? 'bg-accent' : ''}
+                >
+                  {d.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {/* Language switcher */}
         <DropdownMenu>

@@ -62,6 +62,7 @@ export default {
     searchRooms: 'Rooms',
     searchBills: 'Bills',
     searchContracts: 'Contracts',
+    switchBranch: 'Switch Branch',
     notifications: 'Notifications',
     myAccount: 'My Account',
     profile: 'Profile',

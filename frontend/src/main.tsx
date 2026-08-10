@@ -5,12 +5,15 @@ import './i18n'
 import App from './App'
 import { ThemeProvider } from '@/lib/theme'
 import { AuthProvider } from '@/features/auth/AuthContext'
+import { DormitoryProvider } from '@/features/dormitory/DormitoryContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
       <AuthProvider>
-        <App />
+        <DormitoryProvider>
+          <App />
+        </DormitoryProvider>
       </AuthProvider>
     </ThemeProvider>
   </StrictMode>,

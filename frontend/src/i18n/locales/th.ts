@@ -62,6 +62,7 @@ export default {
     searchRooms: 'ห้องพัก',
     searchBills: 'ใบแจ้งหนี้',
     searchContracts: 'สัญญาเช่า',
+    switchBranch: 'สลับสาขา',
     notifications: 'การแจ้งเตือน',
     myAccount: 'บัญชีของฉัน',
     profile: 'โปรไฟล์',

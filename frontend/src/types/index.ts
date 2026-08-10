@@ -18,4 +18,5 @@ export * from './parcel'
 export * from './document'
 export * from './report'
 export * from './analytics'
+export * from './dormitory'
 
