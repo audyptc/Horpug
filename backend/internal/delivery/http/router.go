@@ -93,13 +93,14 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 
 	// Dormitories (branches) — not itself dormitory-scoped
 	dormitoriesGroup := protected.Group("/dormitories")
-	dormitoriesGroup.Get("/", middleware.RequirePermission("dormitories.read"), dormitoryH.List)
+	dormitoriesGroup.Get("/", middleware.RequirePermission("settings/dormitories.read"), dormitoryH.List)
 	dormitoriesGroup.Get("/mine", dormitoryH.Mine)
-	dormitoriesGroup.Post("/", middleware.RequirePermission("dormitories.create"), dormitoryH.Create)
-	dormitoriesGroup.Get("/:id", middleware.RequirePermission("dormitories.read"), dormitoryH.GetByID)
-	dormitoriesGroup.Put("/:id", middleware.RequirePermission("dormitories.update"), dormitoryH.Update)
-	dormitoriesGroup.Delete("/:id", middleware.RequirePermission("dormitories.delete"), dormitoryH.Delete)
-	dormitoriesGroup.Put("/users/:userId", middleware.RequirePermission("dormitories.update"), dormitoryH.AssignToUser)
+	dormitoriesGroup.Get("/users/:userId", middleware.RequirePermission("settings/dormitories.read"), dormitoryH.GetForUser)
+	dormitoriesGroup.Post("/", middleware.RequirePermission("settings/dormitories.create"), dormitoryH.Create)
+	dormitoriesGroup.Get("/:id", middleware.RequirePermission("settings/dormitories.read"), dormitoryH.GetByID)
+	dormitoriesGroup.Put("/:id", middleware.RequirePermission("settings/dormitories.update"), dormitoryH.Update)
+	dormitoriesGroup.Delete("/:id", middleware.RequirePermission("settings/dormitories.delete"), dormitoryH.Delete)
+	dormitoriesGroup.Put("/users/:userId", middleware.RequirePermission("settings/dormitories.update"), dormitoryH.AssignToUser)
 
 	// Users
 	usersGroup := protected.Group("/users")

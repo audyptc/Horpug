@@ -44,6 +44,16 @@ func (h *DormitoryHandler) Mine(c fiber.Ctx) error {
 	return response.OK(c, dormitories)
 }
 
+// GetForUser returns the raw dormitory assignments for a given user, used by the
+// user-management "manage branches" dialog to show current checkbox state.
+func (h *DormitoryHandler) GetForUser(c fiber.Ctx) error {
+	dormitories, err := h.dormitories.ListForUser(c.Context(), c.Params("userId"))
+	if err != nil {
+		return err
+	}
+	return response.OK(c, dormitories)
+}
+
 func (h *DormitoryHandler) GetByID(c fiber.Ctx) error {
 	dormitory, err := h.dormitories.GetByID(c.Context(), c.Params("id"))
 	if err != nil {

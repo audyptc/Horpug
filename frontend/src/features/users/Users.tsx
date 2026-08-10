@@ -17,6 +17,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Download,
+  Building2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,6 +45,7 @@ import { formatDate } from '@/lib/dateUtils'
 import { usePermission } from '@/hooks/usePermission'
 import { UserFormDialog } from './components/UserFormDialog'
 import { DeleteUserDialog } from './components/DeleteUserDialog'
+import { AssignDormitoriesDialog } from './components/AssignDormitoriesDialog'
 
 type StatusFilter = 'all' | 'active' | 'inactive'
 
@@ -85,6 +87,8 @@ export function Users() {
   const [editingUser, setEditingUser] = useState<ApiUser | null>(null)
   const [deletingUser, setDeletingUser] = useState<ApiUser | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [assignDormsOpen, setAssignDormsOpen] = useState(false)
+  const [assignDormsUser, setAssignDormsUser] = useState<ApiUser | null>(null)
 
   const fetchUsers = useCallback(async (p: number, pp: number) => {
     setLoading(true)
@@ -156,6 +160,11 @@ export function Users() {
   function openEdit(user: ApiUser) {
     setEditingUser(user)
     setDialogOpen(true)
+  }
+
+  function openAssignDorms(user: ApiUser) {
+    setAssignDormsUser(user)
+    setAssignDormsOpen(true)
   }
 
   async function handleUserDeleted() {
@@ -321,6 +330,11 @@ export function Users() {
                                     <Pencil className="w-4 h-4" /> {t('common.edit')}
                                   </DropdownMenuItem>
                                 )}
+                                {canUpdate && (
+                                  <DropdownMenuItem onClick={() => openAssignDorms(user)} className="gap-2">
+                                    <Building2 className="w-4 h-4" /> {t('users.manageBranches')}
+                                  </DropdownMenuItem>
+                                )}
                                 {canUpdate && canDelete && <DropdownMenuSeparator />}
                                 {canDelete && (
                                   <DropdownMenuItem
@@ -387,6 +401,11 @@ export function Users() {
                         <DropdownMenuContent align="end">
                           {canUpdate && (
                             <DropdownMenuItem onClick={() => openEdit(user)}>{t('common.edit')}</DropdownMenuItem>
+                          )}
+                          {canUpdate && (
+                            <DropdownMenuItem onClick={() => openAssignDorms(user)}>
+                              {t('users.manageBranches')}
+                            </DropdownMenuItem>
                           )}
                           {canUpdate && canDelete && <DropdownMenuSeparator />}
                           {canDelete && (
@@ -472,6 +491,12 @@ export function Users() {
         onOpenChange={setDeleteDialogOpen}
         user={deletingUser}
         onDeleted={handleUserDeleted}
+      />
+
+      <AssignDormitoriesDialog
+        user={assignDormsUser}
+        open={assignDormsOpen}
+        onOpenChange={setAssignDormsOpen}
       />
     </div>
   )

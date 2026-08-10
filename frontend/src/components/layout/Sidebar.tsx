@@ -125,6 +125,7 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
         { label: t('nav.users'), icon: Users, to: '/settings/users' },
         { label: t('nav.roles'), icon: ShieldCheck, to: '/settings/roles' },
         { label: t('nav.roomTypes'), icon: LayoutList, to: '/settings/room-types' },
+        { label: t('nav.dormitories'), icon: Building2, to: '/settings/dormitories' },
         { label: 'ทั่วไป', icon: SlidersHorizontal, to: '/settings/general' },
       ],
     },

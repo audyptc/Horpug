@@ -11,6 +11,7 @@ const Users = lazy(() => import('@/features/users/Users').then((m) => ({ default
 const Analytics = lazy(() => import('@/features/analytics/Analytics').then((m) => ({ default: m.Analytics })))
 const Settings = lazy(() => import('@/features/settings/Settings').then((m) => ({ default: m.Settings })))
 const RoomTypes = lazy(() => import('@/features/roomTypes/RoomTypes').then((m) => ({ default: m.RoomTypes })))
+const Dormitories = lazy(() => import('@/features/dormitory/Dormitories').then((m) => ({ default: m.Dormitories })))
 const Roles = lazy(() => import('@/features/roles/Roles').then((m) => ({ default: m.Roles })))
 const Rooms = lazy(() => import('@/features/rooms/Rooms').then((m) => ({ default: m.Rooms })))
 const Tenants = lazy(() => import('@/features/tenants/Tenants').then((m) => ({ default: m.Tenants })))
@@ -58,6 +59,7 @@ const ROUTE_CANDIDATES = [
   '/settings/roles',
   '/settings/room-types',
   '/settings/general',
+  '/settings/dormitories',
 ] as const
 
 function normalizePath(path: string): string {
@@ -165,6 +167,7 @@ export const router = createBrowserRouter([
               { path: 'roles', element: <PermissionRoute requiredPath="/settings/roles" element={withSuspense(<Roles />)} /> },
               { path: 'general', element: <PermissionRoute requiredPath="/settings/general" element={withSuspense(<Settings />)} /> },
               { path: 'room-types', element: <PermissionRoute requiredPath="/settings/room-types" element={withSuspense(<RoomTypes />)} /> },
+              { path: 'dormitories', element: <PermissionRoute requiredPath="/settings/dormitories" element={withSuspense(<Dormitories />)} /> },
             ],
           },
         ],

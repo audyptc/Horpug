@@ -110,6 +110,16 @@ func (uc *DormitoryUseCase) ListAccessible(ctx context.Context, userID, roleName
 	return dormitories, nil
 }
 
+// ListForUser returns the raw set of dormitories a user is explicitly assigned to,
+// with no admin bypass — used to show real state in an assignment-editing UI.
+func (uc *DormitoryUseCase) ListForUser(ctx context.Context, userID string) ([]*domain.Dormitory, error) {
+	dormitories, err := uc.dormitoryRepo.ListForUser(ctx, userID)
+	if err != nil {
+		return nil, apierror.Internal(err)
+	}
+	return dormitories, nil
+}
+
 // CheckAccess reports whether the given user may operate against dormitoryID.
 func (uc *DormitoryUseCase) CheckAccess(ctx context.Context, userID, roleName, dormitoryID string) (bool, error) {
 	if strings.EqualFold(roleName, "admin") {
