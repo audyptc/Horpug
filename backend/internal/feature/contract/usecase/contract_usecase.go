@@ -27,20 +27,20 @@ func NewContractUseCase(
 	return &ContractUseCase{contractRepo: contractRepo, roomRepo: roomRepo, tenantRepo: tenantRepo}
 }
 
-func (uc *ContractUseCase) List(ctx context.Context, limit, offset int) ([]*domain.ContractDetail, int, error) {
-	total, err := uc.contractRepo.Count(ctx)
+func (uc *ContractUseCase) List(ctx context.Context, dormitoryID string, limit, offset int) ([]*domain.ContractDetail, int, error) {
+	total, err := uc.contractRepo.Count(ctx, dormitoryID)
 	if err != nil {
 		return nil, 0, apierror.Internal(err)
 	}
-	list, err := uc.contractRepo.List(ctx, limit, offset)
+	list, err := uc.contractRepo.List(ctx, dormitoryID, limit, offset)
 	if err != nil {
 		return nil, 0, apierror.Internal(err)
 	}
 	return list, total, nil
 }
 
-func (uc *ContractUseCase) GetByID(ctx context.Context, id string) (*domain.ContractDetail, error) {
-	d, err := uc.contractRepo.FindDetailByID(ctx, id)
+func (uc *ContractUseCase) GetByID(ctx context.Context, dormitoryID, id string) (*domain.ContractDetail, error) {
+	d, err := uc.contractRepo.FindDetailByID(ctx, dormitoryID, id)
 	if err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
@@ -50,15 +50,15 @@ func (uc *ContractUseCase) GetByID(ctx context.Context, id string) (*domain.Cont
 	return d, nil
 }
 
-func (uc *ContractUseCase) Create(ctx context.Context, req *domain.CreateContractRequest, actorID string) (*domain.ContractDetail, error) {
-	if _, err := uc.tenantRepo.FindByID(ctx, req.TenantID); err != nil {
+func (uc *ContractUseCase) Create(ctx context.Context, dormitoryID string, req *domain.CreateContractRequest, actorID string) (*domain.ContractDetail, error) {
+	if _, err := uc.tenantRepo.FindByID(ctx, dormitoryID, req.TenantID); err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound("tenant not found")
 		}
 		return nil, apierror.Internal(err)
 	}
 
-	room, err := uc.roomRepo.FindByID(ctx, req.RoomID)
+	room, err := uc.roomRepo.FindByID(ctx, dormitoryID, req.RoomID)
 	if err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound("room not found")
@@ -96,11 +96,11 @@ func (uc *ContractUseCase) Create(ctx context.Context, req *domain.CreateContrac
 		return nil, apierror.Internal(err)
 	}
 
-	return uc.contractRepo.FindDetailByID(ctx, c.ID)
+	return uc.contractRepo.FindDetailByID(ctx, dormitoryID, c.ID)
 }
 
-func (uc *ContractUseCase) Update(ctx context.Context, id string, req *domain.UpdateContractRequest, actorID string) (*domain.ContractDetail, error) {
-	c, err := uc.contractRepo.FindByID(ctx, id)
+func (uc *ContractUseCase) Update(ctx context.Context, dormitoryID, id string, req *domain.UpdateContractRequest, actorID string) (*domain.ContractDetail, error) {
+	c, err := uc.contractRepo.FindByID(ctx, dormitoryID, id)
 	if err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
@@ -126,25 +126,25 @@ func (uc *ContractUseCase) Update(ctx context.Context, id string, req *domain.Up
 	c.Note = req.Note
 	c.UpdatedBy = actorID
 
-	if err := uc.contractRepo.Update(ctx, c); err != nil {
+	if err := uc.contractRepo.Update(ctx, dormitoryID, c); err != nil {
 		return nil, apierror.Internal(err)
 	}
 
 	// When contract moves from active -> terminated/expired, free the room
 	if prevStatus == domain.ContractStatusActive &&
 		(c.Status == domain.ContractStatusTerminated || c.Status == domain.ContractStatusExpired) {
-		room, err := uc.roomRepo.FindByID(ctx, c.RoomID)
+		room, err := uc.roomRepo.FindByID(ctx, dormitoryID, c.RoomID)
 		if err == nil {
 			room.Status = "available"
 			_ = uc.roomRepo.Update(ctx, room)
 		}
 	}
 
-	return uc.contractRepo.FindDetailByID(ctx, id)
+	return uc.contractRepo.FindDetailByID(ctx, dormitoryID, id)
 }
 
-func (uc *ContractUseCase) Delete(ctx context.Context, id string) error {
-	c, err := uc.contractRepo.FindByID(ctx, id)
+func (uc *ContractUseCase) Delete(ctx context.Context, dormitoryID, id string) error {
+	c, err := uc.contractRepo.FindByID(ctx, dormitoryID, id)
 	if err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
@@ -152,13 +152,13 @@ func (uc *ContractUseCase) Delete(ctx context.Context, id string) error {
 		return apierror.Internal(err)
 	}
 
-	if err := uc.contractRepo.Delete(ctx, id); err != nil {
+	if err := uc.contractRepo.Delete(ctx, dormitoryID, id); err != nil {
 		return apierror.Internal(err)
 	}
 
 	// Free the room if contract was active
 	if c.Status == domain.ContractStatusActive {
-		room, err := uc.roomRepo.FindByID(ctx, c.RoomID)
+		room, err := uc.roomRepo.FindByID(ctx, dormitoryID, c.RoomID)
 		if err == nil {
 			room.Status = "available"
 			_ = uc.roomRepo.Update(ctx, room)

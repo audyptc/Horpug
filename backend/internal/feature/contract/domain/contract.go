@@ -59,13 +59,20 @@ type UpdateContractRequest struct {
 }
 
 type ContractRepository interface {
-	FindByID(ctx context.Context, id string) (*Contract, error)
-	FindDetailByID(ctx context.Context, id string) (*ContractDetail, error)
-	List(ctx context.Context, limit, offset int) ([]*ContractDetail, error)
-	Count(ctx context.Context) (int, error)
+	// FindByID and Update/Delete are scoped by dormitoryID via a join to rooms
+	// (contracts don't carry their own dormitory_id column).
+	FindByID(ctx context.Context, dormitoryID, id string) (*Contract, error)
+	FindDetailByID(ctx context.Context, dormitoryID, id string) (*ContractDetail, error)
+	List(ctx context.Context, dormitoryID string, limit, offset int) ([]*ContractDetail, error)
+	Count(ctx context.Context, dormitoryID string) (int, error)
 	Create(ctx context.Context, c *Contract) error
-	Update(ctx context.Context, c *Contract) error
-	Delete(ctx context.Context, id string) error
+	Update(ctx context.Context, dormitoryID string, c *Contract) error
+	Delete(ctx context.Context, dormitoryID, id string) error
 	HasActiveContractForRoom(ctx context.Context, roomID string) (bool, error)
 	HasActiveContractForTenant(ctx context.Context, tenantID string) (bool, error)
+
+	// FindByIDAny looks up a contract without dormitory scoping, for features
+	// that are not yet dormitory-scoped themselves (bill). Prefer FindByID
+	// wherever a dormitory context is available.
+	FindByIDAny(ctx context.Context, id string) (*Contract, error)
 }

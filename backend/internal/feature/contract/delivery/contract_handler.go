@@ -26,7 +26,8 @@ func (h *ContractHandler) List(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	list, total, err := h.contracts.List(c.Context(), perPage, offset)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	list, total, err := h.contracts.List(c.Context(), dormitoryID, perPage, offset)
 	if err != nil {
 		return err
 	}
@@ -34,7 +35,8 @@ func (h *ContractHandler) List(c fiber.Ctx) error {
 }
 
 func (h *ContractHandler) GetByID(c fiber.Ctx) error {
-	d, err := h.contracts.GetByID(c.Context(), c.Params("id"))
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	d, err := h.contracts.GetByID(c.Context(), dormitoryID, c.Params("id"))
 	if err != nil {
 		return err
 	}
@@ -50,7 +52,8 @@ func (h *ContractHandler) Create(c fiber.Ctx) error {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	d, err := h.contracts.Create(c.Context(), &req, actorID)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	d, err := h.contracts.Create(c.Context(), dormitoryID, &req, actorID)
 	if err != nil {
 		return err
 	}
@@ -64,7 +67,8 @@ func (h *ContractHandler) Update(c fiber.Ctx) error {
 		return apierror.BadRequest("invalid request body")
 	}
 	actorID, _ := c.Locals("user_id").(string)
-	d, err := h.contracts.Update(c.Context(), c.Params("id"), &req, actorID)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	d, err := h.contracts.Update(c.Context(), dormitoryID, c.Params("id"), &req, actorID)
 	if err != nil {
 		return err
 	}
@@ -74,7 +78,8 @@ func (h *ContractHandler) Update(c fiber.Ctx) error {
 
 func (h *ContractHandler) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
-	if err := h.contracts.Delete(c.Context(), id); err != nil {
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	if err := h.contracts.Delete(c.Context(), dormitoryID, id); err != nil {
 		return err
 	}
 	actorID, _ := c.Locals("user_id").(string)

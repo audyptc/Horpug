@@ -7,6 +7,7 @@ import (
 
 type Room struct {
 	ID            string    `json:"id"`
+	DormitoryID   string    `json:"dormitory_id"`
 	RoomNumber    string    `json:"room_number"`
 	Floor         int       `json:"floor"`
 	Type          string    `json:"type"`
@@ -39,10 +40,15 @@ type UpdateRoomRequest struct {
 }
 
 type RoomRepository interface {
-	FindByID(ctx context.Context, id string) (*Room, error)
-	List(ctx context.Context, limit, offset int) ([]*Room, error)
-	Count(ctx context.Context) (int, error)
+	FindByID(ctx context.Context, dormitoryID, id string) (*Room, error)
+	List(ctx context.Context, dormitoryID string, limit, offset int) ([]*Room, error)
+	Count(ctx context.Context, dormitoryID string) (int, error)
 	Create(ctx context.Context, room *Room) error
 	Update(ctx context.Context, room *Room) error
-	Delete(ctx context.Context, id string) error
+	Delete(ctx context.Context, dormitoryID, id string) error
+
+	// FindByIDAny looks up a room without dormitory scoping. It exists for
+	// features that are not yet dormitory-scoped themselves (electric/water
+	// meters); prefer FindByID wherever a dormitory context is available.
+	FindByIDAny(ctx context.Context, id string) (*Room, error)
 }

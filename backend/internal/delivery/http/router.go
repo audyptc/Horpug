@@ -15,6 +15,7 @@ import (
 	contractdelivery "apigofiberhorpug/internal/feature/contract/delivery"
 	dashboarddelivery "apigofiberhorpug/internal/feature/dashboard/delivery"
 	documentdelivery "apigofiberhorpug/internal/feature/document/delivery"
+	dormitorydelivery "apigofiberhorpug/internal/feature/dormitory/delivery"
 	electricmeterdelivery "apigofiberhorpug/internal/feature/electricmeter/delivery"
 	expensedelivery "apigofiberhorpug/internal/feature/expense/delivery"
 	maintenancerequestdelivery "apigofiberhorpug/internal/feature/maintenancerequest/delivery"
@@ -47,6 +48,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	roomTypeH := roomtypedelivery.NewRoomTypeHandler(c.RoomTypeUC)
 	tenantH := tenantdelivery.NewTenantHandler(c.TenantUC, c.ActivityLogUC)
 	contractH := contractdelivery.NewContractHandler(c.ContractUC, c.ActivityLogUC)
+	dormitoryH := dormitorydelivery.NewDormitoryHandler(c.DormitoryUC, c.ActivityLogUC)
 	electricMeterH := electricmeterdelivery.NewElectricMeterHandler(c.ElectricMeterUC, c.ActivityLogUC)
 	waterMeterH := watermeterdelivery.NewWaterMeterHandler(c.WaterMeterUC, c.ActivityLogUC)
 	billH := billdelivery.NewBillHandler(c.BillUC, c.ActivityLogUC)
@@ -86,6 +88,19 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	// Protected: all routes below require a valid JWT
 	protected := api.Group("", middleware.RequireAuth(c.AuthUC))
 
+	// Scoped: routes below additionally require a resolved dormitory (branch) context
+	scoped := protected.Group("", middleware.RequireDormitory(c.DormitoryUC))
+
+	// Dormitories (branches) — not itself dormitory-scoped
+	dormitoriesGroup := protected.Group("/dormitories")
+	dormitoriesGroup.Get("/", middleware.RequirePermission("dormitories.read"), dormitoryH.List)
+	dormitoriesGroup.Get("/mine", dormitoryH.Mine)
+	dormitoriesGroup.Post("/", middleware.RequirePermission("dormitories.create"), dormitoryH.Create)
+	dormitoriesGroup.Get("/:id", middleware.RequirePermission("dormitories.read"), dormitoryH.GetByID)
+	dormitoriesGroup.Put("/:id", middleware.RequirePermission("dormitories.update"), dormitoryH.Update)
+	dormitoriesGroup.Delete("/:id", middleware.RequirePermission("dormitories.delete"), dormitoryH.Delete)
+	dormitoriesGroup.Put("/users/:userId", middleware.RequirePermission("dormitories.update"), dormitoryH.AssignToUser)
+
 	// Users
 	usersGroup := protected.Group("/users")
 	usersGroup.Get("/", middleware.RequirePermission("users.read"), userH.List)
@@ -115,7 +130,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	menusGroup.Get("/:id", menuH.GetByID)
 
 	// Rooms
-	roomsGroup := protected.Group("/rooms")
+	roomsGroup := scoped.Group("/rooms")
 	roomsGroup.Get("/", middleware.RequirePermission("rooms.read"), roomH.List)
 	roomsGroup.Post("/", middleware.RequirePermission("rooms.create"), roomH.Create)
 	roomsGroup.Get("/:id", middleware.RequirePermission("rooms.read"), roomH.GetByID)
@@ -131,7 +146,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	roomTypesGroup.Delete("/:id", middleware.RequirePermission("settings/room-types.delete"), roomTypeH.Delete)
 
 	// Tenants
-	tenantsGroup := protected.Group("/tenants")
+	tenantsGroup := scoped.Group("/tenants")
 	tenantsGroup.Get("/", middleware.RequirePermission("tenants.read"), tenantH.List)
 	tenantsGroup.Post("/", middleware.RequirePermission("tenants.create"), tenantH.Create)
 	tenantsGroup.Get("/:id", middleware.RequirePermission("tenants.read"), tenantH.GetByID)
@@ -139,7 +154,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	tenantsGroup.Delete("/:id", middleware.RequirePermission("tenants.delete"), tenantH.Delete)
 
 	// Contracts
-	contractsGroup := protected.Group("/contracts")
+	contractsGroup := scoped.Group("/contracts")
 	contractsGroup.Get("/", middleware.RequirePermission("contracts.read"), contractH.List)
 	contractsGroup.Post("/", middleware.RequirePermission("contracts.create"), contractH.Create)
 	contractsGroup.Get("/:id", middleware.RequirePermission("contracts.read"), contractH.GetByID)

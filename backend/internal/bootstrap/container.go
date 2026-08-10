@@ -10,6 +10,7 @@ import (
 	contractusecase "apigofiberhorpug/internal/feature/contract/usecase"
 	dashboardusecase "apigofiberhorpug/internal/feature/dashboard/usecase"
 	documentusecase "apigofiberhorpug/internal/feature/document/usecase"
+	dormitoryusecase "apigofiberhorpug/internal/feature/dormitory/usecase"
 	electricmeterusecase "apigofiberhorpug/internal/feature/electricmeter/usecase"
 	expenseusecase "apigofiberhorpug/internal/feature/expense/usecase"
 	maintenancerequestusecase "apigofiberhorpug/internal/feature/maintenancerequest/usecase"
@@ -40,6 +41,7 @@ type Container struct {
 	RoomTypeUC      *roomtypeusecase.RoomTypeUseCase
 	TenantUC        *tenantusecase.TenantUseCase
 	ContractUC      *contractusecase.ContractUseCase
+	DormitoryUC     *dormitoryusecase.DormitoryUseCase
 	ElectricMeterUC *electricmeterusecase.ElectricMeterUseCase
 	WaterMeterUC    *watermeterusecase.WaterMeterUseCase
 	BillUC          *billusecase.BillUseCase
@@ -70,6 +72,7 @@ func NewContainer(db *database.DB, secretKey string, accessTokenDuration, refres
 		RoomTypeUC:      roomtypeusecase.NewRoomTypeUseCase(repos.roomType),
 		TenantUC:        tenantusecase.NewTenantUseCase(repos.tenant, repos.contract),
 		ContractUC:      contractusecase.NewContractUseCase(repos.contract, repos.room, repos.tenant),
+		DormitoryUC:     dormitoryusecase.NewDormitoryUseCase(repos.dormitory),
 		ElectricMeterUC: electricmeterusecase.NewElectricMeterUseCase(repos.electricMeter, repos.room),
 		WaterMeterUC:    watermeterusecase.NewWaterMeterUseCase(repos.waterMeter, repos.room),
 		BillUC:          billusecase.NewBillUseCase(repos.bill, repos.contract),

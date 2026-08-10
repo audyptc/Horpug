@@ -46,7 +46,7 @@ func (uc *BillUseCase) GetByID(ctx context.Context, id string) (*domain.BillDeta
 }
 
 func (uc *BillUseCase) Create(ctx context.Context, req *domain.CreateBillRequest, actorID string) (*domain.BillDetail, error) {
-	if _, err := uc.contractRepo.FindByID(ctx, req.ContractID); err != nil {
+	if _, err := uc.contractRepo.FindByIDAny(ctx, req.ContractID); err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound("contract not found")
 		}

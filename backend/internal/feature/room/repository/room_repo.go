@@ -21,17 +21,17 @@ func NewRoomRepo(db *database.DB) *RoomRepo {
 	return &RoomRepo{db: db}
 }
 
-func (r *RoomRepo) FindByID(ctx context.Context, id string) (*domain.Room, error) {
+func (r *RoomRepo) FindByID(ctx context.Context, dormitoryID, id string) (*domain.Room, error) {
 	room := &domain.Room{}
 	err := r.db.Pool.QueryRow(ctx, `
-		SELECT r.id, r.room_number, r.floor, r.type, r.status, r.rent_price, r.description,
+		SELECT r.id, r.dormitory_id, r.room_number, r.floor, r.type, r.status, r.rent_price, r.description,
 		       COALESCE(r.created_by::text, ''), COALESCE(r.updated_by::text, ''),
 		       COALESCE(u.full_name, ''),
 		       r.created_at, r.updated_at
 		FROM rooms r
 		LEFT JOIN users u ON u.id = r.updated_by
-		WHERE r.id = $1 AND r.deleted_at IS NULL`, id).
-		Scan(&room.ID, &room.RoomNumber, &room.Floor, &room.Type, &room.Status,
+		WHERE r.id = $1 AND r.dormitory_id = $2 AND r.deleted_at IS NULL`, id, dormitoryID).
+		Scan(&room.ID, &room.DormitoryID, &room.RoomNumber, &room.Floor, &room.Type, &room.Status,
 			&room.RentPrice, &room.Description, &room.CreatedBy, &room.UpdatedBy,
 			&room.UpdatedByName, &room.CreatedAt, &room.UpdatedAt)
 	if err == pgx.ErrNoRows {
@@ -40,17 +40,36 @@ func (r *RoomRepo) FindByID(ctx context.Context, id string) (*domain.Room, error
 	return room, err
 }
 
-func (r *RoomRepo) List(ctx context.Context, limit, offset int) ([]*domain.Room, error) {
-	rows, err := r.db.Pool.Query(ctx, `
-		SELECT r.id, r.room_number, r.floor, r.type, r.status, r.rent_price, r.description,
+func (r *RoomRepo) FindByIDAny(ctx context.Context, id string) (*domain.Room, error) {
+	room := &domain.Room{}
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT r.id, r.dormitory_id, r.room_number, r.floor, r.type, r.status, r.rent_price, r.description,
 		       COALESCE(r.created_by::text, ''), COALESCE(r.updated_by::text, ''),
 		       COALESCE(u.full_name, ''),
 		       r.created_at, r.updated_at
 		FROM rooms r
 		LEFT JOIN users u ON u.id = r.updated_by
-		WHERE r.deleted_at IS NULL
+		WHERE r.id = $1 AND r.deleted_at IS NULL`, id).
+		Scan(&room.ID, &room.DormitoryID, &room.RoomNumber, &room.Floor, &room.Type, &room.Status,
+			&room.RentPrice, &room.Description, &room.CreatedBy, &room.UpdatedBy,
+			&room.UpdatedByName, &room.CreatedAt, &room.UpdatedAt)
+	if err == pgx.ErrNoRows {
+		return nil, fmt.Errorf("room not found: %w", coredomain.ErrNotFound)
+	}
+	return room, err
+}
+
+func (r *RoomRepo) List(ctx context.Context, dormitoryID string, limit, offset int) ([]*domain.Room, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT r.id, r.dormitory_id, r.room_number, r.floor, r.type, r.status, r.rent_price, r.description,
+		       COALESCE(r.created_by::text, ''), COALESCE(r.updated_by::text, ''),
+		       COALESCE(u.full_name, ''),
+		       r.created_at, r.updated_at
+		FROM rooms r
+		LEFT JOIN users u ON u.id = r.updated_by
+		WHERE r.dormitory_id = $1 AND r.deleted_at IS NULL
 		ORDER BY r.floor, r.room_number
-		LIMIT $1 OFFSET $2`, limit, offset)
+		LIMIT $2 OFFSET $3`, dormitoryID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +78,7 @@ func (r *RoomRepo) List(ctx context.Context, limit, offset int) ([]*domain.Room,
 	var rooms []*domain.Room
 	for rows.Next() {
 		room := &domain.Room{}
-		if err := rows.Scan(&room.ID, &room.RoomNumber, &room.Floor, &room.Type, &room.Status,
+		if err := rows.Scan(&room.ID, &room.DormitoryID, &room.RoomNumber, &room.Floor, &room.Type, &room.Status,
 			&room.RentPrice, &room.Description, &room.CreatedBy, &room.UpdatedBy,
 			&room.UpdatedByName, &room.CreatedAt, &room.UpdatedAt); err != nil {
 			return nil, err
@@ -72,17 +91,18 @@ func (r *RoomRepo) List(ctx context.Context, limit, offset int) ([]*domain.Room,
 	return rooms, rows.Err()
 }
 
-func (r *RoomRepo) Count(ctx context.Context) (int, error) {
+func (r *RoomRepo) Count(ctx context.Context, dormitoryID string) (int, error) {
 	var total int
-	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM rooms WHERE deleted_at IS NULL`).Scan(&total)
+	err := r.db.Pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM rooms WHERE dormitory_id = $1 AND deleted_at IS NULL`, dormitoryID).Scan(&total)
 	return total, err
 }
 
 func (r *RoomRepo) Create(ctx context.Context, room *domain.Room) error {
 	_, err := r.db.Pool.Exec(ctx, `
-		INSERT INTO rooms (id, room_number, floor, type, status, rent_price, description, created_by, updated_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, '')::uuid, NULLIF($8, '')::uuid)`,
-		room.ID, room.RoomNumber, room.Floor, room.Type, room.Status, room.RentPrice, room.Description, room.CreatedBy)
+		INSERT INTO rooms (id, dormitory_id, room_number, floor, type, status, rent_price, description, created_by, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULLIF($9, '')::uuid, NULLIF($9, '')::uuid)`,
+		room.ID, room.DormitoryID, room.RoomNumber, room.Floor, room.Type, room.Status, room.RentPrice, room.Description, room.CreatedBy)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -95,10 +115,10 @@ func (r *RoomRepo) Create(ctx context.Context, room *domain.Room) error {
 func (r *RoomRepo) Update(ctx context.Context, room *domain.Room) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		UPDATE rooms
-		SET room_number = $2, floor = $3, type = $4, status = $5, rent_price = $6, description = $7,
-		    updated_by = NULLIF($8, '')::uuid, updated_at = NOW()
-		WHERE id = $1`,
-		room.ID, room.RoomNumber, room.Floor, room.Type, room.Status, room.RentPrice, room.Description, room.UpdatedBy)
+		SET room_number = $3, floor = $4, type = $5, status = $6, rent_price = $7, description = $8,
+		    updated_by = NULLIF($9, '')::uuid, updated_at = NOW()
+		WHERE id = $1 AND dormitory_id = $2`,
+		room.ID, room.DormitoryID, room.RoomNumber, room.Floor, room.Type, room.Status, room.RentPrice, room.Description, room.UpdatedBy)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -108,8 +128,9 @@ func (r *RoomRepo) Update(ctx context.Context, room *domain.Room) error {
 	return err
 }
 
-func (r *RoomRepo) Delete(ctx context.Context, id string) error {
+func (r *RoomRepo) Delete(ctx context.Context, dormitoryID, id string) error {
 	_, err := r.db.Pool.Exec(ctx,
-		`UPDATE rooms SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
+		`UPDATE rooms SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND dormitory_id = $2 AND deleted_at IS NULL`,
+		id, dormitoryID)
 	return err
 }

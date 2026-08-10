@@ -7,6 +7,7 @@ import (
 
 type Tenant struct {
 	ID                string    `json:"id"`
+	DormitoryID       string    `json:"dormitory_id"`
 	FirstName         string    `json:"first_name"`
 	LastName          string    `json:"last_name"`
 	Phone             string    `json:"phone"`
@@ -43,10 +44,10 @@ type UpdateTenantRequest struct {
 }
 
 type TenantRepository interface {
-	FindByID(ctx context.Context, id string) (*Tenant, error)
-	List(ctx context.Context, limit, offset int) ([]*Tenant, error)
-	Count(ctx context.Context) (int, error)
+	FindByID(ctx context.Context, dormitoryID, id string) (*Tenant, error)
+	List(ctx context.Context, dormitoryID string, limit, offset int) ([]*Tenant, error)
+	Count(ctx context.Context, dormitoryID string) (int, error)
 	Create(ctx context.Context, tenant *Tenant) error
 	Update(ctx context.Context, tenant *Tenant) error
-	Delete(ctx context.Context, id string) error
+	Delete(ctx context.Context, dormitoryID, id string) error
 }

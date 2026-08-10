@@ -43,7 +43,25 @@ func scanContractDetail(row pgx.Row) (*domain.ContractDetail, error) {
 	return d, err
 }
 
-func (r *ContractRepo) FindByID(ctx context.Context, id string) (*domain.Contract, error) {
+func (r *ContractRepo) FindByID(ctx context.Context, dormitoryID, id string) (*domain.Contract, error) {
+	c := &domain.Contract{}
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT c.id, c.tenant_id, c.room_id, c.start_date, c.end_date,
+		       c.rent_price, c.deposit, c.num_occupants, c.status, c.note, c.created_at, c.updated_at,
+		       COALESCE(c.created_by::text, ''), COALESCE(c.updated_by::text, '')
+		FROM contracts c
+		JOIN rooms r ON r.id = c.room_id
+		WHERE c.id = $1 AND r.dormitory_id = $2 AND c.deleted_at IS NULL`, id, dormitoryID).
+		Scan(&c.ID, &c.TenantID, &c.RoomID, &c.StartDate, &c.EndDate,
+			&c.RentPrice, &c.Deposit, &c.NumOccupants, &c.Status, &c.Note, &c.CreatedAt, &c.UpdatedAt,
+			&c.CreatedBy, &c.UpdatedBy)
+	if err == pgx.ErrNoRows {
+		return nil, fmt.Errorf("contract not found: %w", coredomain.ErrNotFound)
+	}
+	return c, err
+}
+
+func (r *ContractRepo) FindByIDAny(ctx context.Context, id string) (*domain.Contract, error) {
 	c := &domain.Contract{}
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT id, tenant_id, room_id, start_date, end_date,
@@ -59,8 +77,9 @@ func (r *ContractRepo) FindByID(ctx context.Context, id string) (*domain.Contrac
 	return c, err
 }
 
-func (r *ContractRepo) FindDetailByID(ctx context.Context, id string) (*domain.ContractDetail, error) {
-	row := r.db.Pool.QueryRow(ctx, contractDetailSelect+` WHERE c.id = $1 AND c.deleted_at IS NULL`, id)
+func (r *ContractRepo) FindDetailByID(ctx context.Context, dormitoryID, id string) (*domain.ContractDetail, error) {
+	row := r.db.Pool.QueryRow(ctx,
+		contractDetailSelect+` WHERE c.id = $1 AND r.dormitory_id = $2 AND c.deleted_at IS NULL`, id, dormitoryID)
 	d, err := scanContractDetail(row)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("contract not found: %w", coredomain.ErrNotFound)
@@ -68,9 +87,10 @@ func (r *ContractRepo) FindDetailByID(ctx context.Context, id string) (*domain.C
 	return d, err
 }
 
-func (r *ContractRepo) List(ctx context.Context, limit, offset int) ([]*domain.ContractDetail, error) {
+func (r *ContractRepo) List(ctx context.Context, dormitoryID string, limit, offset int) ([]*domain.ContractDetail, error) {
 	rows, err := r.db.Pool.Query(ctx,
-		contractDetailSelect+` WHERE c.deleted_at IS NULL ORDER BY c.created_at DESC LIMIT $1 OFFSET $2`, limit, offset)
+		contractDetailSelect+` WHERE r.dormitory_id = $1 AND c.deleted_at IS NULL ORDER BY c.created_at DESC LIMIT $2 OFFSET $3`,
+		dormitoryID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -90,9 +110,12 @@ func (r *ContractRepo) List(ctx context.Context, limit, offset int) ([]*domain.C
 	return list, rows.Err()
 }
 
-func (r *ContractRepo) Count(ctx context.Context) (int, error) {
+func (r *ContractRepo) Count(ctx context.Context, dormitoryID string) (int, error) {
 	var total int
-	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM contracts WHERE deleted_at IS NULL`).Scan(&total)
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM contracts c
+		JOIN rooms r ON r.id = c.room_id
+		WHERE r.dormitory_id = $1 AND c.deleted_at IS NULL`, dormitoryID).Scan(&total)
 	return total, err
 }
 
@@ -104,19 +127,22 @@ func (r *ContractRepo) Create(ctx context.Context, c *domain.Contract) error {
 	return err
 }
 
-func (r *ContractRepo) Update(ctx context.Context, c *domain.Contract) error {
+func (r *ContractRepo) Update(ctx context.Context, dormitoryID string, c *domain.Contract) error {
 	_, err := r.db.Pool.Exec(ctx, `
-		UPDATE contracts
-		SET end_date = $2, rent_price = $3, deposit = $4, num_occupants = $5, status = $6, note = $7,
-		    updated_by = NULLIF($8, '')::uuid, updated_at = NOW()
-		WHERE id = $1`,
-		c.ID, c.EndDate, c.RentPrice, c.Deposit, c.NumOccupants, c.Status, c.Note, c.UpdatedBy)
+		UPDATE contracts SET end_date = $3, rent_price = $4, deposit = $5, num_occupants = $6, status = $7, note = $8,
+		    updated_by = NULLIF($9, '')::uuid, updated_at = NOW()
+		FROM rooms r
+		WHERE contracts.id = $1 AND r.id = contracts.room_id AND r.dormitory_id = $2`,
+		c.ID, dormitoryID, c.EndDate, c.RentPrice, c.Deposit, c.NumOccupants, c.Status, c.Note, c.UpdatedBy)
 	return err
 }
 
-func (r *ContractRepo) Delete(ctx context.Context, id string) error {
-	_, err := r.db.Pool.Exec(ctx,
-		`UPDATE contracts SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
+func (r *ContractRepo) Delete(ctx context.Context, dormitoryID, id string) error {
+	_, err := r.db.Pool.Exec(ctx, `
+		UPDATE contracts SET deleted_at = NOW(), updated_at = NOW()
+		FROM rooms r
+		WHERE contracts.id = $1 AND r.id = contracts.room_id AND r.dormitory_id = $2 AND contracts.deleted_at IS NULL`,
+		id, dormitoryID)
 	return err
 }
 

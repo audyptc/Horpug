@@ -21,20 +21,20 @@ func NewRoomUseCase(roomRepo domain.RoomRepository, contractRepo contractdomain.
 	return &RoomUseCase{roomRepo: roomRepo, contractRepo: contractRepo}
 }
 
-func (uc *RoomUseCase) List(ctx context.Context, limit, offset int) ([]*domain.Room, int, error) {
-	total, err := uc.roomRepo.Count(ctx)
+func (uc *RoomUseCase) List(ctx context.Context, dormitoryID string, limit, offset int) ([]*domain.Room, int, error) {
+	total, err := uc.roomRepo.Count(ctx, dormitoryID)
 	if err != nil {
 		return nil, 0, apierror.Internal(err)
 	}
-	rooms, err := uc.roomRepo.List(ctx, limit, offset)
+	rooms, err := uc.roomRepo.List(ctx, dormitoryID, limit, offset)
 	if err != nil {
 		return nil, 0, apierror.Internal(err)
 	}
 	return rooms, total, nil
 }
 
-func (uc *RoomUseCase) GetByID(ctx context.Context, id string) (*domain.Room, error) {
-	room, err := uc.roomRepo.FindByID(ctx, id)
+func (uc *RoomUseCase) GetByID(ctx context.Context, dormitoryID, id string) (*domain.Room, error) {
+	room, err := uc.roomRepo.FindByID(ctx, dormitoryID, id)
 	if err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
@@ -44,9 +44,10 @@ func (uc *RoomUseCase) GetByID(ctx context.Context, id string) (*domain.Room, er
 	return room, nil
 }
 
-func (uc *RoomUseCase) Create(ctx context.Context, req *domain.CreateRoomRequest, actorID string) (*domain.Room, error) {
+func (uc *RoomUseCase) Create(ctx context.Context, dormitoryID string, req *domain.CreateRoomRequest, actorID string) (*domain.Room, error) {
 	room := &domain.Room{
 		ID:          uuid.New().String(),
+		DormitoryID: dormitoryID,
 		RoomNumber:  req.RoomNumber,
 		Floor:       req.Floor,
 		Type:        req.Type,
@@ -71,8 +72,8 @@ func (uc *RoomUseCase) Create(ctx context.Context, req *domain.CreateRoomRequest
 	return room, nil
 }
 
-func (uc *RoomUseCase) Update(ctx context.Context, id string, req *domain.UpdateRoomRequest, actorID string) (*domain.Room, error) {
-	room, err := uc.roomRepo.FindByID(ctx, id)
+func (uc *RoomUseCase) Update(ctx context.Context, dormitoryID, id string, req *domain.UpdateRoomRequest, actorID string) (*domain.Room, error) {
+	room, err := uc.roomRepo.FindByID(ctx, dormitoryID, id)
 	if err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
@@ -105,8 +106,8 @@ func (uc *RoomUseCase) Update(ctx context.Context, id string, req *domain.Update
 	return room, nil
 }
 
-func (uc *RoomUseCase) Delete(ctx context.Context, id string) error {
-	if _, err := uc.roomRepo.FindByID(ctx, id); err != nil {
+func (uc *RoomUseCase) Delete(ctx context.Context, dormitoryID, id string) error {
+	if _, err := uc.roomRepo.FindByID(ctx, dormitoryID, id); err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
 		}
@@ -119,7 +120,7 @@ func (uc *RoomUseCase) Delete(ctx context.Context, id string) error {
 	if hasContract {
 		return apierror.Conflict("ไม่สามารถลบห้องที่มีสัญญาเช่าที่ยังใช้งานอยู่ได้")
 	}
-	if err := uc.roomRepo.Delete(ctx, id); err != nil {
+	if err := uc.roomRepo.Delete(ctx, dormitoryID, id); err != nil {
 		return apierror.Internal(err)
 	}
 	return nil

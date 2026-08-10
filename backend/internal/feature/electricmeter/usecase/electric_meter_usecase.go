@@ -57,7 +57,7 @@ func (uc *ElectricMeterUseCase) GetLatestByRoomID(ctx context.Context, roomID st
 }
 
 func (uc *ElectricMeterUseCase) Create(ctx context.Context, req *domain.CreateElectricMeterRequest, actorID string) (*domain.ElectricMeterDetail, error) {
-	if _, err := uc.roomRepo.FindByID(ctx, req.RoomID); err != nil {
+	if _, err := uc.roomRepo.FindByIDAny(ctx, req.RoomID); err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound("room not found")
 		}

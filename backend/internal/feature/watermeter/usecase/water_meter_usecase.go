@@ -57,7 +57,7 @@ func (uc *WaterMeterUseCase) GetLatestByRoomID(ctx context.Context, roomID strin
 }
 
 func (uc *WaterMeterUseCase) Create(ctx context.Context, req *domain.CreateWaterMeterRequest, actorID string) (*domain.WaterMeterDetail, error) {
-	if _, err := uc.roomRepo.FindByID(ctx, req.RoomID); err != nil {
+	if _, err := uc.roomRepo.FindByIDAny(ctx, req.RoomID); err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound("room not found")
 		}
