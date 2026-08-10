@@ -9,13 +9,20 @@ import (
 	"apigofiberhorpug/internal/delivery/http/middleware"
 	v1 "apigofiberhorpug/internal/delivery/http/v1"
 	aldelivery "apigofiberhorpug/internal/feature/activitylog/delivery"
+	announcementdelivery "apigofiberhorpug/internal/feature/announcement/delivery"
 	authdelivery "apigofiberhorpug/internal/feature/auth/delivery"
 	billdelivery "apigofiberhorpug/internal/feature/bill/delivery"
+	contractdelivery "apigofiberhorpug/internal/feature/contract/delivery"
+	documentdelivery "apigofiberhorpug/internal/feature/document/delivery"
+	electricmeterdelivery "apigofiberhorpug/internal/feature/electricmeter/delivery"
+	expensedelivery "apigofiberhorpug/internal/feature/expense/delivery"
+	maintenancerequestdelivery "apigofiberhorpug/internal/feature/maintenancerequest/delivery"
 	menudelivery "apigofiberhorpug/internal/feature/menu/delivery"
+	notificationdelivery "apigofiberhorpug/internal/feature/notification/delivery"
+	parceldelivery "apigofiberhorpug/internal/feature/parcel/delivery"
+	parkingdelivery "apigofiberhorpug/internal/feature/parking/delivery"
 	paymentdelivery "apigofiberhorpug/internal/feature/payment/delivery"
 	permissiondelivery "apigofiberhorpug/internal/feature/permission/delivery"
-	contractdelivery "apigofiberhorpug/internal/feature/contract/delivery"
-	electricmeterdelivery "apigofiberhorpug/internal/feature/electricmeter/delivery"
 	roledelivery "apigofiberhorpug/internal/feature/role/delivery"
 	roomdelivery "apigofiberhorpug/internal/feature/room/delivery"
 	roomtypedelivery "apigofiberhorpug/internal/feature/roomtype/delivery"
@@ -42,15 +49,15 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	billH := billdelivery.NewBillHandler(c.BillUC, c.ActivityLogUC)
 	dashboardH := v1.NewDashboardHandler(c.DashboardUC)
 	analyticsH := v1.NewAnalyticsHandler(c.AnalyticsUC)
-	expenseH := v1.NewExpenseHandler(c.ExpenseUC)
-	maintenanceH := v1.NewMaintenanceRequestHandler(c.MaintenanceUC)
+	expenseH := expensedelivery.NewExpenseHandler(c.ExpenseUC)
+	maintenanceH := maintenancerequestdelivery.NewMaintenanceRequestHandler(c.MaintenanceUC)
 	paymentH := paymentdelivery.NewPaymentHandler(c.PaymentUC, c.ActivityLogUC)
-	announcementH := v1.NewAnnouncementHandler(c.AnnouncementUC)
+	announcementH := announcementdelivery.NewAnnouncementHandler(c.AnnouncementUC)
 	reportH := v1.NewReportHandler(c.ReportUC)
-	parkingH := v1.NewParkingHandler(c.ParkingUC)
-	parcelH := v1.NewParcelHandler(c.ParcelUC)
-	documentH := v1.NewDocumentHandler(c.DocumentUC, cfg.UploadDir, cfg.UploadBaseURL)
-	notificationH := v1.NewNotificationHandler(c.NotificationUC)
+	parkingH := parkingdelivery.NewParkingHandler(c.ParkingUC)
+	parcelH := parceldelivery.NewParcelHandler(c.ParcelUC)
+	documentH := documentdelivery.NewDocumentHandler(c.DocumentUC, cfg.UploadDir, cfg.UploadBaseURL)
+	notificationH := notificationdelivery.NewNotificationHandler(c.NotificationUC)
 	searchH := v1.NewSearchHandler(c.SearchUC)
 	activityLogH := aldelivery.NewActivityLogHandler(c.ActivityLogUC)
 
