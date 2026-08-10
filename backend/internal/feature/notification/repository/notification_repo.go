@@ -17,7 +17,7 @@ func NewNotificationRepo(db *database.DB) *NotificationRepo {
 	return &NotificationRepo{db: db}
 }
 
-func (r *NotificationRepo) ListOverdueBills(ctx context.Context, limit int) ([]*domain.NotificationItem, error) {
+func (r *NotificationRepo) ListOverdueBills(ctx context.Context, dormitoryID string, limit int) ([]*domain.NotificationItem, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT
 			b.id, b.total_amount, b.due_date, b.created_at,
@@ -26,10 +26,11 @@ func (r *NotificationRepo) ListOverdueBills(ctx context.Context, limit int) ([]*
 		JOIN contracts c  ON c.id = b.contract_id
 		JOIN tenants t    ON t.id = c.tenant_id
 		JOIN rooms rm     ON rm.id = c.room_id
-		WHERE b.status = 'overdue'
-		   OR (b.status = 'unpaid' AND b.due_date IS NOT NULL AND b.due_date < NOW())
+		WHERE rm.dormitory_id = $1
+		  AND (b.status = 'overdue'
+		   OR (b.status = 'unpaid' AND b.due_date IS NOT NULL AND b.due_date < NOW()))
 		ORDER BY b.due_date ASC
-		LIMIT $1`, limit)
+		LIMIT $2`, dormitoryID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -41,8 +42,8 @@ func (r *NotificationRepo) ListOverdueBills(ctx context.Context, limit int) ([]*
 		var (
 			id, firstName, lastName, roomNumber string
 			totalAmount                         float64
-			dueDate                              *time.Time
-			createdAt                            time.Time
+			dueDate                             *time.Time
+			createdAt                           time.Time
 		)
 		if err := rows.Scan(&id, &totalAmount, &dueDate, &createdAt, &firstName, &lastName, &roomNumber); err != nil {
 			return nil, err
@@ -69,7 +70,7 @@ func (r *NotificationRepo) ListOverdueBills(ctx context.Context, limit int) ([]*
 	return list, rows.Err()
 }
 
-func (r *NotificationRepo) ListExpiringContracts(ctx context.Context, withinDays, limit int) ([]*domain.NotificationItem, error) {
+func (r *NotificationRepo) ListExpiringContracts(ctx context.Context, dormitoryID string, withinDays, limit int) ([]*domain.NotificationItem, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT
 			c.id, c.end_date, c.created_at,
@@ -78,11 +79,12 @@ func (r *NotificationRepo) ListExpiringContracts(ctx context.Context, withinDays
 		FROM contracts c
 		JOIN tenants t  ON t.id = c.tenant_id
 		JOIN rooms rm   ON rm.id = c.room_id
-		WHERE c.status = 'active'
+		WHERE rm.dormitory_id = $1
+		  AND c.status = 'active'
 		  AND c.end_date IS NOT NULL
-		  AND c.end_date BETWEEN NOW() AND NOW() + make_interval(days => $1)
+		  AND c.end_date BETWEEN NOW() AND NOW() + make_interval(days => $2)
 		ORDER BY c.end_date ASC
-		LIMIT $2`, withinDays, limit)
+		LIMIT $3`, dormitoryID, withinDays, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -92,9 +94,9 @@ func (r *NotificationRepo) ListExpiringContracts(ctx context.Context, withinDays
 	for rows.Next() {
 		var (
 			id, firstName, lastName, roomNumber string
-			endDate                              *time.Time
-			createdAt                            time.Time
-			daysRemaining                        int
+			endDate                             *time.Time
+			createdAt                           time.Time
+			daysRemaining                       int
 		)
 		if err := rows.Scan(&id, &endDate, &createdAt, &firstName, &lastName, &roomNumber, &daysRemaining); err != nil {
 			return nil, err
@@ -115,14 +117,15 @@ func (r *NotificationRepo) ListExpiringContracts(ctx context.Context, withinDays
 	return list, rows.Err()
 }
 
-func (r *NotificationRepo) ListOpenMaintenance(ctx context.Context, limit int) ([]*domain.NotificationItem, error) {
+func (r *NotificationRepo) ListOpenMaintenance(ctx context.Context, dormitoryID string, limit int) ([]*domain.NotificationItem, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT
 			m.id, m.title, m.priority, m.created_at,
 			rm.room_number
 		FROM maintenance_requests m
 		JOIN rooms rm ON rm.id = m.room_id
-		WHERE m.status IN ('open', 'in_progress')
+		WHERE rm.dormitory_id = $1
+		  AND m.status IN ('open', 'in_progress')
 		ORDER BY
 			CASE m.priority
 				WHEN 'urgent' THEN 1
@@ -131,7 +134,7 @@ func (r *NotificationRepo) ListOpenMaintenance(ctx context.Context, limit int) (
 				WHEN 'low'    THEN 4
 			END,
 			m.reported_date ASC
-		LIMIT $1`, limit)
+		LIMIT $2`, dormitoryID, limit)
 	if err != nil {
 		return nil, err
 	}

@@ -19,20 +19,20 @@ func NewParcelUseCase(repo domain.ParcelRepository) *ParcelUseCase {
 	return &ParcelUseCase{repo: repo}
 }
 
-func (uc *ParcelUseCase) List(ctx context.Context, limit, offset int) ([]*domain.Parcel, int, error) {
-	total, err := uc.repo.Count(ctx)
+func (uc *ParcelUseCase) List(ctx context.Context, dormitoryID string, limit, offset int) ([]*domain.Parcel, int, error) {
+	total, err := uc.repo.Count(ctx, dormitoryID)
 	if err != nil {
 		return nil, 0, apierror.Internal(err)
 	}
-	list, err := uc.repo.List(ctx, limit, offset)
+	list, err := uc.repo.List(ctx, dormitoryID, limit, offset)
 	if err != nil {
 		return nil, 0, apierror.Internal(err)
 	}
 	return list, total, nil
 }
 
-func (uc *ParcelUseCase) GetByID(ctx context.Context, id string) (*domain.Parcel, error) {
-	p, err := uc.repo.FindByID(ctx, id)
+func (uc *ParcelUseCase) GetByID(ctx context.Context, dormitoryID, id string) (*domain.Parcel, error) {
+	p, err := uc.repo.FindByID(ctx, dormitoryID, id)
 	if err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
@@ -42,9 +42,10 @@ func (uc *ParcelUseCase) GetByID(ctx context.Context, id string) (*domain.Parcel
 	return p, nil
 }
 
-func (uc *ParcelUseCase) Create(ctx context.Context, req *domain.CreateParcelRequest) (*domain.Parcel, error) {
+func (uc *ParcelUseCase) Create(ctx context.Context, dormitoryID string, req *domain.CreateParcelRequest) (*domain.Parcel, error) {
 	p := &domain.Parcel{
 		ID:             uuid.New().String(),
+		DormitoryID:    dormitoryID,
 		TrackingNumber: req.TrackingNumber,
 		RecipientName:  req.RecipientName,
 		RoomNumber:     req.RoomNumber,
@@ -56,11 +57,11 @@ func (uc *ParcelUseCase) Create(ctx context.Context, req *domain.CreateParcelReq
 	if err := uc.repo.Create(ctx, p); err != nil {
 		return nil, apierror.Internal(err)
 	}
-	return uc.repo.FindByID(ctx, p.ID)
+	return uc.repo.FindByID(ctx, dormitoryID, p.ID)
 }
 
-func (uc *ParcelUseCase) Update(ctx context.Context, id string, req *domain.UpdateParcelRequest) (*domain.Parcel, error) {
-	p, err := uc.repo.FindByID(ctx, id)
+func (uc *ParcelUseCase) Update(ctx context.Context, dormitoryID, id string, req *domain.UpdateParcelRequest) (*domain.Parcel, error) {
+	p, err := uc.repo.FindByID(ctx, dormitoryID, id)
 	if err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return nil, apierror.NotFound(err.Error())
@@ -79,17 +80,17 @@ func (uc *ParcelUseCase) Update(ctx context.Context, id string, req *domain.Upda
 	if err := uc.repo.Update(ctx, p); err != nil {
 		return nil, apierror.Internal(err)
 	}
-	return uc.repo.FindByID(ctx, id)
+	return uc.repo.FindByID(ctx, dormitoryID, id)
 }
 
-func (uc *ParcelUseCase) Delete(ctx context.Context, id string) error {
-	if _, err := uc.repo.FindByID(ctx, id); err != nil {
+func (uc *ParcelUseCase) Delete(ctx context.Context, dormitoryID, id string) error {
+	if _, err := uc.repo.FindByID(ctx, dormitoryID, id); err != nil {
 		if errors.Is(err, coredomain.ErrNotFound) {
 			return apierror.NotFound(err.Error())
 		}
 		return apierror.Internal(err)
 	}
-	if err := uc.repo.Delete(ctx, id); err != nil {
+	if err := uc.repo.Delete(ctx, dormitoryID, id); err != nil {
 		return apierror.Internal(err)
 	}
 	return nil

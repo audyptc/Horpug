@@ -23,7 +23,8 @@ func (h *ParcelHandler) List(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	list, total, err := h.parcels.List(c.Context(), perPage, offset)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	list, total, err := h.parcels.List(c.Context(), dormitoryID, perPage, offset)
 	if err != nil {
 		return err
 	}
@@ -31,7 +32,8 @@ func (h *ParcelHandler) List(c fiber.Ctx) error {
 }
 
 func (h *ParcelHandler) GetByID(c fiber.Ctx) error {
-	p, err := h.parcels.GetByID(c.Context(), c.Params("id"))
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	p, err := h.parcels.GetByID(c.Context(), dormitoryID, c.Params("id"))
 	if err != nil {
 		return err
 	}
@@ -46,7 +48,8 @@ func (h *ParcelHandler) Create(c fiber.Ctx) error {
 	if err := validateCreateParcelRequest(&req); err != nil {
 		return err
 	}
-	p, err := h.parcels.Create(c.Context(), &req)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	p, err := h.parcels.Create(c.Context(), dormitoryID, &req)
 	if err != nil {
 		return err
 	}
@@ -61,7 +64,8 @@ func (h *ParcelHandler) Update(c fiber.Ctx) error {
 	if err := validateUpdateParcelRequest(&req); err != nil {
 		return err
 	}
-	p, err := h.parcels.Update(c.Context(), c.Params("id"), &req)
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	p, err := h.parcels.Update(c.Context(), dormitoryID, c.Params("id"), &req)
 	if err != nil {
 		return err
 	}
@@ -69,7 +73,8 @@ func (h *ParcelHandler) Update(c fiber.Ctx) error {
 }
 
 func (h *ParcelHandler) Delete(c fiber.Ctx) error {
-	if err := h.parcels.Delete(c.Context(), c.Params("id")); err != nil {
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	if err := h.parcels.Delete(c.Context(), dormitoryID, c.Params("id")); err != nil {
 		return err
 	}
 	return response.Message(c, "parcel deleted")

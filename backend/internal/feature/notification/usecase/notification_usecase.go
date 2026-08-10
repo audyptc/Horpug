@@ -15,18 +15,18 @@ func NewNotificationUseCase(notifRepo domain.NotificationRepository) *Notificati
 	return &NotificationUseCase{notifRepo: notifRepo}
 }
 
-func (uc *NotificationUseCase) List(ctx context.Context) ([]*domain.NotificationItem, error) {
-	overdue, err := uc.notifRepo.ListOverdueBills(ctx, 20)
+func (uc *NotificationUseCase) List(ctx context.Context, dormitoryID string) ([]*domain.NotificationItem, error) {
+	overdue, err := uc.notifRepo.ListOverdueBills(ctx, dormitoryID, 20)
 	if err != nil {
 		return nil, apierror.Internal(err)
 	}
 
-	expiring, err := uc.notifRepo.ListExpiringContracts(ctx, 30, 20)
+	expiring, err := uc.notifRepo.ListExpiringContracts(ctx, dormitoryID, 30, 20)
 	if err != nil {
 		return nil, apierror.Internal(err)
 	}
 
-	maintenance, err := uc.notifRepo.ListOpenMaintenance(ctx, 20)
+	maintenance, err := uc.notifRepo.ListOpenMaintenance(ctx, dormitoryID, 20)
 	if err != nil {
 		return nil, apierror.Internal(err)
 	}

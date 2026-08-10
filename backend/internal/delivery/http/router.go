@@ -240,7 +240,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	parkingGroup.Delete("/:id", middleware.RequirePermission("parking.delete"), parkingH.Delete)
 
 	// Parcels
-	parcelsGroup := protected.Group("/parcels")
+	parcelsGroup := scoped.Group("/parcels")
 	parcelsGroup.Get("/", middleware.RequirePermission("parcels.read"), parcelH.List)
 	parcelsGroup.Post("/", middleware.RequirePermission("parcels.create"), parcelH.Create)
 	parcelsGroup.Get("/:id", middleware.RequirePermission("parcels.read"), parcelH.GetByID)
@@ -257,7 +257,7 @@ func SetupRoutes(app *fiber.App, c *bootstrap.Container, cfg *config.Config) {
 	documentsGroup.Delete("/:id", middleware.RequirePermission("documents.delete"), documentH.Delete)
 
 	// Notifications
-	protected.Get("/notifications", notificationH.List)
+	scoped.Get("/notifications", notificationH.List)
 
 	// Search
 	scoped.Get("/search", searchH.Global)

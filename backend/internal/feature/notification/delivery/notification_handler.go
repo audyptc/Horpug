@@ -16,7 +16,8 @@ func NewNotificationHandler(notifs *usecase.NotificationUseCase) *NotificationHa
 }
 
 func (h *NotificationHandler) List(c fiber.Ctx) error {
-	items, err := h.notifs.List(c.Context())
+	dormitoryID, _ := c.Locals("dormitory_id").(string)
+	items, err := h.notifs.List(c.Context(), dormitoryID)
 	if err != nil {
 		return err
 	}

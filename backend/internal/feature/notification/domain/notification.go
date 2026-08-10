@@ -27,7 +27,7 @@ type NotificationItem struct {
 }
 
 type NotificationRepository interface {
-	ListOverdueBills(ctx context.Context, limit int) ([]*NotificationItem, error)
-	ListExpiringContracts(ctx context.Context, withinDays, limit int) ([]*NotificationItem, error)
-	ListOpenMaintenance(ctx context.Context, limit int) ([]*NotificationItem, error)
+	ListOverdueBills(ctx context.Context, dormitoryID string, limit int) ([]*NotificationItem, error)
+	ListExpiringContracts(ctx context.Context, dormitoryID string, withinDays, limit int) ([]*NotificationItem, error)
+	ListOpenMaintenance(ctx context.Context, dormitoryID string, limit int) ([]*NotificationItem, error)
 }
