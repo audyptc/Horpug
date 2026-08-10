@@ -34,7 +34,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.LoginRequest"
+                            "$ref": "#/definitions/LoginRequest"
                         }
                     }
                 ],
@@ -42,7 +42,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.LoginResponse"
+                            "$ref": "#/definitions/LoginResponse"
                         }
                     }
                 }
@@ -67,7 +67,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.LogoutRequest"
+                            "$ref": "#/definitions/LogoutRequest"
                         }
                     }
                 ],
@@ -101,7 +101,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.RefreshRequest"
+                            "$ref": "#/definitions/RefreshRequest"
                         }
                     }
                 ],
@@ -109,7 +109,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.LoginResponse"
+                            "$ref": "#/definitions/LoginResponse"
                         }
                     }
                 }
@@ -135,7 +135,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.Menu"
+                                "$ref": "#/definitions/Menu"
                             }
                         }
                     }
@@ -169,7 +169,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Menu"
+                            "$ref": "#/definitions/Menu"
                         }
                     }
                 }
@@ -195,7 +195,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.Permission"
+                                "$ref": "#/definitions/Permission"
                             }
                         }
                     }
@@ -222,7 +222,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.Role"
+                                "$ref": "#/definitions/Role"
                             }
                         }
                     }
@@ -251,7 +251,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.CreateRoleRequest"
+                            "$ref": "#/definitions/CreateRoleRequest"
                         }
                     }
                 ],
@@ -259,7 +259,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/domain.Role"
+                            "$ref": "#/definitions/Role"
                         }
                     }
                 }
@@ -285,7 +285,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.Role"
+                                "$ref": "#/definitions/Role"
                             }
                         }
                     }
@@ -319,7 +319,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Role"
+                            "$ref": "#/definitions/Role"
                         }
                     }
                 }
@@ -354,7 +354,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.UpdateRoleRequest"
+                            "$ref": "#/definitions/UpdateRoleRequest"
                         }
                     }
                 ],
@@ -362,7 +362,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Role"
+                            "$ref": "#/definitions/Role"
                         }
                     }
                 }
@@ -431,7 +431,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.AssignPermissionsRequest"
+                            "$ref": "#/definitions/AssignPermissionsRequest"
                         }
                     }
                 ],
@@ -466,7 +466,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.User"
+                                "$ref": "#/definitions/User"
                             }
                         }
                     }
@@ -495,7 +495,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.CreateUserRequest"
+                            "$ref": "#/definitions/CreateUserRequest"
                         }
                     }
                 ],
@@ -503,7 +503,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/domain.User"
+                            "$ref": "#/definitions/User"
                         }
                     }
                 }
@@ -536,7 +536,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.User"
+                            "$ref": "#/definitions/User"
                         }
                     }
                 }
@@ -571,7 +571,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.UpdateUserRequest"
+                            "$ref": "#/definitions/UpdateUserRequest"
                         }
                     }
                 ],
@@ -579,7 +579,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.User"
+                            "$ref": "#/definitions/User"
                         }
                     }
                 }
@@ -648,7 +648,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.AssignRoleRequest"
+                            "$ref": "#/definitions/AssignRoleRequest"
                         }
                     }
                 ],
@@ -665,18 +665,18 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "domain.AssignPermissionsRequest": {
+        "AssignPermissionsRequest": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/domain.RoleMenuPermissionItem"
+                        "$ref": "#/definitions/RoleMenuPermissionItem"
                     }
                 }
             }
         },
-        "domain.AssignRoleRequest": {
+        "AssignRoleRequest": {
             "type": "object",
             "properties": {
                 "role_id": {
@@ -684,7 +684,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.CreateRoleRequest": {
+        "CreateRoleRequest": {
             "type": "object",
             "properties": {
                 "description": {
@@ -698,7 +698,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.CreateUserRequest": {
+        "CreateUserRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -712,7 +712,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.LoginRequest": {
+        "LoginRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -723,7 +723,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.LoginResponse": {
+        "LoginResponse": {
             "type": "object",
             "properties": {
                 "access_token": {
@@ -737,7 +737,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.LogoutRequest": {
+        "LogoutRequest": {
             "type": "object",
             "properties": {
                 "refresh_token": {
@@ -745,7 +745,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.Menu": {
+        "Menu": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -765,7 +765,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.Permission": {
+        "Permission": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -785,7 +785,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.RefreshRequest": {
+        "RefreshRequest": {
             "type": "object",
             "properties": {
                 "refresh_token": {
@@ -793,7 +793,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.Role": {
+        "Role": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -811,7 +811,7 @@ const docTemplate = `{
                 "menu_permissions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/domain.RoleMenuPermission"
+                        "$ref": "#/definitions/RoleMenuPermission"
                     }
                 },
                 "name": {
@@ -822,7 +822,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.RoleMenuPermission": {
+        "RoleMenuPermission": {
             "type": "object",
             "properties": {
                 "menu_id": {
@@ -834,12 +834,12 @@ const docTemplate = `{
                 "permissions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/domain.Permission"
+                        "$ref": "#/definitions/Permission"
                     }
                 }
             }
         },
-        "domain.RoleMenuPermissionItem": {
+        "RoleMenuPermissionItem": {
             "type": "object",
             "properties": {
                 "menu_id": {
@@ -853,7 +853,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.UpdateRoleRequest": {
+        "UpdateRoleRequest": {
             "type": "object",
             "properties": {
                 "description": {
@@ -867,7 +867,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.UpdateUserRequest": {
+        "UpdateUserRequest": {
             "type": "object",
             "properties": {
                 "full_name": {
@@ -881,7 +881,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.User": {
+        "User": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -900,7 +900,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "role": {
-                    "$ref": "#/definitions/domain.Role"
+                    "$ref": "#/definitions/Role"
                 },
                 "updated_at": {
                     "type": "string"

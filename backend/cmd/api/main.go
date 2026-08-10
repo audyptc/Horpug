@@ -66,9 +66,6 @@ func main() {
 	app.Get("/", func(c fiber.Ctx) error {
 		return c.Redirect().To("/docs")
 	})
-	app.Get("/swagger", func(c fiber.Ctx) error {
-		return c.Redirect().To("/docs")
-	})
 
 	app.Get("/health", func(c fiber.Ctx) error {
 		if err := db.Pool.Ping(context.Background()); err != nil {

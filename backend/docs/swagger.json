@@ -29,7 +29,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.LoginRequest"
+                            "$ref": "#/definitions/LoginRequest"
                         }
                     }
                 ],
@@ -37,7 +37,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.LoginResponse"
+                            "$ref": "#/definitions/LoginResponse"
                         }
                     }
                 }
@@ -62,7 +62,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.LogoutRequest"
+                            "$ref": "#/definitions/LogoutRequest"
                         }
                     }
                 ],
@@ -96,7 +96,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.RefreshRequest"
+                            "$ref": "#/definitions/RefreshRequest"
                         }
                     }
                 ],
@@ -104,7 +104,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.LoginResponse"
+                            "$ref": "#/definitions/LoginResponse"
                         }
                     }
                 }
@@ -130,7 +130,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.Menu"
+                                "$ref": "#/definitions/Menu"
                             }
                         }
                     }
@@ -164,7 +164,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Menu"
+                            "$ref": "#/definitions/Menu"
                         }
                     }
                 }
@@ -190,7 +190,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.Permission"
+                                "$ref": "#/definitions/Permission"
                             }
                         }
                     }
@@ -217,7 +217,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.Role"
+                                "$ref": "#/definitions/Role"
                             }
                         }
                     }
@@ -246,7 +246,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.CreateRoleRequest"
+                            "$ref": "#/definitions/CreateRoleRequest"
                         }
                     }
                 ],
@@ -254,7 +254,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/domain.Role"
+                            "$ref": "#/definitions/Role"
                         }
                     }
                 }
@@ -280,7 +280,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.Role"
+                                "$ref": "#/definitions/Role"
                             }
                         }
                     }
@@ -314,7 +314,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Role"
+                            "$ref": "#/definitions/Role"
                         }
                     }
                 }
@@ -349,7 +349,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.UpdateRoleRequest"
+                            "$ref": "#/definitions/UpdateRoleRequest"
                         }
                     }
                 ],
@@ -357,7 +357,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Role"
+                            "$ref": "#/definitions/Role"
                         }
                     }
                 }
@@ -426,7 +426,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.AssignPermissionsRequest"
+                            "$ref": "#/definitions/AssignPermissionsRequest"
                         }
                     }
                 ],
@@ -461,7 +461,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.User"
+                                "$ref": "#/definitions/User"
                             }
                         }
                     }
@@ -490,7 +490,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.CreateUserRequest"
+                            "$ref": "#/definitions/CreateUserRequest"
                         }
                     }
                 ],
@@ -498,7 +498,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/domain.User"
+                            "$ref": "#/definitions/User"
                         }
                     }
                 }
@@ -531,7 +531,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.User"
+                            "$ref": "#/definitions/User"
                         }
                     }
                 }
@@ -566,7 +566,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.UpdateUserRequest"
+                            "$ref": "#/definitions/UpdateUserRequest"
                         }
                     }
                 ],
@@ -574,7 +574,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.User"
+                            "$ref": "#/definitions/User"
                         }
                     }
                 }
@@ -643,7 +643,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.AssignRoleRequest"
+                            "$ref": "#/definitions/AssignRoleRequest"
                         }
                     }
                 ],
@@ -660,18 +660,18 @@
         }
     },
     "definitions": {
-        "domain.AssignPermissionsRequest": {
+        "AssignPermissionsRequest": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/domain.RoleMenuPermissionItem"
+                        "$ref": "#/definitions/RoleMenuPermissionItem"
                     }
                 }
             }
         },
-        "domain.AssignRoleRequest": {
+        "AssignRoleRequest": {
             "type": "object",
             "properties": {
                 "role_id": {
@@ -679,7 +679,7 @@
                 }
             }
         },
-        "domain.CreateRoleRequest": {
+        "CreateRoleRequest": {
             "type": "object",
             "properties": {
                 "description": {
@@ -693,7 +693,7 @@
                 }
             }
         },
-        "domain.CreateUserRequest": {
+        "CreateUserRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -707,7 +707,7 @@
                 }
             }
         },
-        "domain.LoginRequest": {
+        "LoginRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -718,7 +718,7 @@
                 }
             }
         },
-        "domain.LoginResponse": {
+        "LoginResponse": {
             "type": "object",
             "properties": {
                 "access_token": {
@@ -732,7 +732,7 @@
                 }
             }
         },
-        "domain.LogoutRequest": {
+        "LogoutRequest": {
             "type": "object",
             "properties": {
                 "refresh_token": {
@@ -740,7 +740,7 @@
                 }
             }
         },
-        "domain.Menu": {
+        "Menu": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -760,7 +760,7 @@
                 }
             }
         },
-        "domain.Permission": {
+        "Permission": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -780,7 +780,7 @@
                 }
             }
         },
-        "domain.RefreshRequest": {
+        "RefreshRequest": {
             "type": "object",
             "properties": {
                 "refresh_token": {
@@ -788,7 +788,7 @@
                 }
             }
         },
-        "domain.Role": {
+        "Role": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -806,7 +806,7 @@
                 "menu_permissions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/domain.RoleMenuPermission"
+                        "$ref": "#/definitions/RoleMenuPermission"
                     }
                 },
                 "name": {
@@ -817,7 +817,7 @@
                 }
             }
         },
-        "domain.RoleMenuPermission": {
+        "RoleMenuPermission": {
             "type": "object",
             "properties": {
                 "menu_id": {
@@ -829,12 +829,12 @@
                 "permissions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/domain.Permission"
+                        "$ref": "#/definitions/Permission"
                     }
                 }
             }
         },
-        "domain.RoleMenuPermissionItem": {
+        "RoleMenuPermissionItem": {
             "type": "object",
             "properties": {
                 "menu_id": {
@@ -848,7 +848,7 @@
                 }
             }
         },
-        "domain.UpdateRoleRequest": {
+        "UpdateRoleRequest": {
             "type": "object",
             "properties": {
                 "description": {
@@ -862,7 +862,7 @@
                 }
             }
         },
-        "domain.UpdateUserRequest": {
+        "UpdateUserRequest": {
             "type": "object",
             "properties": {
                 "full_name": {
@@ -876,7 +876,7 @@
                 }
             }
         },
-        "domain.User": {
+        "User": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -895,7 +895,7 @@
                     "type": "boolean"
                 },
                 "role": {
-                    "$ref": "#/definitions/domain.Role"
+                    "$ref": "#/definitions/Role"
                 },
                 "updated_at": {
                     "type": "string"

@@ -1,18 +1,18 @@
 basePath: /api/v1
 definitions:
-  domain.AssignPermissionsRequest:
+  AssignPermissionsRequest:
     properties:
       items:
         items:
-          $ref: '#/definitions/domain.RoleMenuPermissionItem'
+          $ref: '#/definitions/RoleMenuPermissionItem'
         type: array
     type: object
-  domain.AssignRoleRequest:
+  AssignRoleRequest:
     properties:
       role_id:
         type: string
     type: object
-  domain.CreateRoleRequest:
+  CreateRoleRequest:
     properties:
       description:
         type: string
@@ -21,7 +21,7 @@ definitions:
       name:
         type: string
     type: object
-  domain.CreateUserRequest:
+  CreateUserRequest:
     properties:
       email:
         type: string
@@ -30,14 +30,14 @@ definitions:
       password:
         type: string
     type: object
-  domain.LoginRequest:
+  LoginRequest:
     properties:
       email:
         type: string
       password:
         type: string
     type: object
-  domain.LoginResponse:
+  LoginResponse:
     properties:
       access_token:
         type: string
@@ -46,12 +46,12 @@ definitions:
       refresh_token:
         type: string
     type: object
-  domain.LogoutRequest:
+  LogoutRequest:
     properties:
       refresh_token:
         type: string
     type: object
-  domain.Menu:
+  Menu:
     properties:
       created_at:
         type: string
@@ -64,7 +64,7 @@ definitions:
       updated_at:
         type: string
     type: object
-  domain.Permission:
+  Permission:
     properties:
       created_at:
         type: string
@@ -77,12 +77,12 @@ definitions:
       updated_at:
         type: string
     type: object
-  domain.RefreshRequest:
+  RefreshRequest:
     properties:
       refresh_token:
         type: string
     type: object
-  domain.Role:
+  Role:
     properties:
       created_at:
         type: string
@@ -94,14 +94,14 @@ definitions:
         type: boolean
       menu_permissions:
         items:
-          $ref: '#/definitions/domain.RoleMenuPermission'
+          $ref: '#/definitions/RoleMenuPermission'
         type: array
       name:
         type: string
       updated_at:
         type: string
     type: object
-  domain.RoleMenuPermission:
+  RoleMenuPermission:
     properties:
       menu_id:
         type: string
@@ -109,10 +109,10 @@ definitions:
         type: string
       permissions:
         items:
-          $ref: '#/definitions/domain.Permission'
+          $ref: '#/definitions/Permission'
         type: array
     type: object
-  domain.RoleMenuPermissionItem:
+  RoleMenuPermissionItem:
     properties:
       menu_id:
         type: string
@@ -121,7 +121,7 @@ definitions:
           type: string
         type: array
     type: object
-  domain.UpdateRoleRequest:
+  UpdateRoleRequest:
     properties:
       description:
         type: string
@@ -130,7 +130,7 @@ definitions:
       name:
         type: string
     type: object
-  domain.UpdateUserRequest:
+  UpdateUserRequest:
     properties:
       full_name:
         type: string
@@ -139,7 +139,7 @@ definitions:
       password:
         type: string
     type: object
-  domain.User:
+  User:
     properties:
       created_at:
         type: string
@@ -152,7 +152,7 @@ definitions:
       is_active:
         type: boolean
       role:
-        $ref: '#/definitions/domain.Role'
+        $ref: '#/definitions/Role'
       updated_at:
         type: string
     type: object
@@ -170,14 +170,14 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/domain.LoginRequest'
+          $ref: '#/definitions/LoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.LoginResponse'
+            $ref: '#/definitions/LoginResponse'
       summary: เข้าสู่ระบบ
       tags:
       - auth
@@ -191,7 +191,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/domain.LogoutRequest'
+          $ref: '#/definitions/LogoutRequest'
       produces:
       - application/json
       responses:
@@ -213,14 +213,14 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/domain.RefreshRequest'
+          $ref: '#/definitions/RefreshRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.LoginResponse'
+            $ref: '#/definitions/LoginResponse'
       summary: ต่ออายุโทเค็น
       tags:
       - auth
@@ -233,7 +233,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/domain.Menu'
+              $ref: '#/definitions/Menu'
             type: array
       security:
       - ApiKeyAuth: []
@@ -254,7 +254,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.Menu'
+            $ref: '#/definitions/Menu'
       security:
       - ApiKeyAuth: []
       summary: ดูเมนูตาม ID
@@ -269,7 +269,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/domain.Permission'
+              $ref: '#/definitions/Permission'
             type: array
       security:
       - ApiKeyAuth: []
@@ -285,7 +285,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/domain.Role'
+              $ref: '#/definitions/Role'
             type: array
       security:
       - ApiKeyAuth: []
@@ -301,14 +301,14 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/domain.CreateRoleRequest'
+          $ref: '#/definitions/CreateRoleRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/domain.Role'
+            $ref: '#/definitions/Role'
       security:
       - ApiKeyAuth: []
       summary: สร้างบทบาท
@@ -348,7 +348,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.Role'
+            $ref: '#/definitions/Role'
       security:
       - ApiKeyAuth: []
       summary: ดูข้อมูลบทบาทตาม ID
@@ -368,14 +368,14 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/domain.UpdateRoleRequest'
+          $ref: '#/definitions/UpdateRoleRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.Role'
+            $ref: '#/definitions/Role'
       security:
       - ApiKeyAuth: []
       summary: แก้ไขบทบาท
@@ -396,7 +396,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/domain.AssignPermissionsRequest'
+          $ref: '#/definitions/AssignPermissionsRequest'
       produces:
       - application/json
       responses:
@@ -419,7 +419,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/domain.Role'
+              $ref: '#/definitions/Role'
             type: array
       security:
       - ApiKeyAuth: []
@@ -435,7 +435,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/domain.User'
+              $ref: '#/definitions/User'
             type: array
       security:
       - ApiKeyAuth: []
@@ -451,14 +451,14 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/domain.CreateUserRequest'
+          $ref: '#/definitions/CreateUserRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/domain.User'
+            $ref: '#/definitions/User'
       security:
       - ApiKeyAuth: []
       summary: สร้างผู้ใช้
@@ -498,7 +498,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.User'
+            $ref: '#/definitions/User'
       security:
       - ApiKeyAuth: []
       summary: ดูข้อมูลผู้ใช้ตาม ID
@@ -518,14 +518,14 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/domain.UpdateUserRequest'
+          $ref: '#/definitions/UpdateUserRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.User'
+            $ref: '#/definitions/User'
       security:
       - ApiKeyAuth: []
       summary: แก้ไขผู้ใช้
@@ -546,7 +546,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/domain.AssignRoleRequest'
+          $ref: '#/definitions/AssignRoleRequest'
       produces:
       - application/json
       responses:

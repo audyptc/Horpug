@@ -22,7 +22,7 @@ go install github.com/swaggo/swag/cmd/swag@latest
 
 ## Environment Variables
 
-The service loads variables from `server/.env` first and falls back to OS environment variables.
+The service loads variables from `backend/.env` first and falls back to OS environment variables.
 
 Required:
 
@@ -45,7 +45,7 @@ Duration values must be valid Go duration strings such as `30s`, `15m`, `1h`, `2
 
 ## Run Locally
 
-From the `server/` directory:
+From the `backend/` directory:
 
 ```bash
 go mod download
@@ -90,10 +90,16 @@ X-Dormitory-Id: <dormitory-uuid>
 
 ## Swagger
 
-Generate docs from `server/` directory:
+Generate docs from `backend/` directory:
+
+```powershell
+# PowerShell
+$dirs = @('cmd/api'); Get-ChildItem internal\feature -Directory | ForEach-Object { foreach ($leaf in @('domain','delivery')) { $candidate = Join-Path $_.FullName $leaf; if (Test-Path $candidate) { $dirs += (Resolve-Path -Relative $candidate) } } }; swag init -g main.go -d ($dirs -join ',') --parseInternal --parseDependency --parseDependencyLevel 3 --useStructName -o docs
+```
 
 ```bash
-swag init -g main.go -d cmd/api,internal/delivery/http,internal/domain -o docs
+# Bash (Linux/macOS)
+dirs="cmd/api"; for d in internal/feature/*/; do for leaf in domain delivery; do candidate="${d}${leaf}"; [ -d "$candidate" ] && dirs="$dirs,$candidate"; done; done; swag init -g main.go -d "$dirs" --parseInternal --parseDependency --parseDependencyLevel 3 --useStructName -o docs
 ```
 
 Then open:
@@ -105,7 +111,7 @@ Then open:
 Build backend image only:
 
 ```bash
-docker build -t horpug-backend ./server
+docker build -t horpug-backend ./backend
 ```
 
 Run full stack from repository root:
@@ -123,7 +129,7 @@ Main entry points when running with compose:
 ## Project Structure
 
 ```text
-server/
+backend/
 ├── cmd/
 │   ├── api/                # API entrypoint and docs routes
 │   └── modelgen/           # helper/generator entrypoint
