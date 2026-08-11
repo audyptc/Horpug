@@ -22,6 +22,10 @@ func main() {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
 
+	if err := database.SeedMenus(db); err != nil {
+		log.Fatalf("failed to seed menus: %v", err)
+	}
+
 	if err := database.SeedPermissions(db); err != nil {
 		log.Fatalf("failed to seed permissions: %v", err)
 	}

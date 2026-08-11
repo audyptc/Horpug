@@ -1,6 +1,7 @@
 package http
 
 import (
+	menuhttp "apihorpug/internal/features/menu/delivery/http"
 	permissionhttp "apihorpug/internal/features/permission/delivery/http"
 	rolehttp "apihorpug/internal/features/role/delivery/http"
 	userhttp "apihorpug/internal/features/user/delivery/http"
@@ -11,6 +12,7 @@ import (
 
 func RegisterRoutes(app *fiber.App, db *gorm.DB) {
 	permissionHandler := permissionhttp.NewHandler(db)
+	menuHandler := menuhttp.NewHandler(db)
 	roleHandler := rolehttp.NewHandler(db)
 	userHandler := userhttp.NewHandler(db)
 
@@ -22,6 +24,8 @@ func RegisterRoutes(app *fiber.App, db *gorm.DB) {
 
 	api.Get("/permissions", permissionHandler.List)
 	api.Post("/permissions", permissionHandler.Create)
+
+	api.Get("/menus", menuHandler.List)
 
 	api.Get("/roles", roleHandler.List)
 	api.Get("/roles/:id", roleHandler.Get)

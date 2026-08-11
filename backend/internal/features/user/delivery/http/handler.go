@@ -4,7 +4,6 @@ import (
 	"errors"
 	"strings"
 
-	permissiondomain "apihorpug/internal/features/permission/domain"
 	roledomain "apihorpug/internal/features/role/domain"
 	userdomain "apihorpug/internal/features/user/domain"
 
@@ -19,11 +18,11 @@ type Handler struct {
 }
 
 type createUserRequest struct {
-	Username string     `json:"username"`
-	Email    string     `json:"email"`
-	Password string     `json:"password"`
-	RoleID   *uuid.UUID `json:"role_id"`
-	IsActive *bool      `json:"is_active"`
+	Username string    `json:"username"`
+	Email    string    `json:"email"`
+	Password string    `json:"password"`
+	RoleID   uuid.UUID `json:"role_id"`
+	IsActive *bool     `json:"is_active"`
 }
 
 type updateUserRequest struct {
@@ -32,6 +31,14 @@ type updateUserRequest struct {
 	Password *string    `json:"password"`
 	RoleID   *uuid.UUID `json:"role_id"`
 	IsActive *bool      `json:"is_active"`
+}
+
+type userPermissionItem struct {
+	MenuID         uuid.UUID `json:"menu_id"`
+	MenuName       string    `json:"menu_name"`
+	MenuPath       string    `json:"menu_path"`
+	PermissionID   uuid.UUID `json:"permission_id"`
+	PermissionName string    `json:"permission_name"`
 }
 
 func NewHandler(db *gorm.DB) *Handler {
@@ -77,17 +84,14 @@ func (h *Handler) GetPermissions(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to get user"})
 	}
 
-	if user.RoleID == nil {
-		return c.JSON([]permissiondomain.Permission{})
-	}
-
-	var permissions []permissiondomain.Permission
+	var permissions []userPermissionItem
 	err = h.db.
-		Table("permissions").
-		Select("permissions.*").
-		Joins("join role_permissions on role_permissions.permission_id = permissions.id").
-		Where("role_permissions.role_id = ?", *user.RoleID).
-		Order("permissions.name asc").
+		Table("role_menu_permissions as rmp").
+		Select("rmp.menu_id, m.name as menu_name, m.path as menu_path, rmp.permission_id, p.name as permission_name").
+		Joins("join menus m on m.id = rmp.menu_id").
+		Joins("join permissions p on p.id = rmp.permission_id").
+		Where("rmp.role_id = ?", user.RoleID).
+		Order("m.path asc, p.name asc").
 		Find(&permissions).Error
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load user permissions"})
@@ -107,15 +111,16 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	if req.Username == "" || req.Email == "" || req.Password == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "username, email and password are required"})
 	}
+	if req.RoleID == uuid.Nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "role_id is required"})
+	}
 
-	if req.RoleID != nil {
-		var count int64
-		if err := h.db.Model(&roledomain.Role{}).Where("id = ?", *req.RoleID).Count(&count).Error; err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to validate role"})
-		}
-		if count == 0 {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "role not found"})
-		}
+	var count int64
+	if err := h.db.Model(&roledomain.Role{}).Where("id = ?", req.RoleID).Count(&count).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to validate role"})
+	}
+	if count == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "role not found"})
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)

@@ -14,8 +14,8 @@ type User struct {
 	Username  string           `json:"username" gorm:"size:80;uniqueIndex;not null"`
 	Email     string           `json:"email" gorm:"size:180;uniqueIndex;not null"`
 	Password  string           `json:"-" gorm:"size:255;not null"`
-	RoleID    *uuid.UUID       `json:"role_id" gorm:"type:uuid"`
-	Role      *roledomain.Role `json:"role,omitempty" gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL"`
+	RoleID    uuid.UUID        `json:"role_id" gorm:"type:uuid;not null"`
+	Role      *roledomain.Role `json:"role,omitempty" gorm:"constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"`
 	IsActive  bool             `json:"is_active" gorm:"not null;default:true"`
 	CreatedAt time.Time        `json:"created_at"`
 	UpdatedAt time.Time        `json:"updated_at"`
