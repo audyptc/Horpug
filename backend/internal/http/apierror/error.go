@@ -23,6 +23,14 @@ func NotFound(message string) *Error {
 	return New(fiber.StatusNotFound, message)
 }
 
+func Unauthorized(message string) *Error {
+	return New(fiber.StatusUnauthorized, message)
+}
+
+func Forbidden(message string) *Error {
+	return New(fiber.StatusForbidden, message)
+}
+
 func Conflict(message string) *Error {
 	return New(fiber.StatusConflict, message)
 }

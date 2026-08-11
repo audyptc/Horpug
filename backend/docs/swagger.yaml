@@ -1,5 +1,26 @@
 basePath: /api/v1
 definitions:
+  apihorpug_internal_features_activitylog_domain.ActivityLog:
+    properties:
+      action:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      entity_id:
+        type: string
+      entity_type:
+        type: string
+      id:
+        type: string
+      ip_address:
+        type: string
+      user_id:
+        type: string
+      username:
+        type: string
+    type: object
   apihorpug_internal_features_dormitory_domain.Dormitory:
     properties:
       address:
@@ -149,6 +170,34 @@ definitions:
       message:
         type: string
     type: object
+  internal_features_activitylog_delivery_http.createActivityLogRequest:
+    properties:
+      action:
+        type: string
+      description:
+        type: string
+      entity_id:
+        type: string
+      entity_type:
+        type: string
+      user_id:
+        type: string
+    type: object
+  internal_features_auth_delivery_http.loginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  internal_features_auth_delivery_http.loginResponse:
+    properties:
+      expires_at:
+        type: string
+      token:
+        type: string
+      user: {}
+    type: object
   internal_features_dormitory_delivery_http.createDormitoryRequest:
     properties:
       address:
@@ -269,6 +318,142 @@ info:
   title: Horpug API
   version: "1.0"
 paths:
+  /activity-logs:
+    get:
+      parameters:
+      - description: Filter by user ID
+        in: query
+        name: user_id
+        type: string
+      - description: Filter by entity type
+        in: query
+        name: entity_type
+        type: string
+      - description: Filter by entity ID
+        in: query
+        name: entity_id
+        type: string
+      - description: Max results (default 50, max 200)
+        in: query
+        name: limit
+        type: integer
+      - description: Result offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/apihorpug_internal_features_activitylog_domain.ActivityLog'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List activity logs
+      tags:
+      - activity-logs
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Activity log payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_activitylog_delivery_http.createActivityLogRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_activitylog_domain.ActivityLog'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Create an activity log entry
+      tags:
+      - activity-logs
+  /activity-logs/{id}:
+    get:
+      parameters:
+      - description: Activity Log ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_activitylog_domain.ActivityLog'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get an activity log by ID
+      tags:
+      - activity-logs
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Login payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_auth_delivery_http.loginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_features_auth_delivery_http.loginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      summary: Log in with username/email and password
+      tags:
+      - auth
   /dormitories:
     get:
       parameters:
@@ -293,6 +478,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: List dormitories
       tags:
       - dormitories
@@ -321,6 +508,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: Create a dormitory
       tags:
       - dormitories
@@ -353,6 +542,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: Delete a dormitory
       tags:
       - dormitories
@@ -382,6 +573,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: Get a dormitory by ID
       tags:
       - dormitories
@@ -419,6 +612,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: Update a dormitory
       tags:
       - dormitories
@@ -437,6 +632,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: List menus
       tags:
       - menus
@@ -455,6 +652,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: List permissions
       tags:
       - permissions
@@ -487,6 +686,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: Create a permission
       tags:
       - permissions
@@ -505,6 +706,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: List roles
       tags:
       - roles
@@ -537,6 +740,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: Create a role
       tags:
       - roles
@@ -573,6 +778,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: Delete a role
       tags:
       - roles
@@ -602,6 +809,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: Get a role by ID
       tags:
       - roles
@@ -643,6 +852,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: Update a role
       tags:
       - roles
@@ -661,6 +872,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: List users
       tags:
       - users
@@ -693,6 +906,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: Create a user
       tags:
       - users
@@ -725,6 +940,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: Delete a user
       tags:
       - users
@@ -754,6 +971,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: Get a user by ID
       tags:
       - users
@@ -795,6 +1014,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: Update a user
       tags:
       - users
@@ -827,7 +1048,15 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
       summary: Get a user's permissions
       tags:
       - users
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and the JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

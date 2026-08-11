@@ -26,6 +26,7 @@ func NewHandler(usecase *menuusecase.Service) *Handler {
 // @Produce json
 // @Success 200 {array} menudomain.Menu
 // @Failure 500 {object} apierror.Error
+// @Security BearerAuth
 // @Router /menus [get]
 func (h *Handler) List(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)

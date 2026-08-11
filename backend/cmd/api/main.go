@@ -15,6 +15,10 @@ import (
 // @version 1.0
 // @description API for the Horpug dormitory management system.
 // @BasePath /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and the JWT token.
 func main() {
 	cfg := config.Load()
 
@@ -35,8 +39,12 @@ func main() {
 		log.Fatalf("failed to seed permissions: %v", err)
 	}
 
+	if err := database.SeedAdmin(db, cfg); err != nil {
+		log.Fatalf("failed to seed admin user: %v", err)
+	}
+
 	app := fiber.New(fiber.Config{ErrorHandler: http.ErrorHandler})
-	http.RegisterRoutes(app, db)
+	http.RegisterRoutes(app, db, cfg.SecretKey, cfg.AccessTokenTTL)
 	http.RegisterDocsRoutes(app)
 
 	log.Printf("server running on :%s", cfg.AppPort)

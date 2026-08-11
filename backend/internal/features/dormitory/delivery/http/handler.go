@@ -51,6 +51,7 @@ func NewHandler(usecase *dormusecase.Service) *Handler {
 // @Success 200 {array} dormdomain.Dormitory
 // @Failure 400 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
+// @Security BearerAuth
 // @Router /dormitories [get]
 func (h *Handler) List(c fiber.Ctx) error {
 	var filter dormusecase.ListFilter
@@ -82,6 +83,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 // @Failure 400 {object} apierror.Error
 // @Failure 404 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
+// @Security BearerAuth
 // @Router /dormitories/{id} [get]
 func (h *Handler) Get(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
@@ -112,6 +114,7 @@ func (h *Handler) Get(c fiber.Ctx) error {
 // @Success 201 {object} dormdomain.Dormitory
 // @Failure 400 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
+// @Security BearerAuth
 // @Router /dormitories [post]
 func (h *Handler) Create(c fiber.Ctx) error {
 	var req createDormitoryRequest
@@ -160,6 +163,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 // @Failure 400 {object} apierror.Error
 // @Failure 404 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
+// @Security BearerAuth
 // @Router /dormitories/{id} [put]
 func (h *Handler) Update(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
@@ -209,6 +213,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 // @Failure 400 {object} apierror.Error
 // @Failure 404 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
+// @Security BearerAuth
 // @Router /dormitories/{id} [delete]
 func (h *Handler) Delete(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))

@@ -84,6 +84,20 @@ func AutoMigrate(db *pgxpool.Pool) error {
 			CONSTRAINT user_dormitories_user_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
 			CONSTRAINT user_dormitories_dormitory_fkey FOREIGN KEY (dormitory_id) REFERENCES dormitories(id) ON DELETE CASCADE
 		)`,
+		`CREATE TABLE IF NOT EXISTS activity_logs (
+			id UUID PRIMARY KEY,
+			user_id UUID,
+			action VARCHAR(50) NOT NULL,
+			entity_type VARCHAR(80) NOT NULL,
+			entity_id UUID,
+			description VARCHAR(255) DEFAULT '',
+			ip_address VARCHAR(45) DEFAULT '',
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			CONSTRAINT activity_logs_user_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_activity_logs_entity ON activity_logs(entity_type, entity_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at DESC)`,
 	}
 
 	for _, stmt := range statements {

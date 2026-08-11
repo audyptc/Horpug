@@ -86,6 +86,60 @@ func (r *Repository) List(ctx context.Context) ([]userdomain.User, error) {
 	return users, nil
 }
 
+func (r *Repository) FindByLogin(ctx context.Context, login string) (userdomain.User, error) {
+	var user userdomain.User
+	var role roledomain.Role
+
+	err := r.db.QueryRow(ctx, `
+		SELECT
+			u.id,
+			u.username,
+			u.email,
+			u.password,
+			u.role_id,
+			u.is_active,
+			u.created_by,
+			u.updated_by,
+			u.created_at,
+			u.updated_at,
+			r.id,
+			r.name,
+			r.description,
+			r.is_active,
+			r.created_at,
+			r.updated_at
+		FROM users u
+		JOIN roles r ON r.id = u.role_id
+		WHERE u.username = $1 OR u.email = $1
+	`, login).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.Password,
+		&user.RoleID,
+		&user.IsActive,
+		&user.CreatedBy,
+		&user.UpdatedBy,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&role.ID,
+		&role.Name,
+		&role.Description,
+		&role.IsActive,
+		&role.CreatedAt,
+		&role.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return userdomain.User{}, userdomain.ErrUserNotFound
+		}
+		return userdomain.User{}, err
+	}
+
+	user.Role = &role
+	return user, nil
+}
+
 func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (userdomain.User, error) {
 	user, err := r.loadUserByID(ctx, id)
 	if err != nil {

@@ -50,6 +50,7 @@ func NewHandler(usecase *roleusecase.Service) *Handler {
 // @Produce json
 // @Success 200 {array} roledomain.Role
 // @Failure 500 {object} apierror.Error
+// @Security BearerAuth
 // @Router /roles [get]
 func (h *Handler) List(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
@@ -72,6 +73,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 // @Failure 400 {object} apierror.Error
 // @Failure 404 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
+// @Security BearerAuth
 // @Router /roles/{id} [get]
 func (h *Handler) Get(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
@@ -103,6 +105,7 @@ func (h *Handler) Get(c fiber.Ctx) error {
 // @Failure 400 {object} apierror.Error
 // @Failure 409 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
+// @Security BearerAuth
 // @Router /roles [post]
 func (h *Handler) Create(c fiber.Ctx) error {
 	var req createRoleRequest
@@ -155,6 +158,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 // @Failure 404 {object} apierror.Error
 // @Failure 409 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
+// @Security BearerAuth
 // @Router /roles/{id} [put]
 func (h *Handler) Update(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
@@ -217,6 +221,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 // @Failure 404 {object} apierror.Error
 // @Failure 409 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
+// @Security BearerAuth
 // @Router /roles/{id} [delete]
 func (h *Handler) Delete(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))

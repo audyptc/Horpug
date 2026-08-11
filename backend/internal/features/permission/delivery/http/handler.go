@@ -32,6 +32,7 @@ func NewHandler(usecase *permissionusecase.Service) *Handler {
 // @Produce json
 // @Success 200 {array} permissiondomain.Permission
 // @Failure 500 {object} apierror.Error
+// @Security BearerAuth
 // @Router /permissions [get]
 func (h *Handler) List(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
@@ -55,6 +56,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 // @Failure 400 {object} apierror.Error
 // @Failure 409 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
+// @Security BearerAuth
 // @Router /permissions [post]
 func (h *Handler) Create(c fiber.Ctx) error {
 	var req createPermissionRequest
