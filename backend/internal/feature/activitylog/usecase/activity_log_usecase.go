@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/activitylog/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 
 	"github.com/google/uuid"
 )

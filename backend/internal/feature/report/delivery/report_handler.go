@@ -1,9 +1,9 @@
 package delivery
 
 import (
-	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/feature/report/domain"
 	"apigofiberhorpug/internal/feature/report/usecase"
+	"apigofiberhorpug/internal/shared/http/response"
 
 	"github.com/gofiber/fiber/v3"
 )

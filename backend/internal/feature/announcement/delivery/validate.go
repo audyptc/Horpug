@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/announcement/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 func validateCreateAnnouncementRequest(req *domain.CreateAnnouncementRequest) error {

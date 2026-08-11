@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	coredomain "apigofiberhorpug/internal/domain"
 	roledomain "apigofiberhorpug/internal/feature/role/domain"
 	"apigofiberhorpug/internal/feature/user/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"

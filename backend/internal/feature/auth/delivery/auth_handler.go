@@ -1,10 +1,10 @@
 package delivery
 
 import (
-	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/feature/auth/domain"
 	"apigofiberhorpug/internal/feature/auth/usecase"
+	"apigofiberhorpug/internal/shared/http/apierror"
+	"apigofiberhorpug/internal/shared/http/response"
 
 	"github.com/gofiber/fiber/v3"
 )

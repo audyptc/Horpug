@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/watermeter/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 func validateCreateWaterMeterRequest(req *domain.CreateWaterMeterRequest) error {

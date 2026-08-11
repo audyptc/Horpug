@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/user/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 func validateCreateUserRequest(req *domain.CreateUserRequest) error {

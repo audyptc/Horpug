@@ -6,9 +6,9 @@ import (
 	"encoding/hex"
 	"time"
 
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/auth/domain"
 	userdomain "apigofiberhorpug/internal/feature/user/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"

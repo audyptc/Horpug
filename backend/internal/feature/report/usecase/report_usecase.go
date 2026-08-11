@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/report/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 type ReportUseCase struct {

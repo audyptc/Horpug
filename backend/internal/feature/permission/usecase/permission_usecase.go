@@ -3,8 +3,8 @@ package usecase
 import (
 	"context"
 
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/permission/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 type PermissionUseCase struct {

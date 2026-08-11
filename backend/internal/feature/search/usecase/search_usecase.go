@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/search/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 type SearchUseCase struct {

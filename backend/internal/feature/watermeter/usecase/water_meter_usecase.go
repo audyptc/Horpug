@@ -5,10 +5,10 @@ import (
 	"errors"
 	"time"
 
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	coredomain "apigofiberhorpug/internal/domain"
 	roomdomain "apigofiberhorpug/internal/feature/room/domain"
 	"apigofiberhorpug/internal/feature/watermeter/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 
 	"github.com/google/uuid"
 )

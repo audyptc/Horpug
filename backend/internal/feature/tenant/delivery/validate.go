@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/tenant/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 func validateCreateTenantRequest(req *domain.CreateTenantRequest) error {

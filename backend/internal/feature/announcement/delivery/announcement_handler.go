@@ -1,11 +1,11 @@
 package delivery
 
 import (
-	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/delivery/http/httputil"
-	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/feature/announcement/domain"
 	"apigofiberhorpug/internal/feature/announcement/usecase"
+	"apigofiberhorpug/internal/shared/http/apierror"
+	"apigofiberhorpug/internal/shared/http/httputil"
+	"apigofiberhorpug/internal/shared/http/response"
 
 	"github.com/gofiber/fiber/v3"
 )

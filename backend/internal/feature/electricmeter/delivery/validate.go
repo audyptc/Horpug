@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/electricmeter/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 func validateCreateElectricMeterRequest(req *domain.CreateElectricMeterRequest) error {

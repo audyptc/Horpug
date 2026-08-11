@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	coredomain "apigofiberhorpug/internal/domain"
 	"apigofiberhorpug/internal/feature/menu/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 type MenuUseCase struct {

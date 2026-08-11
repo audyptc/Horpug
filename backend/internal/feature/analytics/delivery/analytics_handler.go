@@ -3,9 +3,9 @@ package delivery
 import (
 	"strconv"
 
-	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/feature/analytics/domain"
 	"apigofiberhorpug/internal/feature/analytics/usecase"
+	"apigofiberhorpug/internal/shared/http/response"
 
 	"github.com/gofiber/fiber/v3"
 )

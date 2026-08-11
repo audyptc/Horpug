@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/delivery/http/httputil"
-	"apigofiberhorpug/internal/delivery/http/response"
 	"apigofiberhorpug/internal/feature/document/domain"
 	"apigofiberhorpug/internal/feature/document/usecase"
+	"apigofiberhorpug/internal/shared/http/apierror"
+	"apigofiberhorpug/internal/shared/http/httputil"
+	"apigofiberhorpug/internal/shared/http/response"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"

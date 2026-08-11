@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/document/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 func validateCreateDocumentRequest(req *domain.CreateDocumentRequest) error {

@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/role/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 func validateCreateRoleRequest(req *domain.CreateRoleRequest) error {

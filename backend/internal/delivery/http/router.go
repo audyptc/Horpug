@@ -5,8 +5,6 @@ import (
 
 	"apigofiberhorpug/config"
 	"apigofiberhorpug/internal/app/bootstrap"
-	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/delivery/http/middleware"
 	aldelivery "apigofiberhorpug/internal/feature/activitylog/delivery"
 	analyticsdelivery "apigofiberhorpug/internal/feature/analytics/delivery"
 	announcementdelivery "apigofiberhorpug/internal/feature/announcement/delivery"
@@ -33,6 +31,8 @@ import (
 	tenantdelivery "apigofiberhorpug/internal/feature/tenant/delivery"
 	userdelivery "apigofiberhorpug/internal/feature/user/delivery"
 	watermeterdelivery "apigofiberhorpug/internal/feature/watermeter/delivery"
+	"apigofiberhorpug/internal/shared/http/apierror"
+	"apigofiberhorpug/internal/shared/http/middleware"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/limiter"

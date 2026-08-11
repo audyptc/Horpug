@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/maintenancerequest/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 func validateCreateMaintenanceRequestRequest(req *domain.CreateMaintenanceRequestRequest) error {

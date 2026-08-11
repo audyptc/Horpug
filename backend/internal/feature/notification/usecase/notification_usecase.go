@@ -3,8 +3,8 @@ package usecase
 import (
 	"context"
 
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/notification/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 type NotificationUseCase struct {

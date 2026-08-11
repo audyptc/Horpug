@@ -5,9 +5,9 @@ import (
 	"errors"
 	"strings"
 
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	coredomain "apigofiberhorpug/internal/domain"
 	"apigofiberhorpug/internal/feature/roomtype/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 type RoomTypeUseCase struct {

@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/dormitory/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 func validateCreateDormitoryRequest(req *domain.CreateDormitoryRequest) error {

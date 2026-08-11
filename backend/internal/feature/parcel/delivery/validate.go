@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/parcel/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 func validateCreateParcelRequest(req *domain.CreateParcelRequest) error {

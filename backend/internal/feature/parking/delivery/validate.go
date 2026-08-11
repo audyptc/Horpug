@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/parking/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 func validateCreateParkingSlotRequest(req *domain.CreateParkingSlotRequest) error {

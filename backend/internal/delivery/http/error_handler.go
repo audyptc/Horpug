@@ -3,7 +3,7 @@ package http
 import (
 	"errors"
 
-	"apigofiberhorpug/internal/delivery/http/apierror"
+	"apigofiberhorpug/internal/shared/http/apierror"
 
 	"github.com/gofiber/fiber/v3"
 )

@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/auth/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 func validateLoginRequest(req *domain.LoginRequest) error {

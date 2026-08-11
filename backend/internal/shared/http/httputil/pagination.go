@@ -3,7 +3,7 @@ package httputil
 import (
 	"strconv"
 
-	"apigofiberhorpug/internal/delivery/http/apierror"
+	"apigofiberhorpug/internal/shared/http/apierror"
 
 	"github.com/gofiber/fiber/v3"
 )

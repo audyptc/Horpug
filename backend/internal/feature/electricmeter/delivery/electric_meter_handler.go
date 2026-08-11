@@ -3,13 +3,13 @@ package delivery
 import (
 	"time"
 
-	"apigofiberhorpug/internal/delivery/http/apierror"
-	"apigofiberhorpug/internal/delivery/http/httputil"
-	"apigofiberhorpug/internal/delivery/http/response"
 	aldomain "apigofiberhorpug/internal/feature/activitylog/domain"
 	alusecase "apigofiberhorpug/internal/feature/activitylog/usecase"
 	"apigofiberhorpug/internal/feature/electricmeter/domain"
 	"apigofiberhorpug/internal/feature/electricmeter/usecase"
+	"apigofiberhorpug/internal/shared/http/apierror"
+	"apigofiberhorpug/internal/shared/http/httputil"
+	"apigofiberhorpug/internal/shared/http/response"
 
 	"github.com/gofiber/fiber/v3"
 )

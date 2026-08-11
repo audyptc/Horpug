@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/feature/expense/domain"
+	"apigofiberhorpug/internal/shared/http/apierror"
 )
 
 func validateCreateExpenseRequest(req *domain.CreateExpenseRequest) error {
