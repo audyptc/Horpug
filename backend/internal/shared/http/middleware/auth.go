@@ -3,7 +3,7 @@ package middleware
 import (
 	"strings"
 
-	"apigofiberhorpug/internal/feature/auth/usecase"
+	"apigofiberhorpug/internal/features/auth/usecase"
 	"apigofiberhorpug/internal/shared/http/apierror"
 
 	"github.com/gofiber/fiber/v3"
