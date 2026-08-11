@@ -35,6 +35,9 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (permissiondoma
 	if input.Name == "" {
 		return permissiondomain.Permission{}, permissiondomain.ErrPermissionNameRequired
 	}
+	if !permissiondomain.Action(input.Name).Valid() {
+		return permissiondomain.Permission{}, permissiondomain.ErrPermissionNameInvalid
+	}
 
 	return s.repo.Create(ctx, input)
 }

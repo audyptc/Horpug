@@ -73,6 +73,9 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		if errors.Is(err, permissiondomain.ErrPermissionNameRequired) {
 			return apierror.BadRequest("name is required")
 		}
+		if errors.Is(err, permissiondomain.ErrPermissionNameInvalid) {
+			return apierror.BadRequest("name must be one of the predefined actions")
+		}
 		if errors.Is(err, permissiondomain.ErrPermissionNameExists) {
 			return apierror.Conflict("permission name already exists")
 		}

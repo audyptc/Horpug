@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"apihorpug/config"
+	menurepository "apihorpug/internal/features/menu/repository/postgres"
 	"apihorpug/internal/http"
 	"apihorpug/internal/platform/database"
 
@@ -26,7 +27,7 @@ func main() {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
 
-	if err := database.SeedMenus(db); err != nil {
+	if err := menurepository.SeedMenus(db); err != nil {
 		log.Fatalf("failed to seed menus: %v", err)
 	}
 
