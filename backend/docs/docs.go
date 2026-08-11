@@ -212,7 +212,94 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_features_auth_delivery_http.loginResponse"
+                            "$ref": "#/definitions/internal_features_auth_delivery_http.sessionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Revoke a refresh token",
+                "parameters": [
+                    {
+                        "description": "Refresh payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_auth_delivery_http.refreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Exchange a refresh token for a new access/refresh token pair",
+                "parameters": [
+                    {
+                        "description": "Refresh payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_auth_delivery_http.refreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_auth_delivery_http.sessionResponse"
                         }
                     },
                     "400": {
@@ -237,6 +324,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Returns every dormitory for roles with full dormitory access, otherwise only the dormitories the caller manages.",
                 "produces": [
                     "application/json"
                 ],
@@ -244,14 +332,6 @@ const docTemplate = `{
                     "dormitories"
                 ],
                 "summary": "List dormitories",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Filter by managing user ID",
-                        "name": "user_id",
-                        "in": "query"
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -262,8 +342,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
                         }
@@ -1333,6 +1413,15 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "dormitories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/apihorpug_internal_features_role_domain.RoleDormitory"
+                    }
+                },
+                "full_dormitory_access": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -1352,6 +1441,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_role_domain.RoleDormitory": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 }
             }
@@ -1476,13 +1576,27 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_features_auth_delivery_http.loginResponse": {
+        "internal_features_auth_delivery_http.refreshRequest": {
             "type": "object",
             "properties": {
-                "expires_at": {
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_auth_delivery_http.sessionResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
                     "type": "string"
                 },
-                "token": {
+                "access_token_expires_at": {
+                    "type": "string"
+                },
+                "refresh_token": {
+                    "type": "string"
+                },
+                "refresh_token_expires_at": {
                     "type": "string"
                 },
                 "user": {}
@@ -1492,9 +1606,6 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "address": {
-                    "type": "string"
-                },
-                "created_by": {
                     "type": "string"
                 },
                 "description": {
@@ -1540,9 +1651,6 @@ const docTemplate = `{
                 },
                 "phone": {
                     "type": "string"
-                },
-                "updated_by": {
-                    "type": "string"
                 }
             }
         },
@@ -1560,11 +1668,17 @@ const docTemplate = `{
         "internal_features_role_delivery_http.createRoleRequest": {
             "type": "object",
             "properties": {
-                "created_by": {
-                    "type": "string"
-                },
                 "description": {
                     "type": "string"
+                },
+                "dormitory_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "full_dormitory_access": {
+                    "type": "boolean"
                 },
                 "is_active": {
                     "type": "boolean"
@@ -1600,6 +1714,15 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "dormitory_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "full_dormitory_access": {
+                    "type": "boolean"
+                },
                 "is_active": {
                     "type": "boolean"
                 },
@@ -1611,18 +1734,12 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
-                },
-                "updated_by": {
-                    "type": "string"
                 }
             }
         },
         "internal_features_user_delivery_http.createUserRequest": {
             "type": "object",
             "properties": {
-                "created_by": {
-                    "type": "string"
-                },
                 "email": {
                     "type": "string"
                 },
@@ -1653,9 +1770,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "role_id": {
-                    "type": "string"
-                },
-                "updated_by": {
                     "type": "string"
                 },
                 "username": {

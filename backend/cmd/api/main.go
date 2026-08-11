@@ -44,7 +44,7 @@ func main() {
 	}
 
 	app := fiber.New(fiber.Config{ErrorHandler: http.ErrorHandler})
-	http.RegisterRoutes(app, db, cfg.SecretKey, cfg.AccessTokenTTL)
+	http.RegisterRoutes(app, db, cfg.SecretKey, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 	http.RegisterDocsRoutes(app)
 
 	log.Printf("server running on :%s", cfg.AppPort)

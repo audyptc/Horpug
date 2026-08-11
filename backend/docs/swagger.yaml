@@ -97,6 +97,12 @@ definitions:
         type: string
       description:
         type: string
+      dormitories:
+        items:
+          $ref: '#/definitions/apihorpug_internal_features_role_domain.RoleDormitory'
+        type: array
+      full_dormitory_access:
+        type: boolean
       id:
         type: string
       is_active:
@@ -110,6 +116,13 @@ definitions:
       updated_at:
         type: string
       updated_by:
+        type: string
+    type: object
+  apihorpug_internal_features_role_domain.RoleDormitory:
+    properties:
+      id:
+        type: string
+      name:
         type: string
     type: object
   apihorpug_internal_features_role_domain.RoleMenuPermission:
@@ -190,19 +203,26 @@ definitions:
       username:
         type: string
     type: object
-  internal_features_auth_delivery_http.loginResponse:
+  internal_features_auth_delivery_http.refreshRequest:
     properties:
-      expires_at:
+      refresh_token:
         type: string
-      token:
+    type: object
+  internal_features_auth_delivery_http.sessionResponse:
+    properties:
+      access_token:
+        type: string
+      access_token_expires_at:
+        type: string
+      refresh_token:
+        type: string
+      refresh_token_expires_at:
         type: string
       user: {}
     type: object
   internal_features_dormitory_delivery_http.createDormitoryRequest:
     properties:
       address:
-        type: string
-      created_by:
         type: string
       description:
         type: string
@@ -233,8 +253,6 @@ definitions:
         type: string
       phone:
         type: string
-      updated_by:
-        type: string
     type: object
   internal_features_permission_delivery_http.createPermissionRequest:
     properties:
@@ -245,10 +263,14 @@ definitions:
     type: object
   internal_features_role_delivery_http.createRoleRequest:
     properties:
-      created_by:
-        type: string
       description:
         type: string
+      dormitory_ids:
+        items:
+          type: string
+        type: array
+      full_dormitory_access:
+        type: boolean
       is_active:
         type: boolean
       menu_permissions:
@@ -271,6 +293,12 @@ definitions:
     properties:
       description:
         type: string
+      dormitory_ids:
+        items:
+          type: string
+        type: array
+      full_dormitory_access:
+        type: boolean
       is_active:
         type: boolean
       menu_permissions:
@@ -279,13 +307,9 @@ definitions:
         type: array
       name:
         type: string
-      updated_by:
-        type: string
     type: object
   internal_features_user_delivery_http.createUserRequest:
     properties:
-      created_by:
-        type: string
       email:
         type: string
       is_active:
@@ -306,8 +330,6 @@ definitions:
       password:
         type: string
       role_id:
-        type: string
-      updated_by:
         type: string
       username:
         type: string
@@ -442,7 +464,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_features_auth_delivery_http.loginResponse'
+            $ref: '#/definitions/internal_features_auth_delivery_http.sessionResponse'
         "400":
           description: Bad Request
           schema:
@@ -454,13 +476,66 @@ paths:
       summary: Log in with username/email and password
       tags:
       - auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_auth_delivery_http.refreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      summary: Revoke a refresh token
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_auth_delivery_http.refreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_features_auth_delivery_http.sessionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      summary: Exchange a refresh token for a new access/refresh token pair
+      tags:
+      - auth
   /dormitories:
     get:
-      parameters:
-      - description: Filter by managing user ID
-        in: query
-        name: user_id
-        type: string
+      description: Returns every dormitory for roles with full dormitory access, otherwise
+        only the dormitories the caller manages.
       produces:
       - application/json
       responses:
@@ -470,8 +545,8 @@ paths:
             items:
               $ref: '#/definitions/apihorpug_internal_features_dormitory_domain.Dormitory'
             type: array
-        "400":
-          description: Bad Request
+        "401":
+          description: Unauthorized
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
         "500":

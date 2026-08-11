@@ -7,6 +7,7 @@ import (
 	activitylogrepository "apihorpug/internal/features/activitylog/repository/postgres"
 	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
 	authhttp "apihorpug/internal/features/auth/delivery/http"
+	authrepository "apihorpug/internal/features/auth/repository/postgres"
 	authusecase "apihorpug/internal/features/auth/usecase"
 	dormitoryhttp "apihorpug/internal/features/dormitory/delivery/http"
 	dormitoryrepository "apihorpug/internal/features/dormitory/repository/postgres"
@@ -30,7 +31,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTokenTTL time.Duration) {
+func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTokenTTL, refreshTokenTTL time.Duration) {
 	permissionRepo := permissionrepository.NewRepository(db)
 	permissionService := permissionusecase.New(permissionRepo)
 	permissionHandler := permissionhttp.NewHandler(permissionService)
@@ -49,7 +50,8 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	activityLogRepo := activitylogrepository.NewRepository(db)
 	activityLogService := activitylogusecase.New(activityLogRepo)
 	activityLogHandler := activityloghttp.NewHandler(activityLogService)
-	authService := authusecase.New(userRepo, secretKey, accessTokenTTL)
+	authTokenRepo := authrepository.NewRepository(db)
+	authService := authusecase.New(userRepo, authTokenRepo, secretKey, accessTokenTTL, refreshTokenTTL)
 	authHandler := authhttp.NewHandler(authService)
 
 	app.Get("/health", func(c fiber.Ctx) error {
@@ -58,6 +60,8 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 
 	authGroup := app.Group("/api/v1/auth")
 	authGroup.Post("/login", authHandler.Login)
+	authGroup.Post("/refresh", authHandler.Refresh)
+	authGroup.Post("/logout", authHandler.Logout)
 
 	api := app.Group("/api/v1")
 	api.Use(middleware.RequireAuth(secretKey))
