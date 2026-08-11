@@ -1,124 +1,58 @@
 package database
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"log/slog"
-	"net/url"
-	"strings"
-	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"apihorpug/config"
+	"apihorpug/internal/models"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-// DB พลิกแพลงให้เก็บ *pgxpool.Pool เอาไว้ใช้งานทั่วทั้งแอป
-type DB struct {
-	Pool *pgxpool.Pool
+func NewPostgres(cfg config.Config) (*gorm.DB, error) {
+	dsn := fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s TimeZone=Asia/Bangkok",
+		cfg.DBHost,
+		cfg.DBPort,
+		cfg.DBUsername,
+		cfg.DBPassword,
+		cfg.DBName,
+		cfg.DBSSLMode,
+	)
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }
 
-// ConnectPostgres ทำหน้าที่ลุยเชื่อมต่อฐานข้อมูลตามคู่สายที่เราส่งให้
-func ConnectPostgres(databaseURL string) (*DB, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+func AutoMigrate(db *gorm.DB) error {
+	return db.AutoMigrate(
+		&models.Role{},
+		&models.Permission{},
+		&models.User{},
+		&models.RolePermission{},
+	)
+}
 
-	pool, err := newPostgresPool(ctx, databaseURL)
-	if err != nil {
-		if isDatabaseDoesNotExist(err) {
-			if createErr := createDatabaseIfMissing(ctx, databaseURL); createErr != nil {
-				return nil, createErr
-			}
+func SeedPermissions(db *gorm.DB) error {
+	permissions := []models.Permission{
+		{Name: "users.read", Description: "Read users"},
+		{Name: "users.write", Description: "Create or update users"},
+		{Name: "users.delete", Description: "Delete users"},
+		{Name: "roles.read", Description: "Read roles"},
+		{Name: "roles.write", Description: "Create or update roles"},
+		{Name: "roles.delete", Description: "Delete roles"},
+	}
 
-			pool, err = newPostgresPool(ctx, databaseURL)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, err
+	for _, permission := range permissions {
+		if err := db.Where("name = ?", permission.Name).FirstOrCreate(&permission).Error; err != nil {
+			return err
 		}
 	}
 
-	slog.Info("เชื่อมต่อ PostgreSQL สำเร็จ")
-	return &DB{Pool: pool}, nil
-}
-
-func newPostgresPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
-	// 1. ตั้งค่า Config สำหรับ Connection Pool
-	config, err := pgxpool.ParseConfig(databaseURL)
-	if err != nil {
-		return nil, fmt.Errorf("ไม่สามารถอ่านรูปแบบ Database URL ได้: %v", err)
-	}
-
-	// ปรับแต่งตามใจชอบ (เช่น เชื่อมต่อค้างไว้ขั้นต่ำเท่าไหร่, สูงสุดเท่าไหร่)
-	config.MaxConns = 25
-	config.MinConns = 5
-
-	// 2. เริ่มทำการเปิด Pool เชื่อมต่อไปยัง Postgres
-	pool, err := pgxpool.NewWithConfig(ctx, config)
-	if err != nil {
-		return nil, fmt.Errorf("ไม่สามารถสร้าง Connection Pool ได้: %v", err)
-	}
-
-	// 3. ทดสอบการเชื่อมต่อจริง (Ping)
-	if err := pool.Ping(ctx); err != nil {
-		pool.Close()
-		return nil, fmt.Errorf("เชื่อมต่อ Postgres สำเร็จแต่ Ping ไม่ผ่าน: %v", err)
-	}
-
-	return pool, nil
-}
-
-func createDatabaseIfMissing(ctx context.Context, databaseURL string) error {
-	parsedURL, err := url.Parse(databaseURL)
-	if err != nil {
-		return fmt.Errorf("ไม่สามารถแยกข้อมูล Database URL ได้: %v", err)
-	}
-
-	dbName := strings.TrimPrefix(parsedURL.Path, "/")
-	if dbName == "" {
-		return fmt.Errorf("ไม่สามารถสร้างฐานข้อมูลได้: ไม่พบชื่อ database ใน URL")
-	}
-
-	maintenanceURL := *parsedURL
-	maintenanceURL.Path = "/postgres"
-
-	conn, err := pgx.Connect(ctx, maintenanceURL.String())
-	if err != nil {
-		return fmt.Errorf("ไม่สามารถเชื่อมต่อฐานข้อมูล maintenance เพื่อสร้าง database ได้: %v", err)
-	}
-	defer conn.Close(ctx)
-
-	quotedDBName := strings.ReplaceAll(dbName, `"`, `""`)
-	query := fmt.Sprintf(`CREATE DATABASE "%s"`, quotedDBName)
-	if _, err := conn.Exec(ctx, query); err != nil {
-		if isDatabaseDoesNotExist(err) {
-			return fmt.Errorf("ไม่สามารถสร้างฐานข้อมูล %s ได้: %v", dbName, err)
-		}
-
-		if strings.Contains(strings.ToLower(err.Error()), "already exists") {
-			slog.Info("database มีอยู่แล้ว", "name", dbName)
-			return nil
-		}
-
-		return fmt.Errorf("ไม่สามารถสร้างฐานข้อมูล %s ได้: %v", dbName, err)
-	}
-
-	slog.Info("สร้างฐานข้อมูลสำเร็จ", "name", dbName)
 	return nil
-}
-
-func isDatabaseDoesNotExist(err error) bool {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
-		return pgErr.Code == "3D000"
-	}
-
-	return strings.Contains(strings.ToLower(err.Error()), "does not exist")
-}
-
-// Close ปิด Pool เมื่อแอปพลิเคชันจบการทำงาน
-func (db *DB) Close() {
-	db.Pool.Close()
 }
