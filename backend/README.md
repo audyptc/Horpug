@@ -68,8 +68,10 @@ go install github.com/swaggo/swag/cmd/swag@latest
 รันคำสั่งนี้ที่ root ของ `backend/` ทุกครั้งที่แก้ไข annotation (`@Summary`, `@Router`, ฯลฯ) หรือเพิ่ม endpoint ใหม่:
 
 ```bash
-swag init -g cmd/api/main.go -o docs
+swag init -g cmd/api/main.go -o docs --parseDependency --parseInternal
 ```
+
+(ต้องใส่ `--parseDependency --parseInternal` เพราะ domain struct ถูกอ้างอิงข้าม feature package กัน มิฉะนั้น swag จะ error แบบ `cannot find type definition`)
 
 คำสั่งนี้จะ generate/อัปเดตไฟล์ในโฟลเดอร์ `docs/`:
 

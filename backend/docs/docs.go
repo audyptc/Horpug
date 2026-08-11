@@ -15,6 +15,240 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/dormitories": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dormitories"
+                ],
+                "summary": "List dormitories",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by managing user ID",
+                        "name": "user_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/apihorpug_internal_features_dormitory_domain.Dormitory"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dormitories"
+                ],
+                "summary": "Create a dormitory",
+                "parameters": [
+                    {
+                        "description": "Dormitory payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_dormitory_delivery_http.createDormitoryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_dormitory_domain.Dormitory"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/dormitories/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dormitories"
+                ],
+                "summary": "Get a dormitory by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dormitory ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_dormitory_domain.Dormitory"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dormitories"
+                ],
+                "summary": "Update a dormitory",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dormitory ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dormitory payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_dormitory_delivery_http.updateDormitoryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_dormitory_domain.Dormitory"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dormitories"
+                ],
+                "summary": "Delete a dormitory",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dormitory ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/menus": {
             "get": {
                 "produces": [
@@ -641,6 +875,64 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "apihorpug_internal_features_dormitory_domain.Dormitory": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "managers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/apihorpug_internal_features_dormitory_domain.DormitoryManager"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_dormitory_domain.DormitoryManager": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
         "apihorpug_internal_features_menu_domain.Menu": {
             "type": "object",
             "properties": {
@@ -693,6 +985,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "created_by": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },
@@ -712,6 +1007,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
                     "type": "string"
                 }
             }
@@ -745,6 +1043,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "created_by": {
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },
@@ -761,6 +1062,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
                     "type": "string"
                 },
                 "username": {
@@ -799,6 +1103,64 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_features_dormitory_delivery_http.createDormitoryRequest": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "manager_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_dormitory_delivery_http.updateDormitoryRequest": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "manager_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_features_permission_delivery_http.createPermissionRequest": {
             "type": "object",
             "properties": {
@@ -813,6 +1175,9 @@ const docTemplate = `{
         "internal_features_role_delivery_http.createRoleRequest": {
             "type": "object",
             "properties": {
+                "created_by": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },
@@ -861,12 +1226,18 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
                 }
             }
         },
         "internal_features_user_delivery_http.createUserRequest": {
             "type": "object",
             "properties": {
+                "created_by": {
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },
@@ -897,6 +1268,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "role_id": {
+                    "type": "string"
+                },
+                "updated_by": {
                     "type": "string"
                 },
                 "username": {

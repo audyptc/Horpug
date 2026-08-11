@@ -1,6 +1,9 @@
 package http
 
 import (
+	dormitoryhttp "apihorpug/internal/features/dormitory/delivery/http"
+	dormitoryrepository "apihorpug/internal/features/dormitory/repository/postgres"
+	dormitoryusecase "apihorpug/internal/features/dormitory/usecase"
 	menuhttp "apihorpug/internal/features/menu/delivery/http"
 	menurepository "apihorpug/internal/features/menu/repository/postgres"
 	menuusecase "apihorpug/internal/features/menu/usecase"
@@ -31,6 +34,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool) {
 	userRepo := userrepository.NewRepository(db)
 	userService := userusecase.New(userRepo)
 	userHandler := userhttp.NewHandler(userService)
+	dormitoryRepo := dormitoryrepository.NewRepository(db)
+	dormitoryService := dormitoryusecase.New(dormitoryRepo)
+	dormitoryHandler := dormitoryhttp.NewHandler(dormitoryService)
 
 	app.Get("/health", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "ok"})
@@ -55,4 +61,10 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool) {
 	api.Post("/users", userHandler.Create)
 	api.Put("/users/:id", userHandler.Update)
 	api.Delete("/users/:id", userHandler.Delete)
+
+	api.Get("/dormitories", dormitoryHandler.List)
+	api.Get("/dormitories/:id", dormitoryHandler.Get)
+	api.Post("/dormitories", dormitoryHandler.Create)
+	api.Put("/dormitories/:id", dormitoryHandler.Update)
+	api.Delete("/dormitories/:id", dormitoryHandler.Delete)
 }

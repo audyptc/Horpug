@@ -64,6 +64,26 @@ func AutoMigrate(db *pgxpool.Pool) error {
 			CONSTRAINT rmp_menu_fkey FOREIGN KEY (menu_id) REFERENCES menus(id) ON DELETE CASCADE,
 			CONSTRAINT rmp_permission_fkey FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
 		)`,
+		`CREATE TABLE IF NOT EXISTS dormitories (
+			id UUID PRIMARY KEY,
+			name VARCHAR(150) NOT NULL,
+			address VARCHAR(255) DEFAULT '',
+			phone VARCHAR(30) DEFAULT '',
+			description VARCHAR(255) DEFAULT '',
+			is_active BOOLEAN NOT NULL DEFAULT TRUE,
+			created_by UUID,
+			updated_by UUID,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		)`,
+		`CREATE TABLE IF NOT EXISTS user_dormitories (
+			user_id UUID NOT NULL,
+			dormitory_id UUID NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			PRIMARY KEY (user_id, dormitory_id),
+			CONSTRAINT user_dormitories_user_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+			CONSTRAINT user_dormitories_dormitory_fkey FOREIGN KEY (dormitory_id) REFERENCES dormitories(id) ON DELETE CASCADE
+		)`,
 	}
 
 	for _, stmt := range statements {
@@ -72,7 +92,7 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		}
 	}
 
-	auditColumns := []string{"users", "roles"}
+	auditColumns := []string{"users", "roles", "dormitories"}
 	for _, table := range auditColumns {
 		if _, err := db.Exec(ctx, fmt.Sprintf(`ALTER TABLE %s ADD COLUMN IF NOT EXISTS created_by UUID`, table)); err != nil {
 			return err
@@ -96,6 +116,12 @@ func AutoMigrate(db *pgxpool.Pool) error {
 			END IF;
 			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'roles_updated_by_fkey') THEN
 				ALTER TABLE roles ADD CONSTRAINT roles_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL;
+			END IF;
+			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dormitories_created_by_fkey') THEN
+				ALTER TABLE dormitories ADD CONSTRAINT dormitories_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+			END IF;
+			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dormitories_updated_by_fkey') THEN
+				ALTER TABLE dormitories ADD CONSTRAINT dormitories_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL;
 			END IF;
 		END
 		$$;

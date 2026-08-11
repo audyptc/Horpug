@@ -1,5 +1,43 @@
 basePath: /api/v1
 definitions:
+  apihorpug_internal_features_dormitory_domain.Dormitory:
+    properties:
+      address:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      managers:
+        items:
+          $ref: '#/definitions/apihorpug_internal_features_dormitory_domain.DormitoryManager'
+        type: array
+      name:
+        type: string
+      phone:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  apihorpug_internal_features_dormitory_domain.DormitoryManager:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      user_id:
+        type: string
+      username:
+        type: string
+    type: object
   apihorpug_internal_features_menu_domain.Menu:
     properties:
       created_at:
@@ -34,6 +72,8 @@ definitions:
     properties:
       created_at:
         type: string
+      created_by:
+        type: string
       description:
         type: string
       id:
@@ -47,6 +87,8 @@ definitions:
       name:
         type: string
       updated_at:
+        type: string
+      updated_by:
         type: string
     type: object
   apihorpug_internal_features_role_domain.RoleMenuPermission:
@@ -68,6 +110,8 @@ definitions:
     properties:
       created_at:
         type: string
+      created_by:
+        type: string
       email:
         type: string
       id:
@@ -79,6 +123,8 @@ definitions:
       role_id:
         type: string
       updated_at:
+        type: string
+      updated_by:
         type: string
       username:
         type: string
@@ -103,6 +149,44 @@ definitions:
       message:
         type: string
     type: object
+  internal_features_dormitory_delivery_http.createDormitoryRequest:
+    properties:
+      address:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      is_active:
+        type: boolean
+      manager_ids:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      phone:
+        type: string
+    type: object
+  internal_features_dormitory_delivery_http.updateDormitoryRequest:
+    properties:
+      address:
+        type: string
+      description:
+        type: string
+      is_active:
+        type: boolean
+      manager_ids:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      phone:
+        type: string
+      updated_by:
+        type: string
+    type: object
   internal_features_permission_delivery_http.createPermissionRequest:
     properties:
       description:
@@ -112,6 +196,8 @@ definitions:
     type: object
   internal_features_role_delivery_http.createRoleRequest:
     properties:
+      created_by:
+        type: string
       description:
         type: string
       is_active:
@@ -144,9 +230,13 @@ definitions:
         type: array
       name:
         type: string
+      updated_by:
+        type: string
     type: object
   internal_features_user_delivery_http.createUserRequest:
     properties:
+      created_by:
+        type: string
       email:
         type: string
       is_active:
@@ -168,6 +258,8 @@ definitions:
         type: string
       role_id:
         type: string
+      updated_by:
+        type: string
       username:
         type: string
     type: object
@@ -177,6 +269,159 @@ info:
   title: Horpug API
   version: "1.0"
 paths:
+  /dormitories:
+    get:
+      parameters:
+      - description: Filter by managing user ID
+        in: query
+        name: user_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/apihorpug_internal_features_dormitory_domain.Dormitory'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      summary: List dormitories
+      tags:
+      - dormitories
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dormitory payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_dormitory_delivery_http.createDormitoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_dormitory_domain.Dormitory'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      summary: Create a dormitory
+      tags:
+      - dormitories
+  /dormitories/{id}:
+    delete:
+      parameters:
+      - description: Dormitory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      summary: Delete a dormitory
+      tags:
+      - dormitories
+    get:
+      parameters:
+      - description: Dormitory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_dormitory_domain.Dormitory'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      summary: Get a dormitory by ID
+      tags:
+      - dormitories
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dormitory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dormitory payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_dormitory_delivery_http.updateDormitoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_dormitory_domain.Dormitory'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      summary: Update a dormitory
+      tags:
+      - dormitories
   /menus:
     get:
       produces:
