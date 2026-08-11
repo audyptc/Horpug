@@ -7,10 +7,10 @@ import (
 	userhttp "apihorpug/internal/features/user/delivery/http"
 
 	"github.com/gofiber/fiber/v3"
-	"gorm.io/gorm"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func RegisterRoutes(app *fiber.App, db *gorm.DB) {
+func RegisterRoutes(app *fiber.App, db *pgxpool.Pool) {
 	permissionHandler := permissionhttp.NewHandler(db)
 	menuHandler := menuhttp.NewHandler(db)
 	roleHandler := rolehttp.NewHandler(db)

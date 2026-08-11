@@ -1,16 +1,21 @@
 package http
 
 import (
+	"context"
+	"errors"
 	"strings"
+	"time"
 
 	permissiondomain "apihorpug/internal/features/permission/domain"
 
 	"github.com/gofiber/fiber/v3"
-	"gorm.io/gorm"
+	"github.com/google/uuid"
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Handler struct {
-	db *gorm.DB
+	db *pgxpool.Pool
 }
 
 type createPermissionRequest struct {
@@ -18,15 +23,36 @@ type createPermissionRequest struct {
 	Description string `json:"description"`
 }
 
-func NewHandler(db *gorm.DB) *Handler {
+func NewHandler(db *pgxpool.Pool) *Handler {
 	return &Handler{db: db}
 }
 
 func (h *Handler) List(c fiber.Ctx) error {
-	var permissions []permissiondomain.Permission
-	if err := h.db.Order("name asc").Find(&permissions).Error; err != nil {
+	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	defer cancel()
+
+	rows, err := h.db.Query(ctx, `
+		SELECT id, name, description, created_at, updated_at
+		FROM permissions
+		ORDER BY name ASC
+	`)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list permissions"})
 	}
+	defer rows.Close()
+
+	permissions := make([]permissiondomain.Permission, 0)
+	for rows.Next() {
+		var permission permissiondomain.Permission
+		if err := rows.Scan(&permission.ID, &permission.Name, &permission.Description, &permission.CreatedAt, &permission.UpdatedAt); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list permissions"})
+		}
+		permissions = append(permissions, permission)
+	}
+	if err := rows.Err(); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list permissions"})
+	}
+
 	return c.JSON(permissions)
 }
 
@@ -42,12 +68,22 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	}
 
 	permission := permissiondomain.Permission{
+		ID:          uuid.New(),
 		Name:        req.Name,
 		Description: strings.TrimSpace(req.Description),
 	}
 
-	if err := h.db.Create(&permission).Error; err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "duplicate key") {
+	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	defer cancel()
+
+	err := h.db.QueryRow(ctx, `
+		INSERT INTO permissions (id, name, description)
+		VALUES ($1, $2, $3)
+		RETURNING created_at, updated_at
+	`, permission.ID, permission.Name, permission.Description).Scan(&permission.CreatedAt, &permission.UpdatedAt)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "permission name already exists"})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create permission"})

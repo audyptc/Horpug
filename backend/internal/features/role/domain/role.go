@@ -7,7 +7,6 @@ import (
 	permissiondomain "apihorpug/internal/features/permission/domain"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type Role struct {
@@ -27,11 +26,4 @@ type RoleMenuPermission struct {
 	CreatedAt    time.Time                   `json:"created_at"`
 	Menu         menudomain.Menu             `json:"menu" gorm:"foreignKey:MenuID;references:ID;constraint:OnDelete:CASCADE"`
 	Permission   permissiondomain.Permission `json:"permission" gorm:"foreignKey:PermissionID;references:ID;constraint:OnDelete:CASCADE"`
-}
-
-func (m *Role) BeforeCreate(_ *gorm.DB) error {
-	if m.ID == uuid.Nil {
-		m.ID = uuid.New()
-	}
-	return nil
 }

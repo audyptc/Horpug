@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type Permission struct {
@@ -13,11 +12,4 @@ type Permission struct {
 	Description string    `json:"description" gorm:"size:255"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
-}
-
-func (m *Permission) BeforeCreate(_ *gorm.DB) error {
-	if m.ID == uuid.Nil {
-		m.ID = uuid.New()
-	}
-	return nil
 }

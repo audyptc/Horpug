@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type Menu struct {
@@ -15,11 +14,4 @@ type Menu struct {
 	IsActive    bool      `json:"is_active" gorm:"not null;default:true"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
-}
-
-func (m *Menu) BeforeCreate(_ *gorm.DB) error {
-	if m.ID == uuid.Nil {
-		m.ID = uuid.New()
-	}
-	return nil
 }

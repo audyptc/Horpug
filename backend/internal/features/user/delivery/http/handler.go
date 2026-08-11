@@ -1,20 +1,25 @@
 package http
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"strings"
+	"time"
 
 	roledomain "apihorpug/internal/features/role/domain"
 	userdomain "apihorpug/internal/features/user/domain"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 type Handler struct {
-	db *gorm.DB
+	db *pgxpool.Pool
 }
 
 type createUserRequest struct {
@@ -41,15 +46,68 @@ type userPermissionItem struct {
 	PermissionName string    `json:"permission_name"`
 }
 
-func NewHandler(db *gorm.DB) *Handler {
+func NewHandler(db *pgxpool.Pool) *Handler {
 	return &Handler{db: db}
 }
 
 func (h *Handler) List(c fiber.Ctx) error {
-	var users []userdomain.User
-	if err := h.db.Preload("Role").Order("created_at desc").Find(&users).Error; err != nil {
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	rows, err := h.db.Query(ctx, `
+		SELECT
+			u.id,
+			u.username,
+			u.email,
+			u.password,
+			u.role_id,
+			u.is_active,
+			u.created_at,
+			u.updated_at,
+			r.id,
+			r.name,
+			r.description,
+			r.is_active,
+			r.created_at,
+			r.updated_at
+		FROM users u
+		JOIN roles r ON r.id = u.role_id
+		ORDER BY u.created_at DESC
+	`)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list users"})
 	}
+	defer rows.Close()
+
+	users := make([]userdomain.User, 0)
+	for rows.Next() {
+		var user userdomain.User
+		var role roledomain.Role
+		if err := rows.Scan(
+			&user.ID,
+			&user.Username,
+			&user.Email,
+			&user.Password,
+			&user.RoleID,
+			&user.IsActive,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+			&role.ID,
+			&role.Name,
+			&role.Description,
+			&role.IsActive,
+			&role.CreatedAt,
+			&role.UpdatedAt,
+		); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list users"})
+		}
+		user.Role = &role
+		users = append(users, user)
+	}
+	if err := rows.Err(); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list users"})
+	}
+
 	return c.JSON(users)
 }
 
@@ -59,9 +117,12 @@ func (h *Handler) Get(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid user id"})
 	}
 
-	var user userdomain.User
-	if err := h.db.Preload("Role").First(&user, "id = ?", id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	user, err := loadUserByID(ctx, h.db, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to get user"})
@@ -76,24 +137,39 @@ func (h *Handler) GetPermissions(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid user id"})
 	}
 
-	var user userdomain.User
-	if err := h.db.First(&user, "id = ?", id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	var roleID uuid.UUID
+	if err := h.db.QueryRow(ctx, `SELECT role_id FROM users WHERE id = $1`, id).Scan(&roleID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to get user"})
 	}
 
-	var permissions []userPermissionItem
-	err = h.db.
-		Table("role_menu_permissions as rmp").
-		Select("rmp.menu_id, m.name as menu_name, m.path as menu_path, rmp.permission_id, p.name as permission_name").
-		Joins("join menus m on m.id = rmp.menu_id").
-		Joins("join permissions p on p.id = rmp.permission_id").
-		Where("rmp.role_id = ?", user.RoleID).
-		Order("m.path asc, p.name asc").
-		Find(&permissions).Error
+	rows, err := h.db.Query(ctx, `
+		SELECT rmp.menu_id, m.name AS menu_name, m.path AS menu_path, rmp.permission_id, p.name AS permission_name
+		FROM role_menu_permissions rmp
+		JOIN menus m ON m.id = rmp.menu_id
+		JOIN permissions p ON p.id = rmp.permission_id
+		WHERE rmp.role_id = $1
+		ORDER BY m.path ASC, p.name ASC
+	`, roleID)
 	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load user permissions"})
+	}
+	defer rows.Close()
+
+	permissions := make([]userPermissionItem, 0)
+	for rows.Next() {
+		var item userPermissionItem
+		if err := rows.Scan(&item.MenuID, &item.MenuName, &item.MenuPath, &item.PermissionID, &item.PermissionName); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load user permissions"})
+		}
+		permissions = append(permissions, item)
+	}
+	if err := rows.Err(); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load user permissions"})
 	}
 
@@ -115,12 +191,14 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "role_id is required"})
 	}
 
-	var count int64
-	if err := h.db.Model(&roledomain.Role{}).Where("id = ?", req.RoleID).Count(&count).Error; err != nil {
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	if err := ensureRoleExists(ctx, h.db, req.RoleID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "role not found"})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to validate role"})
-	}
-	if count == 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "role not found"})
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
@@ -129,6 +207,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	}
 
 	user := userdomain.User{
+		ID:       uuid.New(),
 		Username: req.Username,
 		Email:    req.Email,
 		Password: string(hashedPassword),
@@ -139,18 +218,25 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		user.IsActive = *req.IsActive
 	}
 
-	if err := h.db.Create(&user).Error; err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "duplicate key") {
+	err = h.db.QueryRow(ctx, `
+		INSERT INTO users (id, username, email, password, role_id, is_active)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING created_at, updated_at
+	`, user.ID, user.Username, user.Email, user.Password, user.RoleID, user.IsActive).Scan(&user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "username or email already exists"})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create user"})
 	}
 
-	if err := h.db.Preload("Role").First(&user, "id = ?", user.ID).Error; err != nil {
+	createdUser, err := loadUserByID(ctx, h.db, user.ID)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load user"})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(user)
+	return c.Status(fiber.StatusCreated).JSON(createdUser)
 }
 
 func (h *Handler) Update(c fiber.Ctx) error {
@@ -164,41 +250,53 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
 
-	var user userdomain.User
-	if err := h.db.First(&user, "id = ?", id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	if err := ensureUserExists(ctx, h.db, id); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to get user"})
 	}
 
-	updates := map[string]any{}
+	setClauses := make([]string, 0)
+	args := make([]any, 0)
+	argIdx := 1
+
 	if req.Username != nil {
 		username := strings.TrimSpace(*req.Username)
 		if username == "" {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "username cannot be empty"})
 		}
-		updates["username"] = username
+		setClauses = append(setClauses, fmt.Sprintf("username = $%d", argIdx))
+		args = append(args, username)
+		argIdx++
 	}
 	if req.Email != nil {
 		email := strings.TrimSpace(strings.ToLower(*req.Email))
 		if email == "" {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "email cannot be empty"})
 		}
-		updates["email"] = email
+		setClauses = append(setClauses, fmt.Sprintf("email = $%d", argIdx))
+		args = append(args, email)
+		argIdx++
 	}
 	if req.IsActive != nil {
-		updates["is_active"] = *req.IsActive
+		setClauses = append(setClauses, fmt.Sprintf("is_active = $%d", argIdx))
+		args = append(args, *req.IsActive)
+		argIdx++
 	}
 	if req.RoleID != nil {
-		var count int64
-		if err := h.db.Model(&roledomain.Role{}).Where("id = ?", *req.RoleID).Count(&count).Error; err != nil {
+		if err := ensureRoleExists(ctx, h.db, *req.RoleID); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "role not found"})
+			}
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to validate role"})
 		}
-		if count == 0 {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "role not found"})
-		}
-		updates["role_id"] = *req.RoleID
+		setClauses = append(setClauses, fmt.Sprintf("role_id = $%d", argIdx))
+		args = append(args, *req.RoleID)
+		argIdx++
 	}
 	if req.Password != nil {
 		if strings.TrimSpace(*req.Password) == "" {
@@ -208,23 +306,30 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to hash password"})
 		}
-		updates["password"] = string(hashedPassword)
+		setClauses = append(setClauses, fmt.Sprintf("password = $%d", argIdx))
+		args = append(args, string(hashedPassword))
+		argIdx++
 	}
 
-	if len(updates) > 0 {
-		if err := h.db.Model(&user).Updates(updates).Error; err != nil {
-			if strings.Contains(strings.ToLower(err.Error()), "duplicate key") {
+	if len(setClauses) > 0 {
+		setClauses = append(setClauses, "updated_at = NOW()")
+		args = append(args, id)
+		query := fmt.Sprintf("UPDATE users SET %s WHERE id = $%d", strings.Join(setClauses, ", "), argIdx)
+		if _, err := h.db.Exec(ctx, query, args...); err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 				return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "username or email already exists"})
 			}
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update user"})
 		}
 	}
 
-	if err := h.db.Preload("Role").First(&user, "id = ?", user.ID).Error; err != nil {
+	updatedUser, err := loadUserByID(ctx, h.db, id)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load user"})
 	}
 
-	return c.JSON(user)
+	return c.JSON(updatedUser)
 }
 
 func (h *Handler) Delete(c fiber.Ctx) error {
@@ -233,13 +338,73 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid user id"})
 	}
 
-	result := h.db.Delete(&userdomain.User{}, "id = ?", id)
-	if result.Error != nil {
+	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	defer cancel()
+
+	result, err := h.db.Exec(ctx, `DELETE FROM users WHERE id = $1`, id)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to delete user"})
 	}
-	if result.RowsAffected == 0 {
+	if result.RowsAffected() == 0 {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
 	}
 
 	return c.JSON(fiber.Map{"message": "user deleted"})
+}
+
+func ensureRoleExists(ctx context.Context, db *pgxpool.Pool, roleID uuid.UUID) error {
+	var exists int
+	return db.QueryRow(ctx, `SELECT 1 FROM roles WHERE id = $1`, roleID).Scan(&exists)
+}
+
+func ensureUserExists(ctx context.Context, db *pgxpool.Pool, userID uuid.UUID) error {
+	var exists int
+	return db.QueryRow(ctx, `SELECT 1 FROM users WHERE id = $1`, userID).Scan(&exists)
+}
+
+func loadUserByID(ctx context.Context, db *pgxpool.Pool, userID uuid.UUID) (userdomain.User, error) {
+	var user userdomain.User
+	var role roledomain.Role
+
+	err := db.QueryRow(ctx, `
+		SELECT
+			u.id,
+			u.username,
+			u.email,
+			u.password,
+			u.role_id,
+			u.is_active,
+			u.created_at,
+			u.updated_at,
+			r.id,
+			r.name,
+			r.description,
+			r.is_active,
+			r.created_at,
+			r.updated_at
+		FROM users u
+		JOIN roles r ON r.id = u.role_id
+		WHERE u.id = $1
+	`, userID).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.Password,
+		&user.RoleID,
+		&user.IsActive,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&role.ID,
+		&role.Name,
+		&role.Description,
+		&role.IsActive,
+		&role.CreatedAt,
+		&role.UpdatedAt,
+	)
+	if err != nil {
+		return userdomain.User{}, err
+	}
+
+	user.Role = &role
+	return user, nil
 }
