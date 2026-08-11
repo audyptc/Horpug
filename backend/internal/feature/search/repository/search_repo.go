@@ -3,10 +3,10 @@ package repository
 import (
 	"context"
 
-	"apigofiberhorpug/internal/database"
 	roomdomain "apigofiberhorpug/internal/feature/room/domain"
 	"apigofiberhorpug/internal/feature/search/domain"
 	tenantdomain "apigofiberhorpug/internal/feature/tenant/domain"
+	"apigofiberhorpug/internal/platform/database"
 )
 
 type SearchRepo struct {

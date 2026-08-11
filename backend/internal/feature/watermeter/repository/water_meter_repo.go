@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"apigofiberhorpug/internal/database"
 	coredomain "apigofiberhorpug/internal/domain"
 	"apigofiberhorpug/internal/feature/watermeter/domain"
+	"apigofiberhorpug/internal/platform/database"
 
 	"github.com/jackc/pgx/v5"
 )

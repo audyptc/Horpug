@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 
-	"apigofiberhorpug/internal/database"
 	"apigofiberhorpug/internal/feature/dashboard/domain"
+	"apigofiberhorpug/internal/platform/database"
 )
 
 type DashboardRepo struct {

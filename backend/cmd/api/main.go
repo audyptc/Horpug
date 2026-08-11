@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"apigofiberhorpug/config"
-	"apigofiberhorpug/internal/bootstrap"
-	"apigofiberhorpug/internal/database"
+	"apigofiberhorpug/internal/app/bootstrap"
 	deliveryhttp "apigofiberhorpug/internal/delivery/http"
+	"apigofiberhorpug/internal/platform/database"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"

@@ -40,6 +40,8 @@ Common variables:
 - `CORS_ORIGINS` comma-separated list (default: `http://localhost,http://localhost:5173,http://localhost:3000`)
 - `ACCESS_TOKEN_TTL` (default: `15m`)
 - `REFRESH_TOKEN_TTL` (default: `168h`)
+- `UPLOAD_DIR` (default: `./uploads`)
+- `UPLOAD_BASE_URL` (default: `http://localhost:8080`)
 
 Duration values must be valid Go duration strings such as `30s`, `15m`, `1h`, `24h`.
 
@@ -59,12 +61,21 @@ On startup, the service will:
 3. Run DB migrations
 4. Start HTTP server
 
+After changing or adding `@Router`/`@Summary` annotations on any handler, regenerate the Swagger
+docs before committing (see [Swagger](#swagger) for the full command):
+
+```powershell
+./scripts/generate-swagger.ps1
+```
+
 ## API and Health Endpoints
 
 - `GET /health` - health check
 - `GET /` - redirects to `/docs`
 - `GET /docs` - Scalar API Reference UI
+- `GET /swagger` - Swagger UI
 - `GET /docs/swagger.json` - generated Swagger JSON
+- `GET /uploads/*` - static file serving for uploaded documents (from `UPLOAD_DIR`)
 - API base path: `/api/v1`
 
 ## Multi-Dormitory Request Scope
@@ -93,14 +104,13 @@ X-Dormitory-Id: <dormitory-uuid>
 Generate docs from `backend/` directory:
 
 ```powershell
-# PowerShell
-$dirs = @('cmd/api'); Get-ChildItem internal\feature -Directory | ForEach-Object { foreach ($leaf in @('domain','delivery')) { $candidate = Join-Path $_.FullName $leaf; if (Test-Path $candidate) { $dirs += (Resolve-Path -Relative $candidate) } } }; swag init -g main.go -d ($dirs -join ',') --parseInternal --parseDependency --parseDependencyLevel 3 --useStructName -o docs
+./scripts/generate-swagger.ps1
 ```
 
-```bash
-# Bash (Linux/macOS)
-dirs="cmd/api"; for d in internal/feature/*/; do for leaf in domain delivery; do candidate="${d}${leaf}"; [ -d "$candidate" ] && dirs="$dirs,$candidate"; done; done; swag init -g main.go -d "$dirs" --parseInternal --parseDependency --parseDependencyLevel 3 --useStructName -o docs
-```
+The script keeps the `swag init` arguments in one place because this project stores Swagger
+annotations and DTOs across many feature-level `domain` and `delivery` packages. A shorter direct
+`swag init` command misses some types or duplicates routes with the current layout.
+
 
 Then open:
 
@@ -128,21 +138,28 @@ Main entry points when running with compose:
 
 ## Project Structure
 
+The backend is organized by feature (vertical slices), not by technical layer. Each feature under
+`internal/feature/` owns its own domain types, repository, usecase, and HTTP delivery code.
+
 ```text
 backend/
 ├── cmd/
-│   ├── api/                # API entrypoint and docs routes
-│   └── modelgen/           # helper/generator entrypoint
-├── config/                 # configuration loading
-├── docs/                   # generated swagger artifacts
+│   ├── api/                     # API entrypoint and docs routes
+│   └── modelgen/                # generates SQL migrations from Go struct definitions
+├── config/                      # configuration loading
+├── docs/                        # generated swagger artifacts (docs.go, swagger.json, swagger.yaml)
 ├── internal/
-│   ├── bootstrap/          # dependency wiring
-│   ├── database/           # postgres + migrations
-│   ├── delivery/http/      # handlers, middleware, routes
-│   ├── domain/             # entities and interfaces
-│   ├── repository/         # persistence layer
-│   ├── usecase/            # business logic
-│   └── validator/          # validation utilities
+│   ├── bootstrap/                # dependency wiring (constructs repos/usecases/handlers)
+│   ├── database/                 # postgres connection + migrations
+│   ├── delivery/http/            # router, error handler, shared response/pagination helpers
+│   │   └── middleware/           # auth (JWT) and dormitory-scope middleware
+│   ├── domain/                   # shared cross-feature types (tx, errors)
+│   └── feature/                  # one folder per feature, e.g. room, tenant, bill, payment, ...
+│       └── <feature>/
+│           ├── domain/           # entities and request/response DTOs
+│           ├── repository/       # persistence layer
+│           ├── usecase/          # business logic
+│           └── delivery/         # HTTP handlers + request validation (validate.go)
 ├── Dockerfile
 ├── go.mod
 ├── go.sum

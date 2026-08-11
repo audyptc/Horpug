@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"apigofiberhorpug/internal/database"
 	"apigofiberhorpug/internal/feature/analytics/domain"
+	"apigofiberhorpug/internal/platform/database"
 )
 
 type AnalyticsRepo struct {

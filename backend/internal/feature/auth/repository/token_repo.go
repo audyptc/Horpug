@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"apigofiberhorpug/internal/database"
 	"apigofiberhorpug/internal/feature/auth/domain"
+	"apigofiberhorpug/internal/platform/database"
 
 	"github.com/jackc/pgx/v5"
 )

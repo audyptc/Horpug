@@ -18,8 +18,8 @@ type Role struct {
 }
 
 type RoleMenuPermission struct {
-	MenuID      string                     `json:"menu_id"`
-	MenuName    string                     `json:"menu_name"`
+	MenuID      string                        `json:"menu_id"`
+	MenuName    string                        `json:"menu_name"`
 	Permissions []permissiondomain.Permission `json:"permissions"`
 }
 

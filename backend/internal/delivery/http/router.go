@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"apigofiberhorpug/config"
-	"apigofiberhorpug/internal/bootstrap"
+	"apigofiberhorpug/internal/app/bootstrap"
 	"apigofiberhorpug/internal/delivery/http/apierror"
 	"apigofiberhorpug/internal/delivery/http/middleware"
 	aldelivery "apigofiberhorpug/internal/feature/activitylog/delivery"

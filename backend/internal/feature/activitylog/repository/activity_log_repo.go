@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"apigofiberhorpug/internal/database"
 	"apigofiberhorpug/internal/feature/activitylog/domain"
+	"apigofiberhorpug/internal/platform/database"
 )
 
 type ActivityLogRepo struct {

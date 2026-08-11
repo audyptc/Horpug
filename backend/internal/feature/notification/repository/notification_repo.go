@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"apigofiberhorpug/internal/database"
 	"apigofiberhorpug/internal/feature/notification/domain"
+	"apigofiberhorpug/internal/platform/database"
 )
 
 type NotificationRepo struct {
