@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	coredomain "apigofiberhorpug/internal/domain"
 	"apigofiberhorpug/internal/feature/payment/domain"
 	"apigofiberhorpug/internal/platform/database"
+	coredomain "apigofiberhorpug/internal/shared/domain"
 
 	"github.com/jackc/pgx/v5"
 )

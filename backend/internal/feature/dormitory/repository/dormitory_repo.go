@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	coredomain "apigofiberhorpug/internal/domain"
 	"apigofiberhorpug/internal/feature/dormitory/domain"
 	"apigofiberhorpug/internal/platform/database"
+	coredomain "apigofiberhorpug/internal/shared/domain"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"

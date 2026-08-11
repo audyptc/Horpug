@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	coredomain "apigofiberhorpug/internal/domain"
 	"apigofiberhorpug/internal/feature/menu/domain"
+	coredomain "apigofiberhorpug/internal/shared/domain"
 	"apigofiberhorpug/internal/shared/http/apierror"
 )
 

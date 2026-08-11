@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	coredomain "apigofiberhorpug/internal/domain"
 	billdomain "apigofiberhorpug/internal/feature/bill/domain"
 	"apigofiberhorpug/internal/feature/payment/domain"
+	coredomain "apigofiberhorpug/internal/shared/domain"
 	"apigofiberhorpug/internal/shared/http/apierror"
 
 	"github.com/google/uuid"

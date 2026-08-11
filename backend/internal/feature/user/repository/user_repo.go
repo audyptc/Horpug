@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	coredomain "apigofiberhorpug/internal/domain"
 	roledomain "apigofiberhorpug/internal/feature/role/domain"
 	"apigofiberhorpug/internal/feature/user/domain"
 	"apigofiberhorpug/internal/platform/database"
+	coredomain "apigofiberhorpug/internal/shared/domain"
 
 	"github.com/jackc/pgx/v5"
 )

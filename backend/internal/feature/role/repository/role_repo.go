@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	coredomain "apigofiberhorpug/internal/domain"
 	permissiondomain "apigofiberhorpug/internal/feature/permission/domain"
 	"apigofiberhorpug/internal/feature/role/domain"
 	"apigofiberhorpug/internal/platform/database"
+	coredomain "apigofiberhorpug/internal/shared/domain"
 
 	"github.com/jackc/pgx/v5"
 )

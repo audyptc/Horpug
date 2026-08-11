@@ -7,9 +7,9 @@ import (
 	"slices"
 	"strings"
 
-	coredomain "apigofiberhorpug/internal/domain"
 	"apigofiberhorpug/internal/feature/dormitory/domain"
 	roledomain "apigofiberhorpug/internal/feature/role/domain"
+	coredomain "apigofiberhorpug/internal/shared/domain"
 	"apigofiberhorpug/internal/shared/http/apierror"
 
 	"github.com/google/uuid"

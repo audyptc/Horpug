@@ -5,10 +5,10 @@ import (
 	"errors"
 	"strings"
 
-	coredomain "apigofiberhorpug/internal/domain"
 	menudomain "apigofiberhorpug/internal/feature/menu/domain"
 	permissiondomain "apigofiberhorpug/internal/feature/permission/domain"
 	"apigofiberhorpug/internal/feature/role/domain"
+	coredomain "apigofiberhorpug/internal/shared/domain"
 	"apigofiberhorpug/internal/shared/http/apierror"
 
 	"github.com/google/uuid"

@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
-	coredomain "apigofiberhorpug/internal/domain"
 	roomdomain "apigofiberhorpug/internal/feature/room/domain"
 	"apigofiberhorpug/internal/feature/watermeter/domain"
+	coredomain "apigofiberhorpug/internal/shared/domain"
 	"apigofiberhorpug/internal/shared/http/apierror"
 
 	"github.com/google/uuid"
