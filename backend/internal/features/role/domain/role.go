@@ -15,6 +15,8 @@ type Role struct {
 	Description     string               `json:"description" gorm:"size:255"`
 	IsActive        bool                 `json:"is_active" gorm:"not null;default:true"`
 	MenuPermissions []RoleMenuPermission `json:"menu_permissions,omitempty" gorm:"foreignKey:RoleID;constraint:OnDelete:CASCADE"`
+	CreatedBy       *uuid.UUID           `json:"created_by,omitempty" gorm:"type:uuid"`
+	UpdatedBy       *uuid.UUID           `json:"updated_by,omitempty" gorm:"type:uuid"`
 	CreatedAt       time.Time            `json:"created_at"`
 	UpdatedAt       time.Time            `json:"updated_at"`
 }

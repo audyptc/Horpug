@@ -19,6 +19,7 @@ type CreateInput struct {
 	Description     string
 	IsActive        bool
 	MenuPermissions []MenuPermissionInput
+	CreatedBy       *uuid.UUID
 }
 
 type UpdateInput struct {
@@ -26,6 +27,7 @@ type UpdateInput struct {
 	Description     *string
 	IsActive        *bool
 	MenuPermissions *[]MenuPermissionInput
+	UpdatedBy       *uuid.UUID
 }
 
 type Repository interface {

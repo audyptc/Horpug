@@ -20,19 +20,21 @@ type Handler struct {
 }
 
 type createUserRequest struct {
-	Username string    `json:"username"`
-	Email    string    `json:"email"`
-	Password string    `json:"password"`
-	RoleID   uuid.UUID `json:"role_id"`
-	IsActive *bool     `json:"is_active"`
+	Username  string     `json:"username"`
+	Email     string     `json:"email"`
+	Password  string     `json:"password"`
+	RoleID    uuid.UUID  `json:"role_id"`
+	IsActive  *bool      `json:"is_active"`
+	CreatedBy *uuid.UUID `json:"created_by"`
 }
 
 type updateUserRequest struct {
-	Username *string    `json:"username"`
-	Email    *string    `json:"email"`
-	Password *string    `json:"password"`
-	RoleID   *uuid.UUID `json:"role_id"`
-	IsActive *bool      `json:"is_active"`
+	Username  *string    `json:"username"`
+	Email     *string    `json:"email"`
+	Password  *string    `json:"password"`
+	RoleID    *uuid.UUID `json:"role_id"`
+	IsActive  *bool      `json:"is_active"`
+	UpdatedBy *uuid.UUID `json:"updated_by"`
 }
 
 func NewHandler(usecase *userusecase.Service) *Handler {
@@ -144,11 +146,12 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	defer cancel()
 
 	user, err := h.usecase.Create(ctx, userusecase.CreateInput{
-		Username: strings.TrimSpace(req.Username),
-		Email:    strings.TrimSpace(req.Email),
-		Password: req.Password,
-		RoleID:   req.RoleID,
-		IsActive: isActive,
+		Username:  strings.TrimSpace(req.Username),
+		Email:     strings.TrimSpace(req.Email),
+		Password:  req.Password,
+		RoleID:    req.RoleID,
+		IsActive:  isActive,
+		CreatedBy: req.CreatedBy,
 	})
 	if err != nil {
 		if errors.Is(err, userdomain.ErrRequiredUserData) {
@@ -197,11 +200,12 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	defer cancel()
 
 	updatedUser, err := h.usecase.Update(ctx, id, userusecase.UpdateInput{
-		Username: req.Username,
-		Email:    req.Email,
-		Password: req.Password,
-		RoleID:   req.RoleID,
-		IsActive: req.IsActive,
+		Username:  req.Username,
+		Email:     req.Email,
+		Password:  req.Password,
+		RoleID:    req.RoleID,
+		IsActive:  req.IsActive,
+		UpdatedBy: req.UpdatedBy,
 	})
 	if err != nil {
 		if errors.Is(err, userdomain.ErrUserNotFound) {

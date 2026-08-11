@@ -25,7 +25,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 
 func (r *Repository) List(ctx context.Context) ([]roledomain.Role, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, name, description, is_active, created_at, updated_at
+		SELECT id, name, description, is_active, created_by, updated_by, created_at, updated_at
 		FROM roles
 		ORDER BY name ASC
 	`)
@@ -37,7 +37,7 @@ func (r *Repository) List(ctx context.Context) ([]roledomain.Role, error) {
 	roles := make([]roledomain.Role, 0)
 	for rows.Next() {
 		var role roledomain.Role
-		if err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.CreatedAt, &role.UpdatedAt); err != nil {
+		if err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.CreatedBy, &role.UpdatedBy, &role.CreatedAt, &role.UpdatedAt); err != nil {
 			return nil, err
 		}
 
@@ -72,6 +72,8 @@ func (r *Repository) Create(ctx context.Context, input roleusecase.CreateInput) 
 		Name:        input.Name,
 		Description: input.Description,
 		IsActive:    input.IsActive,
+		CreatedBy:   input.CreatedBy,
+		UpdatedBy:   input.CreatedBy,
 	}
 
 	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
@@ -81,10 +83,10 @@ func (r *Repository) Create(ctx context.Context, input roleusecase.CreateInput) 
 	defer tx.Rollback(ctx)
 
 	err = tx.QueryRow(ctx, `
-		INSERT INTO roles (id, name, description, is_active)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO roles (id, name, description, is_active, created_by, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING created_at, updated_at
-	`, role.ID, role.Name, role.Description, role.IsActive).Scan(&role.CreatedAt, &role.UpdatedAt)
+	`, role.ID, role.Name, role.Description, role.IsActive, role.CreatedBy, role.UpdatedBy).Scan(&role.CreatedAt, &role.UpdatedAt)
 	if err == nil {
 		err = r.replaceRoleMenuPermissions(ctx, tx, role.ID, input.MenuPermissions)
 	}
@@ -140,6 +142,11 @@ func (r *Repository) Update(ctx context.Context, id uuid.UUID, input roleusecase
 		args = append(args, *input.IsActive)
 		argIdx++
 	}
+	if input.UpdatedBy != nil {
+		setClauses = append(setClauses, fmt.Sprintf("updated_by = $%d", argIdx))
+		args = append(args, *input.UpdatedBy)
+		argIdx++
+	}
 
 	if len(setClauses) > 0 {
 		setClauses = append(setClauses, "updated_at = NOW()")
@@ -189,10 +196,10 @@ func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 func (r *Repository) loadRoleByID(ctx context.Context, roleID uuid.UUID) (roledomain.Role, error) {
 	var role roledomain.Role
 	err := r.db.QueryRow(ctx, `
-		SELECT id, name, description, is_active, created_at, updated_at
+		SELECT id, name, description, is_active, created_by, updated_by, created_at, updated_at
 		FROM roles
 		WHERE id = $1
-	`, roleID).Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.CreatedAt, &role.UpdatedAt)
+	`, roleID).Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.CreatedBy, &role.UpdatedBy, &role.CreatedAt, &role.UpdatedAt)
 	if err != nil {
 		return roledomain.Role{}, err
 	}

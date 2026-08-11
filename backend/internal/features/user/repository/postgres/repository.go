@@ -33,6 +33,8 @@ func (r *Repository) List(ctx context.Context) ([]userdomain.User, error) {
 			u.password,
 			u.role_id,
 			u.is_active,
+			u.created_by,
+			u.updated_by,
 			u.created_at,
 			u.updated_at,
 			r.id,
@@ -61,6 +63,8 @@ func (r *Repository) List(ctx context.Context) ([]userdomain.User, error) {
 			&user.Password,
 			&user.RoleID,
 			&user.IsActive,
+			&user.CreatedBy,
+			&user.UpdatedBy,
 			&user.CreatedAt,
 			&user.UpdatedAt,
 			&role.ID,
@@ -136,19 +140,21 @@ func (r *Repository) Create(ctx context.Context, input userusecase.CreateInput, 
 	}
 
 	user := userdomain.User{
-		ID:       uuid.New(),
-		Username: input.Username,
-		Email:    input.Email,
-		Password: hashedPassword,
-		RoleID:   input.RoleID,
-		IsActive: input.IsActive,
+		ID:        uuid.New(),
+		Username:  input.Username,
+		Email:     input.Email,
+		Password:  hashedPassword,
+		RoleID:    input.RoleID,
+		IsActive:  input.IsActive,
+		CreatedBy: input.CreatedBy,
+		UpdatedBy: input.CreatedBy,
 	}
 
 	err := r.db.QueryRow(ctx, `
-		INSERT INTO users (id, username, email, password, role_id, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO users (id, username, email, password, role_id, is_active, created_by, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING created_at, updated_at
-	`, user.ID, user.Username, user.Email, user.Password, user.RoleID, user.IsActive).Scan(&user.CreatedAt, &user.UpdatedAt)
+	`, user.ID, user.Username, user.Email, user.Password, user.RoleID, user.IsActive, user.CreatedBy, user.UpdatedBy).Scan(&user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -198,6 +204,11 @@ func (r *Repository) Update(ctx context.Context, id uuid.UUID, input userusecase
 	if hashedPassword != nil {
 		setClauses = append(setClauses, fmt.Sprintf("password = $%d", argIdx))
 		args = append(args, *hashedPassword)
+		argIdx++
+	}
+	if input.UpdatedBy != nil {
+		setClauses = append(setClauses, fmt.Sprintf("updated_by = $%d", argIdx))
+		args = append(args, *input.UpdatedBy)
 		argIdx++
 	}
 
@@ -263,6 +274,8 @@ func (r *Repository) loadUserByID(ctx context.Context, userID uuid.UUID) (userdo
 			u.password,
 			u.role_id,
 			u.is_active,
+			u.created_by,
+			u.updated_by,
 			u.created_at,
 			u.updated_at,
 			r.id,
@@ -281,6 +294,8 @@ func (r *Repository) loadUserByID(ctx context.Context, userID uuid.UUID) (userdo
 		&user.Password,
 		&user.RoleID,
 		&user.IsActive,
+		&user.CreatedBy,
+		&user.UpdatedBy,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 		&role.ID,

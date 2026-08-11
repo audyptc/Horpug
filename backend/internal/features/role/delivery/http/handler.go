@@ -29,6 +29,7 @@ type createRoleRequest struct {
 	Description     string                `json:"description"`
 	IsActive        *bool                 `json:"is_active"`
 	MenuPermissions []menuPermissionInput `json:"menu_permissions"`
+	CreatedBy       *uuid.UUID            `json:"created_by"`
 }
 
 type updateRoleRequest struct {
@@ -36,6 +37,7 @@ type updateRoleRequest struct {
 	Description     *string                `json:"description"`
 	IsActive        *bool                  `json:"is_active"`
 	MenuPermissions *[]menuPermissionInput `json:"menu_permissions"`
+	UpdatedBy       *uuid.UUID             `json:"updated_by"`
 }
 
 func NewHandler(usecase *roleusecase.Service) *Handler {
@@ -126,6 +128,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		Description:     req.Description,
 		IsActive:        isActive,
 		MenuPermissions: toUsecaseMenuPermissions(req.MenuPermissions),
+		CreatedBy:       req.CreatedBy,
 	})
 	if err != nil {
 		if errors.Is(err, roledomain.ErrRoleNameExists) {
@@ -186,6 +189,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		Description:     req.Description,
 		IsActive:        req.IsActive,
 		MenuPermissions: menuPermissions,
+		UpdatedBy:       req.UpdatedBy,
 	})
 	if err != nil {
 		if errors.Is(err, roledomain.ErrRoleNotFound) {

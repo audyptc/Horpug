@@ -19,19 +19,21 @@ type UserPermissionItem struct {
 }
 
 type CreateInput struct {
-	Username string
-	Email    string
-	Password string
-	RoleID   uuid.UUID
-	IsActive bool
+	Username  string
+	Email     string
+	Password  string
+	RoleID    uuid.UUID
+	IsActive  bool
+	CreatedBy *uuid.UUID
 }
 
 type UpdateInput struct {
-	Username *string
-	Email    *string
-	Password *string
-	RoleID   *uuid.UUID
-	IsActive *bool
+	Username  *string
+	Email     *string
+	Password  *string
+	RoleID    *uuid.UUID
+	IsActive  *bool
+	UpdatedBy *uuid.UUID
 }
 
 type Repository interface {
