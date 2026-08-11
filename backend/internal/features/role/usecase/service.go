@@ -15,19 +15,23 @@ type MenuPermissionInput struct {
 }
 
 type CreateInput struct {
-	Name            string
-	Description     string
-	IsActive        bool
-	MenuPermissions []MenuPermissionInput
-	CreatedBy       *uuid.UUID
+	Name                string
+	Description         string
+	IsActive            bool
+	FullDormitoryAccess bool
+	DormitoryIDs        []uuid.UUID
+	MenuPermissions     []MenuPermissionInput
+	CreatedBy           *uuid.UUID
 }
 
 type UpdateInput struct {
-	Name            *string
-	Description     *string
-	IsActive        *bool
-	MenuPermissions *[]MenuPermissionInput
-	UpdatedBy       *uuid.UUID
+	Name                *string
+	Description         *string
+	IsActive            *bool
+	FullDormitoryAccess *bool
+	DormitoryIDs        *[]uuid.UUID
+	MenuPermissions     *[]MenuPermissionInput
+	UpdatedBy           *uuid.UUID
 }
 
 type Repository interface {

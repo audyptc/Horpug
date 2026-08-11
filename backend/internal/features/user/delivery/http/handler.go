@@ -10,6 +10,7 @@ import (
 	userusecase "apihorpug/internal/features/user/usecase"
 	"apihorpug/internal/http/apierror"
 	"apihorpug/internal/http/apiresponse"
+	"apihorpug/internal/http/middleware"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -20,21 +21,19 @@ type Handler struct {
 }
 
 type createUserRequest struct {
-	Username  string     `json:"username"`
-	Email     string     `json:"email"`
-	Password  string     `json:"password"`
-	RoleID    uuid.UUID  `json:"role_id"`
-	IsActive  *bool      `json:"is_active"`
-	CreatedBy *uuid.UUID `json:"created_by"`
+	Username string    `json:"username"`
+	Email    string    `json:"email"`
+	Password string    `json:"password"`
+	RoleID   uuid.UUID `json:"role_id"`
+	IsActive *bool     `json:"is_active"`
 }
 
 type updateUserRequest struct {
-	Username  *string    `json:"username"`
-	Email     *string    `json:"email"`
-	Password  *string    `json:"password"`
-	RoleID    *uuid.UUID `json:"role_id"`
-	IsActive  *bool      `json:"is_active"`
-	UpdatedBy *uuid.UUID `json:"updated_by"`
+	Username *string    `json:"username"`
+	Email    *string    `json:"email"`
+	Password *string    `json:"password"`
+	RoleID   *uuid.UUID `json:"role_id"`
+	IsActive *bool      `json:"is_active"`
 }
 
 func NewHandler(usecase *userusecase.Service) *Handler {
@@ -146,6 +145,11 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		isActive = *req.IsActive
 	}
 
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
@@ -155,7 +159,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		Password:  req.Password,
 		RoleID:    req.RoleID,
 		IsActive:  isActive,
-		CreatedBy: req.CreatedBy,
+		CreatedBy: &requesterID,
 	})
 	if err != nil {
 		if errors.Is(err, userdomain.ErrRequiredUserData) {
@@ -201,6 +205,11 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		return apierror.BadRequest("invalid request body")
 	}
 
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
@@ -210,7 +219,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		Password:  req.Password,
 		RoleID:    req.RoleID,
 		IsActive:  req.IsActive,
-		UpdatedBy: req.UpdatedBy,
+		UpdatedBy: &requesterID,
 	})
 	if err != nil {
 		if errors.Is(err, userdomain.ErrUserNotFound) {

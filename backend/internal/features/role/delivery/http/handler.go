@@ -10,6 +10,7 @@ import (
 	roleusecase "apihorpug/internal/features/role/usecase"
 	"apihorpug/internal/http/apierror"
 	"apihorpug/internal/http/apiresponse"
+	"apihorpug/internal/http/middleware"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -25,19 +26,21 @@ type menuPermissionInput struct {
 }
 
 type createRoleRequest struct {
-	Name            string                `json:"name"`
-	Description     string                `json:"description"`
-	IsActive        *bool                 `json:"is_active"`
-	MenuPermissions []menuPermissionInput `json:"menu_permissions"`
-	CreatedBy       *uuid.UUID            `json:"created_by"`
+	Name                string                `json:"name"`
+	Description         string                `json:"description"`
+	IsActive            *bool                 `json:"is_active"`
+	FullDormitoryAccess *bool                 `json:"full_dormitory_access"`
+	DormitoryIDs        []uuid.UUID           `json:"dormitory_ids"`
+	MenuPermissions     []menuPermissionInput `json:"menu_permissions"`
 }
 
 type updateRoleRequest struct {
-	Name            *string                `json:"name"`
-	Description     *string                `json:"description"`
-	IsActive        *bool                  `json:"is_active"`
-	MenuPermissions *[]menuPermissionInput `json:"menu_permissions"`
-	UpdatedBy       *uuid.UUID             `json:"updated_by"`
+	Name                *string                `json:"name"`
+	Description         *string                `json:"description"`
+	IsActive            *bool                  `json:"is_active"`
+	FullDormitoryAccess *bool                  `json:"full_dormitory_access"`
+	DormitoryIDs        *[]uuid.UUID           `json:"dormitory_ids"`
+	MenuPermissions     *[]menuPermissionInput `json:"menu_permissions"`
 }
 
 func NewHandler(usecase *roleusecase.Service) *Handler {
@@ -123,22 +126,34 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		isActive = *req.IsActive
 	}
 
+	fullDormitoryAccess := false
+	if req.FullDormitoryAccess != nil {
+		fullDormitoryAccess = *req.FullDormitoryAccess
+	}
+
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
 	createdRole, err := h.usecase.Create(ctx, roleusecase.CreateInput{
-		Name:            req.Name,
-		Description:     req.Description,
-		IsActive:        isActive,
-		MenuPermissions: toUsecaseMenuPermissions(req.MenuPermissions),
-		CreatedBy:       req.CreatedBy,
+		Name:                req.Name,
+		Description:         req.Description,
+		IsActive:            isActive,
+		FullDormitoryAccess: fullDormitoryAccess,
+		DormitoryIDs:        req.DormitoryIDs,
+		MenuPermissions:     toUsecaseMenuPermissions(req.MenuPermissions),
+		CreatedBy:           &requesterID,
 	})
 	if err != nil {
 		if errors.Is(err, roledomain.ErrRoleNameExists) {
 			return apierror.Conflict("role name already exists")
 		}
 		if errors.Is(err, roledomain.ErrReferenceNotFound) {
-			return apierror.BadRequest("one or more menus or permissions not found")
+			return apierror.BadRequest("one or more menus, permissions or dormitories not found")
 		}
 		return apierror.Internal("failed to create role")
 	}
@@ -185,15 +200,22 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		menuPermissions = &mapped
 	}
 
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
 	updatedRole, err := h.usecase.Update(ctx, id, roleusecase.UpdateInput{
-		Name:            req.Name,
-		Description:     req.Description,
-		IsActive:        req.IsActive,
-		MenuPermissions: menuPermissions,
-		UpdatedBy:       req.UpdatedBy,
+		Name:                req.Name,
+		Description:         req.Description,
+		IsActive:            req.IsActive,
+		FullDormitoryAccess: req.FullDormitoryAccess,
+		DormitoryIDs:        req.DormitoryIDs,
+		MenuPermissions:     menuPermissions,
+		UpdatedBy:           &requesterID,
 	})
 	if err != nil {
 		if errors.Is(err, roledomain.ErrRoleNotFound) {
@@ -203,7 +225,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 			return apierror.Conflict("role name already exists")
 		}
 		if errors.Is(err, roledomain.ErrReferenceNotFound) {
-			return apierror.BadRequest("one or more menus or permissions not found")
+			return apierror.BadRequest("one or more menus, permissions or dormitories not found")
 		}
 		return apierror.Internal("failed to update role")
 	}

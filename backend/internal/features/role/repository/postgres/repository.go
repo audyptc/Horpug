@@ -25,7 +25,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 
 func (r *Repository) List(ctx context.Context) ([]roledomain.Role, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, name, description, is_active, created_by, updated_by, created_at, updated_at
+		SELECT id, name, description, is_active, full_dormitory_access, created_by, updated_by, created_at, updated_at
 		FROM roles
 		ORDER BY name ASC
 	`)
@@ -37,7 +37,7 @@ func (r *Repository) List(ctx context.Context) ([]roledomain.Role, error) {
 	roles := make([]roledomain.Role, 0)
 	for rows.Next() {
 		var role roledomain.Role
-		if err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.CreatedBy, &role.UpdatedBy, &role.CreatedAt, &role.UpdatedAt); err != nil {
+		if err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.FullDormitoryAccess, &role.CreatedBy, &role.UpdatedBy, &role.CreatedAt, &role.UpdatedAt); err != nil {
 			return nil, err
 		}
 
@@ -46,6 +46,13 @@ func (r *Repository) List(ctx context.Context) ([]roledomain.Role, error) {
 			return nil, err
 		}
 		role.MenuPermissions = menuPermissions
+
+		dormitories, err := r.fetchRoleDormitories(ctx, role.ID)
+		if err != nil {
+			return nil, err
+		}
+		role.Dormitories = dormitories
+
 		roles = append(roles, role)
 	}
 	if err := rows.Err(); err != nil {
@@ -68,12 +75,13 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (roledomain.Role
 
 func (r *Repository) Create(ctx context.Context, input roleusecase.CreateInput) (roledomain.Role, error) {
 	role := roledomain.Role{
-		ID:          uuid.New(),
-		Name:        input.Name,
-		Description: input.Description,
-		IsActive:    input.IsActive,
-		CreatedBy:   input.CreatedBy,
-		UpdatedBy:   input.CreatedBy,
+		ID:                  uuid.New(),
+		Name:                input.Name,
+		Description:         input.Description,
+		IsActive:            input.IsActive,
+		FullDormitoryAccess: input.FullDormitoryAccess,
+		CreatedBy:           input.CreatedBy,
+		UpdatedBy:           input.CreatedBy,
 	}
 
 	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
@@ -83,12 +91,15 @@ func (r *Repository) Create(ctx context.Context, input roleusecase.CreateInput) 
 	defer tx.Rollback(ctx)
 
 	err = tx.QueryRow(ctx, `
-		INSERT INTO roles (id, name, description, is_active, created_by, updated_by)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO roles (id, name, description, is_active, full_dormitory_access, created_by, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING created_at, updated_at
-	`, role.ID, role.Name, role.Description, role.IsActive, role.CreatedBy, role.UpdatedBy).Scan(&role.CreatedAt, &role.UpdatedAt)
+	`, role.ID, role.Name, role.Description, role.IsActive, role.FullDormitoryAccess, role.CreatedBy, role.UpdatedBy).Scan(&role.CreatedAt, &role.UpdatedAt)
 	if err == nil {
 		err = r.replaceRoleMenuPermissions(ctx, tx, role.ID, input.MenuPermissions)
+	}
+	if err == nil {
+		err = r.replaceRoleDormitories(ctx, tx, role.ID, input.DormitoryIDs)
 	}
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -142,6 +153,11 @@ func (r *Repository) Update(ctx context.Context, id uuid.UUID, input roleusecase
 		args = append(args, *input.IsActive)
 		argIdx++
 	}
+	if input.FullDormitoryAccess != nil {
+		setClauses = append(setClauses, fmt.Sprintf("full_dormitory_access = $%d", argIdx))
+		args = append(args, *input.FullDormitoryAccess)
+		argIdx++
+	}
 	if input.UpdatedBy != nil {
 		setClauses = append(setClauses, fmt.Sprintf("updated_by = $%d", argIdx))
 		args = append(args, *input.UpdatedBy)
@@ -166,6 +182,12 @@ func (r *Repository) Update(ctx context.Context, id uuid.UUID, input roleusecase
 			if errors.Is(err, roledomain.ErrReferenceNotFound) {
 				return roledomain.Role{}, err
 			}
+			return roledomain.Role{}, err
+		}
+	}
+
+	if input.DormitoryIDs != nil {
+		if err := r.replaceRoleDormitories(ctx, tx, id, *input.DormitoryIDs); err != nil {
 			return roledomain.Role{}, err
 		}
 	}
@@ -196,10 +218,10 @@ func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 func (r *Repository) loadRoleByID(ctx context.Context, roleID uuid.UUID) (roledomain.Role, error) {
 	var role roledomain.Role
 	err := r.db.QueryRow(ctx, `
-		SELECT id, name, description, is_active, created_by, updated_by, created_at, updated_at
+		SELECT id, name, description, is_active, full_dormitory_access, created_by, updated_by, created_at, updated_at
 		FROM roles
 		WHERE id = $1
-	`, roleID).Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.CreatedBy, &role.UpdatedBy, &role.CreatedAt, &role.UpdatedAt)
+	`, roleID).Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.FullDormitoryAccess, &role.CreatedBy, &role.UpdatedBy, &role.CreatedAt, &role.UpdatedAt)
 	if err != nil {
 		return roledomain.Role{}, err
 	}
@@ -209,6 +231,13 @@ func (r *Repository) loadRoleByID(ctx context.Context, roleID uuid.UUID) (roledo
 		return roledomain.Role{}, err
 	}
 	role.MenuPermissions = menuPermissions
+
+	dormitories, err := r.fetchRoleDormitories(ctx, role.ID)
+	if err != nil {
+		return roledomain.Role{}, err
+	}
+	role.Dormitories = dormitories
+
 	return role, nil
 }
 
@@ -322,6 +351,71 @@ func (r *Repository) replaceRoleMenuPermissions(ctx context.Context, tx pgx.Tx, 
 			INSERT INTO role_menu_permissions (role_id, menu_id, permission_id)
 			VALUES ($1, $2, $3)
 		`, row.RoleID, row.MenuID, row.PermissionID); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *Repository) fetchRoleDormitories(ctx context.Context, roleID uuid.UUID) ([]roledomain.RoleDormitory, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT d.id, d.name
+		FROM role_dormitories rd
+		JOIN dormitories d ON d.id = rd.dormitory_id
+		WHERE rd.role_id = $1
+		ORDER BY d.name ASC
+	`, roleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	dormitories := make([]roledomain.RoleDormitory, 0)
+	for rows.Next() {
+		var dormitory roledomain.RoleDormitory
+		if err := rows.Scan(&dormitory.ID, &dormitory.Name); err != nil {
+			return nil, err
+		}
+		dormitories = append(dormitories, dormitory)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return dormitories, nil
+}
+
+func (r *Repository) replaceRoleDormitories(ctx context.Context, tx pgx.Tx, roleID uuid.UUID, dormitoryIDs []uuid.UUID) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM role_dormitories WHERE role_id = $1`, roleID); err != nil {
+		return err
+	}
+	if len(dormitoryIDs) == 0 {
+		return nil
+	}
+
+	dormitorySet := make(map[uuid.UUID]struct{}, len(dormitoryIDs))
+	for _, dormitoryID := range dormitoryIDs {
+		if dormitoryID == uuid.Nil {
+			return roledomain.ErrReferenceNotFound
+		}
+		dormitorySet[dormitoryID] = struct{}{}
+	}
+
+	for dormitoryID := range dormitorySet {
+		if err := tx.QueryRow(ctx, `SELECT 1 FROM dormitories WHERE id = $1`, dormitoryID).Scan(new(int)); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return roledomain.ErrReferenceNotFound
+			}
+			return err
+		}
+	}
+
+	for dormitoryID := range dormitorySet {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO role_dormitories (role_id, dormitory_id)
+			VALUES ($1, $2)
+		`, roleID, dormitoryID); err != nil {
 			return err
 		}
 	}

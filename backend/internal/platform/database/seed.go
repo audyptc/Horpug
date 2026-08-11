@@ -55,9 +55,9 @@ func SeedAdmin(db *pgxpool.Pool, cfg config.Config) error {
 
 	var roleID uuid.UUID
 	if err := db.QueryRow(ctx, `
-		INSERT INTO roles (id, name, description, is_active)
-		VALUES ($1, 'Admin', 'Full system access', TRUE)
-		ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+		INSERT INTO roles (id, name, description, is_active, full_dormitory_access)
+		VALUES ($1, 'Admin', 'Full system access', TRUE, TRUE)
+		ON CONFLICT (name) DO UPDATE SET full_dormitory_access = TRUE
 		RETURNING id
 	`, uuid.New()).Scan(&roleID); err != nil {
 		return err
@@ -76,11 +76,23 @@ func SeedAdmin(db *pgxpool.Pool, cfg config.Config) error {
 		return err
 	}
 
-	if _, err := db.Exec(ctx, `
+	var adminID uuid.UUID
+	if err := db.QueryRow(ctx, `
 		INSERT INTO users (id, username, email, password, role_id, is_active)
 		VALUES ($1, $2, $3, $4, $5, TRUE)
-		ON CONFLICT (username) DO NOTHING
-	`, uuid.New(), cfg.AdminUsername, cfg.AdminEmail, string(hashedPassword), roleID); err != nil {
+		ON CONFLICT (username) DO UPDATE SET username = EXCLUDED.username
+		RETURNING id
+	`, uuid.New(), cfg.AdminUsername, cfg.AdminEmail, string(hashedPassword), roleID).Scan(&adminID); err != nil {
+		return err
+	}
+
+	// Keep the admin registered as a manager of every dormitory, including
+	// ones created after this seed last ran.
+	if _, err := db.Exec(ctx, `
+		INSERT INTO user_dormitories (user_id, dormitory_id)
+		SELECT $1, d.id FROM dormitories d
+		ON CONFLICT (user_id, dormitory_id) DO NOTHING
+	`, adminID); err != nil {
 		return err
 	}
 

@@ -34,6 +34,7 @@ func AutoMigrate(db *pgxpool.Pool) error {
 			name VARCHAR(120) UNIQUE NOT NULL,
 			description VARCHAR(255) DEFAULT '',
 			is_active BOOLEAN NOT NULL DEFAULT TRUE,
+			full_dormitory_access BOOLEAN NOT NULL DEFAULT FALSE,
 			created_by UUID,
 			updated_by UUID,
 			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -84,6 +85,14 @@ func AutoMigrate(db *pgxpool.Pool) error {
 			CONSTRAINT user_dormitories_user_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
 			CONSTRAINT user_dormitories_dormitory_fkey FOREIGN KEY (dormitory_id) REFERENCES dormitories(id) ON DELETE CASCADE
 		)`,
+		`CREATE TABLE IF NOT EXISTS role_dormitories (
+			role_id UUID NOT NULL,
+			dormitory_id UUID NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			PRIMARY KEY (role_id, dormitory_id),
+			CONSTRAINT role_dormitories_role_fkey FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+			CONSTRAINT role_dormitories_dormitory_fkey FOREIGN KEY (dormitory_id) REFERENCES dormitories(id) ON DELETE CASCADE
+		)`,
 		`CREATE TABLE IF NOT EXISTS activity_logs (
 			id UUID PRIMARY KEY,
 			user_id UUID,
@@ -95,15 +104,64 @@ func AutoMigrate(db *pgxpool.Pool) error {
 			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			CONSTRAINT activity_logs_user_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 		)`,
-		`CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_activity_logs_entity ON activity_logs(entity_type, entity_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at DESC)`,
 	}
 
 	for _, stmt := range statements {
 		if _, err := db.Exec(ctx, stmt); err != nil {
 			return err
 		}
+	}
+
+	compatibilityStatements := []string{
+		`ALTER TABLE menus ADD COLUMN IF NOT EXISTS description VARCHAR(255) DEFAULT ''`,
+		`ALTER TABLE menus ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`,
+		`ALTER TABLE menus ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
+		`ALTER TABLE menus ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_menus_path ON menus(path)`,
+
+		`ALTER TABLE permissions ADD COLUMN IF NOT EXISTS description VARCHAR(255) DEFAULT ''`,
+		`ALTER TABLE permissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
+		`ALTER TABLE permissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_permissions_name ON permissions(name)`,
+
+		`ALTER TABLE roles ADD COLUMN IF NOT EXISTS description VARCHAR(255) DEFAULT ''`,
+		`ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`,
+		`ALTER TABLE roles ADD COLUMN IF NOT EXISTS full_dormitory_access BOOLEAN NOT NULL DEFAULT FALSE`,
+		`ALTER TABLE roles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
+		`ALTER TABLE roles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_roles_name ON roles(name)`,
+
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(80)`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(180)`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255)`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id UUID`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_users_username ON users(username)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email ON users(email)`,
+	}
+
+	for _, stmt := range compatibilityStatements {
+		if _, err := db.Exec(ctx, stmt); err != nil {
+			return err
+		}
+	}
+
+	if _, err := db.Exec(ctx, `
+		DO $$
+		BEGIN
+			IF EXISTS (
+				SELECT 1
+				FROM information_schema.columns
+				WHERE table_name = 'users' AND column_name = 'full_name'
+			) THEN
+				ALTER TABLE users ALTER COLUMN full_name SET DEFAULT '';
+			END IF;
+		END
+		$$;
+	`); err != nil {
+		return err
 	}
 
 	auditColumns := []string{"users", "roles", "dormitories"}
@@ -116,9 +174,25 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		}
 	}
 
+	if _, err := db.Exec(ctx, `ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS user_id UUID`); err != nil {
+		return err
+	}
+	if _, err := db.Exec(ctx, `CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id)`); err != nil {
+		return err
+	}
+	if _, err := db.Exec(ctx, `CREATE INDEX IF NOT EXISTS idx_activity_logs_entity ON activity_logs(entity_type, entity_id)`); err != nil {
+		return err
+	}
+	if _, err := db.Exec(ctx, `CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at DESC)`); err != nil {
+		return err
+	}
+
 	if _, err := db.Exec(ctx, `
 		DO $$
 		BEGIN
+			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'activity_logs_user_fkey') THEN
+				ALTER TABLE activity_logs ADD CONSTRAINT activity_logs_user_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
+			END IF;
 			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_created_by_fkey') THEN
 				ALTER TABLE users ADD CONSTRAINT users_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 			END IF;

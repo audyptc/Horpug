@@ -29,16 +29,12 @@ type UpdateInput struct {
 	UpdatedBy   *uuid.UUID
 }
 
-type ListFilter struct {
-	UserID *uuid.UUID
-}
-
 type Repository interface {
-	List(ctx context.Context, filter ListFilter) ([]dormdomain.Dormitory, error)
-	GetByID(ctx context.Context, id uuid.UUID) (dormdomain.Dormitory, error)
+	List(ctx context.Context, requesterID uuid.UUID) ([]dormdomain.Dormitory, error)
+	GetByID(ctx context.Context, id, requesterID uuid.UUID) (dormdomain.Dormitory, error)
 	Create(ctx context.Context, input CreateInput) (dormdomain.Dormitory, error)
-	Update(ctx context.Context, id uuid.UUID, input UpdateInput) (dormdomain.Dormitory, error)
-	Delete(ctx context.Context, id uuid.UUID) error
+	Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (dormdomain.Dormitory, error)
+	Delete(ctx context.Context, id, requesterID uuid.UUID) error
 }
 
 type Service struct {
@@ -49,12 +45,12 @@ func New(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) List(ctx context.Context, filter ListFilter) ([]dormdomain.Dormitory, error) {
-	return s.repo.List(ctx, filter)
+func (s *Service) List(ctx context.Context, requesterID uuid.UUID) ([]dormdomain.Dormitory, error) {
+	return s.repo.List(ctx, requesterID)
 }
 
-func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (dormdomain.Dormitory, error) {
-	return s.repo.GetByID(ctx, id)
+func (s *Service) GetByID(ctx context.Context, id, requesterID uuid.UUID) (dormdomain.Dormitory, error) {
+	return s.repo.GetByID(ctx, id, requesterID)
 }
 
 func (s *Service) Create(ctx context.Context, input CreateInput) (dormdomain.Dormitory, error) {
@@ -69,7 +65,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (dormdomain.Dor
 	return s.repo.Create(ctx, input)
 }
 
-func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput) (dormdomain.Dormitory, error) {
+func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (dormdomain.Dormitory, error) {
 	if input.Name != nil {
 		name := strings.TrimSpace(*input.Name)
 		if name == "" {
@@ -90,9 +86,9 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput) (
 		input.Description = &description
 	}
 
-	return s.repo.Update(ctx, id, input)
+	return s.repo.Update(ctx, id, requesterID, input)
 }
 
-func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
-	return s.repo.Delete(ctx, id)
+func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
+	return s.repo.Delete(ctx, id, requesterID)
 }

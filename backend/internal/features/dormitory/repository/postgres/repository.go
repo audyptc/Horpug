@@ -22,15 +22,26 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) List(ctx context.Context, filter dormusecase.ListFilter) ([]dormdomain.Dormitory, error) {
+func (r *Repository) List(ctx context.Context, requesterID uuid.UUID) ([]dormdomain.Dormitory, error) {
+	full, roleID, err := r.dormitoryScope(ctx, requesterID)
+	if err != nil {
+		return nil, err
+	}
+
 	query := `
 		SELECT DISTINCT d.id, d.name, d.address, d.phone, d.description, d.is_active, d.created_by, d.updated_by, d.created_at, d.updated_at
 		FROM dormitories d
 	`
 	args := make([]any, 0)
-	if filter.UserID != nil {
-		query += ` JOIN user_dormitories ud ON ud.dormitory_id = d.id WHERE ud.user_id = $1`
-		args = append(args, *filter.UserID)
+	if !full {
+		query += `
+			WHERE d.id IN (
+				SELECT dormitory_id FROM user_dormitories WHERE user_id = $1
+				UNION
+				SELECT dormitory_id FROM role_dormitories WHERE role_id = $2
+			)
+		`
+		args = append(args, requesterID, roleID)
 	}
 	query += ` ORDER BY d.name ASC`
 
@@ -72,7 +83,11 @@ func (r *Repository) List(ctx context.Context, filter dormusecase.ListFilter) ([
 	return dormitories, nil
 }
 
-func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (dormdomain.Dormitory, error) {
+func (r *Repository) GetByID(ctx context.Context, id, requesterID uuid.UUID) (dormdomain.Dormitory, error) {
+	if err := r.ensureDormitoryAccess(ctx, id, requesterID); err != nil {
+		return dormdomain.Dormitory{}, err
+	}
+
 	dormitory, err := r.loadDormitoryByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -95,6 +110,20 @@ func (r *Repository) Create(ctx context.Context, input dormusecase.CreateInput) 
 		UpdatedBy:   input.CreatedBy,
 	}
 
+	managerIDs := input.ManagerIDs
+	if input.CreatedBy != nil {
+		alreadyManager := false
+		for _, managerID := range managerIDs {
+			if managerID == *input.CreatedBy {
+				alreadyManager = true
+				break
+			}
+		}
+		if !alreadyManager {
+			managerIDs = append(managerIDs, *input.CreatedBy)
+		}
+	}
+
 	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return dormdomain.Dormitory{}, err
@@ -108,7 +137,7 @@ func (r *Repository) Create(ctx context.Context, input dormusecase.CreateInput) 
 	`, dormitory.ID, dormitory.Name, dormitory.Address, dormitory.Phone, dormitory.Description, dormitory.IsActive, dormitory.CreatedBy, dormitory.UpdatedBy).
 		Scan(&dormitory.CreatedAt, &dormitory.UpdatedAt)
 	if err == nil {
-		err = r.replaceManagers(ctx, tx, dormitory.ID, input.ManagerIDs)
+		err = r.replaceManagers(ctx, tx, dormitory.ID, managerIDs)
 	}
 	if err != nil {
 		return dormdomain.Dormitory{}, err
@@ -121,12 +150,8 @@ func (r *Repository) Create(ctx context.Context, input dormusecase.CreateInput) 
 	return r.loadDormitoryByID(ctx, dormitory.ID)
 }
 
-func (r *Repository) Update(ctx context.Context, id uuid.UUID, input dormusecase.UpdateInput) (dormdomain.Dormitory, error) {
-	var exists int
-	if err := r.db.QueryRow(ctx, `SELECT 1 FROM dormitories WHERE id = $1`, id).Scan(&exists); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return dormdomain.Dormitory{}, dormdomain.ErrDormitoryNotFound
-		}
+func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, input dormusecase.UpdateInput) (dormdomain.Dormitory, error) {
+	if err := r.ensureDormitoryAccess(ctx, id, requesterID); err != nil {
 		return dormdomain.Dormitory{}, err
 	}
 
@@ -193,7 +218,11 @@ func (r *Repository) Update(ctx context.Context, id uuid.UUID, input dormusecase
 	return r.loadDormitoryByID(ctx, id)
 }
 
-func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
+	if err := r.ensureDormitoryAccess(ctx, id, requesterID); err != nil {
+		return err
+	}
+
 	result, err := r.db.Exec(ctx, `DELETE FROM dormitories WHERE id = $1`, id)
 	if err != nil {
 		return err
@@ -298,5 +327,51 @@ func (r *Repository) replaceManagers(ctx context.Context, tx pgx.Tx, dormitoryID
 		}
 	}
 
+	return nil
+}
+
+// dormitoryScope reports whether the user's role is exempt from per-dormitory
+// scoping (sees and manages every dormitory), along with their role ID so
+// callers can also check role-level dormitory grants.
+func (r *Repository) dormitoryScope(ctx context.Context, userID uuid.UUID) (full bool, roleID uuid.UUID, err error) {
+	err = r.db.QueryRow(ctx, `
+		SELECT r.full_dormitory_access, r.id
+		FROM users u
+		JOIN roles r ON r.id = u.role_id
+		WHERE u.id = $1
+	`, userID).Scan(&full, &roleID)
+	if err != nil {
+		return false, uuid.Nil, err
+	}
+	return full, roleID, nil
+}
+
+// ensureDormitoryAccess confirms the dormitory exists and the requester may
+// act on it (unrestricted, individually assigned via user_dormitories, or
+// granted through their role via role_dormitories). Both a missing dormitory
+// and a missing grant surface as ErrDormitoryNotFound so scoped-out callers
+// can't distinguish the two.
+func (r *Repository) ensureDormitoryAccess(ctx context.Context, dormitoryID, requesterID uuid.UUID) error {
+	full, roleID, err := r.dormitoryScope(ctx, requesterID)
+	if err != nil {
+		return err
+	}
+
+	var exists int
+	err = r.db.QueryRow(ctx, `
+		SELECT 1 FROM dormitories d
+		WHERE d.id = $1
+		AND ($2 OR EXISTS (
+			SELECT 1 FROM user_dormitories ud WHERE ud.dormitory_id = d.id AND ud.user_id = $3
+		) OR EXISTS (
+			SELECT 1 FROM role_dormitories rd WHERE rd.dormitory_id = d.id AND rd.role_id = $4
+		))
+	`, dormitoryID, full, requesterID, roleID).Scan(&exists)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return dormdomain.ErrDormitoryNotFound
+		}
+		return err
+	}
 	return nil
 }
