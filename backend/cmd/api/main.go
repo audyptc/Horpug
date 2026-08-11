@@ -30,7 +30,7 @@ func main() {
 		log.Fatalf("failed to seed permissions: %v", err)
 	}
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{ErrorHandler: http.ErrorHandler})
 	http.RegisterRoutes(app, db)
 
 	log.Printf("server running on :%s", cfg.AppPort)

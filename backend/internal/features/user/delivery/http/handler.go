@@ -8,6 +8,7 @@ import (
 
 	userdomain "apihorpug/internal/features/user/domain"
 	userusecase "apihorpug/internal/features/user/usecase"
+	"apihorpug/internal/http/apierror"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -43,7 +44,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 
 	users, err := h.usecase.List(ctx)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list users"})
+		return apierror.Internal("failed to list users")
 	}
 
 	return c.JSON(users)
@@ -52,7 +53,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 func (h *Handler) Get(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid user id"})
+		return apierror.BadRequest("invalid user id")
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
@@ -61,9 +62,9 @@ func (h *Handler) Get(c fiber.Ctx) error {
 	user, err := h.usecase.GetByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, userdomain.ErrUserNotFound) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
+			return apierror.NotFound("user not found")
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to get user"})
+		return apierror.Internal("failed to get user")
 	}
 
 	return c.JSON(user)
@@ -72,7 +73,7 @@ func (h *Handler) Get(c fiber.Ctx) error {
 func (h *Handler) GetPermissions(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid user id"})
+		return apierror.BadRequest("invalid user id")
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
@@ -81,9 +82,9 @@ func (h *Handler) GetPermissions(c fiber.Ctx) error {
 	permissions, err := h.usecase.GetPermissions(ctx, id)
 	if err != nil {
 		if errors.Is(err, userdomain.ErrUserNotFound) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
+			return apierror.NotFound("user not found")
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load user permissions"})
+		return apierror.Internal("failed to load user permissions")
 	}
 
 	return c.JSON(permissions)
@@ -92,7 +93,7 @@ func (h *Handler) GetPermissions(c fiber.Ctx) error {
 func (h *Handler) Create(c fiber.Ctx) error {
 	var req createUserRequest
 	if err := c.Bind().Body(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+		return apierror.BadRequest("invalid request body")
 	}
 
 	isActive := true
@@ -112,18 +113,18 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	})
 	if err != nil {
 		if errors.Is(err, userdomain.ErrRequiredUserData) {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "username, email and password are required"})
+			return apierror.BadRequest("username, email and password are required")
 		}
 		if errors.Is(err, userdomain.ErrRoleNotFound) {
 			if req.RoleID == uuid.Nil {
-				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "role_id is required"})
+				return apierror.BadRequest("role_id is required")
 			}
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "role not found"})
+			return apierror.BadRequest("role not found")
 		}
 		if errors.Is(err, userdomain.ErrUserDuplicate) {
-			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "username or email already exists"})
+			return apierror.Conflict("username or email already exists")
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create user"})
+		return apierror.Internal("failed to create user")
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(user)
@@ -132,12 +133,12 @@ func (h *Handler) Create(c fiber.Ctx) error {
 func (h *Handler) Update(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid user id"})
+		return apierror.BadRequest("invalid user id")
 	}
 
 	var req updateUserRequest
 	if err := c.Bind().Body(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+		return apierror.BadRequest("invalid request body")
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
@@ -152,24 +153,24 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	})
 	if err != nil {
 		if errors.Is(err, userdomain.ErrUserNotFound) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
+			return apierror.NotFound("user not found")
 		}
 		if errors.Is(err, userdomain.ErrInvalidUsername) {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "username cannot be empty"})
+			return apierror.BadRequest("username cannot be empty")
 		}
 		if errors.Is(err, userdomain.ErrInvalidEmail) {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "email cannot be empty"})
+			return apierror.BadRequest("email cannot be empty")
 		}
 		if errors.Is(err, userdomain.ErrInvalidPassword) {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "password cannot be empty"})
+			return apierror.BadRequest("password cannot be empty")
 		}
 		if errors.Is(err, userdomain.ErrRoleNotFound) {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "role not found"})
+			return apierror.BadRequest("role not found")
 		}
 		if errors.Is(err, userdomain.ErrUserDuplicate) {
-			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "username or email already exists"})
+			return apierror.Conflict("username or email already exists")
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update user"})
+		return apierror.Internal("failed to update user")
 	}
 
 	return c.JSON(updatedUser)
@@ -178,7 +179,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 func (h *Handler) Delete(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid user id"})
+		return apierror.BadRequest("invalid user id")
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
@@ -186,9 +187,9 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 
 	if err := h.usecase.Delete(ctx, id); err != nil {
 		if errors.Is(err, userdomain.ErrUserNotFound) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
+			return apierror.NotFound("user not found")
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to delete user"})
+		return apierror.Internal("failed to delete user")
 	}
 
 	return c.JSON(fiber.Map{"message": "user deleted"})

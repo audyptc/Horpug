@@ -8,6 +8,7 @@ import (
 
 	roledomain "apihorpug/internal/features/role/domain"
 	roleusecase "apihorpug/internal/features/role/usecase"
+	"apihorpug/internal/http/apierror"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -46,7 +47,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 
 	roles, err := h.usecase.List(ctx)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list roles"})
+		return apierror.Internal("failed to list roles")
 	}
 
 	return c.JSON(roles)
@@ -55,7 +56,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 func (h *Handler) Get(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid role id"})
+		return apierror.BadRequest("invalid role id")
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
@@ -64,9 +65,9 @@ func (h *Handler) Get(c fiber.Ctx) error {
 	role, err := h.usecase.GetByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, roledomain.ErrRoleNotFound) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "role not found"})
+			return apierror.NotFound("role not found")
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to get role"})
+		return apierror.Internal("failed to get role")
 	}
 
 	return c.JSON(role)
@@ -75,12 +76,12 @@ func (h *Handler) Get(c fiber.Ctx) error {
 func (h *Handler) Create(c fiber.Ctx) error {
 	var req createRoleRequest
 	if err := c.Bind().Body(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+		return apierror.BadRequest("invalid request body")
 	}
 
 	req.Name = strings.TrimSpace(req.Name)
 	if req.Name == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "name is required"})
+		return apierror.BadRequest("name is required")
 	}
 
 	isActive := true
@@ -99,12 +100,12 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	})
 	if err != nil {
 		if errors.Is(err, roledomain.ErrRoleNameExists) {
-			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "role name already exists"})
+			return apierror.Conflict("role name already exists")
 		}
 		if errors.Is(err, roledomain.ErrReferenceNotFound) {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "one or more menus or permissions not found"})
+			return apierror.BadRequest("one or more menus or permissions not found")
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create role"})
+		return apierror.Internal("failed to create role")
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(createdRole)
@@ -113,18 +114,18 @@ func (h *Handler) Create(c fiber.Ctx) error {
 func (h *Handler) Update(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid role id"})
+		return apierror.BadRequest("invalid role id")
 	}
 
 	var req updateRoleRequest
 	if err := c.Bind().Body(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+		return apierror.BadRequest("invalid request body")
 	}
 
 	if req.Name != nil {
 		name := strings.TrimSpace(*req.Name)
 		if name == "" {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "name cannot be empty"})
+			return apierror.BadRequest("name cannot be empty")
 		}
 		req.Name = &name
 	}
@@ -146,15 +147,15 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	})
 	if err != nil {
 		if errors.Is(err, roledomain.ErrRoleNotFound) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "role not found"})
+			return apierror.NotFound("role not found")
 		}
 		if errors.Is(err, roledomain.ErrRoleNameExists) {
-			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "role name already exists"})
+			return apierror.Conflict("role name already exists")
 		}
 		if errors.Is(err, roledomain.ErrReferenceNotFound) {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "one or more menus or permissions not found"})
+			return apierror.BadRequest("one or more menus or permissions not found")
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update role"})
+		return apierror.Internal("failed to update role")
 	}
 
 	return c.JSON(updatedRole)
@@ -163,7 +164,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 func (h *Handler) Delete(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid role id"})
+		return apierror.BadRequest("invalid role id")
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
@@ -171,12 +172,12 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 
 	if err := h.usecase.Delete(ctx, id); err != nil {
 		if errors.Is(err, roledomain.ErrRoleNotFound) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "role not found"})
+			return apierror.NotFound("role not found")
 		}
 		if errors.Is(err, roledomain.ErrRoleInUse) {
-			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "role is being used by users"})
+			return apierror.Conflict("role is being used by users")
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to delete role"})
+		return apierror.Internal("failed to delete role")
 	}
 
 	return c.JSON(fiber.Map{"message": "role deleted"})

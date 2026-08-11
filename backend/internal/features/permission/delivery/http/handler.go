@@ -7,6 +7,7 @@ import (
 
 	permissiondomain "apihorpug/internal/features/permission/domain"
 	permissionusecase "apihorpug/internal/features/permission/usecase"
+	"apihorpug/internal/http/apierror"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -30,7 +31,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 
 	permissions, err := h.usecase.List(ctx)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list permissions"})
+		return apierror.Internal("failed to list permissions")
 	}
 
 	return c.JSON(permissions)
@@ -39,7 +40,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 func (h *Handler) Create(c fiber.Ctx) error {
 	var req createPermissionRequest
 	if err := c.Bind().Body(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+		return apierror.BadRequest("invalid request body")
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
@@ -51,12 +52,12 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	})
 	if err != nil {
 		if errors.Is(err, permissiondomain.ErrPermissionNameRequired) {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "name is required"})
+			return apierror.BadRequest("name is required")
 		}
 		if errors.Is(err, permissiondomain.ErrPermissionNameExists) {
-			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "permission name already exists"})
+			return apierror.Conflict("permission name already exists")
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create permission"})
+		return apierror.Internal("failed to create permission")
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(permission)

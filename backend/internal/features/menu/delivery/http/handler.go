@@ -5,6 +5,7 @@ import (
 	"time"
 
 	menuusecase "apihorpug/internal/features/menu/usecase"
+	"apihorpug/internal/http/apierror"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -23,7 +24,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 
 	menus, err := h.usecase.List(ctx)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list menus"})
+		return apierror.Internal("failed to list menus")
 	}
 
 	return c.JSON(menus)
