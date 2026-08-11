@@ -9,6 +9,7 @@ import (
 	userdomain "apihorpug/internal/features/user/domain"
 	userusecase "apihorpug/internal/features/user/usecase"
 	"apihorpug/internal/http/apierror"
+	"apihorpug/internal/http/apiresponse"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -38,6 +39,13 @@ func NewHandler(usecase *userusecase.Service) *Handler {
 	return &Handler{usecase: usecase}
 }
 
+// List godoc
+// @Summary List users
+// @Tags users
+// @Produce json
+// @Success 200 {array} userdomain.User
+// @Failure 500 {object} apierror.Error
+// @Router /users [get]
 func (h *Handler) List(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
@@ -47,9 +55,19 @@ func (h *Handler) List(c fiber.Ctx) error {
 		return apierror.Internal("failed to list users")
 	}
 
-	return c.JSON(users)
+	return apiresponse.OK(c, users)
 }
 
+// Get godoc
+// @Summary Get a user by ID
+// @Tags users
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} userdomain.User
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Router /users/{id} [get]
 func (h *Handler) Get(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
@@ -67,9 +85,19 @@ func (h *Handler) Get(c fiber.Ctx) error {
 		return apierror.Internal("failed to get user")
 	}
 
-	return c.JSON(user)
+	return apiresponse.OK(c, user)
 }
 
+// GetPermissions godoc
+// @Summary Get a user's permissions
+// @Tags users
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {array} userusecase.UserPermissionItem
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Router /users/{id}/permissions [get]
 func (h *Handler) GetPermissions(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
@@ -87,9 +115,20 @@ func (h *Handler) GetPermissions(c fiber.Ctx) error {
 		return apierror.Internal("failed to load user permissions")
 	}
 
-	return c.JSON(permissions)
+	return apiresponse.OK(c, permissions)
 }
 
+// Create godoc
+// @Summary Create a user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param request body createUserRequest true "User payload"
+// @Success 201 {object} userdomain.User
+// @Failure 400 {object} apierror.Error
+// @Failure 409 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Router /users [post]
 func (h *Handler) Create(c fiber.Ctx) error {
 	var req createUserRequest
 	if err := c.Bind().Body(&req); err != nil {
@@ -127,9 +166,22 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		return apierror.Internal("failed to create user")
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(user)
+	return apiresponse.Created(c, user)
 }
 
+// Update godoc
+// @Summary Update a user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param request body updateUserRequest true "User payload"
+// @Success 200 {object} userdomain.User
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 409 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Router /users/{id} [put]
 func (h *Handler) Update(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
@@ -173,9 +225,19 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		return apierror.Internal("failed to update user")
 	}
 
-	return c.JSON(updatedUser)
+	return apiresponse.OK(c, updatedUser)
 }
 
+// Delete godoc
+// @Summary Delete a user
+// @Tags users
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Router /users/{id} [delete]
 func (h *Handler) Delete(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
@@ -192,5 +254,5 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 		return apierror.Internal("failed to delete user")
 	}
 
-	return c.JSON(fiber.Map{"message": "user deleted"})
+	return apiresponse.Message(c, "user deleted")
 }

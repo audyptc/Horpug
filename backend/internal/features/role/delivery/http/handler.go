@@ -9,6 +9,7 @@ import (
 	roledomain "apihorpug/internal/features/role/domain"
 	roleusecase "apihorpug/internal/features/role/usecase"
 	"apihorpug/internal/http/apierror"
+	"apihorpug/internal/http/apiresponse"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -41,6 +42,13 @@ func NewHandler(usecase *roleusecase.Service) *Handler {
 	return &Handler{usecase: usecase}
 }
 
+// List godoc
+// @Summary List roles
+// @Tags roles
+// @Produce json
+// @Success 200 {array} roledomain.Role
+// @Failure 500 {object} apierror.Error
+// @Router /roles [get]
 func (h *Handler) List(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
@@ -50,9 +58,19 @@ func (h *Handler) List(c fiber.Ctx) error {
 		return apierror.Internal("failed to list roles")
 	}
 
-	return c.JSON(roles)
+	return apiresponse.OK(c, roles)
 }
 
+// Get godoc
+// @Summary Get a role by ID
+// @Tags roles
+// @Produce json
+// @Param id path string true "Role ID"
+// @Success 200 {object} roledomain.Role
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Router /roles/{id} [get]
 func (h *Handler) Get(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
@@ -70,9 +88,20 @@ func (h *Handler) Get(c fiber.Ctx) error {
 		return apierror.Internal("failed to get role")
 	}
 
-	return c.JSON(role)
+	return apiresponse.OK(c, role)
 }
 
+// Create godoc
+// @Summary Create a role
+// @Tags roles
+// @Accept json
+// @Produce json
+// @Param request body createRoleRequest true "Role payload"
+// @Success 201 {object} roledomain.Role
+// @Failure 400 {object} apierror.Error
+// @Failure 409 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Router /roles [post]
 func (h *Handler) Create(c fiber.Ctx) error {
 	var req createRoleRequest
 	if err := c.Bind().Body(&req); err != nil {
@@ -108,9 +137,22 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		return apierror.Internal("failed to create role")
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(createdRole)
+	return apiresponse.Created(c, createdRole)
 }
 
+// Update godoc
+// @Summary Update a role
+// @Tags roles
+// @Accept json
+// @Produce json
+// @Param id path string true "Role ID"
+// @Param request body updateRoleRequest true "Role payload"
+// @Success 200 {object} roledomain.Role
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 409 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Router /roles/{id} [put]
 func (h *Handler) Update(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
@@ -158,9 +200,20 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		return apierror.Internal("failed to update role")
 	}
 
-	return c.JSON(updatedRole)
+	return apiresponse.OK(c, updatedRole)
 }
 
+// Delete godoc
+// @Summary Delete a role
+// @Tags roles
+// @Produce json
+// @Param id path string true "Role ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 409 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Router /roles/{id} [delete]
 func (h *Handler) Delete(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
@@ -180,7 +233,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 		return apierror.Internal("failed to delete role")
 	}
 
-	return c.JSON(fiber.Map{"message": "role deleted"})
+	return apiresponse.Message(c, "role deleted")
 }
 
 func toUsecaseMenuPermissions(inputs []menuPermissionInput) []roleusecase.MenuPermissionInput {

@@ -10,6 +10,10 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
+// @title Horpug API
+// @version 1.0
+// @description API for the Horpug dormitory management system.
+// @BasePath /api/v1
 func main() {
 	cfg := config.Load()
 
@@ -32,6 +36,7 @@ func main() {
 
 	app := fiber.New(fiber.Config{ErrorHandler: http.ErrorHandler})
 	http.RegisterRoutes(app, db)
+	http.RegisterDocsRoutes(app)
 
 	log.Printf("server running on :%s", cfg.AppPort)
 	if err := app.Listen(":" + cfg.AppPort); err != nil {

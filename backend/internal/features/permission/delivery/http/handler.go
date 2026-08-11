@@ -8,6 +8,7 @@ import (
 	permissiondomain "apihorpug/internal/features/permission/domain"
 	permissionusecase "apihorpug/internal/features/permission/usecase"
 	"apihorpug/internal/http/apierror"
+	"apihorpug/internal/http/apiresponse"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -25,6 +26,13 @@ func NewHandler(usecase *permissionusecase.Service) *Handler {
 	return &Handler{usecase: usecase}
 }
 
+// List godoc
+// @Summary List permissions
+// @Tags permissions
+// @Produce json
+// @Success 200 {array} permissiondomain.Permission
+// @Failure 500 {object} apierror.Error
+// @Router /permissions [get]
 func (h *Handler) List(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
@@ -34,9 +42,20 @@ func (h *Handler) List(c fiber.Ctx) error {
 		return apierror.Internal("failed to list permissions")
 	}
 
-	return c.JSON(permissions)
+	return apiresponse.OK(c, permissions)
 }
 
+// Create godoc
+// @Summary Create a permission
+// @Tags permissions
+// @Accept json
+// @Produce json
+// @Param request body createPermissionRequest true "Permission payload"
+// @Success 201 {object} permissiondomain.Permission
+// @Failure 400 {object} apierror.Error
+// @Failure 409 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Router /permissions [post]
 func (h *Handler) Create(c fiber.Ctx) error {
 	var req createPermissionRequest
 	if err := c.Bind().Body(&req); err != nil {
@@ -60,5 +79,5 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		return apierror.Internal("failed to create permission")
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(permission)
+	return apiresponse.Created(c, permission)
 }
