@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	"apihorpug/config"
-	"apihorpug/internal/models"
+	permissiondomain "apihorpug/internal/features/permission/domain"
+	roledomain "apihorpug/internal/features/role/domain"
+	userdomain "apihorpug/internal/features/user/domain"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -31,15 +33,15 @@ func NewPostgres(cfg config.Config) (*gorm.DB, error) {
 
 func AutoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
-		&models.Role{},
-		&models.Permission{},
-		&models.User{},
-		&models.RolePermission{},
+		&roledomain.Role{},
+		&permissiondomain.Permission{},
+		&userdomain.User{},
+		&roledomain.RolePermission{},
 	)
 }
 
 func SeedPermissions(db *gorm.DB) error {
-	permissions := []models.Permission{
+	permissions := []permissiondomain.Permission{
 		{Name: "users.read", Description: "Read users"},
 		{Name: "users.write", Description: "Create or update users"},
 		{Name: "users.delete", Description: "Delete users"},
