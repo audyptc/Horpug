@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChartNoAxesColumn, ChevronDown, Lock, Settings } from 'lucide-react'
+import { ChartNoAxesColumn, ChevronDown, ClipboardList, Lock, Settings } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useLanguage } from '@/shared/i18n/language'
 import { menuMeta, useMenus, type ApiMenu } from './menus'
@@ -18,12 +18,15 @@ export function SidebarNav({
   const byMetaOrder = (a: ApiMenu, b: ApiMenu) => metaOrder.indexOf(a.path) - metaOrder.indexOf(b.path)
 
   const mainMenus = menus.filter((menu) => !menuMeta[menu.path]?.group).sort(byMetaOrder)
+  const reportMenus = menus.filter((menu) => menuMeta[menu.path]?.group === 'reports').sort(byMetaOrder)
   const accessMenus = menus.filter((menu) => menuMeta[menu.path]?.group === 'access').sort(byMetaOrder)
   const settingsMenus = menus.filter((menu) => menuMeta[menu.path]?.group === 'settings').sort(byMetaOrder)
 
+  const [isReportsOpen, setIsReportsOpen] = useState(true)
   const [isAccessOpen, setIsAccessOpen] = useState(true)
   const [isSettingsOpen, setIsSettingsOpen] = useState(true)
 
+  const showReportMenus = collapsed || isReportsOpen
   const showAccessMenus = collapsed || isAccessOpen
   const showSettingsMenus = collapsed || isSettingsOpen
 
@@ -62,6 +65,36 @@ export function SidebarNav({
         </NavLink>
         {mainMenus.map(renderMenuLink)}
       </nav>
+
+      {reportMenus.length > 0 && (
+        <div className="menu-group-section">
+          <button
+            type="button"
+            className={`sidebar-label menu-group-label menu-group-toggle ${collapsed ? 'collapsed' : ''}`}
+            onClick={() => setIsReportsOpen((open) => !open)}
+            aria-expanded={showReportMenus}
+            disabled={collapsed}
+            title={t('menuGroupReports')}
+          >
+            <span className="menu-group-toggle-label">
+              <ClipboardList size={14} aria-hidden="true" />
+              <span className="menu-text">{t('menuGroupReports')}</span>
+            </span>
+            {!collapsed && (
+              <ChevronDown
+                size={14}
+                className={`menu-group-chevron ${isReportsOpen ? 'open' : ''}`}
+                aria-hidden="true"
+              />
+            )}
+          </button>
+          {showReportMenus && (
+            <nav className="menu-list menu-group" aria-label={t('menuGroupReports')}>
+              {reportMenus.map(renderMenuLink)}
+            </nav>
+          )}
+        </div>
+      )}
 
       {accessMenus.length > 0 && (
         <div className="menu-group-section">

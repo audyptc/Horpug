@@ -98,6 +98,7 @@ func AutoMigrate(db *pgxpool.Pool) error {
 			dormitory_id UUID NOT NULL,
 			name VARCHAR(120) NOT NULL,
 			description VARCHAR(255) DEFAULT '',
+			price NUMERIC(10,2) NOT NULL DEFAULT 0,
 			is_active BOOLEAN NOT NULL DEFAULT TRUE,
 			created_by UUID,
 			updated_by UUID,
@@ -149,6 +150,8 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		`ALTER TABLE permissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
 		`ALTER TABLE permissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_permissions_name ON permissions(name)`,
+
+		`ALTER TABLE room_types ADD COLUMN IF NOT EXISTS price NUMERIC(10,2) NOT NULL DEFAULT 0`,
 
 		`ALTER TABLE roles ADD COLUMN IF NOT EXISTS description VARCHAR(255) DEFAULT ''`,
 		`ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`,

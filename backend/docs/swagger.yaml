@@ -158,6 +158,8 @@ definitions:
         type: boolean
       name:
         type: string
+      price:
+        type: number
       updated_at:
         type: string
       updated_by:
@@ -343,6 +345,8 @@ definitions:
         type: boolean
       name:
         type: string
+      price:
+        type: number
     type: object
   internal_features_roomtype_delivery_http.updateRoomTypeRequest:
     properties:
@@ -352,6 +356,8 @@ definitions:
         type: boolean
       name:
         type: string
+      price:
+        type: number
     type: object
   internal_features_user_delivery_http.createUserRequest:
     properties:

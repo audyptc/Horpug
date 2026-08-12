@@ -26,13 +26,15 @@ type createRoomTypeRequest struct {
 	DormitoryID uuid.UUID `json:"dormitory_id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
+	Price       float64   `json:"price"`
 	IsActive    *bool     `json:"is_active"`
 }
 
 type updateRoomTypeRequest struct {
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
-	IsActive    *bool   `json:"is_active"`
+	Name        *string  `json:"name"`
+	Description *string  `json:"description"`
+	Price       *float64 `json:"price"`
+	IsActive    *bool    `json:"is_active"`
 }
 
 func NewHandler(usecase *roomtypeusecase.Service) *Handler {
@@ -216,12 +218,16 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		DormitoryID: req.DormitoryID,
 		Name:        strings.TrimSpace(req.Name),
 		Description: req.Description,
+		Price:       req.Price,
 		IsActive:    isActive,
 		CreatedBy:   &requesterID,
 	})
 	if err != nil {
 		if errors.Is(err, roomtypedomain.ErrRequiredRoomTypeData) {
 			return apierror.BadRequest("name and dormitory_id are required")
+		}
+		if errors.Is(err, roomtypedomain.ErrInvalidRoomTypePrice) {
+			return apierror.BadRequest("price must not be negative")
 		}
 		if errors.Is(err, roomtypedomain.ErrDormitoryNotFound) {
 			return apierror.NotFound("dormitory not found")
@@ -271,6 +277,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	roomType, err := h.usecase.Update(ctx, id, requesterID, roomtypeusecase.UpdateInput{
 		Name:        req.Name,
 		Description: req.Description,
+		Price:       req.Price,
 		IsActive:    req.IsActive,
 		UpdatedBy:   &requesterID,
 	})
@@ -280,6 +287,9 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		}
 		if errors.Is(err, roomtypedomain.ErrRequiredRoomTypeData) {
 			return apierror.BadRequest("name cannot be empty")
+		}
+		if errors.Is(err, roomtypedomain.ErrInvalidRoomTypePrice) {
+			return apierror.BadRequest("price must not be negative")
 		}
 		if errors.Is(err, roomtypedomain.ErrRoomTypeNameExists) {
 			return apierror.Conflict("room type name already exists in this dormitory")

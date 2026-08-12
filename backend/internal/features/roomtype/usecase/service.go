@@ -13,6 +13,7 @@ type CreateInput struct {
 	DormitoryID uuid.UUID
 	Name        string
 	Description string
+	Price       float64
 	IsActive    bool
 	CreatedBy   *uuid.UUID
 }
@@ -20,6 +21,7 @@ type CreateInput struct {
 type UpdateInput struct {
 	Name        *string
 	Description *string
+	Price       *float64
 	IsActive    *bool
 	UpdatedBy   *uuid.UUID
 }
@@ -70,6 +72,9 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (roomtypedomain
 	if input.Name == "" || input.DormitoryID == uuid.Nil {
 		return roomtypedomain.RoomType{}, roomtypedomain.ErrRequiredRoomTypeData
 	}
+	if input.Price < 0 {
+		return roomtypedomain.RoomType{}, roomtypedomain.ErrInvalidRoomTypePrice
+	}
 
 	return s.repo.Create(ctx, input)
 }
@@ -85,6 +90,9 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 	if input.Description != nil {
 		description := strings.TrimSpace(*input.Description)
 		input.Description = &description
+	}
+	if input.Price != nil && *input.Price < 0 {
+		return roomtypedomain.RoomType{}, roomtypedomain.ErrInvalidRoomTypePrice
 	}
 
 	return s.repo.Update(ctx, id, requesterID, input)

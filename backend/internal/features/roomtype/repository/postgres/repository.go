@@ -66,7 +66,7 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, dormitoryI
 	}
 
 	query := `
-		SELECT rt.id, rt.dormitory_id, d.name, rt.name, rt.description, rt.is_active, rt.created_by, rt.updated_by, rt.created_at, rt.updated_at
+		SELECT rt.id, rt.dormitory_id, d.name, rt.name, rt.description, rt.price, rt.is_active, rt.created_by, rt.updated_by, rt.created_at, rt.updated_at
 		FROM room_types rt
 		JOIN dormitories d ON d.id = rt.dormitory_id
 	`
@@ -109,6 +109,7 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, dormitoryI
 			&roomType.DormitoryName,
 			&roomType.Name,
 			&roomType.Description,
+			&roomType.Price,
 			&roomType.IsActive,
 			&roomType.CreatedBy,
 			&roomType.UpdatedBy,
@@ -133,7 +134,7 @@ func (r *Repository) ListActive(ctx context.Context, requesterID uuid.UUID, dorm
 	}
 
 	query := `
-		SELECT rt.id, rt.dormitory_id, d.name, rt.name, rt.description, rt.is_active, rt.created_by, rt.updated_by, rt.created_at, rt.updated_at
+		SELECT rt.id, rt.dormitory_id, d.name, rt.name, rt.description, rt.price, rt.is_active, rt.created_by, rt.updated_by, rt.created_at, rt.updated_at
 		FROM room_types rt
 		JOIN dormitories d ON d.id = rt.dormitory_id
 		WHERE rt.is_active = true
@@ -178,6 +179,7 @@ func (r *Repository) ListActive(ctx context.Context, requesterID uuid.UUID, dorm
 			&roomType.DormitoryName,
 			&roomType.Name,
 			&roomType.Description,
+			&roomType.Price,
 			&roomType.IsActive,
 			&roomType.CreatedBy,
 			&roomType.UpdatedBy,
@@ -222,16 +224,17 @@ func (r *Repository) Create(ctx context.Context, input roomtypeusecase.CreateInp
 		DormitoryID: input.DormitoryID,
 		Name:        input.Name,
 		Description: input.Description,
+		Price:       input.Price,
 		IsActive:    input.IsActive,
 		CreatedBy:   input.CreatedBy,
 		UpdatedBy:   input.CreatedBy,
 	}
 
 	err := r.db.QueryRow(ctx, `
-		INSERT INTO room_types (id, dormitory_id, name, description, is_active, created_by, updated_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO room_types (id, dormitory_id, name, description, price, is_active, created_by, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING created_at, updated_at
-	`, roomType.ID, roomType.DormitoryID, roomType.Name, roomType.Description, roomType.IsActive, roomType.CreatedBy, roomType.UpdatedBy).
+	`, roomType.ID, roomType.DormitoryID, roomType.Name, roomType.Description, roomType.Price, roomType.IsActive, roomType.CreatedBy, roomType.UpdatedBy).
 		Scan(&roomType.CreatedAt, &roomType.UpdatedAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -266,6 +269,11 @@ func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, inpu
 	if input.Description != nil {
 		setClauses = append(setClauses, fmt.Sprintf("description = $%d", argIdx))
 		args = append(args, *input.Description)
+		argIdx++
+	}
+	if input.Price != nil {
+		setClauses = append(setClauses, fmt.Sprintf("price = $%d", argIdx))
+		args = append(args, *input.Price)
 		argIdx++
 	}
 	if input.IsActive != nil {
@@ -314,7 +322,7 @@ func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) erro
 func (r *Repository) loadRoomTypeByID(ctx context.Context, id uuid.UUID) (roomtypedomain.RoomType, error) {
 	var roomType roomtypedomain.RoomType
 	err := r.db.QueryRow(ctx, `
-		SELECT rt.id, rt.dormitory_id, d.name, rt.name, rt.description, rt.is_active, rt.created_by, rt.updated_by, rt.created_at, rt.updated_at
+		SELECT rt.id, rt.dormitory_id, d.name, rt.name, rt.description, rt.price, rt.is_active, rt.created_by, rt.updated_by, rt.created_at, rt.updated_at
 		FROM room_types rt
 		JOIN dormitories d ON d.id = rt.dormitory_id
 		WHERE rt.id = $1
@@ -324,6 +332,7 @@ func (r *Repository) loadRoomTypeByID(ctx context.Context, id uuid.UUID) (roomty
 		&roomType.DormitoryName,
 		&roomType.Name,
 		&roomType.Description,
+		&roomType.Price,
 		&roomType.IsActive,
 		&roomType.CreatedBy,
 		&roomType.UpdatedBy,

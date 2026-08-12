@@ -2021,6 +2021,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "price": {
+                    "type": "number"
+                },
                 "updated_at": {
                     "type": "string"
                 },
@@ -2304,6 +2307,9 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "price": {
+                    "type": "number"
                 }
             }
         },
@@ -2318,6 +2324,9 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "price": {
+                    "type": "number"
                 }
             }
         },

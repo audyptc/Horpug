@@ -2014,6 +2014,9 @@
                 "name": {
                     "type": "string"
                 },
+                "price": {
+                    "type": "number"
+                },
                 "updated_at": {
                     "type": "string"
                 },
@@ -2297,6 +2300,9 @@
                 },
                 "name": {
                     "type": "string"
+                },
+                "price": {
+                    "type": "number"
                 }
             }
         },
@@ -2311,6 +2317,9 @@
                 },
                 "name": {
                     "type": "string"
+                },
+                "price": {
+                    "type": "number"
                 }
             }
         },
