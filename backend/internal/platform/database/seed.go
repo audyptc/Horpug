@@ -2,12 +2,14 @@ package database
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"apihorpug/config"
 	permissiondomain "apihorpug/internal/features/permission/domain"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -76,14 +78,34 @@ func SeedAdmin(db *pgxpool.Pool, cfg config.Config) error {
 		return err
 	}
 
+	// Look the admin row up by username OR email rather than upserting on a
+	// single ON CONFLICT target: legacy databases can carry a row that matches
+	// on only one of the two unique columns, which would otherwise make the
+	// INSERT collide with the other column's unique index instead of updating.
 	var adminID uuid.UUID
-	if err := db.QueryRow(ctx, `
-		INSERT INTO users (id, username, email, password, role_id, is_active)
-		VALUES ($1, $2, $3, $4, $5, TRUE)
-		ON CONFLICT (username) DO UPDATE SET username = EXCLUDED.username
-		RETURNING id
-	`, uuid.New(), cfg.AdminUsername, cfg.AdminEmail, string(hashedPassword), roleID).Scan(&adminID); err != nil {
-		return err
+	lookupErr := db.QueryRow(ctx, `
+		SELECT id FROM users WHERE username = $1 OR email = $2
+	`, cfg.AdminUsername, cfg.AdminEmail).Scan(&adminID)
+
+	switch {
+	case lookupErr == nil:
+		if _, err := db.Exec(ctx, `
+			UPDATE users
+			SET username = $1, email = $2, password = $3, role_id = $4, is_active = TRUE
+			WHERE id = $5
+		`, cfg.AdminUsername, cfg.AdminEmail, string(hashedPassword), roleID, adminID); err != nil {
+			return err
+		}
+	case errors.Is(lookupErr, pgx.ErrNoRows):
+		adminID = uuid.New()
+		if _, err := db.Exec(ctx, `
+			INSERT INTO users (id, username, email, password, role_id, is_active)
+			VALUES ($1, $2, $3, $4, $5, TRUE)
+		`, adminID, cfg.AdminUsername, cfg.AdminEmail, string(hashedPassword), roleID); err != nil {
+			return err
+		}
+	default:
+		return lookupErr
 	}
 
 	// Keep the admin registered as a manager of every dormitory, including
