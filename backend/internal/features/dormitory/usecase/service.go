@@ -32,6 +32,7 @@ type UpdateInput struct {
 type Repository interface {
 	Count(ctx context.Context, requesterID uuid.UUID) (int64, error)
 	List(ctx context.Context, requesterID uuid.UUID, limit, offset int) ([]dormdomain.Dormitory, error)
+	ListActive(ctx context.Context, requesterID uuid.UUID, search string, limit int) ([]dormdomain.Dormitory, error)
 	GetByID(ctx context.Context, id, requesterID uuid.UUID) (dormdomain.Dormitory, error)
 	Create(ctx context.Context, input CreateInput) (dormdomain.Dormitory, error)
 	Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (dormdomain.Dormitory, error)
@@ -58,6 +59,10 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, limit, offset
 	}
 
 	return dormitories, total, nil
+}
+
+func (s *Service) ListActive(ctx context.Context, requesterID uuid.UUID, search string, limit int) ([]dormdomain.Dormitory, error) {
+	return s.repo.ListActive(ctx, requesterID, strings.TrimSpace(search), limit)
 }
 
 func (s *Service) GetByID(ctx context.Context, id, requesterID uuid.UUID) (dormdomain.Dormitory, error) {

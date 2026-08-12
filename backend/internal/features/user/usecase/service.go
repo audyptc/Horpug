@@ -39,6 +39,7 @@ type UpdateInput struct {
 type Repository interface {
 	Count(ctx context.Context) (int64, error)
 	List(ctx context.Context, limit, offset int) ([]userdomain.User, error)
+	ListActive(ctx context.Context, search string, limit int) ([]userdomain.User, error)
 	GetByID(ctx context.Context, id uuid.UUID) (userdomain.User, error)
 	GetPermissions(ctx context.Context, id uuid.UUID) ([]UserPermissionItem, error)
 	Create(ctx context.Context, input CreateInput, hashedPassword string) (userdomain.User, error)
@@ -66,6 +67,10 @@ func (s *Service) List(ctx context.Context, limit, offset int) ([]userdomain.Use
 	}
 
 	return users, total, nil
+}
+
+func (s *Service) ListActive(ctx context.Context, search string, limit int) ([]userdomain.User, error) {
+	return s.repo.ListActive(ctx, strings.TrimSpace(search), limit)
 }
 
 func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (userdomain.User, error) {

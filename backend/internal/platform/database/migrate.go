@@ -93,6 +93,22 @@ func AutoMigrate(db *pgxpool.Pool) error {
 			CONSTRAINT role_dormitories_role_fkey FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
 			CONSTRAINT role_dormitories_dormitory_fkey FOREIGN KEY (dormitory_id) REFERENCES dormitories(id) ON DELETE CASCADE
 		)`,
+		`CREATE TABLE IF NOT EXISTS room_types (
+			id UUID PRIMARY KEY,
+			dormitory_id UUID NOT NULL,
+			name VARCHAR(120) NOT NULL,
+			description VARCHAR(255) DEFAULT '',
+			is_active BOOLEAN NOT NULL DEFAULT TRUE,
+			created_by UUID,
+			updated_by UUID,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			CONSTRAINT room_types_dormitory_fkey FOREIGN KEY (dormitory_id) REFERENCES dormitories(id) ON DELETE CASCADE,
+			CONSTRAINT room_types_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+			CONSTRAINT room_types_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
+			CONSTRAINT uq_room_types_dormitory_name UNIQUE (dormitory_id, name)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_room_types_dormitory_id ON room_types(dormitory_id)`,
 		`CREATE TABLE IF NOT EXISTS activity_logs (
 			id UUID PRIMARY KEY,
 			user_id UUID,

@@ -95,6 +95,79 @@ func (r *Repository) List(ctx context.Context, limit, offset int) ([]userdomain.
 	return users, nil
 }
 
+func (r *Repository) ListActive(ctx context.Context, search string, limit int) ([]userdomain.User, error) {
+	query := `
+		SELECT
+			u.id,
+			u.username,
+			u.email,
+			u.password,
+			u.role_id,
+			u.is_active,
+			u.created_by,
+			u.updated_by,
+			u.created_at,
+			u.updated_at,
+			r.id,
+			r.name,
+			r.description,
+			r.is_active,
+			r.created_at,
+			r.updated_at
+		FROM users u
+		JOIN roles r ON r.id = u.role_id
+		WHERE u.is_active = true
+	`
+	args := make([]any, 0)
+	argIdx := 1
+	if search != "" {
+		query += fmt.Sprintf(` AND (u.username ILIKE $%d OR u.email ILIKE $%d)`, argIdx, argIdx)
+		args = append(args, "%"+search+"%")
+		argIdx++
+	}
+	query += fmt.Sprintf(` ORDER BY u.username ASC LIMIT $%d`, argIdx)
+	args = append(args, limit)
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	users := make([]userdomain.User, 0)
+	for rows.Next() {
+		var user userdomain.User
+		var role roledomain.Role
+		if err := rows.Scan(
+			&user.ID,
+			&user.Username,
+			&user.Email,
+			&user.Password,
+			&user.RoleID,
+			&user.IsActive,
+			&user.CreatedBy,
+			&user.UpdatedBy,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+			&role.ID,
+			&role.Name,
+			&role.Description,
+			&role.IsActive,
+			&role.CreatedAt,
+			&role.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		user.Role = &role
+		users = append(users, user)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
 func (r *Repository) FindByLogin(ctx context.Context, login string) (userdomain.User, error) {
 	var user userdomain.User
 	var role roledomain.Role

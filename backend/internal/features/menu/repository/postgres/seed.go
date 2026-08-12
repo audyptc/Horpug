@@ -22,6 +22,7 @@ func SeedMenus(db *pgxpool.Pool) error {
 		{Name: "Roles", Path: "/roles", Description: "Role and access management", IsActive: true},
 		{Name: "Permissions", Path: "/permissions", Description: "Permission catalog", IsActive: true},
 		{Name: "Dormitories", Path: "/dormitories", Description: "Dormitory management", IsActive: true},
+		{Name: "Room Types", Path: "/room-types", Description: "Room type management", IsActive: true},
 		{Name: "Activity Logs", Path: "/activity-logs", Description: "Activity log records", IsActive: true},
 	}
 

@@ -140,6 +140,29 @@ definitions:
       role_id:
         type: string
     type: object
+  apihorpug_internal_features_roomtype_domain.RoomType:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      dormitory_id:
+        type: string
+      dormitory_name:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
   apihorpug_internal_features_user_domain.User:
     properties:
       created_at:
@@ -183,6 +206,17 @@ definitions:
       message:
         type: string
     type: object
+  apihorpug_internal_http_apiresponse.Meta:
+    properties:
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   internal_features_activitylog_delivery_http.createActivityLogRequest:
     properties:
       action:
@@ -203,20 +237,11 @@ definitions:
       username:
         type: string
     type: object
-  internal_features_auth_delivery_http.refreshRequest:
-    properties:
-      refresh_token:
-        type: string
-    type: object
   internal_features_auth_delivery_http.sessionResponse:
     properties:
       access_token:
         type: string
       access_token_expires_at:
-        type: string
-      refresh_token:
-        type: string
-      refresh_token_expires_at:
         type: string
       user: {}
     type: object
@@ -308,6 +333,26 @@ definitions:
       name:
         type: string
     type: object
+  internal_features_roomtype_delivery_http.createRoomTypeRequest:
+    properties:
+      description:
+        type: string
+      dormitory_id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+    type: object
+  internal_features_roomtype_delivery_http.updateRoomTypeRequest:
+    properties:
+      description:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+    type: object
   internal_features_user_delivery_http.createUserRequest:
     properties:
       email:
@@ -355,13 +400,13 @@ paths:
         in: query
         name: entity_id
         type: string
-      - description: Max results (default 50, max 200)
+      - description: Page number (default 1)
         in: query
-        name: limit
+        name: page
         type: integer
-      - description: Result offset
+      - description: Results per page (default 10, max 100)
         in: query
-        name: offset
+        name: per_page
         type: integer
       produces:
       - application/json
@@ -369,9 +414,7 @@ paths:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/apihorpug_internal_features_activitylog_domain.ActivityLog'
-            type: array
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
         "400":
           description: Bad Request
           schema:
@@ -478,15 +521,6 @@ paths:
       - auth
   /auth/logout:
     post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Refresh payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/internal_features_auth_delivery_http.refreshRequest'
       produces:
       - application/json
       responses:
@@ -496,24 +530,11 @@ paths:
             additionalProperties:
               type: string
             type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
-      summary: Revoke a refresh token
+      summary: Revoke the refresh token cookie
       tags:
       - auth
   /auth/refresh:
     post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Refresh payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/internal_features_auth_delivery_http.refreshRequest'
       produces:
       - application/json
       responses:
@@ -521,30 +542,37 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/internal_features_auth_delivery_http.sessionResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
-      summary: Exchange a refresh token for a new access/refresh token pair
+      summary: Exchange the refresh token cookie for a new access/refresh token pair
       tags:
       - auth
   /dormitories:
     get:
       description: Returns every dormitory for roles with full dormitory access, otherwise
         only the dormitories the caller manages.
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/apihorpug_internal_features_dormitory_domain.Dormitory'
-            type: array
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
         "401":
           description: Unauthorized
           schema:
@@ -692,8 +720,20 @@ paths:
       summary: Update a dormitory
       tags:
       - dormitories
-  /menus:
+  /dormitories/active:
     get:
+      description: Returns active dormitories for roles with full dormitory access,
+        otherwise only the active dormitories the caller manages. Intended for populating
+        dormitory selectors; results are capped rather than paginated.
+      parameters:
+      - description: Filter by dormitory name
+        in: query
+        name: q
+        type: string
+      - description: Max results (default 50, max 100)
+        in: query
+        name: limit
+        type: integer
       produces:
       - application/json
       responses:
@@ -701,8 +741,47 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/apihorpug_internal_features_menu_domain.Menu'
+              $ref: '#/definitions/apihorpug_internal_features_dormitory_domain.Dormitory'
             type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List active dormitories
+      tags:
+      - dormitories
+  /menus:
+    get:
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
         "500":
           description: Internal Server Error
           schema:
@@ -714,15 +793,26 @@ paths:
       - menus
   /permissions:
     get:
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/apihorpug_internal_features_permission_domain.Permission'
-            type: array
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
         "500":
           description: Internal Server Error
           schema:
@@ -768,15 +858,26 @@ paths:
       - permissions
   /roles:
     get:
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/apihorpug_internal_features_role_domain.Role'
-            type: array
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
         "500":
           description: Internal Server Error
           schema:
@@ -932,8 +1033,213 @@ paths:
       summary: Update a role
       tags:
       - roles
-  /users:
+  /room-types:
     get:
+      description: Returns every room type for roles with full dormitory access, otherwise
+        only room types under dormitories the caller manages. Optionally filter by
+        dormitory.
+      parameters:
+      - description: Filter by dormitory ID
+        in: query
+        name: dormitory_id
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List room types
+      tags:
+      - room-types
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Room type payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_roomtype_delivery_http.createRoomTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_roomtype_domain.RoomType'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Create a room type
+      tags:
+      - room-types
+  /room-types/{id}:
+    delete:
+      parameters:
+      - description: Room type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Delete a room type
+      tags:
+      - room-types
+    get:
+      parameters:
+      - description: Room type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_roomtype_domain.RoomType'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get a room type by ID
+      tags:
+      - room-types
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Room type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Room type payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_roomtype_delivery_http.updateRoomTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_roomtype_domain.RoomType'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Update a room type
+      tags:
+      - room-types
+  /room-types/active:
+    get:
+      description: Returns active room types for roles with full dormitory access,
+        otherwise only the active room types under dormitories the caller manages.
+        Intended for populating room type selectors; results are capped rather than
+        paginated.
+      parameters:
+      - description: Filter by dormitory ID
+        in: query
+        name: dormitory_id
+        type: string
+      - description: Filter by room type name
+        in: query
+        name: q
+        type: string
+      - description: Max results (default 50, max 100)
+        in: query
+        name: limit
+        type: integer
       produces:
       - application/json
       responses:
@@ -941,8 +1247,47 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/apihorpug_internal_features_user_domain.User'
+              $ref: '#/definitions/apihorpug_internal_features_roomtype_domain.RoomType'
             type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List active room types
+      tags:
+      - room-types
+  /users:
+    get:
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
         "500":
           description: Internal Server Error
           schema:
@@ -1126,6 +1471,41 @@ paths:
       security:
       - BearerAuth: []
       summary: Get a user's permissions
+      tags:
+      - users
+  /users/active:
+    get:
+      description: Returns active users. Intended for populating user selectors; results
+        are capped rather than paginated.
+      parameters:
+      - description: Filter by username or email
+        in: query
+        name: q
+        type: string
+      - description: Max results (default 50, max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/apihorpug_internal_features_user_domain.User'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List active users
       tags:
       - users
 securityDefinitions:

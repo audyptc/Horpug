@@ -112,6 +112,70 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, limit, off
 	return dormitories, nil
 }
 
+func (r *Repository) ListActive(ctx context.Context, requesterID uuid.UUID, search string, limit int) ([]dormdomain.Dormitory, error) {
+	full, roleID, err := r.dormitoryScope(ctx, requesterID)
+	if err != nil {
+		return nil, err
+	}
+
+	query := `
+		SELECT DISTINCT d.id, d.name, d.address, d.phone, d.description, d.is_active, d.created_by, d.updated_by, d.created_at, d.updated_at
+		FROM dormitories d
+		WHERE d.is_active = true
+	`
+	args := make([]any, 0)
+	argIdx := 1
+	if !full {
+		query += fmt.Sprintf(`
+			AND d.id IN (
+				SELECT dormitory_id FROM user_dormitories WHERE user_id = $%d
+				UNION
+				SELECT dormitory_id FROM role_dormitories WHERE role_id = $%d
+			)
+		`, argIdx, argIdx+1)
+		args = append(args, requesterID, roleID)
+		argIdx += 2
+	}
+	if search != "" {
+		query += fmt.Sprintf(` AND d.name ILIKE $%d`, argIdx)
+		args = append(args, "%"+search+"%")
+		argIdx++
+	}
+	query += fmt.Sprintf(` ORDER BY d.name ASC LIMIT $%d`, argIdx)
+	args = append(args, limit)
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	dormitories := make([]dormdomain.Dormitory, 0)
+	for rows.Next() {
+		var dormitory dormdomain.Dormitory
+		if err := rows.Scan(
+			&dormitory.ID,
+			&dormitory.Name,
+			&dormitory.Address,
+			&dormitory.Phone,
+			&dormitory.Description,
+			&dormitory.IsActive,
+			&dormitory.CreatedBy,
+			&dormitory.UpdatedBy,
+			&dormitory.CreatedAt,
+			&dormitory.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		dormitories = append(dormitories, dormitory)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return dormitories, nil
+}
+
 func (r *Repository) GetByID(ctx context.Context, id, requesterID uuid.UUID) (dormdomain.Dormitory, error) {
 	if err := r.ensureDormitoryAccess(ctx, id, requesterID); err != nil {
 		return dormdomain.Dormitory{}, err
