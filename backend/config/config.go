@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -21,6 +22,7 @@ type Config struct {
 	AdminUsername   string
 	AdminEmail      string
 	AdminPassword   string
+	CookieSecure    bool
 }
 
 func Load() Config {
@@ -40,6 +42,11 @@ func Load() Config {
 		AdminUsername:   getEnv("ADMIN_USERNAME", "admin"),
 		AdminEmail:      getEnv("ADMIN_EMAIL", "admin@horpug.local"),
 		AdminPassword:   getEnv("ADMIN_PASSWORD", "Admin@12345"),
+		// The refresh-token cookie's Secure flag. nginx.conf currently terminates
+		// plain HTTP (no TLS), so this defaults to false; flip it to true once
+		// the deployment sits behind HTTPS, or browsers will silently drop the
+		// cookie.
+		CookieSecure: getEnvBool("APP_COOKIE_SECURE", false),
 	}
 }
 
@@ -54,6 +61,15 @@ func getEnvDuration(key string, fallback time.Duration) time.Duration {
 	if value := os.Getenv(key); value != "" {
 		if d, err := time.ParseDuration(value); err == nil {
 			return d
+		}
+	}
+	return fallback
+}
+
+func getEnvBool(key string, fallback bool) bool {
+	if value := os.Getenv(key); value != "" {
+		if b, err := strconv.ParseBool(value); err == nil {
+			return b
 		}
 	}
 	return fallback

@@ -273,9 +273,7 @@ function AdminLayout({ children }: { children: ReactNode }) {
         </div>
 
         <div className="topbar-actions">
-          <Button size="icon" variant="ghost" className="rounded-full" aria-label={t('notifications')}>
-            <Bell size={18} />
-          </Button>
+          
           <Button
             size="icon"
             variant="ghost"
@@ -293,6 +291,9 @@ function AdminLayout({ children }: { children: ReactNode }) {
           >
             <Languages size={16} />
             {language === 'en' ? 'EN' : 'ไทย'}
+          </Button>
+          <Button size="icon" variant="ghost" className="rounded-full" aria-label={t('notifications')}>
+            <Bell size={18} />
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

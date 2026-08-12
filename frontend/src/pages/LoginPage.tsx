@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth'
 import { useLanguage } from '@/lib/language'
 
 export default function LoginPage() {
-  const { isAuthenticated, login } = useAuth()
+  const { isAuthenticated, isLoading, login } = useAuth()
   const { t } = useLanguage()
   const navigate = useNavigate()
   const location = useLocation()
@@ -14,6 +14,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Wait for the boot-time silent refresh (see auth.tsx) so a visitor who
+  // still has a valid refresh cookie doesn't see the form flash before being
+  // redirected straight to the dashboard.
+  if (isLoading) {
+    return <div className="route-loading" aria-hidden="true" />
+  }
 
   if (isAuthenticated) {
     const redirectTo = (location.state as { from?: Location } | null)?.from?.pathname ?? '/dashboard'

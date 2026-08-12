@@ -31,7 +31,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTokenTTL, refreshTokenTTL time.Duration) {
+func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTokenTTL, refreshTokenTTL time.Duration, cookieSecure bool) {
 	permissionRepo := permissionrepository.NewRepository(db)
 	permissionService := permissionusecase.New(permissionRepo)
 	permissionHandler := permissionhttp.NewHandler(permissionService)
@@ -52,7 +52,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	activityLogHandler := activityloghttp.NewHandler(activityLogService)
 	authTokenRepo := authrepository.NewRepository(db)
 	authService := authusecase.New(userRepo, authTokenRepo, secretKey, accessTokenTTL, refreshTokenTTL)
-	authHandler := authhttp.NewHandler(authService)
+	authHandler := authhttp.NewHandler(authService, cookieSecure)
 
 	app.Get("/health", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "ok"})

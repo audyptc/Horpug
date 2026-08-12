@@ -499,3 +499,8 @@ body {
   width: 100%;
   border-radius: 9999px;
 }
+
+.route-loading {
+  min-height: 100svh;
+  background: hsl(var(--background));
+}

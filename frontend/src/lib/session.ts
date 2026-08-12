@@ -17,22 +17,15 @@ export type SessionUser = {
 export type Session = {
   accessToken: string
   accessTokenExpiresAt: string
-  refreshToken: string
   user: SessionUser
 }
 
-const STORAGE_KEY = 'horpug_session'
-
-function readFromStorage(): Session | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as Session) : null
-  } catch {
-    return null
-  }
-}
-
-let session: Session | null = readFromStorage()
+// Deliberately in-memory only: the refresh token lives in an httpOnly cookie
+// the browser manages, and the access token is short-lived, so nothing
+// session-related needs to (or should) sit in localStorage where any
+// injected script could read it. A hard refresh loses this and re-derives it
+// via a silent /auth/refresh call — see lib/auth.tsx.
+let session: Session | null = null
 const listeners = new Set<() => void>()
 
 export function getSession(): Session | null {
@@ -41,11 +34,6 @@ export function getSession(): Session | null {
 
 export function setSession(next: Session | null) {
   session = next
-  if (next) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-  } else {
-    localStorage.removeItem(STORAGE_KEY)
-  }
   listeners.forEach((listener) => listener())
 }
 
