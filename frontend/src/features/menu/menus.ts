@@ -42,38 +42,52 @@ export const menuMeta: Record<string, MenuMeta> = {
 }
 
 export function useMenus() {
-  const { isAuthenticated } = useAuth()
-  const [menus, setMenus] = useState<ApiMenu[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { isAuthenticated, session } = useAuth()
+  const userId = isAuthenticated ? session?.user.id ?? null : null
+  const [menuState, setMenuState] = useState<{
+    userId: string | null
+    menus: ApiMenu[]
+    error: string | null
+  }>({
+    userId: null,
+    menus: [],
+    error: null,
+  })
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      setMenus([])
-      setLoading(false)
-      return
-    }
+    if (!userId) return
 
     let cancelled = false
-    setLoading(true)
-    setError(null)
 
     api
       .get<ApiMenu[]>('/menus')
       .then(({ data }) => {
-        if (!cancelled) setMenus(data.filter((menu) => menu.is_active && menu.path in menuMeta))
+        if (!cancelled) {
+          setMenuState({
+            userId,
+            menus: data.filter((menu) => menu.is_active && menu.path in menuMeta),
+            error: null,
+          })
+        }
       })
       .catch(() => {
-        if (!cancelled) setError('failed to load menus')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          setMenuState({
+            userId,
+            menus: [],
+            error: 'failed to load menus',
+          })
+        }
       })
 
     return () => {
       cancelled = true
     }
-  }, [isAuthenticated])
+  }, [userId])
+
+  const menus = menuState.userId === userId ? menuState.menus : []
+  const error = menuState.userId === userId ? menuState.error : null
+  const loading = Boolean(userId) && menuState.userId !== userId
 
   return { menus, loading, error }
 }

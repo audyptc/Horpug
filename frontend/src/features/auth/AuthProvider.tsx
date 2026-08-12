@@ -43,7 +43,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: data.user,
       })
     } catch (error) {
-      throw new Error(extractErrorMessage(error, 'Login failed'))
+      throw new Error(extractErrorMessage(error, 'Login failed'), {
+        cause: error,
+      })
     }
   }
 

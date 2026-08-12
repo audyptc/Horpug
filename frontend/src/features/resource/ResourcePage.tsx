@@ -20,28 +20,47 @@ function recordLabel(record: ApiRecord): string {
 
 export default function ResourcePage({ titleKey, descriptionKey, endpoint }: Props) {
   const { t, language } = useLanguage()
-  const [records, setRecords] = useState<ApiRecord[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [resourceState, setResourceState] = useState<{
+    endpoint: string
+    records: ApiRecord[] | null
+    error: string | null
+  }>(() => ({
+    endpoint,
+    records: null,
+    error: null,
+  }))
+
+  const records = resourceState.endpoint === endpoint ? resourceState.records : null
+  const error = resourceState.endpoint === endpoint ? resourceState.error : null
 
   useEffect(() => {
     let cancelled = false
-    setRecords(null)
-    setError(null)
 
     api
       .get<ApiRecord[]>(endpoint)
       .then(({ data }) => {
-        if (!cancelled) setRecords(data)
+        if (!cancelled) {
+          setResourceState({
+            endpoint,
+            records: data,
+            error: null,
+          })
+        }
       })
       .catch((err) => {
-        if (!cancelled) setError(extractErrorMessage(err, t('resourceLoadError')))
+        if (!cancelled) {
+          setResourceState({
+            endpoint,
+            records: null,
+            error: extractErrorMessage(err, t('resourceLoadError')),
+          })
+        }
       })
 
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [endpoint])
+  }, [endpoint, t])
 
   return (
     <main className="content">

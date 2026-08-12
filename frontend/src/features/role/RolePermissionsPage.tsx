@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { KeyRound, Pencil, Trash2 } from 'lucide-react'
 import { api, extractErrorMessage } from '@/shared/api/client'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
+import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
 import { Button } from '@/shared/components/ui/button'
@@ -47,6 +49,33 @@ function menuLabel(menu: ApiMenu, t: (key: TranslationKey) => string): string {
   return meta ? t(meta.labelKey) : menu.name
 }
 
+function buildRoleMatrix(role: ApiRole | null): Record<string, Set<string>> {
+  const next: Record<string, Set<string>> = {}
+  for (const item of role?.menu_permissions ?? []) {
+    if (!next[item.menu_id]) next[item.menu_id] = new Set()
+    next[item.menu_id].add(item.permission_id)
+  }
+  return next
+}
+
+function areMatricesEqual(
+  left: Record<string, Set<string>>,
+  right: Record<string, Set<string>>
+): boolean {
+  const menuIds = new Set([...Object.keys(left), ...Object.keys(right)])
+  for (const menuId of menuIds) {
+    const leftIds = left[menuId] ?? new Set<string>()
+    const rightIds = right[menuId] ?? new Set<string>()
+    if (leftIds.size !== rightIds.size) return false
+    for (const permissionId of leftIds) {
+      if (!rightIds.has(permissionId)) return false
+    }
+  }
+  return true
+}
+
+type View = 'list' | 'permissions'
+
 export default function RolePermissionsPage() {
   const { t } = useLanguage()
 
@@ -55,27 +84,28 @@ export default function RolePermissionsPage() {
   const [permissions, setPermissions] = useState<ApiPermission[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
 
+  const [view, setView] = useState<View>('list')
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
   const [matrix, setMatrix] = useState<Record<string, Set<string>>>({})
+  const [menuQuery, setMenuQuery] = useState('')
 
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
 
   const [formOpen, setFormOpen] = useState(false)
-  const [formMode, setFormMode] = useState<'create' | 'edit'>('create')
+  const [formRoleId, setFormRoleId] = useState<string | null>(null)
   const [formName, setFormName] = useState('')
   const [formDescription, setFormDescription] = useState('')
   const [formIsActive, setFormIsActive] = useState(true)
   const [formSaving, setFormSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  const [deleting, setDeleting] = useState(false)
+  const [deletingRoleId, setDeletingRoleId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    setLoadError(null)
 
     Promise.all([
       api.get<ApiRole[]>('/roles'),
@@ -87,7 +117,6 @@ export default function RolePermissionsPage() {
         setRoles(rolesRes.data)
         setMenus(menusRes.data)
         setPermissions(permissionsRes.data)
-        setSelectedRoleId((current) => current ?? rolesRes.data[0]?.id ?? null)
       })
       .catch((err) => {
         if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
@@ -104,21 +133,7 @@ export default function RolePermissionsPage() {
     [roles, selectedRoleId]
   )
 
-  useEffect(() => {
-    const role = roles?.find((item) => item.id === selectedRoleId) ?? null
-    const next: Record<string, Set<string>> = {}
-    for (const item of role?.menu_permissions ?? []) {
-      if (!next[item.menu_id]) next[item.menu_id] = new Set()
-      next[item.menu_id].add(item.permission_id)
-    }
-    setMatrix(next)
-    setSaveError(null)
-    setSaveSuccess(false)
-    // Deliberately keyed on selectedRoleId (not the role object or `roles`):
-    // handleSave replaces the role object in `roles` after a successful save,
-    // and depending on that reference would immediately reset saveSuccess/matrix.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRoleId])
+  const baselineMatrix = useMemo(() => buildRoleMatrix(selectedRole), [selectedRole])
 
   const sortedMenus = useMemo(
     () => (menus ?? []).filter((menu) => menu.is_active).sort((a, b) => a.path.localeCompare(b.path)),
@@ -136,6 +151,25 @@ export default function RolePermissionsPage() {
     })
   }, [permissions])
 
+  const filteredMenus = useMemo(() => {
+    const query = menuQuery.trim().toLocaleLowerCase()
+    if (!query) return sortedMenus
+
+    return sortedMenus.filter((menu) => {
+      const label = menuLabel(menu, t).toLocaleLowerCase()
+      return (
+        label.includes(query) ||
+        menu.name.toLocaleLowerCase().includes(query) ||
+        menu.path.toLocaleLowerCase().includes(query)
+      )
+    })
+  }, [menuQuery, sortedMenus, t])
+
+  const hasUnsavedChanges = useMemo(
+    () => !areMatricesEqual(matrix, baselineMatrix),
+    [baselineMatrix, matrix]
+  )
+
   function toggleCell(menuId: string, permissionId: string) {
     setMatrix((prev) => {
       const next = { ...prev }
@@ -151,8 +185,29 @@ export default function RolePermissionsPage() {
     setSaveSuccess(false)
   }
 
+  function setMenuPermissions(menuId: string, permissionIds: string[]) {
+    setMatrix((prev) => ({
+      ...prev,
+      [menuId]: new Set(permissionIds),
+    }))
+    setSaveSuccess(false)
+  }
+
+  function setVisiblePermissions(grantAll: boolean) {
+    const nextPermissionIds = grantAll ? sortedPermissions.map((permission) => permission.id) : []
+
+    setMatrix((prev) => {
+      const next = { ...prev }
+      for (const menu of filteredMenus) {
+        next[menu.id] = new Set(nextPermissionIds)
+      }
+      return next
+    })
+    setSaveSuccess(false)
+  }
+
   async function handleSave() {
-    if (!selectedRoleId) return
+    if (!selectedRoleId || !hasUnsavedChanges) return
 
     setSaving(true)
     setSaveError(null)
@@ -173,8 +228,17 @@ export default function RolePermissionsPage() {
     }
   }
 
+  function openPermissions(role: ApiRole) {
+    setSelectedRoleId(role.id)
+    setMatrix(buildRoleMatrix(role))
+    setSaveError(null)
+    setSaveSuccess(false)
+    setMenuQuery('')
+    setView('permissions')
+  }
+
   function openCreateForm() {
-    setFormMode('create')
+    setFormRoleId(null)
     setFormName('')
     setFormDescription('')
     setFormIsActive(true)
@@ -182,12 +246,11 @@ export default function RolePermissionsPage() {
     setFormOpen(true)
   }
 
-  function openEditForm() {
-    if (!selectedRole) return
-    setFormMode('edit')
-    setFormName(selectedRole.name)
-    setFormDescription(selectedRole.description)
-    setFormIsActive(selectedRole.is_active)
+  function openEditForm(role: ApiRole) {
+    setFormRoleId(role.id)
+    setFormName(role.name)
+    setFormDescription(role.description)
+    setFormIsActive(role.is_active)
     setFormError(null)
     setFormOpen(true)
   }
@@ -205,49 +268,51 @@ export default function RolePermissionsPage() {
     setFormError(null)
 
     try {
-      if (formMode === 'create') {
+      let savedRole: ApiRole
+      if (formRoleId === null) {
         const { data } = await api.post<ApiRole>('/roles', {
           name,
           description: formDescription,
           is_active: formIsActive,
         })
+        savedRole = data
         setRoles((prev) => [...(prev ?? []), data])
-        setSelectedRoleId(data.id)
-      } else if (selectedRoleId) {
-        const { data } = await api.put<ApiRole>(`/roles/${selectedRoleId}`, {
+      } else {
+        const { data } = await api.put<ApiRole>(`/roles/${formRoleId}`, {
           name,
           description: formDescription,
           is_active: formIsActive,
         })
+        savedRole = data
         setRoles((prev) => prev?.map((role) => (role.id === data.id ? data : role)) ?? prev)
       }
       setFormOpen(false)
+      openPermissions(savedRole)
     } catch (err) {
-      const fallback = formMode === 'create' ? t('rolePermissionsCreateError') : t('rolePermissionsUpdateError')
+      const fallback = formRoleId === null ? t('rolePermissionsCreateError') : t('rolePermissionsUpdateError')
       setFormError(extractErrorMessage(err, fallback))
     } finally {
       setFormSaving(false)
     }
   }
 
-  async function handleDeleteRole() {
-    if (!selectedRoleId) return
+  async function handleDeleteRole(role: ApiRole) {
     if (!window.confirm(t('rolePermissionsDeleteConfirm'))) return
 
-    setDeleting(true)
+    setDeletingRoleId(role.id)
     setDeleteError(null)
 
     try {
-      await api.delete(`/roles/${selectedRoleId}`)
-      setRoles((prev) => {
-        const remaining = prev?.filter((role) => role.id !== selectedRoleId) ?? null
-        setSelectedRoleId(remaining?.[0]?.id ?? null)
-        return remaining
-      })
+      await api.delete(`/roles/${role.id}`)
+      setRoles((prev) => prev?.filter((item) => item.id !== role.id) ?? prev)
+      if (selectedRoleId === role.id) {
+        setView('list')
+        setSelectedRoleId(null)
+      }
     } catch (err) {
       setDeleteError(extractErrorMessage(err, t('rolePermissionsDeleteError')))
     } finally {
-      setDeleting(false)
+      setDeletingRoleId(null)
     }
   }
 
@@ -260,111 +325,249 @@ export default function RolePermissionsPage() {
         <p>{t('menuRolesDescription')}</p>
       </section>
 
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
-          <div>
-            <CardTitle>{t('menuRoles')}</CardTitle>
-            <CardDescription>
-              GET /roles · GET /menus · GET /permissions · POST /roles · PUT /roles/:id · DELETE /roles/:id
-            </CardDescription>
-          </div>
-          <Button onClick={openCreateForm} disabled={isLoading}>
-            {t('rolePermissionsCreateRole')}
-          </Button>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          {loadError && <p className="resource-error">{loadError}</p>}
+      {view === 'list' && (
+        <Card>
+          <CardHeader className="flex flex-row items-start justify-between gap-4">
+            <div>
+              <CardTitle>{t('menuRoles')}</CardTitle>
+              <CardDescription>
+                GET /roles · POST /roles · PUT /roles/:id · DELETE /roles/:id
+              </CardDescription>
+            </div>
+            <Button onClick={openCreateForm} disabled={isLoading}>
+              {t('rolePermissionsCreateRole')}
+            </Button>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {loadError && <p className="resource-error">{loadError}</p>}
+            {deleteError && <p className="resource-error">{deleteError}</p>}
 
-          {!loadError && isLoading && <p className="metric-detail">{t('loading')}</p>}
+            {!loadError && isLoading && <p className="metric-detail">{t('loading')}</p>}
 
-          {!loadError && !isLoading && roles && roles.length === 0 && (
-            <p className="metric-detail">{t('rolePermissionsNoRoles')}</p>
-          )}
+            {!loadError && !isLoading && roles && roles.length === 0 && (
+              <p className="metric-detail">{t('rolePermissionsNoRoles')}</p>
+            )}
 
-          {!loadError && !isLoading && roles && roles.length > 0 && (
-            <>
-              <div className="flex flex-wrap items-end gap-3">
-                <label className="flex flex-col gap-1.5 text-sm font-medium sm:max-w-xs">
-                  {t('rolePermissionsSelectRoleLabel')}
-                  <select
-                    className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                    value={selectedRoleId ?? ''}
-                    onChange={(event) => setSelectedRoleId(event.target.value)}
-                  >
-                    {roles.map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {role.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <Button variant="outline" onClick={openEditForm} disabled={!selectedRole}>
-                  {t('rolePermissionsEditRole')}
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteRole}
-                  disabled={!selectedRole || deleting}
-                >
-                  {deleting ? t('rolePermissionsDeleting') : t('rolePermissionsDeleteRole')}
-                </Button>
-              </div>
-              {deleteError && <p className="resource-error">{deleteError}</p>}
-
+            {!loadError && !isLoading && roles && roles.length > 0 && (
               <div className="table-wrap">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('rolePermissionsMenuColumn')}</TableHead>
-                      {sortedPermissions.map((permission) => (
-                        <TableHead key={permission.id} className="text-center">
-                          {actionLabelKeys[permission.name] ? t(actionLabelKeys[permission.name]) : permission.name}
-                        </TableHead>
-                      ))}
+                      <TableHead>{t('rolePermissionsNameColumn')}</TableHead>
+                      <TableHead>{t('rolePermissionsDescriptionColumn')}</TableHead>
+                      <TableHead>{t('rolePermissionsStatusColumn')}</TableHead>
+                      <TableHead className="text-right">{t('rolePermissionsActionsColumn')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sortedMenus.map((menu) => (
-                      <TableRow key={menu.id}>
-                        <TableCell className="font-semibold">{menuLabel(menu, t)}</TableCell>
-                        {sortedPermissions.map((permission) => (
-                          <TableCell key={permission.id} className="text-center">
-                            <input
-                              type="checkbox"
-                              aria-label={`${menuLabel(menu, t)} - ${permission.name}`}
-                              checked={matrix[menu.id]?.has(permission.id) ?? false}
-                              onChange={() => toggleCell(menu.id, permission.id)}
-                              className="h-4 w-4 accent-primary"
-                            />
-                          </TableCell>
-                        ))}
+                    {roles.map((role) => (
+                      <TableRow key={role.id}>
+                        <TableCell className="font-semibold">{role.name}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {role.description || t('rolePermissionsDescriptionEmpty')}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={role.is_active ? 'default' : 'outline'}>
+                            {role.is_active ? t('statusActive') : t('statusInactive')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              title={t('rolePermissionsManage')}
+                              aria-label={t('rolePermissionsManage')}
+                              onClick={() => openPermissions(role)}
+                            >
+                              <KeyRound />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              title={t('rolePermissionsEditRole')}
+                              aria-label={t('rolePermissionsEditRole')}
+                              onClick={() => openEditForm(role)}
+                            >
+                              <Pencil />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="destructive"
+                              title={t('rolePermissionsDeleteRole')}
+                              aria-label={t('rolePermissionsDeleteRole')}
+                              onClick={() => handleDeleteRole(role)}
+                              disabled={deletingRoleId === role.id}
+                            >
+                              <Trash2 />
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-              <div className="flex items-center gap-3">
-                <Button onClick={handleSave} disabled={saving}>
-                  {saving ? t('rolePermissionsSaving') : t('rolePermissionsSave')}
+      {view === 'permissions' && selectedRole && (
+        <Card>
+          <CardHeader className="flex flex-row items-start justify-between gap-4">
+            <div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="-ml-3 mb-2"
+                onClick={() => setView('list')}
+              >
+                {t('rolePermissionsBackToRoles')}
+              </Button>
+              <CardTitle className="flex items-center gap-2">
+                {selectedRole.name}
+                <Badge variant={selectedRole.is_active ? 'default' : 'outline'}>
+                  {selectedRole.is_active ? t('statusActive') : t('statusInactive')}
+                </Badge>
+              </CardTitle>
+              <CardDescription>
+                {selectedRole.description || t('rolePermissionsDescriptionEmpty')}
+              </CardDescription>
+            </div>
+            <Button type="button" variant="outline" onClick={() => openEditForm(selectedRole)}>
+              {t('rolePermissionsEditRole')}
+            </Button>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3 lg:flex-row lg:items-end lg:justify-between">
+              <label className="flex w-full max-w-md flex-col gap-1.5 text-sm font-medium">
+                {t('rolePermissionsSearchLabel')}
+                <input
+                  type="search"
+                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                  placeholder={t('rolePermissionsSearchPlaceholder')}
+                  value={menuQuery}
+                  onChange={(event) => setMenuQuery(event.target.value)}
+                />
+              </label>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setVisiblePermissions(true)}
+                  disabled={filteredMenus.length === 0 || sortedPermissions.length === 0}
+                >
+                  {t('rolePermissionsSelectAllVisible')}
                 </Button>
-                {saveSuccess && <p className="metric-detail">{t('rolePermissionsSaved')}</p>}
-                {saveError && <p className="resource-error">{saveError}</p>}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setVisiblePermissions(false)}
+                  disabled={filteredMenus.length === 0}
+                >
+                  {t('rolePermissionsClearVisible')}
+                </Button>
               </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+            </div>
+
+            <div className="table-wrap">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('rolePermissionsMenuColumn')}</TableHead>
+                    {sortedPermissions.map((permission) => (
+                      <TableHead key={permission.id} className="text-center">
+                        {actionLabelKeys[permission.name] ? t(actionLabelKeys[permission.name]) : permission.name}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredMenus.map((menu) => (
+                    <TableRow key={menu.id}>
+                      <TableCell className="align-top">
+                        <div className="flex min-w-48 flex-col gap-2">
+                          <div>
+                            <p className="font-semibold">{menuLabel(menu, t)}</p>
+                            <p className="text-xs text-muted-foreground">{menu.path}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setMenuPermissions(
+                                  menu.id,
+                                  sortedPermissions.map((permission) => permission.id)
+                                )
+                              }
+                              disabled={sortedPermissions.length === 0}
+                            >
+                              {t('rolePermissionsSelectAllRow')}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setMenuPermissions(menu.id, [])}
+                            >
+                              {t('rolePermissionsClearRow')}
+                            </Button>
+                          </div>
+                        </div>
+                      </TableCell>
+                      {sortedPermissions.map((permission) => (
+                        <TableCell key={permission.id} className="text-center">
+                          <input
+                            type="checkbox"
+                            aria-label={`${menuLabel(menu, t)} - ${permission.name}`}
+                            checked={matrix[menu.id]?.has(permission.id) ?? false}
+                            onChange={() => toggleCell(menu.id, permission.id)}
+                            className="h-4 w-4 accent-primary"
+                          />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                  {filteredMenus.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={sortedPermissions.length + 1} className="py-6 text-center text-muted-foreground">
+                        {t('rolePermissionsNoVisibleMenus')}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button onClick={handleSave} disabled={saving || !hasUnsavedChanges}>
+                {saving ? t('rolePermissionsSaving') : t('rolePermissionsSave')}
+              </Button>
+              {saveSuccess && <p className="metric-detail">{t('rolePermissionsSaved')}</p>}
+              {!saveSuccess && hasUnsavedChanges && <p className="metric-detail">{t('rolePermissionsUnsaved')}</p>}
+              {saveError && <p className="resource-error">{saveError}</p>}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Sheet open={formOpen} onOpenChange={setFormOpen}>
         <SheetContent>
           <form className="flex h-full flex-col gap-4" onSubmit={handleFormSubmit}>
             <SheetHeader>
               <SheetTitle>
-                {formMode === 'create' ? t('rolePermissionsFormCreateTitle') : t('rolePermissionsFormEditTitle')}
+                {formRoleId === null ? t('rolePermissionsFormCreateTitle') : t('rolePermissionsFormEditTitle')}
               </SheetTitle>
               <SheetDescription>
-                {formMode === 'create'
+                {formRoleId === null
                   ? t('rolePermissionsFormCreateDescription')
                   : t('rolePermissionsFormEditDescription')}
               </SheetDescription>
