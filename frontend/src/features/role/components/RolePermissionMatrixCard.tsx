@@ -113,12 +113,12 @@ export function RolePermissionMatrixCard({
               {filteredMenus.map((menu) => (
                 <TableRow key={menu.id}>
                   <TableCell className="align-top">
-                    <div className="flex min-w-48 flex-col gap-2">
+                    <div className="flex min-w-64 items-center justify-between gap-3">
                       <div>
                         <p className="font-semibold">{menuLabel(menu, t)}</p>
                         <p className="text-xs text-muted-foreground">{menu.path}</p>
                       </div>
-                      <label className="flex items-center gap-2 text-xs font-medium">
+                      <label className="flex shrink-0 items-center gap-2 whitespace-nowrap text-xs font-medium">
                         <Switch
                           checked={isRowFullySelected(menu.id)}
                           onCheckedChange={(checked) =>

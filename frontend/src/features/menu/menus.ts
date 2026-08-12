@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Building2, History, KeyRound, ShieldCheck, Users2, type LucideIcon } from 'lucide-react'
+import { Building2, History, ShieldCheck, Users2, type LucideIcon } from 'lucide-react'
 import { api, type ApiPage } from '@/shared/api/client'
 import { useAuth } from '@/features/auth/AuthProvider'
 import type { TranslationKey } from '@/shared/i18n/language'
@@ -24,11 +24,6 @@ export type MenuMeta = {
 export const menuMeta: Record<string, MenuMeta> = {
   '/users': { icon: Users2, labelKey: 'menuUsers', descriptionKey: 'menuUsersDescription' },
   '/roles': { icon: ShieldCheck, labelKey: 'menuRoles', descriptionKey: 'menuRolesDescription' },
-  '/permissions': {
-    icon: KeyRound,
-    labelKey: 'menuPermissions',
-    descriptionKey: 'menuPermissionsDescription',
-  },
   '/dormitories': {
     icon: Building2,
     labelKey: 'menuDormitories',
