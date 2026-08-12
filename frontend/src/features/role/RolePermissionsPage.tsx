@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { KeyRound, Pencil, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, KeyRound, Pencil, Trash2 } from 'lucide-react'
 import { api, extractErrorMessage } from '@/shared/api/client'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
@@ -76,6 +76,8 @@ function areMatricesEqual(
 
 type View = 'list' | 'permissions'
 
+const ROLES_PAGE_SIZE = 10
+
 export default function RolePermissionsPage() {
   const { t } = useLanguage()
 
@@ -85,6 +87,8 @@ export default function RolePermissionsPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [view, setView] = useState<View>('list')
+  const [roleQuery, setRoleQuery] = useState('')
+  const [rolePage, setRolePage] = useState(1)
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
   const [matrix, setMatrix] = useState<Record<string, Set<string>>>({})
   const [menuQuery, setMenuQuery] = useState('')
@@ -168,6 +172,25 @@ export default function RolePermissionsPage() {
   const hasUnsavedChanges = useMemo(
     () => !areMatricesEqual(matrix, baselineMatrix),
     [baselineMatrix, matrix]
+  )
+
+  const filteredRoles = useMemo(() => {
+    const query = roleQuery.trim().toLocaleLowerCase()
+    if (!query) return roles ?? []
+
+    return (roles ?? []).filter((role) => {
+      return (
+        role.name.toLocaleLowerCase().includes(query) ||
+        role.description.toLocaleLowerCase().includes(query)
+      )
+    })
+  }, [roleQuery, roles])
+
+  const totalRolePages = Math.max(1, Math.ceil(filteredRoles.length / ROLES_PAGE_SIZE))
+  const currentRolePage = Math.min(rolePage, totalRolePages)
+  const paginatedRoles = filteredRoles.slice(
+    (currentRolePage - 1) * ROLES_PAGE_SIZE,
+    currentRolePage * ROLES_PAGE_SIZE
   )
 
   function toggleCell(menuId: string, permissionId: string) {
@@ -349,68 +372,122 @@ export default function RolePermissionsPage() {
             )}
 
             {!loadError && !isLoading && roles && roles.length > 0 && (
-              <div className="table-wrap">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('rolePermissionsNameColumn')}</TableHead>
-                      <TableHead>{t('rolePermissionsDescriptionColumn')}</TableHead>
-                      <TableHead>{t('rolePermissionsStatusColumn')}</TableHead>
-                      <TableHead className="text-right">{t('rolePermissionsActionsColumn')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {roles.map((role) => (
-                      <TableRow key={role.id}>
-                        <TableCell className="font-semibold">{role.name}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {role.description || t('rolePermissionsDescriptionEmpty')}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={role.is_active ? 'default' : 'outline'}>
-                            {role.is_active ? t('statusActive') : t('statusInactive')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex flex-wrap justify-end gap-2">
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="outline"
-                              title={t('rolePermissionsManage')}
-                              aria-label={t('rolePermissionsManage')}
-                              onClick={() => openPermissions(role)}
-                            >
-                              <KeyRound />
-                            </Button>
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="outline"
-                              title={t('rolePermissionsEditRole')}
-                              aria-label={t('rolePermissionsEditRole')}
-                              onClick={() => openEditForm(role)}
-                            >
-                              <Pencil />
-                            </Button>
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="destructive"
-                              title={t('rolePermissionsDeleteRole')}
-                              aria-label={t('rolePermissionsDeleteRole')}
-                              onClick={() => handleDeleteRole(role)}
-                              disabled={deletingRoleId === role.id}
-                            >
-                              <Trash2 />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <>
+                <label className="flex w-full max-w-md flex-col gap-1.5 text-sm font-medium">
+                  {t('rolePermissionsRoleSearchLabel')}
+                  <input
+                    type="search"
+                    className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                    placeholder={t('rolePermissionsRoleSearchPlaceholder')}
+                    value={roleQuery}
+                    onChange={(event) => {
+                      setRoleQuery(event.target.value)
+                      setRolePage(1)
+                    }}
+                  />
+                </label>
+
+                {filteredRoles.length === 0 && (
+                  <p className="metric-detail">{t('rolePermissionsNoMatchingRoles')}</p>
+                )}
+
+                {filteredRoles.length > 0 && (
+                  <div className="table-wrap">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t('rolePermissionsNameColumn')}</TableHead>
+                          <TableHead>{t('rolePermissionsDescriptionColumn')}</TableHead>
+                          <TableHead>{t('rolePermissionsStatusColumn')}</TableHead>
+                          <TableHead className="text-right">{t('rolePermissionsActionsColumn')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedRoles.map((role) => (
+                          <TableRow key={role.id}>
+                            <TableCell className="font-semibold">{role.name}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {role.description || t('rolePermissionsDescriptionEmpty')}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={role.is_active ? 'default' : 'outline'}>
+                                {role.is_active ? t('statusActive') : t('statusInactive')}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex flex-wrap justify-end gap-2">
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="outline"
+                                  title={t('rolePermissionsManage')}
+                                  aria-label={t('rolePermissionsManage')}
+                                  onClick={() => openPermissions(role)}
+                                >
+                                  <KeyRound />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="outline"
+                                  title={t('rolePermissionsEditRole')}
+                                  aria-label={t('rolePermissionsEditRole')}
+                                  onClick={() => openEditForm(role)}
+                                >
+                                  <Pencil />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="destructive"
+                                  title={t('rolePermissionsDeleteRole')}
+                                  aria-label={t('rolePermissionsDeleteRole')}
+                                  onClick={() => handleDeleteRole(role)}
+                                  disabled={deletingRoleId === role.id}
+                                >
+                                  <Trash2 />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                {filteredRoles.length > 0 && totalRolePages > 1 && (
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-muted-foreground">
+                      {t('rolePermissionsPageLabel')} {currentRolePage} / {totalRolePages}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        title={t('rolePermissionsPrevPage')}
+                        aria-label={t('rolePermissionsPrevPage')}
+                        disabled={currentRolePage <= 1}
+                        onClick={() => setRolePage((page) => Math.max(1, page - 1))}
+                      >
+                        <ChevronLeft />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        title={t('rolePermissionsNextPage')}
+                        aria-label={t('rolePermissionsNextPage')}
+                        disabled={currentRolePage >= totalRolePages}
+                        onClick={() => setRolePage((page) => Math.min(totalRolePages, page + 1))}
+                      >
+                        <ChevronRight />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
