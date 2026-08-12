@@ -556,3 +556,48 @@ body {
   min-height: 100svh;
   background: hsl(var(--background));
 }
+
+@keyframes alert-dialog-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes alert-dialog-content-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.alert-dialog-overlay {
+  animation: alert-dialog-overlay-in 150ms ease-out;
+}
+
+.alert-dialog-content {
+  animation: alert-dialog-content-in 150ms ease-out;
+}
+
+.confirm-dialog-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  background: hsl(0 84% 95%);
+  color: hsl(0 72% 45%);
+  flex-shrink: 0;
+}
+
+.dark .confirm-dialog-icon {
+  background: hsl(0 45% 20%);
+  color: hsl(0 90% 75%);
+}

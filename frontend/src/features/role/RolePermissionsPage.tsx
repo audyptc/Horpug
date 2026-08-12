@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiMenu } from '@/features/menu/menus'
 import type { ApiPermission, ApiRole } from './types'
 import { ACTION_ORDER, ROLE_PAGE_SIZE_OPTIONS, areMatricesEqual, buildRoleMatrix, menuLabel } from './utils'
@@ -40,6 +41,7 @@ export default function RolePermissionsPage() {
 
   const [deletingRoleId, setDeletingRoleId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [confirmDeleteRole, setConfirmDeleteRole] = useState<ApiRole | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -179,6 +181,7 @@ export default function RolePermissionsPage() {
       const { data } = await api.put<ApiRole>(`/roles/${selectedRoleId}`, { menu_permissions })
       setRoles((prev) => prev?.map((role) => (role.id === data.id ? data : role)) ?? prev)
       setSaveSuccess(true)
+      setView('list')
     } catch (err) {
       setSaveError(extractErrorMessage(err, t('rolePermissionsSaveError')))
     } finally {
@@ -254,8 +257,9 @@ export default function RolePermissionsPage() {
     }
   }
 
-  async function handleDeleteRole(role: ApiRole) {
-    if (!window.confirm(t('rolePermissionsDeleteConfirm'))) return
+  async function handleDeleteRole() {
+    if (!confirmDeleteRole) return
+    const role = confirmDeleteRole
 
     setDeletingRoleId(role.id)
     setDeleteError(null)
@@ -267,6 +271,7 @@ export default function RolePermissionsPage() {
         setView('list')
         setSelectedRoleId(null)
       }
+      setConfirmDeleteRole(null)
     } catch (err) {
       setDeleteError(extractErrorMessage(err, t('rolePermissionsDeleteError')))
     } finally {
@@ -311,7 +316,7 @@ export default function RolePermissionsPage() {
           onCreateRole={openCreateForm}
           onManageRole={openPermissions}
           onEditRole={openEditForm}
-          onDeleteRole={handleDeleteRole}
+          onDeleteRole={setConfirmDeleteRole}
         />
       )}
 
@@ -335,6 +340,17 @@ export default function RolePermissionsPage() {
           hasUnsavedChanges={hasUnsavedChanges}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteRole !== null}
+        onOpenChange={(open) => !open && setConfirmDeleteRole(null)}
+        title={t('confirmDeleteTitle')}
+        description={t('rolePermissionsDeleteConfirm')}
+        confirmLabel={t('rolePermissionsDeleteRole')}
+        cancelLabel={t('cancel')}
+        loading={deletingRoleId === confirmDeleteRole?.id}
+        onConfirm={handleDeleteRole}
+      />
 
       <RoleFormSheet
         open={formOpen}

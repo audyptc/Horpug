@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { UserListCard } from './components/UserListCard'
 import { UserFormSheet } from './components/UserFormSheet'
 import type { ApiUser, ApiUserRole } from './types'
@@ -29,6 +30,7 @@ export default function UserPage() {
 
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState<ApiUser | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -150,8 +152,9 @@ export default function UserPage() {
     }
   }
 
-  async function handleDeleteUser(user: ApiUser) {
-    if (!window.confirm(t('userDeleteConfirm'))) return
+  async function handleDeleteUser() {
+    if (!confirmDeleteUser) return
+    const user = confirmDeleteUser
 
     setDeletingUserId(user.id)
     setDeleteError(null)
@@ -159,6 +162,7 @@ export default function UserPage() {
     try {
       await api.delete(`/users/${user.id}`)
       setUsers((prev) => prev?.filter((item) => item.id !== user.id) ?? prev)
+      setConfirmDeleteUser(null)
     } catch (err) {
       setDeleteError(extractErrorMessage(err, t('userDeleteError')))
     } finally {
@@ -199,7 +203,18 @@ export default function UserPage() {
         deletingUserId={deletingUserId}
         onCreateUser={openCreateForm}
         onEditUser={openEditForm}
-        onDeleteUser={handleDeleteUser}
+        onDeleteUser={setConfirmDeleteUser}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteUser !== null}
+        onOpenChange={(open) => !open && setConfirmDeleteUser(null)}
+        title={t('confirmDeleteTitle')}
+        description={t('userDeleteConfirm')}
+        confirmLabel={t('userDelete')}
+        cancelLabel={t('cancel')}
+        loading={deletingUserId === confirmDeleteUser?.id}
+        onConfirm={handleDeleteUser}
       />
 
       <UserFormSheet

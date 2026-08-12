@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DormitoryListCard } from './components/DormitoryListCard'
 import { DormitoryFormSheet } from './components/DormitoryFormSheet'
 import type { ApiDormitory, ApiUser } from './types'
@@ -30,6 +31,7 @@ export default function DormitoryPage() {
 
   const [deletingDormitoryId, setDeletingDormitoryId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [confirmDeleteDormitory, setConfirmDeleteDormitory] = useState<ApiDormitory | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -139,8 +141,9 @@ export default function DormitoryPage() {
     }
   }
 
-  async function handleDeleteDormitory(dormitory: ApiDormitory) {
-    if (!window.confirm(t('dormitoryDeleteConfirm'))) return
+  async function handleDeleteDormitory() {
+    if (!confirmDeleteDormitory) return
+    const dormitory = confirmDeleteDormitory
 
     setDeletingDormitoryId(dormitory.id)
     setDeleteError(null)
@@ -148,6 +151,7 @@ export default function DormitoryPage() {
     try {
       await api.delete(`/dormitories/${dormitory.id}`)
       setDormitories((prev) => prev?.filter((item) => item.id !== dormitory.id) ?? prev)
+      setConfirmDeleteDormitory(null)
     } catch (err) {
       setDeleteError(extractErrorMessage(err, t('dormitoryDeleteError')))
     } finally {
@@ -188,7 +192,18 @@ export default function DormitoryPage() {
         deletingDormitoryId={deletingDormitoryId}
         onCreateDormitory={openCreateForm}
         onEditDormitory={openEditForm}
-        onDeleteDormitory={handleDeleteDormitory}
+        onDeleteDormitory={setConfirmDeleteDormitory}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteDormitory !== null}
+        onOpenChange={(open) => !open && setConfirmDeleteDormitory(null)}
+        title={t('confirmDeleteTitle')}
+        description={t('dormitoryDeleteConfirm')}
+        confirmLabel={t('dormitoryDelete')}
+        cancelLabel={t('cancel')}
+        loading={deletingDormitoryId === confirmDeleteDormitory?.id}
+        onConfirm={handleDeleteDormitory}
       />
 
       <DormitoryFormSheet
