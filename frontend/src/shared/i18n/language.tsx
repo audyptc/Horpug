@@ -11,7 +11,7 @@ export type Language = 'en' | 'th'
 
 const translations = {
   en: {
-    brandSubtitle: 'Studio Dashboard',
+    brandSubtitle: 'Dormitory Management',
     searchPlaceholder: 'Search videos, analytics...',
     openMenu: 'Open menu',
     collapseSidebar: 'Collapse sidebar',
@@ -58,6 +58,7 @@ const translations = {
     menuRolesDescription: 'Manage roles and the menu permissions granted to them.',
     menuPermissions: 'Permissions',
     menuPermissionsDescription: 'Browse the catalog of permission actions.',
+    menuGroupSettings: 'Settings',
     menuDormitories: 'Dormitories',
     menuDormitoriesDescription: 'Manage dormitories and their assigned managers.',
     menuActivityLogs: 'Activity Logs',
@@ -211,7 +212,7 @@ const translations = {
     activityLogSystemUser: 'System',
   },
   th: {
-    brandSubtitle: 'แดชบอร์ดสตูดิโอ',
+    brandSubtitle: 'ระบบจัดการหอพัก',
     searchPlaceholder: 'ค้นหาวิดีโอ, ข้อมูลวิเคราะห์...',
     openMenu: 'เปิดเมนู',
     collapseSidebar: 'ย่อแถบเมนู',
@@ -258,6 +259,7 @@ const translations = {
     menuRolesDescription: 'จัดการบทบาทและสิทธิ์การเข้าถึงเมนูต่าง ๆ',
     menuPermissions: 'สิทธิ์การใช้งาน',
     menuPermissionsDescription: 'ดูรายการสิทธิ์การใช้งานทั้งหมดในระบบ',
+    menuGroupSettings: 'ตั้งค่า',
     menuDormitories: 'หอพัก',
     menuDormitoriesDescription: 'จัดการหอพักและผู้ดูแลที่ได้รับมอบหมาย',
     menuActivityLogs: 'บันทึกกิจกรรม',

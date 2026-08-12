@@ -16,7 +16,7 @@ export type MenuMeta = {
   icon: LucideIcon
   labelKey: TranslationKey
   descriptionKey: TranslationKey
-  group?: 'access'
+  group?: 'access' | 'settings'
 }
 
 // The backend seeds a fixed, known set of menu paths (see
@@ -39,6 +39,7 @@ export const menuMeta: Record<string, MenuMeta> = {
     icon: Building2,
     labelKey: 'menuDormitories',
     descriptionKey: 'menuDormitoriesDescription',
+    group: 'settings',
   },
   '/activity-logs': {
     icon: History,

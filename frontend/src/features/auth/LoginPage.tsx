@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate, type Location } from 'react-router-dom'
-import { CirclePlay } from 'lucide-react'
+import { Building2 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useLanguage } from '@/shared/i18n/language'
@@ -46,10 +46,10 @@ export default function LoginPage() {
       <form className="login-card" onSubmit={handleSubmit}>
         <div className="login-brand">
           <span className="brand-mark" aria-hidden="true">
-            <CirclePlay size={22} strokeWidth={2.4} />
+            <Building2 size={22} strokeWidth={2.4} />
           </span>
           <div>
-            <p className="brand-title">YouTube Admin</p>
+            <p className="brand-title">Horpug</p>
             <p className="brand-subtitle">{t('brandSubtitle')}</p>
           </div>
         </div>
