@@ -51,7 +51,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	activityLogService := activitylogusecase.New(activityLogRepo)
 	activityLogHandler := activityloghttp.NewHandler(activityLogService)
 	authTokenRepo := authrepository.NewRepository(db)
-	authService := authusecase.New(userRepo, authTokenRepo, secretKey, accessTokenTTL, refreshTokenTTL)
+	authService := authusecase.New(userRepo, authTokenRepo, activityLogService, secretKey, accessTokenTTL, refreshTokenTTL)
 	authHandler := authhttp.NewHandler(authService, cookieSecure)
 
 	app.Get("/health", func(c fiber.Ctx) error {

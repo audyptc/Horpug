@@ -7,9 +7,12 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"log"
 	"strings"
 	"time"
 
+	activitylogdomain "apihorpug/internal/features/activitylog/domain"
+	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
 	authdomain "apihorpug/internal/features/auth/domain"
 	userdomain "apihorpug/internal/features/user/domain"
 	platformjwt "apihorpug/internal/platform/jwt"
@@ -29,6 +32,12 @@ type TokenRepository interface {
 	RevokeRefreshToken(ctx context.Context, id uuid.UUID) error
 }
 
+// ActivityLogger records login/logout events for the audit trail. Failures to
+// record are logged but never block the auth flow itself.
+type ActivityLogger interface {
+	Create(ctx context.Context, input activitylogusecase.CreateInput) (activitylogdomain.ActivityLog, error)
+}
+
 type LoginResult struct {
 	AccessToken           string
 	AccessTokenExpiresAt  time.Time
@@ -38,24 +47,26 @@ type LoginResult struct {
 }
 
 type Service struct {
-	userRepo   UserRepository
-	tokenRepo  TokenRepository
-	jwtSecret  string
-	accessTTL  time.Duration
-	refreshTTL time.Duration
+	userRepo    UserRepository
+	tokenRepo   TokenRepository
+	activityLog ActivityLogger
+	jwtSecret   string
+	accessTTL   time.Duration
+	refreshTTL  time.Duration
 }
 
-func New(userRepo UserRepository, tokenRepo TokenRepository, jwtSecret string, accessTTL, refreshTTL time.Duration) *Service {
+func New(userRepo UserRepository, tokenRepo TokenRepository, activityLog ActivityLogger, jwtSecret string, accessTTL, refreshTTL time.Duration) *Service {
 	return &Service{
-		userRepo:   userRepo,
-		tokenRepo:  tokenRepo,
-		jwtSecret:  jwtSecret,
-		accessTTL:  accessTTL,
-		refreshTTL: refreshTTL,
+		userRepo:    userRepo,
+		tokenRepo:   tokenRepo,
+		activityLog: activityLog,
+		jwtSecret:   jwtSecret,
+		accessTTL:   accessTTL,
+		refreshTTL:  refreshTTL,
 	}
 }
 
-func (s *Service) Login(ctx context.Context, login, password string) (LoginResult, error) {
+func (s *Service) Login(ctx context.Context, login, password, ipAddress string) (LoginResult, error) {
 	login = strings.TrimSpace(login)
 	if login == "" || password == "" {
 		return LoginResult{}, authdomain.ErrInvalidCredentials
@@ -77,7 +88,13 @@ func (s *Service) Login(ctx context.Context, login, password string) (LoginResul
 		return LoginResult{}, authdomain.ErrInvalidCredentials
 	}
 
-	return s.issueSession(ctx, user)
+	result, err := s.issueSession(ctx, user)
+	if err != nil {
+		return LoginResult{}, err
+	}
+
+	s.recordActivity(ctx, &user.ID, "LOGIN", "User logged in", ipAddress)
+	return result, nil
 }
 
 // Refresh rotates a refresh token: the presented token is revoked and a new
@@ -116,7 +133,7 @@ func (s *Service) Refresh(ctx context.Context, rawToken string) (LoginResult, er
 
 // Logout revokes a refresh token. Already-invalid tokens are treated as
 // success since the end state (no usable session) is the same.
-func (s *Service) Logout(ctx context.Context, rawToken string) error {
+func (s *Service) Logout(ctx context.Context, rawToken, ipAddress string) error {
 	rawToken = strings.TrimSpace(rawToken)
 	if rawToken == "" {
 		return nil
@@ -130,7 +147,31 @@ func (s *Service) Logout(ctx context.Context, rawToken string) error {
 		return err
 	}
 
-	return s.tokenRepo.RevokeRefreshToken(ctx, stored.ID)
+	if err := s.tokenRepo.RevokeRefreshToken(ctx, stored.ID); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, &stored.UserID, "LOGOUT", "User logged out", ipAddress)
+	return nil
+}
+
+// recordActivity is best-effort: a failure to write the audit trail must
+// never fail the login/logout flow itself.
+func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action, description, ipAddress string) {
+	if s.activityLog == nil {
+		return
+	}
+
+	_, err := s.activityLog.Create(ctx, activitylogusecase.CreateInput{
+		UserID:      userID,
+		Action:      action,
+		EntityType:  "auth",
+		Description: description,
+		IPAddress:   ipAddress,
+	})
+	if err != nil {
+		log.Printf("failed to record activity log (action=%s): %v", action, err)
+	}
 }
 
 func (s *Service) issueSession(ctx context.Context, user userdomain.User) (LoginResult, error) {

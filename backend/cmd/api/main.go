@@ -45,7 +45,18 @@ func main() {
 		log.Fatalf("failed to seed admin user: %v", err)
 	}
 
-	app := fiber.New(fiber.Config{ErrorHandler: http.ErrorHandler})
+	// Backend is only reachable through nginx on the docker-internal network
+	// (see docker-compose.yml — backend has no exposed port), so it's safe to
+	// trust X-Forwarded-For from any private-range peer and recover the real
+	// client IP nginx already forwards (nginx/proxy_params.conf).
+	app := fiber.New(fiber.Config{
+		ErrorHandler: http.ErrorHandler,
+		ProxyHeader:  fiber.HeaderXForwardedFor,
+		TrustProxy:   true,
+		TrustProxyConfig: fiber.TrustProxyConfig{
+			Private: true,
+		},
+	})
 	http.RegisterRoutes(app, db, cfg.SecretKey, cfg.AccessTokenTTL, cfg.RefreshTokenTTL, cfg.CookieSecure)
 	http.RegisterDocsRoutes(app)
 

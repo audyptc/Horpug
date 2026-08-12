@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChartNoAxesColumn, ChevronDown } from 'lucide-react'
+import { ChartNoAxesColumn, ChevronDown, Lock } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useLanguage } from '@/shared/i18n/language'
 import { menuMeta, useMenus, type ApiMenu } from './menus'
@@ -64,12 +64,16 @@ export function SidebarNav({
         <div className="menu-group-section">
           <button
             type="button"
-            className="sidebar-label menu-group-label menu-group-toggle"
+            className={`sidebar-label menu-group-label menu-group-toggle ${collapsed ? 'collapsed' : ''}`}
             onClick={() => setIsAccessOpen((open) => !open)}
             aria-expanded={showAccessMenus}
             disabled={collapsed}
+            title={t('menuGroupAccess')}
           >
-            <span>{t('menuGroupAccess')}</span>
+            <span className="menu-group-toggle-label">
+              <Lock size={14} aria-hidden="true" />
+              <span className="menu-text">{t('menuGroupAccess')}</span>
+            </span>
             {!collapsed && (
               <ChevronDown
                 size={14}
