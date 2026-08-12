@@ -1,29 +1,49 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap');
 @import 'tailwindcss';
 
 :root {
-  --background: 245 16% 96%;
-  --foreground: 222 35% 12%;
+  --background: 0 0% 98%;
+  --foreground: 0 0% 6%;
   --card: 0 0% 100%;
-  --card-foreground: 222 35% 12%;
+  --card-foreground: 0 0% 6%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222 35% 12%;
-  --primary: 0 84% 53%;
+  --popover-foreground: 0 0% 6%;
+  --primary: 0 100% 50%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 220 15% 94%;
-  --secondary-foreground: 222 35% 12%;
-  --muted: 220 14% 92%;
-  --muted-foreground: 222 18% 42%;
-  --accent: 0 84% 95%;
-  --accent-foreground: 0 84% 42%;
-  --border: 220 14% 88%;
-  --input: 220 14% 88%;
-  --ring: 0 84% 53%;
-  --radius: 1rem;
+  --secondary: 0 0% 95%;
+  --secondary-foreground: 0 0% 6%;
+  --muted: 0 0% 95%;
+  --muted-foreground: 0 0% 38%;
+  --accent: 0 0% 95%;
+  --accent-foreground: 0 0% 6%;
+  --border: 0 0% 89%;
+  --input: 0 0% 89%;
+  --ring: 0 100% 50%;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 0 0% 7%;
+  --foreground: 0 0% 95%;
+  --card: 0 0% 12%;
+  --card-foreground: 0 0% 95%;
+  --popover: 0 0% 12%;
+  --popover-foreground: 0 0% 95%;
+  --primary: 0 100% 63%;
+  --primary-foreground: 0 0% 8%;
+  --secondary: 0 0% 18%;
+  --secondary-foreground: 0 0% 95%;
+  --muted: 0 0% 18%;
+  --muted-foreground: 0 0% 65%;
+  --accent: 0 0% 18%;
+  --accent-foreground: 0 0% 95%;
+  --border: 0 0% 24%;
+  --input: 0 0% 24%;
+  --ring: 0 100% 63%;
 }
 
 @theme inline {
-  --font-sans: 'Manrope', 'Segoe UI', sans-serif;
+  --font-sans: 'Roboto', 'Segoe UI', Arial, sans-serif;
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));
@@ -52,10 +72,14 @@ body {
   min-height: 100svh;
   color: hsl(var(--foreground));
   font-family: var(--font-sans);
-  background:
-    radial-gradient(circle at 10% 10%, #ffd8cf 0, transparent 32%),
-    radial-gradient(circle at 90% 0%, #ffe8c4 0, transparent 28%),
-    linear-gradient(180deg, #fffaf7 0%, #f2f4fa 100%);
+  background: hsl(var(--background));
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.topbar,
+.sidebar,
+.search-box {
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 #root {
@@ -63,70 +87,78 @@ body {
 }
 
 .app-shell {
-  width: min(1240px, 100% - 2rem);
-  margin: 1rem auto;
-  border: 1px solid hsl(var(--border));
-  border-radius: 1.4rem;
-  background: hsl(var(--card));
-  box-shadow: 0 25px 55px rgba(18, 29, 51, 0.08);
-  overflow: hidden;
-  animation: app-enter 500ms ease;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
 }
 
 .topbar {
-  height: 74px;
-  padding: 0 1.25rem;
+  height: 56px;
+  padding: 0 16px;
   border-bottom: 1px solid hsl(var(--border));
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  background: linear-gradient(180deg, #fff, #fff9f8);
+  background: hsl(var(--card));
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
 .brand-area {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.25rem;
+  flex: 0 0 auto;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  margin-left: 0.25rem;
 }
 
 .brand-mark {
-  width: 2.4rem;
-  height: 2.4rem;
-  border-radius: 0.9rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
   display: grid;
   place-items: center;
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
-  box-shadow: 0 10px 24px rgba(244, 67, 54, 0.38);
 }
 
 .brand-title {
   margin: 0;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1;
+  font-weight: 500;
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
 }
 
 .brand-subtitle {
-  margin: 0.2rem 0 0;
+  margin: 0;
   color: hsl(var(--muted-foreground));
-  font-size: 0.77rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.topbar-center {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 1rem;
 }
 
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.4rem;
+  flex: 0 0 auto;
 }
 
 .desktop-only {
@@ -139,18 +171,23 @@ body {
 
 .user-trigger {
   gap: 0.4rem;
+  border-radius: 9999px;
 }
 
 .search-box {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.6rem;
   border: 1px solid hsl(var(--border));
-  background: #fff;
+  background: hsl(var(--card));
   border-radius: 9999px;
-  padding: 0.5rem 0.85rem;
-  width: min(360px, 42vw);
+  padding: 0.5rem 1rem;
+  width: min(600px, 100%);
   color: hsl(var(--muted-foreground));
+}
+
+.search-box:focus-within {
+  border-color: #1a73e8;
 }
 
 .search-box input {
@@ -162,65 +199,88 @@ body {
   font: inherit;
 }
 
+.lang-btn {
+  border-radius: 9999px;
+  gap: 0.4rem;
+}
+
 .admin-grid {
   display: grid;
-  grid-template-columns: 220px 1fr;
-  min-height: calc(100svh - 74px - 2rem);
-  transition: grid-template-columns 220ms ease;
+  grid-template-columns: 240px 1fr;
+  flex: 1;
+  min-height: 0;
+  transition: grid-template-columns 200ms ease;
 }
 
 .admin-grid.sidebar-collapsed {
-  grid-template-columns: 80px 1fr;
+  grid-template-columns: 72px 1fr;
 }
 
 .sidebar {
   border-right: 1px solid hsl(var(--border));
-  padding: 1rem;
-  background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+  padding: 0.75rem 0;
+  background: hsl(var(--card));
+  position: sticky;
+  top: 56px;
+  height: calc(100svh - 56px);
+  overflow-y: auto;
 }
 
 .sidebar-label {
-  margin: 0 0 0.8rem;
-  text-transform: uppercase;
-  font-size: 0.72rem;
-  letter-spacing: 0.09em;
+  margin: 0 0 0.4rem;
+  padding: 0 1.5rem;
+  text-transform: none;
+  font-size: 0.8125rem;
   color: hsl(var(--muted-foreground));
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .admin-grid.sidebar-collapsed .sidebar-label {
   text-align: center;
+  padding: 0 0.5rem;
 }
 
 .menu-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
 }
 
 .menu-item {
   width: 100%;
-  border: 1px solid transparent;
-  border-radius: 0.9rem;
-  padding: 0.7rem 0.8rem;
+  border: 0;
+  border-radius: 0;
+  padding: 0.65rem 1.5rem;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 1.25rem;
   font: inherit;
-  font-weight: 700;
+  font-size: 0.875rem;
+  font-weight: 400;
   color: hsl(var(--foreground));
   background: transparent;
   text-decoration: none;
 }
 
+.menu-item:hover {
+  background: hsl(var(--secondary));
+}
+
 .menu-item.active {
-  background: #fff6f5;
-  border-color: #ffd7d2;
+  background: hsl(var(--secondary));
+  font-weight: 700;
+  color: hsl(var(--primary));
+}
+
+.menu-item.active svg {
+  color: hsl(var(--primary));
 }
 
 .menu-item.collapsed {
+  flex-direction: column;
   justify-content: center;
-  padding-inline: 0.5rem;
+  gap: 0.25rem;
+  padding: 0.6rem 0.25rem;
+  text-align: center;
 }
 
 .admin-grid.sidebar-collapsed .menu-text,
@@ -233,21 +293,23 @@ body {
 }
 
 .content {
-  padding: 1.2rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .welcome h1 {
   margin: 0;
-  font-size: clamp(1.5rem, 2vw, 2rem);
-  letter-spacing: -0.02em;
+  font-size: 1.375rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 .welcome p {
-  margin: 0.35rem 0 0;
+  margin: 0.3rem 0 0;
   color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
 }
 
 .metric-grid {
@@ -259,17 +321,17 @@ body {
 .metric-detail {
   margin: 0;
   color: hsl(var(--muted-foreground));
-  font-size: 0.9rem;
+  font-size: 0.8125rem;
 }
 
 .table-wrap {
   border: 1px solid hsl(var(--border));
-  border-radius: 0.8rem;
+  border-radius: var(--radius);
   overflow: hidden;
 }
 
 .mobile-sheet {
-  background: #fff;
+  background: hsl(var(--card));
 }
 
 .mobile-sheet-nav {
@@ -277,15 +339,16 @@ body {
 }
 
 @media (max-width: 980px) {
-  .app-shell {
-    width: calc(100% - 1rem);
-    margin: 0.5rem auto;
-  }
-
   .topbar {
     height: auto;
     flex-wrap: wrap;
-    padding: 0.8rem;
+    padding: 0.6rem 0.8rem;
+  }
+
+  .topbar-center {
+    order: 3;
+    flex-basis: 100%;
+    padding: 0;
   }
 
   .search-box {
@@ -309,7 +372,7 @@ body {
     display: inline-flex;
   }
 
-  .upload-btn,
+  .lang-btn,
   .user-trigger {
     flex: 1;
   }
@@ -325,17 +388,5 @@ body {
 
   .metric-grid {
     grid-template-columns: 1fr;
-  }
-}
-
-@keyframes app-enter {
-  from {
-    opacity: 0;
-    transform: translateY(14px) scale(0.99);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }

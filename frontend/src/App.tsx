@@ -1,13 +1,17 @@
 import { useMemo, useState, type ReactNode } from 'react'
+import { useTheme } from '@/lib/use-theme'
+import { useLanguage, type TranslationKey } from '@/lib/language'
 import {
   Bell,
   ChartNoAxesColumn,
   CirclePlay,
+  Languages,
   Menu,
+  Moon,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
-  Upload,
+  Sun,
   UserCircle2,
   type LucideIcon,
 } from 'lucide-react'
@@ -47,7 +51,7 @@ import {
 } from '@/components/ui/table'
 
 type MenuItem = {
-  label: string
+  labelKey: TranslationKey
   to: string
   icon: LucideIcon
   badge: string
@@ -55,7 +59,7 @@ type MenuItem = {
 
 const menuItems: MenuItem[] = [
   {
-    label: 'Dashboard',
+    labelKey: 'dashboard',
     to: '/dashboard',
     icon: ChartNoAxesColumn,
     badge: '1',
@@ -69,10 +73,12 @@ function SidebarNav({
   collapsed?: boolean
   onNavigate?: () => void
 }) {
+  const { t } = useLanguage()
+
   return (
     <>
-      <p className="sidebar-label">Main Menu</p>
-      <nav className="menu-list" aria-label="Admin menu">
+      <p className="sidebar-label">{t('mainMenu')}</p>
+      <nav className="menu-list" aria-label={t('adminMenuLabel')}>
         {menuItems.map((item) => {
           const Icon = item.icon
           return (
@@ -85,7 +91,7 @@ function SidebarNav({
               onClick={onNavigate}
             >
               <Icon size={16} />
-              <span className="menu-text">{item.label}</span>
+              <span className="menu-text">{t(item.labelKey)}</span>
               <Badge variant="secondary" className="menu-badge">
                 {item.badge}
               </Badge>
@@ -98,39 +104,48 @@ function SidebarNav({
 }
 
 function DashboardPage() {
+  const { t, language } = useLanguage()
+
   const metrics = useMemo(
     () => [
-      { title: 'Total Views', value: '1,284,920', detail: '+12.4% this month' },
-      { title: 'Subscribers', value: '98,432', detail: '+1,203 new' },
-      { title: 'Watch Time', value: '3,920 hrs', detail: '+8.7% this week' },
+      { title: t('totalViews'), value: '1,284,920', detail: t('totalViewsDetail') },
+      { title: t('subscribers'), value: '98,432', detail: t('subscribersDetail') },
+      { title: t('watchTime'), value: '3,920 hrs', detail: t('watchTimeDetail') },
     ],
-    []
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [language]
   )
 
   const recentUploads = useMemo(
     () => [
-      { title: 'Campus Tour 2026', status: 'Published', reach: '24.8K', updated: '2 hours ago' },
+      {
+        title: 'Campus Tour 2026',
+        status: t('statusPublished'),
+        reach: '24.8K',
+        updated: t('timeHoursAgo'),
+      },
       {
         title: 'Student Interview #12',
-        status: 'Processing',
-        reach: 'Pending',
-        updated: '12 minutes ago',
+        status: t('statusProcessing'),
+        reach: t('reachPending'),
+        updated: t('timeMinutesAgo'),
       },
       {
         title: 'Welcome Freshmen Highlights',
-        status: 'Draft',
-        reach: 'Not Published',
-        updated: 'Yesterday',
+        status: t('statusDraft'),
+        reach: t('reachNotPublished'),
+        updated: t('timeYesterday'),
       },
     ],
-    []
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [language]
   )
 
   return (
     <main className="content">
       <section className="welcome">
-        <h1>Dashboard</h1>
-        <p>Overview of your channel performance and latest content actions.</p>
+        <h1>{t('dashboard')}</h1>
+        <p>{t('dashboardOverview')}</p>
       </section>
 
       <section className="metric-grid">
@@ -149,18 +164,18 @@ function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Upload Queue</CardTitle>
-          <CardDescription>Video processing status from your latest uploads.</CardDescription>
+          <CardTitle>{t('recentUploadQueue')}</CardTitle>
+          <CardDescription>{t('recentUploadQueueDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="table-wrap">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Video</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Reach</TableHead>
-                  <TableHead className="text-right">Last Update</TableHead>
+                  <TableHead>{t('tableVideo')}</TableHead>
+                  <TableHead>{t('tableStatus')}</TableHead>
+                  <TableHead>{t('tableReach')}</TableHead>
+                  <TableHead className="text-right">{t('tableLastUpdate')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -170,9 +185,9 @@ function DashboardPage() {
                     <TableCell>
                       <Badge
                         variant={
-                          upload.status === 'Published'
+                          upload.status === t('statusPublished')
                             ? 'default'
-                            : upload.status === 'Processing'
+                            : upload.status === t('statusProcessing')
                               ? 'secondary'
                               : 'outline'
                         }
@@ -196,6 +211,8 @@ function DashboardPage() {
 function AdminLayout({ children }: { children: ReactNode }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const { isDark, toggleTheme } = useTheme()
+  const { language, setLanguage, t } = useLanguage()
 
   return (
     <div className="app-shell">
@@ -203,14 +220,14 @@ function AdminLayout({ children }: { children: ReactNode }) {
         <div className="brand-area">
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button size="icon" variant="ghost" className="mobile-only" aria-label="Open menu">
+              <Button size="icon" variant="ghost" className="mobile-only" aria-label={t('openMenu')}>
                 <Menu size={18} />
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="mobile-sheet">
               <SheetHeader>
-                <SheetTitle>Menu</SheetTitle>
-                <SheetDescription>Navigate to your admin sections</SheetDescription>
+                <SheetTitle>{t('mobileMenuTitle')}</SheetTitle>
+                <SheetDescription>{t('mobileMenuDescription')}</SheetDescription>
               </SheetHeader>
               <div className="mobile-sheet-nav">
                 <SidebarNav onNavigate={() => setIsMobileMenuOpen(false)} />
@@ -222,7 +239,7 @@ function AdminLayout({ children }: { children: ReactNode }) {
             size="icon"
             variant="ghost"
             className="desktop-only"
-            aria-label="Collapse sidebar"
+            aria-label={isSidebarCollapsed ? t('expandSidebar') : t('collapseSidebar')}
             onClick={() => setIsSidebarCollapsed((value) => !value)}
           >
             {isSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
@@ -234,41 +251,57 @@ function AdminLayout({ children }: { children: ReactNode }) {
             </span>
             <div>
               <p className="brand-title">YouTube Admin</p>
-              <p className="brand-subtitle">Studio Dashboard</p>
+              <p className="brand-subtitle">{t('brandSubtitle')}</p>
             </div>
           </div>
         </div>
 
-        <div className="topbar-actions">
+        <div className="topbar-center">
           <label className="search-box" htmlFor="search-dashboard">
             <Search size={16} aria-hidden="true" />
             <input
               id="search-dashboard"
               type="search"
-              placeholder="Search videos, analytics..."
+              placeholder={t('searchPlaceholder')}
             />
           </label>
-          <Button size="icon" variant="ghost" aria-label="Notifications">
+        </div>
+
+        <div className="topbar-actions">
+          <Button size="icon" variant="ghost" className="rounded-full" aria-label={t('notifications')}>
             <Bell size={18} />
           </Button>
-          <Button className="upload-btn">
-            <Upload size={16} />
-            Upload
+          <Button
+            size="icon"
+            variant="ghost"
+            className="rounded-full"
+            aria-label={isDark ? t('switchToLight') : t('switchToDark')}
+            onClick={toggleTheme}
+          >
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          </Button>
+          <Button
+            variant="outline"
+            className="lang-btn"
+            aria-label={t('language')}
+            onClick={() => setLanguage(language === 'en' ? 'th' : 'en')}
+          >
+            <Languages size={16} />
+            {language === 'en' ? 'EN' : 'ไทย'}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="user-trigger">
-                <UserCircle2 size={16} />
-                Creator
+              <Button size="icon" variant="ghost" className="user-trigger" aria-label={t('accountMenu')}>
+                <UserCircle2 size={22} />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel>{t('myAccount')}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Channel settings</DropdownMenuItem>
+              <DropdownMenuItem>{t('profile')}</DropdownMenuItem>
+              <DropdownMenuItem>{t('channelSettings')}</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Sign out</DropdownMenuItem>
+              <DropdownMenuItem>{t('signOut')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
