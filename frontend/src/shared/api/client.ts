@@ -74,6 +74,16 @@ api.interceptors.response.use(
   }
 )
 
+export type ApiPage<T> = {
+  data: T
+  meta: {
+    page: number
+    per_page: number
+    total: number
+    total_pages: number
+  }
+}
+
 export function extractErrorMessage(error: unknown, fallback: string): string {
   if (axios.isAxiosError(error)) {
     const data = error.response?.data as { error?: string } | undefined

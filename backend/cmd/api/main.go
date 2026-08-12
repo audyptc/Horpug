@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"time"
 
 	"apihorpug/config"
 	menurepository "apihorpug/internal/features/menu/repository/postgres"
@@ -46,6 +48,12 @@ func main() {
 	app := fiber.New(fiber.Config{ErrorHandler: http.ErrorHandler})
 	http.RegisterRoutes(app, db, cfg.SecretKey, cfg.AccessTokenTTL, cfg.RefreshTokenTTL, cfg.CookieSecure)
 	http.RegisterDocsRoutes(app)
+
+	go func() {
+		time.Sleep(200 * time.Millisecond)
+		fmt.Printf("\n\x1b[1;32m➜\x1b[0m  \x1b[1mScalar UI:\x1b[0m  \x1b[36mhttp://localhost:%s/docs/scalar\x1b[0m\n", cfg.AppPort)
+		fmt.Printf("\x1b[1;32m➜\x1b[0m  \x1b[1mSwagger UI:\x1b[0m \x1b[36mhttp://localhost:%s/docs/swagger\x1b[0m\n\n", cfg.AppPort)
+	}()
 
 	log.Printf("server running on :%s", cfg.AppPort)
 	if err := app.Listen(":" + cfg.AppPort); err != nil {

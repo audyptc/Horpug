@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Building2, History, KeyRound, ShieldCheck, Users2, type LucideIcon } from 'lucide-react'
-import { api } from '@/shared/api/client'
+import { api, type ApiPage } from '@/shared/api/client'
 import { useAuth } from '@/features/auth/AuthProvider'
 import type { TranslationKey } from '@/shared/i18n/language'
 
@@ -60,12 +60,12 @@ export function useMenus() {
     let cancelled = false
 
     api
-      .get<ApiMenu[]>('/menus')
+      .get<ApiPage<ApiMenu[]>>('/menus', { params: { per_page: 100 } })
       .then(({ data }) => {
         if (!cancelled) {
           setMenuState({
             userId,
-            menus: data.filter((menu) => menu.is_active && menu.path in menuMeta),
+            menus: data.data.filter((menu) => menu.is_active && menu.path in menuMeta),
             error: null,
           })
         }

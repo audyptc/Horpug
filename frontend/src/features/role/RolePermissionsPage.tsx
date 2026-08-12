@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { ChevronLeft, ChevronRight, KeyRound, Pencil, Trash2 } from 'lucide-react'
-import { api, extractErrorMessage } from '@/shared/api/client'
+import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
@@ -112,15 +112,15 @@ export default function RolePermissionsPage() {
     let cancelled = false
 
     Promise.all([
-      api.get<ApiRole[]>('/roles'),
-      api.get<ApiMenu[]>('/menus'),
-      api.get<ApiPermission[]>('/permissions'),
+      api.get<ApiPage<ApiRole[]>>('/roles', { params: { per_page: 100 } }),
+      api.get<ApiPage<ApiMenu[]>>('/menus', { params: { per_page: 100 } }),
+      api.get<ApiPage<ApiPermission[]>>('/permissions', { params: { per_page: 100 } }),
     ])
       .then(([rolesRes, menusRes, permissionsRes]) => {
         if (cancelled) return
-        setRoles(rolesRes.data)
-        setMenus(menusRes.data)
-        setPermissions(permissionsRes.data)
+        setRoles(rolesRes.data.data)
+        setMenus(menusRes.data.data)
+        setPermissions(permissionsRes.data.data)
       })
       .catch((err) => {
         if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
@@ -188,6 +188,8 @@ export default function RolePermissionsPage() {
 
   const totalRolePages = Math.max(1, Math.ceil(filteredRoles.length / ROLES_PAGE_SIZE))
   const currentRolePage = Math.min(rolePage, totalRolePages)
+  const rolesRangeStart = filteredRoles.length === 0 ? 0 : (currentRolePage - 1) * ROLES_PAGE_SIZE + 1
+  const rolesRangeEnd = Math.min(currentRolePage * ROLES_PAGE_SIZE, filteredRoles.length)
   const paginatedRoles = filteredRoles.slice(
     (currentRolePage - 1) * ROLES_PAGE_SIZE,
     currentRolePage * ROLES_PAGE_SIZE
@@ -352,10 +354,7 @@ export default function RolePermissionsPage() {
         <Card>
           <CardHeader className="flex flex-row items-start justify-between gap-4">
             <div>
-              <CardTitle>{t('menuRoles')}</CardTitle>
-              <CardDescription>
-                GET /roles · POST /roles · PUT /roles/:id · DELETE /roles/:id
-              </CardDescription>
+              <CardTitle>{t('menuRoles')}</CardTitle>             
             </div>
             <Button onClick={openCreateForm} disabled={isLoading}>
               {t('rolePermissionsCreateRole')}
@@ -456,35 +455,44 @@ export default function RolePermissionsPage() {
                   </div>
                 )}
 
-                {filteredRoles.length > 0 && totalRolePages > 1 && (
+                {filteredRoles.length > 0 && (
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm text-muted-foreground">
-                      {t('rolePermissionsPageLabel')} {currentRolePage} / {totalRolePages}
+                      {t('rolePermissionsShowingLabel')} {rolesRangeStart}-{rolesRangeEnd}{' '}
+                      {t('rolePermissionsOfLabel')} {filteredRoles.length} {t('rolePermissionsResultsLabel')}
+                      {totalRolePages > 1 && (
+                        <>
+                          {' '}
+                          · {t('rolePermissionsPageLabel')} {currentRolePage} / {totalRolePages}
+                        </>
+                      )}
                     </p>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="outline"
-                        title={t('rolePermissionsPrevPage')}
-                        aria-label={t('rolePermissionsPrevPage')}
-                        disabled={currentRolePage <= 1}
-                        onClick={() => setRolePage((page) => Math.max(1, page - 1))}
-                      >
-                        <ChevronLeft />
-                      </Button>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="outline"
-                        title={t('rolePermissionsNextPage')}
-                        aria-label={t('rolePermissionsNextPage')}
-                        disabled={currentRolePage >= totalRolePages}
-                        onClick={() => setRolePage((page) => Math.min(totalRolePages, page + 1))}
-                      >
-                        <ChevronRight />
-                      </Button>
-                    </div>
+                    {totalRolePages > 1 && (
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="outline"
+                          title={t('rolePermissionsPrevPage')}
+                          aria-label={t('rolePermissionsPrevPage')}
+                          disabled={currentRolePage <= 1}
+                          onClick={() => setRolePage((page) => Math.max(1, page - 1))}
+                        >
+                          <ChevronLeft />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="outline"
+                          title={t('rolePermissionsNextPage')}
+                          aria-label={t('rolePermissionsNextPage')}
+                          disabled={currentRolePage >= totalRolePages}
+                          onClick={() => setRolePage((page) => Math.min(totalRolePages, page + 1))}
+                        >
+                          <ChevronRight />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </>
