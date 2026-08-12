@@ -390,3 +390,112 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+.account-name {
+  margin: 0;
+  font-weight: 700;
+}
+
+.account-email {
+  margin: 0.1rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: hsl(var(--muted-foreground));
+}
+
+.account-role {
+  margin: 0.35rem 0 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: hsl(var(--primary));
+}
+
+.resource-error {
+  margin: 0;
+  color: hsl(var(--primary));
+  font-size: 0.875rem;
+}
+
+.login-page {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: hsl(var(--background));
+  padding: 1rem;
+}
+
+.login-card {
+  width: min(360px, 100%);
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 1rem;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+
+.login-card h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.login-subtitle {
+  margin: -0.5rem 0 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+}
+
+.login-error {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.5rem;
+  background: hsl(0 84% 96%);
+  color: hsl(0 72% 42%);
+  font-size: 0.8125rem;
+}
+
+.dark .login-error {
+  background: hsl(0 40% 18%);
+  color: hsl(0 90% 80%);
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.login-field input {
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  font: inherit;
+  font-weight: 400;
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+}
+
+.login-field input:focus {
+  outline: none;
+  border-color: hsl(var(--ring));
+}
+
+.login-submit {
+  margin-top: 0.4rem;
+  width: 100%;
+  border-radius: 9999px;
+}

@@ -1,6 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { useTheme } from '@/lib/use-theme'
-import { useLanguage, type TranslationKey } from '@/lib/language'
+import { useLanguage } from '@/lib/language'
+import { AuthProvider, useAuth } from '@/lib/auth'
+import { menuMeta, useMenus } from '@/lib/menus'
 import {
   Bell,
   ChartNoAxesColumn,
@@ -13,9 +15,11 @@ import {
   Search,
   Sun,
   UserCircle2,
-  type LucideIcon,
 } from 'lucide-react'
-import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
+import LoginPage from '@/pages/LoginPage'
+import ResourcePage from '@/pages/ResourcePage'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -50,22 +54,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
-type MenuItem = {
-  labelKey: TranslationKey
-  to: string
-  icon: LucideIcon
-  badge: string
-}
-
-const menuItems: MenuItem[] = [
-  {
-    labelKey: 'dashboard',
-    to: '/dashboard',
-    icon: ChartNoAxesColumn,
-    badge: '1',
-  },
-]
-
 function SidebarNav({
   collapsed = false,
   onNavigate,
@@ -74,27 +62,37 @@ function SidebarNav({
   onNavigate?: () => void
 }) {
   const { t } = useLanguage()
+  const { menus } = useMenus()
 
   return (
     <>
       <p className="sidebar-label">{t('mainMenu')}</p>
       <nav className="menu-list" aria-label={t('adminMenuLabel')}>
-        {menuItems.map((item) => {
-          const Icon = item.icon
+        <NavLink
+          to="/dashboard"
+          className={({ isActive }) =>
+            `menu-item ${isActive ? 'active' : ''} ${collapsed ? 'collapsed' : ''}`
+          }
+          onClick={onNavigate}
+        >
+          <ChartNoAxesColumn size={16} />
+          <span className="menu-text">{t('dashboard')}</span>
+        </NavLink>
+        {menus.map((menu) => {
+          const meta = menuMeta[menu.path]
+          if (!meta) return null
+          const Icon = meta.icon
           return (
             <NavLink
-              key={item.to}
-              to={item.to}
+              key={menu.id}
+              to={menu.path}
               className={({ isActive }) =>
                 `menu-item ${isActive ? 'active' : ''} ${collapsed ? 'collapsed' : ''}`
               }
               onClick={onNavigate}
             >
               <Icon size={16} />
-              <span className="menu-text">{t(item.labelKey)}</span>
-              <Badge variant="secondary" className="menu-badge">
-                {item.badge}
-              </Badge>
+              <span className="menu-text">{t(meta.labelKey)}</span>
             </NavLink>
           )
         })}
@@ -213,6 +211,13 @@ function AdminLayout({ children }: { children: ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { isDark, toggleTheme } = useTheme()
   const { language, setLanguage, t } = useLanguage()
+  const { session, logout } = useAuth()
+  const navigate = useNavigate()
+
+  const handleSignOut = async () => {
+    await logout()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <div className="app-shell">
@@ -295,13 +300,19 @@ function AdminLayout({ children }: { children: ReactNode }) {
                 <UserCircle2 size={22} />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuLabel>{t('myAccount')}</DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <p className="account-name">{session?.user.username}</p>
+                <p className="account-email">{session?.user.email}</p>
+                {session?.user.role?.name && (
+                  <p className="account-role">{session.user.role.name}</p>
+                )}
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>{t('profile')}</DropdownMenuItem>
               <DropdownMenuItem>{t('channelSettings')}</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>{t('signOut')}</DropdownMenuItem>
+              <DropdownMenuItem onSelect={handleSignOut}>{t('signOut')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -319,18 +330,34 @@ function AdminLayout({ children }: { children: ReactNode }) {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route
-        path="/dashboard"
-        element={
-          <AdminLayout>
-            <DashboardPage />
-          </AdminLayout>
-        }
-      />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route element={<ProtectedRoute />}>
+          <Route
+            path="/dashboard"
+            element={
+              <AdminLayout>
+                <DashboardPage />
+              </AdminLayout>
+            }
+          />
+          {Object.entries(menuMeta).map(([path, meta]) => (
+            <Route
+              key={path}
+              path={path}
+              element={
+                <AdminLayout>
+                  <ResourcePage titleKey={meta.labelKey} descriptionKey={meta.descriptionKey} endpoint={path} />
+                </AdminLayout>
+              }
+            />
+          ))}
+        </Route>
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </AuthProvider>
   )
 }
 
