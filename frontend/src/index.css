@@ -8,7 +8,7 @@
   --card-foreground: 0 0% 6%;
   --popover: 0 0% 100%;
   --popover-foreground: 0 0% 6%;
-  --primary: 0 100% 50%;
+  --primary: 199 89% 48%;
   --primary-foreground: 0 0% 100%;
   --secondary: 0 0% 95%;
   --secondary-foreground: 0 0% 6%;
@@ -18,7 +18,7 @@
   --accent-foreground: 0 0% 6%;
   --border: 0 0% 89%;
   --input: 0 0% 89%;
-  --ring: 0 100% 50%;
+  --ring: 199 89% 48%;
   --radius: 0.5rem;
 }
 
@@ -29,7 +29,7 @@
   --card-foreground: 0 0% 95%;
   --popover: 0 0% 12%;
   --popover-foreground: 0 0% 95%;
-  --primary: 0 100% 63%;
+  --primary: 199 89% 61%;
   --primary-foreground: 0 0% 8%;
   --secondary: 0 0% 18%;
   --secondary-foreground: 0 0% 95%;
@@ -39,7 +39,7 @@
   --accent-foreground: 0 0% 95%;
   --border: 0 0% 24%;
   --input: 0 0% 24%;
-  --ring: 0 100% 63%;
+  --ring: 199 89% 61%;
 }
 
 @theme inline {
@@ -187,7 +187,7 @@ body {
 }
 
 .search-box:focus-within {
-  border-color: #1a73e8;
+  border-color: hsl(var(--ring));
 }
 
 .search-box input {
@@ -238,6 +238,43 @@ body {
 .admin-grid.sidebar-collapsed .sidebar-label {
   text-align: center;
   padding: 0 0.5rem;
+}
+
+.menu-group-label {
+  margin-top: 0.9rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.menu-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.menu-group-toggle:hover:not(:disabled) {
+  color: hsl(var(--foreground));
+}
+
+.menu-group-toggle:disabled {
+  cursor: default;
+}
+
+.menu-group-chevron {
+  transition: transform 150ms ease;
+}
+
+.menu-group-chevron.open {
+  transform: rotate(180deg);
+}
+
+.menu-group .menu-item:not(.collapsed) {
+  padding-left: 2.5rem;
 }
 
 .menu-list {
@@ -414,8 +451,12 @@ body {
 
 .resource-error {
   margin: 0;
-  color: hsl(var(--primary));
+  color: hsl(0 72% 42%);
   font-size: 0.875rem;
+}
+
+.dark .resource-error {
+  color: hsl(0 90% 80%);
 }
 
 .login-page {

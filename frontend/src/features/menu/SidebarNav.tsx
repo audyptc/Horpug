@@ -1,7 +1,8 @@
-import { ChartNoAxesColumn } from 'lucide-react'
+import { useState } from 'react'
+import { ChartNoAxesColumn, ChevronDown } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useLanguage } from '@/shared/i18n/language'
-import { menuMeta, useMenus } from './menus'
+import { menuMeta, useMenus, type ApiMenu } from './menus'
 
 export function SidebarNav({
   collapsed = false,
@@ -12,6 +13,35 @@ export function SidebarNav({
 }) {
   const { t } = useLanguage()
   const { menus } = useMenus()
+
+  const metaOrder = Object.keys(menuMeta)
+  const byMetaOrder = (a: ApiMenu, b: ApiMenu) => metaOrder.indexOf(a.path) - metaOrder.indexOf(b.path)
+
+  const mainMenus = menus.filter((menu) => !menuMeta[menu.path]?.group).sort(byMetaOrder)
+  const accessMenus = menus.filter((menu) => menuMeta[menu.path]?.group === 'access').sort(byMetaOrder)
+
+  const [isAccessOpen, setIsAccessOpen] = useState(true)
+
+  const showAccessMenus = collapsed || isAccessOpen
+
+  function renderMenuLink(menu: ApiMenu) {
+    const meta = menuMeta[menu.path]
+    if (!meta) return null
+    const Icon = meta.icon
+    return (
+      <NavLink
+        key={menu.id}
+        to={menu.path}
+        className={({ isActive }) =>
+          `menu-item ${isActive ? 'active' : ''} ${collapsed ? 'collapsed' : ''}`
+        }
+        onClick={onNavigate}
+      >
+        <Icon size={16} />
+        <span className="menu-text">{t(meta.labelKey)}</span>
+      </NavLink>
+    )
+  }
 
   return (
     <>
@@ -27,25 +57,34 @@ export function SidebarNav({
           <ChartNoAxesColumn size={16} />
           <span className="menu-text">{t('dashboard')}</span>
         </NavLink>
-        {menus.map((menu) => {
-          const meta = menuMeta[menu.path]
-          if (!meta) return null
-          const Icon = meta.icon
-          return (
-            <NavLink
-              key={menu.id}
-              to={menu.path}
-              className={({ isActive }) =>
-                `menu-item ${isActive ? 'active' : ''} ${collapsed ? 'collapsed' : ''}`
-              }
-              onClick={onNavigate}
-            >
-              <Icon size={16} />
-              <span className="menu-text">{t(meta.labelKey)}</span>
-            </NavLink>
-          )
-        })}
+        {mainMenus.map(renderMenuLink)}
       </nav>
+
+      {accessMenus.length > 0 && (
+        <div className="menu-group-section">
+          <button
+            type="button"
+            className="sidebar-label menu-group-label menu-group-toggle"
+            onClick={() => setIsAccessOpen((open) => !open)}
+            aria-expanded={showAccessMenus}
+            disabled={collapsed}
+          >
+            <span>{t('menuGroupAccess')}</span>
+            {!collapsed && (
+              <ChevronDown
+                size={14}
+                className={`menu-group-chevron ${isAccessOpen ? 'open' : ''}`}
+                aria-hidden="true"
+              />
+            )}
+          </button>
+          {showAccessMenus && (
+            <nav className="menu-list menu-group" aria-label={t('menuGroupAccess')}>
+              {accessMenus.map(renderMenuLink)}
+            </nav>
+          )}
+        </div>
+      )}
     </>
   )
 }

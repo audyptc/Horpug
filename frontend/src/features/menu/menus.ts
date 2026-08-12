@@ -16,14 +16,25 @@ export type MenuMeta = {
   icon: LucideIcon
   labelKey: TranslationKey
   descriptionKey: TranslationKey
+  group?: 'access'
 }
 
 // The backend seeds a fixed, known set of menu paths (see
 // backend/internal/features/menu/repository/postgres/seed.go). It has no
 // concept of locale, so the icon and bilingual label for each one live here.
 export const menuMeta: Record<string, MenuMeta> = {
-  '/users': { icon: Users2, labelKey: 'menuUsers', descriptionKey: 'menuUsersDescription' },
-  '/roles': { icon: ShieldCheck, labelKey: 'menuRoles', descriptionKey: 'menuRolesDescription' },
+  '/roles': {
+    icon: ShieldCheck,
+    labelKey: 'menuRoles',
+    descriptionKey: 'menuRolesDescription',
+    group: 'access',
+  },
+  '/users': {
+    icon: Users2,
+    labelKey: 'menuUsers',
+    descriptionKey: 'menuUsersDescription',
+    group: 'access',
+  },
   '/dormitories': {
     icon: Building2,
     labelKey: 'menuDormitories',
