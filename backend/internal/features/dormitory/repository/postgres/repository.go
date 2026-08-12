@@ -22,16 +22,13 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) List(ctx context.Context, requesterID uuid.UUID) ([]dormdomain.Dormitory, error) {
+func (r *Repository) Count(ctx context.Context, requesterID uuid.UUID) (int64, error) {
 	full, roleID, err := r.dormitoryScope(ctx, requesterID)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	query := `
-		SELECT DISTINCT d.id, d.name, d.address, d.phone, d.description, d.is_active, d.created_by, d.updated_by, d.created_at, d.updated_at
-		FROM dormitories d
-	`
+	query := `SELECT COUNT(DISTINCT d.id) FROM dormitories d`
 	args := make([]any, 0)
 	if !full {
 		query += `
@@ -43,7 +40,39 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID) ([]dormdom
 		`
 		args = append(args, requesterID, roleID)
 	}
-	query += ` ORDER BY d.name ASC`
+
+	var total int64
+	if err := r.db.QueryRow(ctx, query, args...).Scan(&total); err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, limit, offset int) ([]dormdomain.Dormitory, error) {
+	full, roleID, err := r.dormitoryScope(ctx, requesterID)
+	if err != nil {
+		return nil, err
+	}
+
+	query := `
+		SELECT DISTINCT d.id, d.name, d.address, d.phone, d.description, d.is_active, d.created_by, d.updated_by, d.created_at, d.updated_at
+		FROM dormitories d
+	`
+	args := make([]any, 0)
+	argIdx := 1
+	if !full {
+		query += `
+			WHERE d.id IN (
+				SELECT dormitory_id FROM user_dormitories WHERE user_id = $1
+				UNION
+				SELECT dormitory_id FROM role_dormitories WHERE role_id = $2
+			)
+		`
+		args = append(args, requesterID, roleID)
+		argIdx = 3
+	}
+	query += fmt.Sprintf(` ORDER BY d.name ASC LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
+	args = append(args, limit, offset)
 
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {

@@ -23,12 +23,21 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) List(ctx context.Context) ([]roledomain.Role, error) {
+func (r *Repository) Count(ctx context.Context) (int64, error) {
+	var total int64
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM roles`).Scan(&total); err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+func (r *Repository) List(ctx context.Context, limit, offset int) ([]roledomain.Role, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT id, name, description, is_active, full_dormitory_access, created_by, updated_by, created_at, updated_at
 		FROM roles
 		ORDER BY name ASC
-	`)
+		LIMIT $1 OFFSET $2
+	`, limit, offset)
 	if err != nil {
 		return nil, err
 	}

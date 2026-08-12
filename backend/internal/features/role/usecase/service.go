@@ -35,7 +35,8 @@ type UpdateInput struct {
 }
 
 type Repository interface {
-	List(ctx context.Context) ([]roledomain.Role, error)
+	Count(ctx context.Context) (int64, error)
+	List(ctx context.Context, limit, offset int) ([]roledomain.Role, error)
 	GetByID(ctx context.Context, id uuid.UUID) (roledomain.Role, error)
 	Create(ctx context.Context, input CreateInput) (roledomain.Role, error)
 	Update(ctx context.Context, id uuid.UUID, input UpdateInput) (roledomain.Role, error)
@@ -50,8 +51,18 @@ func New(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) List(ctx context.Context) ([]roledomain.Role, error) {
-	return s.repo.List(ctx)
+func (s *Service) List(ctx context.Context, limit, offset int) ([]roledomain.Role, int64, error) {
+	total, err := s.repo.Count(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	roles, err := s.repo.List(ctx, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return roles, total, nil
 }
 
 func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (roledomain.Role, error) {

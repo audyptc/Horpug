@@ -27,6 +27,7 @@ type ListFilter struct {
 }
 
 type Repository interface {
+	Count(ctx context.Context, filter ListFilter) (int64, error)
 	List(ctx context.Context, filter ListFilter) ([]activitylogdomain.ActivityLog, error)
 	GetByID(ctx context.Context, id uuid.UUID) (activitylogdomain.ActivityLog, error)
 	Create(ctx context.Context, input CreateInput) (activitylogdomain.ActivityLog, error)
@@ -40,14 +41,25 @@ func New(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) List(ctx context.Context, filter ListFilter) ([]activitylogdomain.ActivityLog, error) {
+func (s *Service) List(ctx context.Context, filter ListFilter) ([]activitylogdomain.ActivityLog, int64, error) {
 	if filter.Limit <= 0 || filter.Limit > 200 {
 		filter.Limit = 50
 	}
 	if filter.Offset < 0 {
 		filter.Offset = 0
 	}
-	return s.repo.List(ctx, filter)
+
+	total, err := s.repo.Count(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	logs, err := s.repo.List(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return logs, total, nil
 }
 
 func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (activitylogdomain.ActivityLog, error) {

@@ -20,12 +20,21 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) List(ctx context.Context) ([]permissiondomain.Permission, error) {
+func (r *Repository) Count(ctx context.Context) (int64, error) {
+	var total int64
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM permissions`).Scan(&total); err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+func (r *Repository) List(ctx context.Context, limit, offset int) ([]permissiondomain.Permission, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT id, name, description, created_at, updated_at
 		FROM permissions
 		ORDER BY name ASC
-	`)
+		LIMIT $1 OFFSET $2
+	`, limit, offset)
 	if err != nil {
 		return nil, err
 	}

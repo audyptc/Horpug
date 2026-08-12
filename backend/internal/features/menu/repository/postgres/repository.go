@@ -16,12 +16,21 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) List(ctx context.Context) ([]menudomain.Menu, error) {
+func (r *Repository) Count(ctx context.Context) (int64, error) {
+	var total int64
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM menus`).Scan(&total); err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+func (r *Repository) List(ctx context.Context, limit, offset int) ([]menudomain.Menu, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT id, name, path, description, is_active, created_at, updated_at
 		FROM menus
 		ORDER BY path ASC
-	`)
+		LIMIT $1 OFFSET $2
+	`, limit, offset)
 	if err != nil {
 		return nil, err
 	}

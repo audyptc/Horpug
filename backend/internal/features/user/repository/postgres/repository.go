@@ -24,7 +24,15 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) List(ctx context.Context) ([]userdomain.User, error) {
+func (r *Repository) Count(ctx context.Context) (int64, error) {
+	var total int64
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&total); err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+func (r *Repository) List(ctx context.Context, limit, offset int) ([]userdomain.User, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT
 			u.id,
@@ -46,7 +54,8 @@ func (r *Repository) List(ctx context.Context) ([]userdomain.User, error) {
 		FROM users u
 		JOIN roles r ON r.id = u.role_id
 		ORDER BY u.created_at DESC
-	`)
+		LIMIT $1 OFFSET $2
+	`, limit, offset)
 	if err != nil {
 		return nil, err
 	}

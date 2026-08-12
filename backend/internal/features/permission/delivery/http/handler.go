@@ -9,6 +9,7 @@ import (
 	permissionusecase "apihorpug/internal/features/permission/usecase"
 	"apihorpug/internal/http/apierror"
 	"apihorpug/internal/http/apiresponse"
+	"apihorpug/internal/http/httputil"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -30,20 +31,28 @@ func NewHandler(usecase *permissionusecase.Service) *Handler {
 // @Summary List permissions
 // @Tags permissions
 // @Produce json
-// @Success 200 {array} permissiondomain.Permission
+// @Param page query int false "Page number (default 1)"
+// @Param per_page query int false "Results per page (default 10, max 100)"
+// @Success 200 {object} apiresponse.Meta
+// @Failure 400 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
 // @Security BearerAuth
 // @Router /permissions [get]
 func (h *Handler) List(c fiber.Ctx) error {
+	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
+	if err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	permissions, err := h.usecase.List(ctx)
+	permissions, total, err := h.usecase.List(ctx, perPage, offset)
 	if err != nil {
 		return apierror.Internal("failed to list permissions")
 	}
 
-	return apiresponse.OK(c, permissions)
+	return apiresponse.Paginated(c, permissions, page, perPage, total)
 }
 
 // Create godoc

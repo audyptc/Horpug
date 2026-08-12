@@ -10,6 +10,7 @@ import (
 	userusecase "apihorpug/internal/features/user/usecase"
 	"apihorpug/internal/http/apierror"
 	"apihorpug/internal/http/apiresponse"
+	"apihorpug/internal/http/httputil"
 	"apihorpug/internal/http/middleware"
 
 	"github.com/gofiber/fiber/v3"
@@ -44,20 +45,28 @@ func NewHandler(usecase *userusecase.Service) *Handler {
 // @Summary List users
 // @Tags users
 // @Produce json
-// @Success 200 {array} userdomain.User
+// @Param page query int false "Page number (default 1)"
+// @Param per_page query int false "Results per page (default 10, max 100)"
+// @Success 200 {object} apiresponse.Meta
+// @Failure 400 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
 // @Security BearerAuth
 // @Router /users [get]
 func (h *Handler) List(c fiber.Ctx) error {
+	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
+	if err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	users, err := h.usecase.List(ctx)
+	users, total, err := h.usecase.List(ctx, perPage, offset)
 	if err != nil {
 		return apierror.Internal("failed to list users")
 	}
 
-	return apiresponse.OK(c, users)
+	return apiresponse.Paginated(c, users, page, perPage, total)
 }
 
 // Get godoc

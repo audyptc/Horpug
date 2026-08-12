@@ -3,7 +3,6 @@ package http
 import (
 	"context"
 	"errors"
-	"strconv"
 	"strings"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
 	"apihorpug/internal/http/apierror"
 	"apihorpug/internal/http/apiresponse"
+	"apihorpug/internal/http/httputil"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -39,9 +39,9 @@ func NewHandler(usecase *activitylogusecase.Service) *Handler {
 // @Param user_id query string false "Filter by user ID"
 // @Param entity_type query string false "Filter by entity type"
 // @Param entity_id query string false "Filter by entity ID"
-// @Param limit query int false "Max results (default 50, max 200)"
-// @Param offset query int false "Result offset"
-// @Success 200 {array} activitylogdomain.ActivityLog
+// @Param page query int false "Page number (default 1)"
+// @Param per_page query int false "Results per page (default 10, max 100)"
+// @Success 200 {object} apiresponse.Meta
 // @Failure 400 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
 // @Security BearerAuth
@@ -67,31 +67,22 @@ func (h *Handler) List(c fiber.Ctx) error {
 		filter.EntityID = &entityID
 	}
 
-	if raw := c.Query("limit"); raw != "" {
-		limit, err := strconv.Atoi(raw)
-		if err != nil {
-			return apierror.BadRequest("invalid limit")
-		}
-		filter.Limit = limit
+	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
+	if err != nil {
+		return err
 	}
-
-	if raw := c.Query("offset"); raw != "" {
-		offset, err := strconv.Atoi(raw)
-		if err != nil {
-			return apierror.BadRequest("invalid offset")
-		}
-		filter.Offset = offset
-	}
+	filter.Limit = perPage
+	filter.Offset = offset
 
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	logs, err := h.usecase.List(ctx, filter)
+	logs, total, err := h.usecase.List(ctx, filter)
 	if err != nil {
 		return apierror.Internal("failed to list activity logs")
 	}
 
-	return apiresponse.OK(c, logs)
+	return apiresponse.Paginated(c, logs, page, perPage, total)
 }
 
 // Get godoc

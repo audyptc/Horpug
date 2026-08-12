@@ -48,7 +48,7 @@ func scanActivityLog(row pgx.Row, log *activitylogdomain.ActivityLog) error {
 	)
 }
 
-func (r *Repository) List(ctx context.Context, filter activitylogusecase.ListFilter) ([]activitylogdomain.ActivityLog, error) {
+func buildListConditions(filter activitylogusecase.ListFilter) ([]string, []any, int) {
 	conditions := make([]string, 0)
 	args := make([]any, 0)
 	argIdx := 1
@@ -68,6 +68,27 @@ func (r *Repository) List(ctx context.Context, filter activitylogusecase.ListFil
 		args = append(args, *filter.EntityID)
 		argIdx++
 	}
+
+	return conditions, args, argIdx
+}
+
+func (r *Repository) Count(ctx context.Context, filter activitylogusecase.ListFilter) (int64, error) {
+	conditions, args, _ := buildListConditions(filter)
+
+	query := `SELECT COUNT(*) FROM activity_logs al`
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	var total int64
+	if err := r.db.QueryRow(ctx, query, args...).Scan(&total); err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+func (r *Repository) List(ctx context.Context, filter activitylogusecase.ListFilter) ([]activitylogdomain.ActivityLog, error) {
+	conditions, args, argIdx := buildListConditions(filter)
 
 	query := fmt.Sprintf(`
 		SELECT %s

@@ -10,6 +10,7 @@ import (
 	dormusecase "apihorpug/internal/features/dormitory/usecase"
 	"apihorpug/internal/http/apierror"
 	"apihorpug/internal/http/apiresponse"
+	"apihorpug/internal/http/httputil"
 	"apihorpug/internal/http/middleware"
 
 	"github.com/gofiber/fiber/v3"
@@ -47,7 +48,10 @@ func NewHandler(usecase *dormusecase.Service) *Handler {
 // @Description Returns every dormitory for roles with full dormitory access, otherwise only the dormitories the caller manages.
 // @Tags dormitories
 // @Produce json
-// @Success 200 {array} dormdomain.Dormitory
+// @Param page query int false "Page number (default 1)"
+// @Param per_page query int false "Results per page (default 10, max 100)"
+// @Success 200 {object} apiresponse.Meta
+// @Failure 400 {object} apierror.Error
 // @Failure 401 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
 // @Security BearerAuth
@@ -58,15 +62,20 @@ func (h *Handler) List(c fiber.Ctx) error {
 		return apierror.Unauthorized("authentication required")
 	}
 
+	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
+	if err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	dormitories, err := h.usecase.List(ctx, requesterID)
+	dormitories, total, err := h.usecase.List(ctx, requesterID, perPage, offset)
 	if err != nil {
 		return apierror.Internal("failed to list dormitories")
 	}
 
-	return apiresponse.OK(c, dormitories)
+	return apiresponse.Paginated(c, dormitories, page, perPage, total)
 }
 
 // Get godoc
