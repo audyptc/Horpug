@@ -915,6 +915,330 @@ const docTemplate = `{
                 }
             }
         },
+        "/invoices": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns every invoice for roles with full dormitory access, otherwise only invoices under dormitories the caller manages. Optionally filter by contract, room, dormitory, tenant, status or billing period.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "List invoices",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by contract ID",
+                        "name": "contract_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by room ID",
+                        "name": "room_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by dormitory ID",
+                        "name": "dormitory_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by tenant ID",
+                        "name": "tenant_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (unpaid, paid, overdue, cancelled)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by billing period year",
+                        "name": "period_year",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by billing period month (1-12)",
+                        "name": "period_month",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Results per page (default 10, max 100)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apiresponse.Meta"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Builds an invoice from the contract's rent price plus any electricity/water meter readings recorded for the contract's room within the given period_year/period_month, each stored as a line item.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Create an invoice for a contract's billing period",
+                "parameters": [
+                    {
+                        "description": "Invoice payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_invoice_delivery_http.createInvoiceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.Invoice"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/invoices/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Get an invoice by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.Invoice"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Update an invoice's status, due date or note",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Invoice payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_invoice_delivery_http.updateInvoiceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.Invoice"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Delete an invoice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/menus": {
             "get": {
                 "security": [
@@ -3607,6 +3931,133 @@ const docTemplate = `{
                 }
             }
         },
+        "apihorpug_internal_features_invoice_domain.Invoice": {
+            "type": "object",
+            "properties": {
+                "contract_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "dormitory_id": {
+                    "type": "string"
+                },
+                "dormitory_name": {
+                    "type": "string"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "issue_date": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.InvoiceItem"
+                    }
+                },
+                "note": {
+                    "type": "string"
+                },
+                "paid_at": {
+                    "type": "string"
+                },
+                "period_month": {
+                    "type": "integer"
+                },
+                "period_year": {
+                    "type": "integer"
+                },
+                "room_id": {
+                    "type": "string"
+                },
+                "room_number": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.InvoiceStatus"
+                },
+                "tenant_id": {
+                    "type": "string"
+                },
+                "tenant_name": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_invoice_domain.InvoiceItem": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "invoice_id": {
+                    "type": "string"
+                },
+                "item_type": {
+                    "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.InvoiceItemType"
+                },
+                "reference_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_invoice_domain.InvoiceItemType": {
+            "type": "string",
+            "enum": [
+                "rent",
+                "electricity",
+                "water",
+                "other"
+            ],
+            "x-enum-varnames": [
+                "InvoiceItemTypeRent",
+                "InvoiceItemTypeElectricity",
+                "InvoiceItemTypeWater",
+                "InvoiceItemTypeOther"
+            ]
+        },
+        "apihorpug_internal_features_invoice_domain.InvoiceStatus": {
+            "type": "string",
+            "enum": [
+                "unpaid",
+                "paid",
+                "overdue",
+                "cancelled"
+            ],
+            "x-enum-varnames": [
+                "InvoiceStatusUnpaid",
+                "InvoiceStatusPaid",
+                "InvoiceStatusOverdue",
+                "InvoiceStatusCancelled"
+            ]
+        },
         "apihorpug_internal_features_menu_domain.Menu": {
             "type": "object",
             "properties": {
@@ -4237,6 +4688,43 @@ const docTemplate = `{
                 },
                 "phone": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_features_invoice_delivery_http.createInvoiceRequest": {
+            "type": "object",
+            "properties": {
+                "contract_id": {
+                    "type": "string"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "issue_date": {
+                    "type": "string"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "period_month": {
+                    "type": "integer"
+                },
+                "period_year": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_features_invoice_delivery_http.updateInvoiceRequest": {
+            "type": "object",
+            "properties": {
+                "due_date": {
+                    "type": "string"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.InvoiceStatus"
                 }
             }
         },

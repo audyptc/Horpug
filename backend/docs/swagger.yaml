@@ -108,6 +108,94 @@ definitions:
       username:
         type: string
     type: object
+  apihorpug_internal_features_invoice_domain.Invoice:
+    properties:
+      contract_id:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      dormitory_id:
+        type: string
+      dormitory_name:
+        type: string
+      due_date:
+        type: string
+      id:
+        type: string
+      issue_date:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/apihorpug_internal_features_invoice_domain.InvoiceItem'
+        type: array
+      note:
+        type: string
+      paid_at:
+        type: string
+      period_month:
+        type: integer
+      period_year:
+        type: integer
+      room_id:
+        type: string
+      room_number:
+        type: string
+      status:
+        $ref: '#/definitions/apihorpug_internal_features_invoice_domain.InvoiceStatus'
+      tenant_id:
+        type: string
+      tenant_name:
+        type: string
+      total_amount:
+        type: number
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  apihorpug_internal_features_invoice_domain.InvoiceItem:
+    properties:
+      amount:
+        type: number
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      invoice_id:
+        type: string
+      item_type:
+        $ref: '#/definitions/apihorpug_internal_features_invoice_domain.InvoiceItemType'
+      reference_id:
+        type: string
+    type: object
+  apihorpug_internal_features_invoice_domain.InvoiceItemType:
+    enum:
+    - rent
+    - electricity
+    - water
+    - other
+    type: string
+    x-enum-varnames:
+    - InvoiceItemTypeRent
+    - InvoiceItemTypeElectricity
+    - InvoiceItemTypeWater
+    - InvoiceItemTypeOther
+  apihorpug_internal_features_invoice_domain.InvoiceStatus:
+    enum:
+    - unpaid
+    - paid
+    - overdue
+    - cancelled
+    type: string
+    x-enum-varnames:
+    - InvoiceStatusUnpaid
+    - InvoiceStatusPaid
+    - InvoiceStatusOverdue
+    - InvoiceStatusCancelled
   apihorpug_internal_features_menu_domain.Menu:
     properties:
       created_at:
@@ -525,6 +613,30 @@ definitions:
         type: string
       phone:
         type: string
+    type: object
+  internal_features_invoice_delivery_http.createInvoiceRequest:
+    properties:
+      contract_id:
+        type: string
+      due_date:
+        type: string
+      issue_date:
+        type: string
+      note:
+        type: string
+      period_month:
+        type: integer
+      period_year:
+        type: integer
+    type: object
+  internal_features_invoice_delivery_http.updateInvoiceRequest:
+    properties:
+      due_date:
+        type: string
+      note:
+        type: string
+      status:
+        $ref: '#/definitions/apihorpug_internal_features_invoice_domain.InvoiceStatus'
     type: object
   internal_features_meter_delivery_http.createMeterRequest:
     properties:
@@ -1351,6 +1463,217 @@ paths:
       summary: List active dormitories
       tags:
       - dormitories
+  /invoices:
+    get:
+      description: Returns every invoice for roles with full dormitory access, otherwise
+        only invoices under dormitories the caller manages. Optionally filter by contract,
+        room, dormitory, tenant, status or billing period.
+      parameters:
+      - description: Filter by contract ID
+        in: query
+        name: contract_id
+        type: string
+      - description: Filter by room ID
+        in: query
+        name: room_id
+        type: string
+      - description: Filter by dormitory ID
+        in: query
+        name: dormitory_id
+        type: string
+      - description: Filter by tenant ID
+        in: query
+        name: tenant_id
+        type: string
+      - description: Filter by status (unpaid, paid, overdue, cancelled)
+        in: query
+        name: status
+        type: string
+      - description: Filter by billing period year
+        in: query
+        name: period_year
+        type: integer
+      - description: Filter by billing period month (1-12)
+        in: query
+        name: period_month
+        type: integer
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List invoices
+      tags:
+      - invoices
+    post:
+      consumes:
+      - application/json
+      description: Builds an invoice from the contract's rent price plus any electricity/water
+        meter readings recorded for the contract's room within the given period_year/period_month,
+        each stored as a line item.
+      parameters:
+      - description: Invoice payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_invoice_delivery_http.createInvoiceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_invoice_domain.Invoice'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Create an invoice for a contract's billing period
+      tags:
+      - invoices
+  /invoices/{id}:
+    delete:
+      parameters:
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Delete an invoice
+      tags:
+      - invoices
+    get:
+      parameters:
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_invoice_domain.Invoice'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get an invoice by ID
+      tags:
+      - invoices
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Invoice payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_invoice_delivery_http.updateInvoiceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_invoice_domain.Invoice'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Update an invoice's status, due date or note
+      tags:
+      - invoices
   /menus:
     get:
       parameters:

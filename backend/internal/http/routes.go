@@ -15,6 +15,9 @@ import (
 	dormitoryhttp "apihorpug/internal/features/dormitory/delivery/http"
 	dormitoryrepository "apihorpug/internal/features/dormitory/repository/postgres"
 	dormitoryusecase "apihorpug/internal/features/dormitory/usecase"
+	invoicehttp "apihorpug/internal/features/invoice/delivery/http"
+	invoicerepository "apihorpug/internal/features/invoice/repository/postgres"
+	invoiceusecase "apihorpug/internal/features/invoice/usecase"
 	menuhttp "apihorpug/internal/features/menu/delivery/http"
 	menurepository "apihorpug/internal/features/menu/repository/postgres"
 	menuusecase "apihorpug/internal/features/menu/usecase"
@@ -83,6 +86,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	waterMeterRepo := watermeterrepository.NewRepository(db)
 	waterMeterService := watermeterusecase.New(waterMeterRepo)
 	waterMeterHandler := watermeterhttp.NewHandler(waterMeterService)
+	invoiceRepo := invoicerepository.NewRepository(db)
+	invoiceService := invoiceusecase.New(invoiceRepo)
+	invoiceHandler := invoicehttp.NewHandler(invoiceService)
 	activityLogRepo := activitylogrepository.NewRepository(db)
 	activityLogService := activitylogusecase.New(activityLogRepo)
 	activityLogHandler := activityloghttp.NewHandler(activityLogService)
@@ -171,6 +177,12 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Post("/water-meters", requirePermission("/water-meters", permissiondomain.ActionCreate), waterMeterHandler.Create)
 	api.Put("/water-meters/:id", requirePermission("/water-meters", permissiondomain.ActionUpdate), waterMeterHandler.Update)
 	api.Delete("/water-meters/:id", requirePermission("/water-meters", permissiondomain.ActionDelete), waterMeterHandler.Delete)
+
+	api.Get("/invoices", requirePermission("/invoices", permissiondomain.ActionRead), invoiceHandler.List)
+	api.Get("/invoices/:id", requirePermission("/invoices", permissiondomain.ActionRead), invoiceHandler.Get)
+	api.Post("/invoices", requirePermission("/invoices", permissiondomain.ActionCreate), invoiceHandler.Create)
+	api.Put("/invoices/:id", requirePermission("/invoices", permissiondomain.ActionUpdate), invoiceHandler.Update)
+	api.Delete("/invoices/:id", requirePermission("/invoices", permissiondomain.ActionDelete), invoiceHandler.Delete)
 
 	api.Get("/activity-logs", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.List)
 	api.Get("/activity-logs/:id", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.Get)

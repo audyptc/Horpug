@@ -28,6 +28,7 @@ func SeedMenus(db *pgxpool.Pool) error {
 		{Name: "Contracts", Path: "/contracts", Description: "Lease contract management", IsActive: true},
 		{Name: "Electricity Meters", Path: "/meters", Description: "Electricity meter reading management", IsActive: true},
 		{Name: "Water Meters", Path: "/water-meters", Description: "Water meter reading management", IsActive: true},
+		{Name: "Invoices", Path: "/invoices", Description: "Tenant invoice management", IsActive: true},
 		{Name: "Activity Logs", Path: "/activity-logs", Description: "Activity log records", IsActive: true},
 	}
 
