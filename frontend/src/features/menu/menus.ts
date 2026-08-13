@@ -8,6 +8,7 @@ import {
   Droplets,
   FileText,
   Gauge,
+  HandCoins,
   History,
   Receipt,
   ShieldCheck,
@@ -89,6 +90,12 @@ export const menuMeta: Record<string, MenuMeta> = {
     icon: CreditCard,
     labelKey: 'menuPayments',
     descriptionKey: 'menuPaymentsDescription',
+    group: 'finance',
+  },
+  '/expenses': {
+    icon: HandCoins,
+    labelKey: 'menuExpenses',
+    descriptionKey: 'menuExpensesDescription',
     group: 'finance',
   },
   '/roles': {

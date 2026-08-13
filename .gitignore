@@ -9,7 +9,7 @@
 # Binary builds
 # สร้างไฟล์ executable จากคำสั่ง go build
 *.exe
-app
+/backend/app
 
 # Logs
 logs
