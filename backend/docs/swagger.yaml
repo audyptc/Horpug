@@ -140,6 +140,45 @@ definitions:
       role_id:
         type: string
     type: object
+  apihorpug_internal_features_room_domain.Room:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      dormitory_id:
+        type: string
+      dormitory_name:
+        type: string
+      floor:
+        type: integer
+      id:
+        type: string
+      is_active:
+        type: boolean
+      room_number:
+        type: string
+      room_type_id:
+        type: string
+      room_type_name:
+        type: string
+      status:
+        $ref: '#/definitions/apihorpug_internal_features_room_domain.RoomStatus'
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  apihorpug_internal_features_room_domain.RoomStatus:
+    enum:
+    - available
+    - occupied
+    - maintenance
+    type: string
+    x-enum-varnames:
+    - RoomStatusAvailable
+    - RoomStatusOccupied
+    - RoomStatusMaintenance
   apihorpug_internal_features_roomtype_domain.RoomType:
     properties:
       created_at:
@@ -334,6 +373,34 @@ definitions:
         type: array
       name:
         type: string
+    type: object
+  internal_features_room_delivery_http.createRoomRequest:
+    properties:
+      dormitory_id:
+        type: string
+      floor:
+        type: integer
+      is_active:
+        type: boolean
+      room_number:
+        type: string
+      room_type_id:
+        type: string
+      status:
+        $ref: '#/definitions/apihorpug_internal_features_room_domain.RoomStatus'
+    type: object
+  internal_features_room_delivery_http.updateRoomRequest:
+    properties:
+      floor:
+        type: integer
+      is_active:
+        type: boolean
+      room_number:
+        type: string
+      room_type_id:
+        type: string
+      status:
+        $ref: '#/definitions/apihorpug_internal_features_room_domain.RoomStatus'
     type: object
   internal_features_roomtype_delivery_http.createRoomTypeRequest:
     properties:
@@ -1039,6 +1106,41 @@ paths:
       summary: Update a role
       tags:
       - roles
+  /roles/active:
+    get:
+      description: Returns active roles. Intended for populating role selectors; results
+        are capped rather than paginated.
+      parameters:
+      - description: Filter by name
+        in: query
+        name: q
+        type: string
+      - description: Max results (default 50, max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/apihorpug_internal_features_role_domain.Role'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List active roles
+      tags:
+      - roles
   /room-types:
     get:
       description: Returns every room type for roles with full dormitory access, otherwise
@@ -1272,6 +1374,237 @@ paths:
       summary: List active room types
       tags:
       - room-types
+  /rooms:
+    get:
+      description: Returns every room for roles with full dormitory access, otherwise
+        only rooms under dormitories the caller manages. Optionally filter by dormitory.
+      parameters:
+      - description: Filter by dormitory ID
+        in: query
+        name: dormitory_id
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List rooms
+      tags:
+      - rooms
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Room payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_room_delivery_http.createRoomRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_room_domain.Room'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Create a room
+      tags:
+      - rooms
+  /rooms/{id}:
+    delete:
+      parameters:
+      - description: Room ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Delete a room
+      tags:
+      - rooms
+    get:
+      parameters:
+      - description: Room ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_room_domain.Room'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get a room by ID
+      tags:
+      - rooms
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Room ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Room payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_room_delivery_http.updateRoomRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_room_domain.Room'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Update a room
+      tags:
+      - rooms
+  /rooms/active:
+    get:
+      description: Returns active rooms for roles with full dormitory access, otherwise
+        only the active rooms under dormitories the caller manages. Intended for populating
+        room selectors; results are capped rather than paginated.
+      parameters:
+      - description: Filter by dormitory ID
+        in: query
+        name: dormitory_id
+        type: string
+      - description: Filter by room number
+        in: query
+        name: q
+        type: string
+      - description: Max results (default 50, max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/apihorpug_internal_features_room_domain.Room'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List active rooms
+      tags:
+      - rooms
   /users:
     get:
       parameters:

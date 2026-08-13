@@ -22,6 +22,9 @@ import (
 	rolehttp "apihorpug/internal/features/role/delivery/http"
 	rolerepository "apihorpug/internal/features/role/repository/postgres"
 	roleusecase "apihorpug/internal/features/role/usecase"
+	roomhttp "apihorpug/internal/features/room/delivery/http"
+	roomrepository "apihorpug/internal/features/room/repository/postgres"
+	roomusecase "apihorpug/internal/features/room/usecase"
 	roomtypehttp "apihorpug/internal/features/roomtype/delivery/http"
 	roomtyperepository "apihorpug/internal/features/roomtype/repository/postgres"
 	roomtypeusecase "apihorpug/internal/features/roomtype/usecase"
@@ -53,6 +56,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	roomTypeRepo := roomtyperepository.NewRepository(db)
 	roomTypeService := roomtypeusecase.New(roomTypeRepo)
 	roomTypeHandler := roomtypehttp.NewHandler(roomTypeService)
+	roomRepo := roomrepository.NewRepository(db)
+	roomService := roomusecase.New(roomRepo)
+	roomHandler := roomhttp.NewHandler(roomService)
 	activityLogRepo := activitylogrepository.NewRepository(db)
 	activityLogService := activitylogusecase.New(activityLogRepo)
 	activityLogHandler := activityloghttp.NewHandler(activityLogService)
@@ -109,6 +115,13 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Post("/room-types", requirePermission("/room-types", permissiondomain.ActionCreate), roomTypeHandler.Create)
 	api.Put("/room-types/:id", requirePermission("/room-types", permissiondomain.ActionUpdate), roomTypeHandler.Update)
 	api.Delete("/room-types/:id", requirePermission("/room-types", permissiondomain.ActionDelete), roomTypeHandler.Delete)
+
+	api.Get("/rooms", requirePermission("/rooms", permissiondomain.ActionRead), roomHandler.List)
+	api.Get("/rooms/active", requirePermission("/rooms", permissiondomain.ActionRead), roomHandler.ListActive)
+	api.Get("/rooms/:id", requirePermission("/rooms", permissiondomain.ActionRead), roomHandler.Get)
+	api.Post("/rooms", requirePermission("/rooms", permissiondomain.ActionCreate), roomHandler.Create)
+	api.Put("/rooms/:id", requirePermission("/rooms", permissiondomain.ActionUpdate), roomHandler.Update)
+	api.Delete("/rooms/:id", requirePermission("/rooms", permissiondomain.ActionDelete), roomHandler.Delete)
 
 	api.Get("/activity-logs", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.List)
 	api.Get("/activity-logs/:id", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.Get)

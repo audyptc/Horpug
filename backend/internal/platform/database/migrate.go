@@ -110,6 +110,26 @@ func AutoMigrate(db *pgxpool.Pool) error {
 			CONSTRAINT uq_room_types_dormitory_name UNIQUE (dormitory_id, name)
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_room_types_dormitory_id ON room_types(dormitory_id)`,
+		`CREATE TABLE IF NOT EXISTS rooms (
+			id UUID PRIMARY KEY,
+			dormitory_id UUID NOT NULL,
+			room_type_id UUID NOT NULL,
+			room_number VARCHAR(20) NOT NULL,
+			floor INTEGER NOT NULL DEFAULT 1,
+			status VARCHAR(20) NOT NULL DEFAULT 'available',
+			is_active BOOLEAN NOT NULL DEFAULT TRUE,
+			created_by UUID,
+			updated_by UUID,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			CONSTRAINT rooms_dormitory_fkey FOREIGN KEY (dormitory_id) REFERENCES dormitories(id) ON DELETE CASCADE,
+			CONSTRAINT rooms_room_type_fkey FOREIGN KEY (room_type_id) REFERENCES room_types(id) ON DELETE RESTRICT,
+			CONSTRAINT rooms_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+			CONSTRAINT rooms_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
+			CONSTRAINT uq_rooms_dormitory_room_number UNIQUE (dormitory_id, room_number)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_rooms_dormitory_id ON rooms(dormitory_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_rooms_room_type_id ON rooms(room_type_id)`,
 		`CREATE TABLE IF NOT EXISTS activity_logs (
 			id UUID PRIMARY KEY,
 			user_id UUID,
