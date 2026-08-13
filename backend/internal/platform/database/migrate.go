@@ -201,6 +201,36 @@ func AutoMigrate(db *pgxpool.Pool) error {
 			CONSTRAINT chk_electricity_meters_flat_amount_nonneg CHECK (flat_amount IS NULL OR flat_amount >= 0)
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_electricity_meters_room_id ON electricity_meters(room_id)`,
+		`CREATE TABLE IF NOT EXISTS water_meters (
+			id UUID PRIMARY KEY,
+			room_id UUID NOT NULL,
+			billing_method VARCHAR(20) NOT NULL DEFAULT 'metered',
+			reading_date DATE NOT NULL,
+			previous_unit NUMERIC(10,2) NOT NULL DEFAULT 0,
+			current_unit NUMERIC(10,2) NOT NULL DEFAULT 0,
+			unit_used NUMERIC(10,2) GENERATED ALWAYS AS (current_unit - previous_unit) STORED,
+			price_per_unit NUMERIC(10,2) NOT NULL DEFAULT 0,
+			flat_amount NUMERIC(10,2),
+			total_amount NUMERIC(10,2) GENERATED ALWAYS AS (
+				CASE WHEN billing_method = 'flat' THEN COALESCE(flat_amount, 0)
+				ELSE (current_unit - previous_unit) * price_per_unit
+				END
+			) STORED,
+			note VARCHAR(255) DEFAULT '',
+			created_by UUID,
+			updated_by UUID,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			CONSTRAINT water_meters_room_fkey FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+			CONSTRAINT water_meters_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+			CONSTRAINT water_meters_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
+			CONSTRAINT uq_water_meters_room_date UNIQUE (room_id, reading_date),
+			CONSTRAINT chk_water_meters_units CHECK (previous_unit >= 0 AND current_unit >= previous_unit),
+			CONSTRAINT chk_water_meters_billing_method CHECK (billing_method IN ('metered', 'flat')),
+			CONSTRAINT chk_water_meters_flat_amount CHECK (billing_method <> 'flat' OR flat_amount IS NOT NULL),
+			CONSTRAINT chk_water_meters_flat_amount_nonneg CHECK (flat_amount IS NULL OR flat_amount >= 0)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_water_meters_room_id ON water_meters(room_id)`,
 		`CREATE TABLE IF NOT EXISTS activity_logs (
 			id UUID PRIMARY KEY,
 			user_id UUID,

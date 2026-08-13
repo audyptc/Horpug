@@ -40,6 +40,9 @@ import (
 	userhttp "apihorpug/internal/features/user/delivery/http"
 	userrepository "apihorpug/internal/features/user/repository/postgres"
 	userusecase "apihorpug/internal/features/user/usecase"
+	watermeterhttp "apihorpug/internal/features/watermeter/delivery/http"
+	watermeterrepository "apihorpug/internal/features/watermeter/repository/postgres"
+	watermeterusecase "apihorpug/internal/features/watermeter/usecase"
 	"apihorpug/internal/http/middleware"
 
 	"github.com/gofiber/fiber/v3"
@@ -77,6 +80,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	meterRepo := meterrepository.NewRepository(db)
 	meterService := meterusecase.New(meterRepo)
 	meterHandler := meterhttp.NewHandler(meterService)
+	waterMeterRepo := watermeterrepository.NewRepository(db)
+	waterMeterService := watermeterusecase.New(waterMeterRepo)
+	waterMeterHandler := watermeterhttp.NewHandler(waterMeterService)
 	activityLogRepo := activitylogrepository.NewRepository(db)
 	activityLogService := activitylogusecase.New(activityLogRepo)
 	activityLogHandler := activityloghttp.NewHandler(activityLogService)
@@ -159,6 +165,12 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Post("/meters", requirePermission("/meters", permissiondomain.ActionCreate), meterHandler.Create)
 	api.Put("/meters/:id", requirePermission("/meters", permissiondomain.ActionUpdate), meterHandler.Update)
 	api.Delete("/meters/:id", requirePermission("/meters", permissiondomain.ActionDelete), meterHandler.Delete)
+
+	api.Get("/water-meters", requirePermission("/water-meters", permissiondomain.ActionRead), waterMeterHandler.List)
+	api.Get("/water-meters/:id", requirePermission("/water-meters", permissiondomain.ActionRead), waterMeterHandler.Get)
+	api.Post("/water-meters", requirePermission("/water-meters", permissiondomain.ActionCreate), waterMeterHandler.Create)
+	api.Put("/water-meters/:id", requirePermission("/water-meters", permissiondomain.ActionUpdate), waterMeterHandler.Update)
+	api.Delete("/water-meters/:id", requirePermission("/water-meters", permissiondomain.ActionDelete), waterMeterHandler.Delete)
 
 	api.Get("/activity-logs", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.List)
 	api.Get("/activity-logs/:id", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.Get)

@@ -3142,6 +3142,306 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/water-meters": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns every water meter reading for roles with full dormitory access, otherwise only readings under dormitories the caller manages. Optionally filter by room or dormitory.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "water-meters"
+                ],
+                "summary": "List water meter readings",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by room ID",
+                        "name": "room_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by dormitory ID",
+                        "name": "dormitory_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Results per page (default 10, max 100)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apiresponse.Meta"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Records a water meter reading or charge for a room. billing_method \"metered\" (default) derives total_amount as (current_unit - previous_unit) * price_per_unit; billing_method \"flat\" uses flat_amount directly as total_amount, for flat-rate, tiered or shared-meter charges computed externally.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "water-meters"
+                ],
+                "summary": "Record a water meter reading",
+                "parameters": [
+                    {
+                        "description": "Meter reading payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_watermeter_delivery_http.createMeterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_watermeter_domain.Meter"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/water-meters/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "water-meters"
+                ],
+                "summary": "Get a water meter reading by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Meter reading ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_watermeter_domain.Meter"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "water-meters"
+                ],
+                "summary": "Update a water meter reading",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Meter reading ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Meter reading payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_watermeter_delivery_http.updateMeterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_watermeter_domain.Meter"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "water-meters"
+                ],
+                "summary": "Delete a water meter reading",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Meter reading ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -3695,6 +3995,76 @@ const docTemplate = `{
                 }
             }
         },
+        "apihorpug_internal_features_watermeter_domain.BillingMethod": {
+            "type": "string",
+            "enum": [
+                "metered",
+                "flat"
+            ],
+            "x-enum-varnames": [
+                "BillingMethodMetered",
+                "BillingMethodFlat"
+            ]
+        },
+        "apihorpug_internal_features_watermeter_domain.Meter": {
+            "type": "object",
+            "properties": {
+                "billing_method": {
+                    "$ref": "#/definitions/apihorpug_internal_features_watermeter_domain.BillingMethod"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "current_unit": {
+                    "type": "number"
+                },
+                "dormitory_id": {
+                    "type": "string"
+                },
+                "dormitory_name": {
+                    "type": "string"
+                },
+                "flat_amount": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "previous_unit": {
+                    "type": "number"
+                },
+                "price_per_unit": {
+                    "type": "number"
+                },
+                "reading_date": {
+                    "type": "string"
+                },
+                "room_id": {
+                    "type": "string"
+                },
+                "room_number": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
+                },
+                "unit_used": {
+                    "type": "number"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
         "apihorpug_internal_http_apierror.Error": {
             "type": "object",
             "properties": {
@@ -4182,6 +4552,61 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_watermeter_delivery_http.createMeterRequest": {
+            "type": "object",
+            "properties": {
+                "billing_method": {
+                    "$ref": "#/definitions/apihorpug_internal_features_watermeter_domain.BillingMethod"
+                },
+                "current_unit": {
+                    "type": "number"
+                },
+                "flat_amount": {
+                    "type": "number"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "previous_unit": {
+                    "type": "number"
+                },
+                "price_per_unit": {
+                    "type": "number"
+                },
+                "reading_date": {
+                    "type": "string"
+                },
+                "room_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_watermeter_delivery_http.updateMeterRequest": {
+            "type": "object",
+            "properties": {
+                "billing_method": {
+                    "$ref": "#/definitions/apihorpug_internal_features_watermeter_domain.BillingMethod"
+                },
+                "current_unit": {
+                    "type": "number"
+                },
+                "flat_amount": {
+                    "type": "number"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "previous_unit": {
+                    "type": "number"
+                },
+                "price_per_unit": {
+                    "type": "number"
+                },
+                "reading_date": {
                     "type": "string"
                 }
             }
