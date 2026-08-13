@@ -24,6 +24,9 @@ import (
 	meterhttp "apihorpug/internal/features/meter/delivery/http"
 	meterrepository "apihorpug/internal/features/meter/repository/postgres"
 	meterusecase "apihorpug/internal/features/meter/usecase"
+	paymenthttp "apihorpug/internal/features/payment/delivery/http"
+	paymentrepository "apihorpug/internal/features/payment/repository/postgres"
+	paymentusecase "apihorpug/internal/features/payment/usecase"
 	permissionhttp "apihorpug/internal/features/permission/delivery/http"
 	permissiondomain "apihorpug/internal/features/permission/domain"
 	permissionrepository "apihorpug/internal/features/permission/repository/postgres"
@@ -89,6 +92,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	invoiceRepo := invoicerepository.NewRepository(db)
 	invoiceService := invoiceusecase.New(invoiceRepo)
 	invoiceHandler := invoicehttp.NewHandler(invoiceService)
+	paymentRepo := paymentrepository.NewRepository(db)
+	paymentService := paymentusecase.New(paymentRepo)
+	paymentHandler := paymenthttp.NewHandler(paymentService)
 	activityLogRepo := activitylogrepository.NewRepository(db)
 	activityLogService := activitylogusecase.New(activityLogRepo)
 	activityLogHandler := activityloghttp.NewHandler(activityLogService)
@@ -183,6 +189,11 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Post("/invoices", requirePermission("/invoices", permissiondomain.ActionCreate), invoiceHandler.Create)
 	api.Put("/invoices/:id", requirePermission("/invoices", permissiondomain.ActionUpdate), invoiceHandler.Update)
 	api.Delete("/invoices/:id", requirePermission("/invoices", permissiondomain.ActionDelete), invoiceHandler.Delete)
+
+	api.Get("/payments", requirePermission("/payments", permissiondomain.ActionRead), paymentHandler.List)
+	api.Get("/payments/:id", requirePermission("/payments", permissiondomain.ActionRead), paymentHandler.Get)
+	api.Post("/payments", requirePermission("/payments", permissiondomain.ActionCreate), paymentHandler.Create)
+	api.Delete("/payments/:id", requirePermission("/payments", permissiondomain.ActionDelete), paymentHandler.Delete)
 
 	api.Get("/activity-logs", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.List)
 	api.Get("/activity-logs/:id", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.Get)

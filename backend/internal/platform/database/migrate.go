@@ -267,6 +267,23 @@ func AutoMigrate(db *pgxpool.Pool) error {
 			CONSTRAINT chk_invoice_items_type CHECK (item_type IN ('rent', 'electricity', 'water', 'other'))
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice_id ON invoice_items(invoice_id)`,
+		`CREATE TABLE IF NOT EXISTS payments (
+			id UUID PRIMARY KEY,
+			invoice_id UUID NOT NULL,
+			amount NUMERIC(10,2) NOT NULL,
+			payment_method VARCHAR(20) NOT NULL DEFAULT 'cash',
+			payment_date DATE NOT NULL,
+			reference_no VARCHAR(100) DEFAULT '',
+			note VARCHAR(255) DEFAULT '',
+			created_by UUID,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			CONSTRAINT payments_invoice_fkey FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
+			CONSTRAINT payments_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+			CONSTRAINT chk_payments_amount CHECK (amount > 0),
+			CONSTRAINT chk_payments_method CHECK (payment_method IN ('cash', 'transfer', 'credit_card', 'other'))
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_payments_invoice_id ON payments(invoice_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_payments_payment_date ON payments(payment_date)`,
 		`CREATE TABLE IF NOT EXISTS activity_logs (
 			id UUID PRIMARY KEY,
 			user_id UUID,

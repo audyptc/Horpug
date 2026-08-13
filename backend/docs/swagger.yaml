@@ -260,6 +260,51 @@ definitions:
       updated_by:
         type: string
     type: object
+  apihorpug_internal_features_payment_domain.Payment:
+    properties:
+      amount:
+        type: number
+      created_at:
+        type: string
+      created_by:
+        type: string
+      dormitory_id:
+        type: string
+      dormitory_name:
+        type: string
+      id:
+        type: string
+      invoice_id:
+        type: string
+      note:
+        type: string
+      payment_date:
+        type: string
+      payment_method:
+        $ref: '#/definitions/apihorpug_internal_features_payment_domain.PaymentMethod'
+      reference_no:
+        type: string
+      room_id:
+        type: string
+      room_number:
+        type: string
+      tenant_id:
+        type: string
+      tenant_name:
+        type: string
+    type: object
+  apihorpug_internal_features_payment_domain.PaymentMethod:
+    enum:
+    - cash
+    - transfer
+    - credit_card
+    - other
+    type: string
+    x-enum-varnames:
+    - PaymentMethodCash
+    - PaymentMethodTransfer
+    - PaymentMethodCreditCard
+    - PaymentMethodOther
   apihorpug_internal_features_permission_domain.Permission:
     properties:
       created_at:
@@ -672,6 +717,21 @@ definitions:
       price_per_unit:
         type: number
       reading_date:
+        type: string
+    type: object
+  internal_features_payment_delivery_http.createPaymentRequest:
+    properties:
+      amount:
+        type: number
+      invoice_id:
+        type: string
+      note:
+        type: string
+      payment_date:
+        type: string
+      payment_method:
+        $ref: '#/definitions/apihorpug_internal_features_payment_domain.PaymentMethod'
+      reference_no:
         type: string
     type: object
   internal_features_permission_delivery_http.createPermissionRequest:
@@ -1901,6 +1961,174 @@ paths:
       summary: Update a meter reading
       tags:
       - meters
+  /payments:
+    get:
+      description: Returns every payment for roles with full dormitory access, otherwise
+        only payments under dormitories the caller manages. Optionally filter by invoice,
+        contract, room, dormitory, tenant or payment date range.
+      parameters:
+      - description: Filter by invoice ID
+        in: query
+        name: invoice_id
+        type: string
+      - description: Filter by contract ID
+        in: query
+        name: contract_id
+        type: string
+      - description: Filter by room ID
+        in: query
+        name: room_id
+        type: string
+      - description: Filter by dormitory ID
+        in: query
+        name: dormitory_id
+        type: string
+      - description: Filter by tenant ID
+        in: query
+        name: tenant_id
+        type: string
+      - description: Filter by payment date, inclusive (YYYY-MM-DD)
+        in: query
+        name: date_from
+        type: string
+      - description: Filter by payment date, inclusive (YYYY-MM-DD)
+        in: query
+        name: date_to
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List payments
+      tags:
+      - payments
+    post:
+      consumes:
+      - application/json
+      description: Records a payment for an invoice. Once the invoice's recorded payments
+        reach its total_amount, the invoice is automatically marked paid.
+      parameters:
+      - description: Payment payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_payment_delivery_http.createPaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_payment_domain.Payment'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Record a payment against an invoice
+      tags:
+      - payments
+  /payments/{id}:
+    delete:
+      description: Deletes a payment and re-evaluates the invoice's paid status accordingly.
+      parameters:
+      - description: Payment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Delete a payment
+      tags:
+      - payments
+    get:
+      parameters:
+      - description: Payment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_payment_domain.Payment'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get a payment by ID
+      tags:
+      - payments
   /permissions:
     get:
       parameters:
