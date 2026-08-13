@@ -3,7 +3,6 @@ import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiTenant } from '@/features/tenant/types'
-import type { ApiRoom } from '@/features/room/types'
 import { ContractListCard } from './components/ContractListCard'
 import { ContractFormSheet } from './components/ContractFormSheet'
 import type { ApiContract, ContractStatus } from './types'
@@ -14,7 +13,6 @@ export default function ContractPage() {
 
   const [contracts, setContracts] = useState<ApiContract[] | null>(null)
   const [tenants, setTenants] = useState<ApiTenant[]>([])
-  const [rooms, setRooms] = useState<ApiRoom[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
@@ -47,13 +45,11 @@ export default function ContractPage() {
     Promise.all([
       api.get<ApiPage<ApiContract[]>>('/contracts', { params: { per_page: 100 } }),
       api.get<ApiTenant[]>('/tenants/active', { params: { limit: 100 } }),
-      api.get<ApiRoom[]>('/rooms/active', { params: { limit: 100 } }),
     ])
-      .then(([contractsRes, tenantsRes, roomsRes]) => {
+      .then(([contractsRes, tenantsRes]) => {
         if (cancelled) return
         setContracts(contractsRes.data.data)
         setTenants(tenantsRes.data)
-        setRooms(roomsRes.data)
       })
       .catch((err) => {
         if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
@@ -64,8 +60,6 @@ export default function ContractPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  const availableRooms = useMemo(() => rooms.filter((room) => room.status === 'available'), [rooms])
 
   const filteredContracts = useMemo(() => {
     const q = query.trim().toLocaleLowerCase()
@@ -270,9 +264,14 @@ export default function ContractPage() {
         onTenantIdChange={setFormTenantId}
         tenants={tenants}
         tenantDisplayName={formTenantDisplayName}
-        roomId={formRoomId}
-        onRoomIdChange={setFormRoomId}
-        rooms={availableRooms}
+        onSelectRoom={(room) => {
+          setFormRoomId(room.id)
+          setFormRoomDisplayLabel([room.room_number, room.dormitory_name].filter(Boolean).join(' - '))
+        }}
+        onClearRoomSelection={() => {
+          setFormRoomId('')
+          setFormRoomDisplayLabel('')
+        }}
         roomDisplayLabel={formRoomDisplayLabel}
         startDate={formStartDate}
         onStartDateChange={setFormStartDate}

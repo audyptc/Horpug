@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react'
-import { BedDouble, Building2, Contact, DoorOpen, FileText, History, ShieldCheck, Users2, type LucideIcon } from 'lucide-react'
+import {
+  BedDouble,
+  Building2,
+  Contact,
+  DoorOpen,
+  FileText,
+  Gauge,
+  History,
+  ShieldCheck,
+  Users2,
+  type LucideIcon,
+} from 'lucide-react'
 import { api, type ApiPage } from '@/shared/api/client'
 import { useAuth } from '@/features/auth/AuthProvider'
 import type { TranslationKey } from '@/shared/i18n/language'
@@ -16,7 +27,7 @@ export type MenuMeta = {
   icon: LucideIcon
   labelKey: TranslationKey
   descriptionKey: TranslationKey
-  group?: 'rooms' | 'reports' | 'access' | 'settings'
+  group?: 'rooms' | 'finance' | 'reports' | 'access' | 'settings'
 }
 
 // The backend seeds a fixed, known set of menu paths (see
@@ -52,6 +63,12 @@ export const menuMeta: Record<string, MenuMeta> = {
     labelKey: 'menuContracts',
     descriptionKey: 'menuContractsDescription',
     group: 'rooms',
+  },
+  '/meters': {
+    icon: Gauge,
+    labelKey: 'menuMeters',
+    descriptionKey: 'menuMetersDescription',
+    group: 'finance',
   },
   '/roles': {
     icon: ShieldCheck,

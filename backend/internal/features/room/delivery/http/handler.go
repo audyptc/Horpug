@@ -104,7 +104,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 // @Tags rooms
 // @Produce json
 // @Param dormitory_id query string false "Filter by dormitory ID"
-// @Param q query string false "Filter by room number"
+// @Param q query string false "Filter by room number or dormitory name"
 // @Param limit query int false "Max results (default 50, max 100)"
 // @Success 200 {array} roomdomain.Room
 // @Failure 400 {object} apierror.Error

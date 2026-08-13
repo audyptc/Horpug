@@ -2202,7 +2202,7 @@ paths:
         in: query
         name: dormitory_id
         type: string
-      - description: Filter by room number
+      - description: Filter by room number or dormitory name
         in: query
         name: q
         type: string

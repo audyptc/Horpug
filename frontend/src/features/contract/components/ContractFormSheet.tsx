@@ -11,6 +11,7 @@ import {
 } from '@/shared/components/ui/sheet'
 import type { ApiTenant } from '@/features/tenant/types'
 import type { ApiRoom } from '@/features/room/types'
+import { RoomSearchSelect } from '@/features/room/components/RoomSearchSelect'
 import type { ContractStatus } from '../types'
 import { CONTRACT_STATUSES } from '../utils'
 
@@ -28,9 +29,8 @@ type ContractFormSheetProps = {
   onTenantIdChange: (tenantId: string) => void
   tenants: ApiTenant[]
   tenantDisplayName: string
-  roomId: string
-  onRoomIdChange: (roomId: string) => void
-  rooms: ApiRoom[]
+  onSelectRoom: (room: ApiRoom) => void
+  onClearRoomSelection: () => void
   roomDisplayLabel: string
   startDate: string
   onStartDateChange: (value: string) => void
@@ -59,9 +59,8 @@ export function ContractFormSheet({
   onTenantIdChange,
   tenants,
   tenantDisplayName,
-  roomId,
-  onRoomIdChange,
-  rooms,
+  onSelectRoom,
+  onClearRoomSelection,
   roomDisplayLabel,
   startDate,
   onStartDateChange,
@@ -134,22 +133,15 @@ export function ContractFormSheet({
 
                 <label className="flex flex-col gap-1.5 text-sm font-medium">
                   {t('contractFormRoomLabel')}
-                  {rooms.length === 0 ? (
-                    <p className="text-xs font-normal text-muted-foreground">{t('contractFormNoRooms')}</p>
-                  ) : (
-                    <select
-                      className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                      value={roomId}
-                      onChange={(event) => onRoomIdChange(event.target.value)}
-                    >
-                      <option value="">{t('contractFormRoomPlaceholder')}</option>
-                      {rooms.map((room) => (
-                        <option key={room.id} value={room.id}>
-                          {room.room_number} {room.dormitory_name ? `(${room.dormitory_name})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  )}
+                  <RoomSearchSelect
+                    selectedLabel={roomDisplayLabel}
+                    onSelectRoom={onSelectRoom}
+                    onClearSelection={onClearRoomSelection}
+                    statusFilter="available"
+                    placeholder={t('contractFormRoomPlaceholder')}
+                    changeLabel={t('contractFormRoomChange')}
+                    noResultsLabel={t('contractFormNoRooms')}
+                  />
                 </label>
 
                 <label className="flex flex-col gap-1.5 text-sm font-medium">

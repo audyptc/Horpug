@@ -161,7 +161,7 @@ func (r *Repository) ListActive(ctx context.Context, requesterID uuid.UUID, dorm
 		argIdx++
 	}
 	if search != "" {
-		query += fmt.Sprintf(` AND rm.room_number ILIKE $%d`, argIdx)
+		query += fmt.Sprintf(` AND (rm.room_number ILIKE $%d OR d.name ILIKE $%d)`, argIdx, argIdx)
 		args = append(args, "%"+search+"%")
 		argIdx++
 	}

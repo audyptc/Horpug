@@ -2209,7 +2209,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Filter by room number",
+                        "description": "Filter by room number or dormitory name",
                         "name": "q",
                         "in": "query"
                     },
