@@ -262,8 +262,6 @@ definitions:
     type: object
   apihorpug_internal_features_payment_domain.Payment:
     properties:
-      amount:
-        type: number
       created_at:
         type: string
       created_by:
@@ -276,13 +274,13 @@ definitions:
         type: string
       invoice_id:
         type: string
+      items:
+        items:
+          $ref: '#/definitions/apihorpug_internal_features_payment_domain.PaymentItem'
+        type: array
       note:
         type: string
       payment_date:
-        type: string
-      payment_method:
-        $ref: '#/definitions/apihorpug_internal_features_payment_domain.PaymentMethod'
-      reference_no:
         type: string
       room_id:
         type: string
@@ -291,6 +289,23 @@ definitions:
       tenant_id:
         type: string
       tenant_name:
+        type: string
+      total_amount:
+        type: number
+    type: object
+  apihorpug_internal_features_payment_domain.PaymentItem:
+    properties:
+      amount:
+        type: number
+      created_at:
+        type: string
+      id:
+        type: string
+      payment_id:
+        type: string
+      payment_method:
+        $ref: '#/definitions/apihorpug_internal_features_payment_domain.PaymentMethod'
+      reference_no:
         type: string
     type: object
   apihorpug_internal_features_payment_domain.PaymentMethod:
@@ -719,19 +734,26 @@ definitions:
       reading_date:
         type: string
     type: object
-  internal_features_payment_delivery_http.createPaymentRequest:
+  internal_features_payment_delivery_http.createPaymentItemRequest:
     properties:
       amount:
         type: number
-      invoice_id:
-        type: string
-      note:
-        type: string
-      payment_date:
-        type: string
       payment_method:
         $ref: '#/definitions/apihorpug_internal_features_payment_domain.PaymentMethod'
       reference_no:
+        type: string
+    type: object
+  internal_features_payment_delivery_http.createPaymentRequest:
+    properties:
+      invoice_id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/internal_features_payment_delivery_http.createPaymentItemRequest'
+        type: array
+      note:
+        type: string
+      payment_date:
         type: string
     type: object
   internal_features_permission_delivery_http.createPermissionRequest:
@@ -2030,8 +2052,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Records a payment for an invoice. Once the invoice's recorded payments
-        reach its total_amount, the invoice is automatically marked paid.
+      description: Records a payment for an invoice as one or more line items (e.g.
+        part cash, part transfer), each with its own method, amount and optional reference
+        number. Once the invoice's recorded payments reach its total_amount, the invoice
+        is automatically marked paid.
       parameters:
       - description: Payment payload
         in: body
@@ -2060,12 +2084,14 @@ paths:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
       security:
       - BearerAuth: []
-      summary: Record a payment against an invoice
+      summary: Record a payment against an invoice, split across one or more payment
+        methods
       tags:
       - payments
   /payments/{id}:
     delete:
-      description: Deletes a payment and re-evaluates the invoice's paid status accordingly.
+      description: Deletes a payment (and its items) and re-evaluates the invoice's
+        paid status accordingly.
       parameters:
       - description: Payment ID
         in: path

@@ -3,6 +3,7 @@ import {
   BedDouble,
   Building2,
   Contact,
+  CreditCard,
   DoorOpen,
   Droplets,
   FileText,
@@ -82,6 +83,12 @@ export const menuMeta: Record<string, MenuMeta> = {
     icon: Receipt,
     labelKey: 'menuInvoices',
     descriptionKey: 'menuInvoicesDescription',
+    group: 'finance',
+  },
+  '/payments': {
+    icon: CreditCard,
+    labelKey: 'menuPayments',
+    descriptionKey: 'menuPaymentsDescription',
     group: 'finance',
   },
   '/roles': {

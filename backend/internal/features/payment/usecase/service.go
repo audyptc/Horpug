@@ -20,14 +20,20 @@ type ListFilters struct {
 	DateTo      *time.Time
 }
 
-type CreateInput struct {
-	InvoiceID     uuid.UUID
-	Amount        float64
+// ItemInput is one payment-method line to record as part of a Create call,
+// e.g. the "cash 3,000" portion of a receipt split across multiple methods.
+type ItemInput struct {
 	PaymentMethod paymentdomain.PaymentMethod
-	PaymentDate   time.Time
+	Amount        float64
 	ReferenceNo   string
-	Note          string
-	CreatedBy     *uuid.UUID
+}
+
+type CreateInput struct {
+	InvoiceID   uuid.UUID
+	PaymentDate time.Time
+	Note        string
+	Items       []ItemInput
+	CreatedBy   *uuid.UUID
 }
 
 type Repository interface {
@@ -65,20 +71,27 @@ func (s *Service) GetByID(ctx context.Context, id, requesterID uuid.UUID) (payme
 }
 
 func (s *Service) Create(ctx context.Context, input CreateInput) (paymentdomain.Payment, error) {
-	input.ReferenceNo = strings.TrimSpace(input.ReferenceNo)
 	input.Note = strings.TrimSpace(input.Note)
-	if input.PaymentMethod == "" {
-		input.PaymentMethod = paymentdomain.PaymentMethodCash
-	}
 
 	if input.InvoiceID == uuid.Nil || input.PaymentDate.IsZero() {
 		return paymentdomain.Payment{}, paymentdomain.ErrRequiredPaymentData
 	}
-	if input.Amount <= 0 {
-		return paymentdomain.Payment{}, paymentdomain.ErrInvalidAmount
+	if len(input.Items) == 0 {
+		return paymentdomain.Payment{}, paymentdomain.ErrRequiredItems
 	}
-	if !input.PaymentMethod.Valid() {
-		return paymentdomain.Payment{}, paymentdomain.ErrInvalidMethod
+
+	for i, item := range input.Items {
+		item.ReferenceNo = strings.TrimSpace(item.ReferenceNo)
+		if item.PaymentMethod == "" {
+			item.PaymentMethod = paymentdomain.PaymentMethodCash
+		}
+		if item.Amount <= 0 {
+			return paymentdomain.Payment{}, paymentdomain.ErrInvalidAmount
+		}
+		if !item.PaymentMethod.Valid() {
+			return paymentdomain.Payment{}, paymentdomain.ErrInvalidMethod
+		}
+		input.Items[i] = item
 	}
 
 	return s.repo.Create(ctx, input)

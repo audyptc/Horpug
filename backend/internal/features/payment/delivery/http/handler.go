@@ -21,13 +21,17 @@ type Handler struct {
 	usecase *paymentusecase.Service
 }
 
-type createPaymentRequest struct {
-	InvoiceID     uuid.UUID                   `json:"invoice_id"`
-	Amount        float64                     `json:"amount"`
+type createPaymentItemRequest struct {
 	PaymentMethod paymentdomain.PaymentMethod `json:"payment_method"`
-	PaymentDate   time.Time                   `json:"payment_date"`
+	Amount        float64                     `json:"amount"`
 	ReferenceNo   string                      `json:"reference_no"`
-	Note          string                      `json:"note"`
+}
+
+type createPaymentRequest struct {
+	InvoiceID   uuid.UUID                  `json:"invoice_id"`
+	PaymentDate time.Time                  `json:"payment_date"`
+	Note        string                     `json:"note"`
+	Items       []createPaymentItemRequest `json:"items"`
 }
 
 func NewHandler(usecase *paymentusecase.Service) *Handler {
@@ -183,8 +187,8 @@ func (h *Handler) Get(c fiber.Ctx) error {
 }
 
 // Create godoc
-// @Summary Record a payment against an invoice
-// @Description Records a payment for an invoice. Once the invoice's recorded payments reach its total_amount, the invoice is automatically marked paid.
+// @Summary Record a payment against an invoice, split across one or more payment methods
+// @Description Records a payment for an invoice as one or more line items (e.g. part cash, part transfer), each with its own method, amount and optional reference number. Once the invoice's recorded payments reach its total_amount, the invoice is automatically marked paid.
 // @Tags payments
 // @Accept json
 // @Produce json
@@ -206,24 +210,34 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		return apierror.Unauthorized("authentication required")
 	}
 
+	items := make([]paymentusecase.ItemInput, 0, len(req.Items))
+	for _, item := range req.Items {
+		items = append(items, paymentusecase.ItemInput{
+			PaymentMethod: item.PaymentMethod,
+			Amount:        item.Amount,
+			ReferenceNo:   item.ReferenceNo,
+		})
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
 	payment, err := h.usecase.Create(ctx, paymentusecase.CreateInput{
-		InvoiceID:     req.InvoiceID,
-		Amount:        req.Amount,
-		PaymentMethod: req.PaymentMethod,
-		PaymentDate:   req.PaymentDate,
-		ReferenceNo:   req.ReferenceNo,
-		Note:          req.Note,
-		CreatedBy:     &requesterID,
+		InvoiceID:   req.InvoiceID,
+		PaymentDate: req.PaymentDate,
+		Note:        req.Note,
+		Items:       items,
+		CreatedBy:   &requesterID,
 	})
 	if err != nil {
 		if errors.Is(err, paymentdomain.ErrRequiredPaymentData) {
-			return apierror.BadRequest("invoice_id, amount and payment_date are required")
+			return apierror.BadRequest("invoice_id and payment_date are required")
+		}
+		if errors.Is(err, paymentdomain.ErrRequiredItems) {
+			return apierror.BadRequest("at least one payment item is required")
 		}
 		if errors.Is(err, paymentdomain.ErrInvalidAmount) {
-			return apierror.BadRequest("amount must be greater than zero")
+			return apierror.BadRequest("each payment item's amount must be greater than zero")
 		}
 		if errors.Is(err, paymentdomain.ErrInvalidMethod) {
 			return apierror.BadRequest("invalid payment method")
@@ -242,7 +256,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 
 // Delete godoc
 // @Summary Delete a payment
-// @Description Deletes a payment and re-evaluates the invoice's paid status accordingly.
+// @Description Deletes a payment (and its items) and re-evaluates the invoice's paid status accordingly.
 // @Tags payments
 // @Produce json
 // @Param id path string true "Payment ID"

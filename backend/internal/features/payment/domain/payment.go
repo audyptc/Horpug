@@ -23,6 +23,18 @@ func (m PaymentMethod) Valid() bool {
 	return false
 }
 
+// PaymentItem is one payment-method line within a Payment, e.g. the "cash
+// 3,000" or "transfer 2,000" portion of a single receipt split across
+// multiple methods.
+type PaymentItem struct {
+	ID            uuid.UUID     `json:"id"`
+	PaymentID     uuid.UUID     `json:"payment_id"`
+	PaymentMethod PaymentMethod `json:"payment_method"`
+	Amount        float64       `json:"amount"`
+	ReferenceNo   string        `json:"reference_no"`
+	CreatedAt     time.Time     `json:"created_at"`
+}
+
 type Payment struct {
 	ID            uuid.UUID     `json:"id"`
 	InvoiceID     uuid.UUID     `json:"invoice_id"`
@@ -32,11 +44,10 @@ type Payment struct {
 	RoomNumber    string        `json:"room_number,omitempty"`
 	DormitoryID   uuid.UUID     `json:"dormitory_id,omitempty"`
 	DormitoryName string        `json:"dormitory_name,omitempty"`
-	Amount        float64       `json:"amount"`
-	PaymentMethod PaymentMethod `json:"payment_method"`
+	TotalAmount   float64       `json:"total_amount"`
 	PaymentDate   time.Time     `json:"payment_date"`
-	ReferenceNo   string        `json:"reference_no"`
 	Note          string        `json:"note"`
+	Items         []PaymentItem `json:"items"`
 	CreatedBy     *uuid.UUID    `json:"created_by,omitempty"`
 	CreatedAt     time.Time     `json:"created_at"`
 }

@@ -1693,7 +1693,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Records a payment for an invoice. Once the invoice's recorded payments reach its total_amount, the invoice is automatically marked paid.",
+                "description": "Records a payment for an invoice as one or more line items (e.g. part cash, part transfer), each with its own method, amount and optional reference number. Once the invoice's recorded payments reach its total_amount, the invoice is automatically marked paid.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1703,7 +1703,7 @@ const docTemplate = `{
                 "tags": [
                     "payments"
                 ],
-                "summary": "Record a payment against an invoice",
+                "summary": "Record a payment against an invoice, split across one or more payment methods",
                 "parameters": [
                     {
                         "description": "Payment payload",
@@ -1799,7 +1799,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Deletes a payment and re-evaluates the invoice's paid status accordingly.",
+                "description": "Deletes a payment (and its items) and re-evaluates the invoice's paid status accordingly.",
                 "produces": [
                     "application/json"
                 ],
@@ -4415,9 +4415,6 @@ const docTemplate = `{
         "apihorpug_internal_features_payment_domain.Payment": {
             "type": "object",
             "properties": {
-                "amount": {
-                    "type": "number"
-                },
                 "created_at": {
                     "type": "string"
                 },
@@ -4436,16 +4433,16 @@ const docTemplate = `{
                 "invoice_id": {
                     "type": "string"
                 },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/apihorpug_internal_features_payment_domain.PaymentItem"
+                    }
+                },
                 "note": {
                     "type": "string"
                 },
                 "payment_date": {
-                    "type": "string"
-                },
-                "payment_method": {
-                    "$ref": "#/definitions/apihorpug_internal_features_payment_domain.PaymentMethod"
-                },
-                "reference_no": {
                     "type": "string"
                 },
                 "room_id": {
@@ -4458,6 +4455,32 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "tenant_name": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
+                }
+            }
+        },
+        "apihorpug_internal_features_payment_domain.PaymentItem": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "payment_id": {
+                    "type": "string"
+                },
+                "payment_method": {
+                    "$ref": "#/definitions/apihorpug_internal_features_payment_domain.PaymentMethod"
+                },
+                "reference_no": {
                     "type": "string"
                 }
             }
@@ -5106,25 +5129,36 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_features_payment_delivery_http.createPaymentRequest": {
+        "internal_features_payment_delivery_http.createPaymentItemRequest": {
             "type": "object",
             "properties": {
                 "amount": {
                     "type": "number"
                 },
+                "payment_method": {
+                    "$ref": "#/definitions/apihorpug_internal_features_payment_domain.PaymentMethod"
+                },
+                "reference_no": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_payment_delivery_http.createPaymentRequest": {
+            "type": "object",
+            "properties": {
                 "invoice_id": {
                     "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_features_payment_delivery_http.createPaymentItemRequest"
+                    }
                 },
                 "note": {
                     "type": "string"
                 },
                 "payment_date": {
-                    "type": "string"
-                },
-                "payment_method": {
-                    "$ref": "#/definitions/apihorpug_internal_features_payment_domain.PaymentMethod"
-                },
-                "reference_no": {
                     "type": "string"
                 }
             }

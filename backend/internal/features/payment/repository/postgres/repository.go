@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -23,11 +24,25 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
+// The items subquery aggregates payment_items into a jsonb array so every
+// Payment row (list or single) always carries its full method breakdown
+// without a separate round trip per row.
 const selectPaymentColumns = `
 	p.id, p.invoice_id, c.tenant_id, t.first_name, t.last_name,
 	c.room_id, rm.room_number, rm.dormitory_id, d.name,
-	p.amount, p.payment_method, p.payment_date, p.reference_no, p.note,
-	p.created_by, p.created_at
+	p.total_amount, p.payment_date, p.note,
+	p.created_by, p.created_at,
+	COALESCE((
+		SELECT jsonb_agg(jsonb_build_object(
+			'id', pi.id,
+			'payment_id', pi.payment_id,
+			'payment_method', pi.payment_method,
+			'amount', pi.amount,
+			'reference_no', pi.reference_no,
+			'created_at', pi.created_at
+		) ORDER BY pi.created_at)
+		FROM payment_items pi WHERE pi.payment_id = p.id
+	), '[]'::jsonb)
 `
 
 const paymentFromJoins = `
@@ -154,9 +169,10 @@ func (r *Repository) GetByID(ctx context.Context, id, requesterID uuid.UUID) (pa
 	return payment, nil
 }
 
-// Create records a payment against an invoice and, once the invoice's
-// payments sum to its total_amount or more, marks the invoice paid. It runs
-// in a transaction so the payment row and invoice status stay consistent.
+// Create records a payment against an invoice as one or more payment_items
+// (e.g. part cash, part transfer), then, once the invoice's payments sum to
+// its total_amount or more, marks the invoice paid. It runs in a transaction
+// so the payment row, its items and the invoice status stay consistent.
 func (r *Repository) Create(ctx context.Context, input paymentusecase.CreateInput) (paymentdomain.Payment, error) {
 	invoiceTotal, invoiceStatus, err := r.loadInvoiceForPayment(ctx, input.InvoiceID, input.CreatedBy)
 	if err != nil {
@@ -164,6 +180,11 @@ func (r *Repository) Create(ctx context.Context, input paymentusecase.CreateInpu
 	}
 	if invoiceStatus == "cancelled" {
 		return paymentdomain.Payment{}, paymentdomain.ErrInvoiceCancelled
+	}
+
+	total := 0.0
+	for _, item := range input.Items {
+		total += item.Amount
 	}
 
 	tx, err := r.db.Begin(ctx)
@@ -174,9 +195,9 @@ func (r *Repository) Create(ctx context.Context, input paymentusecase.CreateInpu
 
 	id := uuid.New()
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO payments (id, invoice_id, amount, payment_method, payment_date, reference_no, note, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-	`, id, input.InvoiceID, input.Amount, input.PaymentMethod, input.PaymentDate, input.ReferenceNo, input.Note, input.CreatedBy); err != nil {
+		INSERT INTO payments (id, invoice_id, payment_date, total_amount, note, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, id, input.InvoiceID, input.PaymentDate, total, input.Note, input.CreatedBy); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
 			return paymentdomain.Payment{}, paymentdomain.ErrInvoiceNotFound
@@ -184,8 +205,17 @@ func (r *Repository) Create(ctx context.Context, input paymentusecase.CreateInpu
 		return paymentdomain.Payment{}, err
 	}
 
+	for _, item := range input.Items {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO payment_items (id, payment_id, payment_method, amount, reference_no)
+			VALUES ($1, $2, $3, $4, $5)
+		`, uuid.New(), id, item.PaymentMethod, item.Amount, item.ReferenceNo); err != nil {
+			return paymentdomain.Payment{}, err
+		}
+	}
+
 	var totalPaid float64
-	if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = $1`, input.InvoiceID).Scan(&totalPaid); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(total_amount), 0) FROM payments WHERE invoice_id = $1`, input.InvoiceID).Scan(&totalPaid); err != nil {
 		return paymentdomain.Payment{}, err
 	}
 
@@ -228,7 +258,7 @@ func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) erro
 	}
 
 	var totalPaid float64
-	if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = $1`, invoiceID).Scan(&totalPaid); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(total_amount), 0) FROM payments WHERE invoice_id = $1`, invoiceID).Scan(&totalPaid); err != nil {
 		return err
 	}
 
@@ -249,6 +279,7 @@ func (r *Repository) loadPaymentByID(ctx context.Context, id uuid.UUID) (payment
 func scanPayment(row pgx.Row) (paymentdomain.Payment, error) {
 	var payment paymentdomain.Payment
 	var firstName, lastName string
+	var itemsRaw []byte
 	if err := row.Scan(
 		&payment.ID,
 		&payment.InvoiceID,
@@ -259,17 +290,22 @@ func scanPayment(row pgx.Row) (paymentdomain.Payment, error) {
 		&payment.RoomNumber,
 		&payment.DormitoryID,
 		&payment.DormitoryName,
-		&payment.Amount,
-		&payment.PaymentMethod,
+		&payment.TotalAmount,
 		&payment.PaymentDate,
-		&payment.ReferenceNo,
 		&payment.Note,
 		&payment.CreatedBy,
 		&payment.CreatedAt,
+		&itemsRaw,
 	); err != nil {
 		return paymentdomain.Payment{}, err
 	}
 	payment.TenantName = strings.TrimSpace(firstName + " " + lastName)
+	payment.Items = make([]paymentdomain.PaymentItem, 0)
+	if len(itemsRaw) > 0 {
+		if err := json.Unmarshal(itemsRaw, &payment.Items); err != nil {
+			return paymentdomain.Payment{}, err
+		}
+	}
 	return payment, nil
 }
 

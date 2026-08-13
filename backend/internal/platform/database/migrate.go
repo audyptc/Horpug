@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -270,20 +271,30 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		`CREATE TABLE IF NOT EXISTS payments (
 			id UUID PRIMARY KEY,
 			invoice_id UUID NOT NULL,
-			amount NUMERIC(10,2) NOT NULL,
-			payment_method VARCHAR(20) NOT NULL DEFAULT 'cash',
 			payment_date DATE NOT NULL,
-			reference_no VARCHAR(100) DEFAULT '',
+			total_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
 			note VARCHAR(255) DEFAULT '',
 			created_by UUID,
 			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			CONSTRAINT payments_invoice_fkey FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
-			CONSTRAINT payments_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
-			CONSTRAINT chk_payments_amount CHECK (amount > 0),
-			CONSTRAINT chk_payments_method CHECK (payment_method IN ('cash', 'transfer', 'credit_card', 'other'))
+			CONSTRAINT payments_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_payments_invoice_id ON payments(invoice_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_payments_payment_date ON payments(payment_date)`,
+		// A payment is split across one or more methods (e.g. part cash, part
+		// transfer); each method's amount is its own payment_items row.
+		`CREATE TABLE IF NOT EXISTS payment_items (
+			id UUID PRIMARY KEY,
+			payment_id UUID NOT NULL,
+			payment_method VARCHAR(20) NOT NULL DEFAULT 'cash',
+			amount NUMERIC(10,2) NOT NULL,
+			reference_no VARCHAR(100) DEFAULT '',
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			CONSTRAINT payment_items_payment_fkey FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE,
+			CONSTRAINT chk_payment_items_amount CHECK (amount > 0),
+			CONSTRAINT chk_payment_items_method CHECK (payment_method IN ('cash', 'transfer', 'credit_card', 'other'))
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_payment_items_payment_id ON payment_items(payment_id)`,
 		`CREATE TABLE IF NOT EXISTS activity_logs (
 			id UUID PRIMARY KEY,
 			user_id UUID,
@@ -458,6 +469,87 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		$$;
 	`); err != nil {
 		return err
+	}
+
+	if err := migrateLegacyPayments(ctx, db); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// migrateLegacyPayments moves rows from an older payments schema (a single
+// amount/payment_method/reference_no directly on the payments row) into the
+// payment_items table now that a payment can be split across several
+// methods, then drops the superseded columns. Safe to run repeatedly: once
+// payments no longer has an amount column this is a no-op.
+func migrateLegacyPayments(ctx context.Context, db *pgxpool.Pool) error {
+	var hasAmountColumn bool
+	if err := db.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_name = 'payments' AND column_name = 'amount'
+		)
+	`).Scan(&hasAmountColumn); err != nil {
+		return err
+	}
+	if !hasAmountColumn {
+		return nil
+	}
+
+	if _, err := db.Exec(ctx, `ALTER TABLE payments ADD COLUMN IF NOT EXISTS total_amount NUMERIC(10,2) NOT NULL DEFAULT 0`); err != nil {
+		return err
+	}
+
+	type legacyPayment struct {
+		id            uuid.UUID
+		paymentMethod string
+		amount        float64
+		referenceNo   string
+		createdAt     time.Time
+	}
+
+	rows, err := db.Query(ctx, `SELECT id, payment_method, amount, reference_no, created_at FROM payments`)
+	if err != nil {
+		return err
+	}
+	legacy := make([]legacyPayment, 0)
+	for rows.Next() {
+		var lp legacyPayment
+		if err := rows.Scan(&lp.id, &lp.paymentMethod, &lp.amount, &lp.referenceNo, &lp.createdAt); err != nil {
+			rows.Close()
+			return err
+		}
+		legacy = append(legacy, lp)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	for _, lp := range legacy {
+		if _, err := db.Exec(ctx, `
+			INSERT INTO payment_items (id, payment_id, payment_method, amount, reference_no, created_at)
+			VALUES ($1, $2, $3, $4, $5, $6)
+		`, uuid.New(), lp.id, lp.paymentMethod, lp.amount, lp.referenceNo, lp.createdAt); err != nil {
+			return err
+		}
+		if _, err := db.Exec(ctx, `UPDATE payments SET total_amount = $1 WHERE id = $2`, lp.amount, lp.id); err != nil {
+			return err
+		}
+	}
+
+	dropStatements := []string{
+		`ALTER TABLE payments DROP CONSTRAINT IF EXISTS chk_payments_amount`,
+		`ALTER TABLE payments DROP CONSTRAINT IF EXISTS chk_payments_method`,
+		`ALTER TABLE payments DROP COLUMN IF EXISTS amount`,
+		`ALTER TABLE payments DROP COLUMN IF EXISTS payment_method`,
+		`ALTER TABLE payments DROP COLUMN IF EXISTS reference_no`,
+	}
+	for _, stmt := range dropStatements {
+		if _, err := db.Exec(ctx, stmt); err != nil {
+			return err
+		}
 	}
 
 	return nil
