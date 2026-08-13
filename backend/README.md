@@ -95,7 +95,7 @@ backend/
 ├── config/            # โหลด config จาก .env
 ├── docs/              # ไฟล์ที่ swag generate (ห้ามแก้ไขมือ)
 ├── internal/
-│   ├── features/      # business logic แยกตาม feature (user, role, permission, menu, ...)
+│   ├── features/      # business logic แยกตาม feature (auth, user, role, permission, menu, dormitory, roomtype, room, activitylog)
 │   ├── http/          # route registration, error handler, response helpers
 │   └── platform/      # infra เช่น database connection/migration
 └── go.mod

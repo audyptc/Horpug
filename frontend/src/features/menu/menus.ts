@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BedDouble, Building2, History, ShieldCheck, Users2, type LucideIcon } from 'lucide-react'
+import { BedDouble, Building2, DoorOpen, History, ShieldCheck, Users2, type LucideIcon } from 'lucide-react'
 import { api, type ApiPage } from '@/shared/api/client'
 import { useAuth } from '@/features/auth/AuthProvider'
 import type { TranslationKey } from '@/shared/i18n/language'
@@ -16,13 +16,19 @@ export type MenuMeta = {
   icon: LucideIcon
   labelKey: TranslationKey
   descriptionKey: TranslationKey
-  group?: 'reports' | 'access' | 'settings'
+  group?: 'rooms' | 'reports' | 'access' | 'settings'
 }
 
 // The backend seeds a fixed, known set of menu paths (see
 // backend/internal/features/menu/repository/postgres/seed.go). It has no
 // concept of locale, so the icon and bilingual label for each one live here.
 export const menuMeta: Record<string, MenuMeta> = {
+  '/rooms': {
+    icon: DoorOpen,
+    labelKey: 'menuRooms',
+    descriptionKey: 'menuRoomsDescription',
+    group: 'rooms',
+  },
   '/roles': {
     icon: ShieldCheck,
     labelKey: 'menuRoles',

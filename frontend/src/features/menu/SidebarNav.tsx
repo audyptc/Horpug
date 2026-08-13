@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChartNoAxesColumn, ChevronDown, ClipboardList, Lock, Settings } from 'lucide-react'
+import { ChartNoAxesColumn, ChevronDown, ClipboardList, DoorOpen, Lock, Settings } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useLanguage } from '@/shared/i18n/language'
 import { menuMeta, useMenus, type ApiMenu } from './menus'
@@ -18,14 +18,17 @@ export function SidebarNav({
   const byMetaOrder = (a: ApiMenu, b: ApiMenu) => metaOrder.indexOf(a.path) - metaOrder.indexOf(b.path)
 
   const mainMenus = menus.filter((menu) => !menuMeta[menu.path]?.group).sort(byMetaOrder)
+  const roomMenus = menus.filter((menu) => menuMeta[menu.path]?.group === 'rooms').sort(byMetaOrder)
   const reportMenus = menus.filter((menu) => menuMeta[menu.path]?.group === 'reports').sort(byMetaOrder)
   const accessMenus = menus.filter((menu) => menuMeta[menu.path]?.group === 'access').sort(byMetaOrder)
   const settingsMenus = menus.filter((menu) => menuMeta[menu.path]?.group === 'settings').sort(byMetaOrder)
 
+  const [isRoomsOpen, setIsRoomsOpen] = useState(true)
   const [isReportsOpen, setIsReportsOpen] = useState(true)
   const [isAccessOpen, setIsAccessOpen] = useState(true)
   const [isSettingsOpen, setIsSettingsOpen] = useState(true)
 
+  const showRoomMenus = collapsed || isRoomsOpen
   const showReportMenus = collapsed || isReportsOpen
   const showAccessMenus = collapsed || isAccessOpen
   const showSettingsMenus = collapsed || isSettingsOpen
@@ -65,6 +68,36 @@ export function SidebarNav({
         </NavLink>
         {mainMenus.map(renderMenuLink)}
       </nav>
+
+      {roomMenus.length > 0 && (
+        <div className="menu-group-section">
+          <button
+            type="button"
+            className={`sidebar-label menu-group-label menu-group-toggle ${collapsed ? 'collapsed' : ''}`}
+            onClick={() => setIsRoomsOpen((open) => !open)}
+            aria-expanded={showRoomMenus}
+            disabled={collapsed}
+            title={t('menuGroupRooms')}
+          >
+            <span className="menu-group-toggle-label">
+              <DoorOpen size={14} aria-hidden="true" />
+              <span className="menu-text">{t('menuGroupRooms')}</span>
+            </span>
+            {!collapsed && (
+              <ChevronDown
+                size={14}
+                className={`menu-group-chevron ${isRoomsOpen ? 'open' : ''}`}
+                aria-hidden="true"
+              />
+            )}
+          </button>
+          {showRoomMenus && (
+            <nav className="menu-list menu-group" aria-label={t('menuGroupRooms')}>
+              {roomMenus.map(renderMenuLink)}
+            </nav>
+          )}
+        </div>
+      )}
 
       {reportMenus.length > 0 && (
         <div className="menu-group-section">
