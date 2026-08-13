@@ -7,17 +7,20 @@ import (
 	activitylogrepository "apihorpug/internal/features/activitylog/repository/postgres"
 	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
 	authhttp "apihorpug/internal/features/auth/delivery/http"
+	authrepository "apihorpug/internal/features/auth/repository/postgres"
+	authusecase "apihorpug/internal/features/auth/usecase"
 	contracthttp "apihorpug/internal/features/contract/delivery/http"
 	contractrepository "apihorpug/internal/features/contract/repository/postgres"
 	contractusecase "apihorpug/internal/features/contract/usecase"
-	authrepository "apihorpug/internal/features/auth/repository/postgres"
-	authusecase "apihorpug/internal/features/auth/usecase"
 	dormitoryhttp "apihorpug/internal/features/dormitory/delivery/http"
 	dormitoryrepository "apihorpug/internal/features/dormitory/repository/postgres"
 	dormitoryusecase "apihorpug/internal/features/dormitory/usecase"
 	menuhttp "apihorpug/internal/features/menu/delivery/http"
 	menurepository "apihorpug/internal/features/menu/repository/postgres"
 	menuusecase "apihorpug/internal/features/menu/usecase"
+	meterhttp "apihorpug/internal/features/meter/delivery/http"
+	meterrepository "apihorpug/internal/features/meter/repository/postgres"
+	meterusecase "apihorpug/internal/features/meter/usecase"
 	permissionhttp "apihorpug/internal/features/permission/delivery/http"
 	permissiondomain "apihorpug/internal/features/permission/domain"
 	permissionrepository "apihorpug/internal/features/permission/repository/postgres"
@@ -71,6 +74,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	contractRepo := contractrepository.NewRepository(db)
 	contractService := contractusecase.New(contractRepo)
 	contractHandler := contracthttp.NewHandler(contractService)
+	meterRepo := meterrepository.NewRepository(db)
+	meterService := meterusecase.New(meterRepo)
+	meterHandler := meterhttp.NewHandler(meterService)
 	activityLogRepo := activitylogrepository.NewRepository(db)
 	activityLogService := activitylogusecase.New(activityLogRepo)
 	activityLogHandler := activityloghttp.NewHandler(activityLogService)
@@ -147,6 +153,12 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Post("/contracts", requirePermission("/contracts", permissiondomain.ActionCreate), contractHandler.Create)
 	api.Put("/contracts/:id", requirePermission("/contracts", permissiondomain.ActionUpdate), contractHandler.Update)
 	api.Delete("/contracts/:id", requirePermission("/contracts", permissiondomain.ActionDelete), contractHandler.Delete)
+
+	api.Get("/meters", requirePermission("/meters", permissiondomain.ActionRead), meterHandler.List)
+	api.Get("/meters/:id", requirePermission("/meters", permissiondomain.ActionRead), meterHandler.Get)
+	api.Post("/meters", requirePermission("/meters", permissiondomain.ActionCreate), meterHandler.Create)
+	api.Put("/meters/:id", requirePermission("/meters", permissiondomain.ActionUpdate), meterHandler.Update)
+	api.Delete("/meters/:id", requirePermission("/meters", permissiondomain.ActionDelete), meterHandler.Delete)
 
 	api.Get("/activity-logs", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.List)
 	api.Get("/activity-logs/:id", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.Get)

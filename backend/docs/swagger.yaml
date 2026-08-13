@@ -125,6 +125,53 @@ definitions:
       updated_at:
         type: string
     type: object
+  apihorpug_internal_features_meter_domain.BillingMethod:
+    enum:
+    - metered
+    - flat
+    type: string
+    x-enum-varnames:
+    - BillingMethodMetered
+    - BillingMethodFlat
+  apihorpug_internal_features_meter_domain.Meter:
+    properties:
+      billing_method:
+        $ref: '#/definitions/apihorpug_internal_features_meter_domain.BillingMethod'
+      created_at:
+        type: string
+      created_by:
+        type: string
+      current_unit:
+        type: number
+      dormitory_id:
+        type: string
+      dormitory_name:
+        type: string
+      flat_amount:
+        type: number
+      id:
+        type: string
+      note:
+        type: string
+      previous_unit:
+        type: number
+      price_per_unit:
+        type: number
+      reading_date:
+        type: string
+      room_id:
+        type: string
+      room_number:
+        type: string
+      total_amount:
+        type: number
+      unit_used:
+        type: number
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
   apihorpug_internal_features_permission_domain.Permission:
     properties:
       created_at:
@@ -430,6 +477,42 @@ definitions:
       name:
         type: string
       phone:
+        type: string
+    type: object
+  internal_features_meter_delivery_http.createMeterRequest:
+    properties:
+      billing_method:
+        $ref: '#/definitions/apihorpug_internal_features_meter_domain.BillingMethod'
+      current_unit:
+        type: number
+      flat_amount:
+        type: number
+      note:
+        type: string
+      previous_unit:
+        type: number
+      price_per_unit:
+        type: number
+      reading_date:
+        type: string
+      room_id:
+        type: string
+    type: object
+  internal_features_meter_delivery_http.updateMeterRequest:
+    properties:
+      billing_method:
+        $ref: '#/definitions/apihorpug_internal_features_meter_domain.BillingMethod'
+      current_unit:
+        type: number
+      flat_amount:
+        type: number
+      note:
+        type: string
+      previous_unit:
+        type: number
+      price_per_unit:
+        type: number
+      reading_date:
         type: string
     type: object
   internal_features_permission_delivery_http.createPermissionRequest:
@@ -1216,6 +1299,202 @@ paths:
       summary: List menus
       tags:
       - menus
+  /meters:
+    get:
+      description: Returns every meter reading for roles with full dormitory access,
+        otherwise only readings under dormitories the caller manages. Optionally filter
+        by room or dormitory.
+      parameters:
+      - description: Filter by room ID
+        in: query
+        name: room_id
+        type: string
+      - description: Filter by dormitory ID
+        in: query
+        name: dormitory_id
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List electricity meter readings
+      tags:
+      - meters
+    post:
+      consumes:
+      - application/json
+      description: Records a meter reading or charge for a room. billing_method "metered"
+        (default) derives total_amount as (current_unit - previous_unit) * price_per_unit;
+        billing_method "flat" uses flat_amount directly as total_amount, for flat-rate,
+        tiered or shared-meter charges computed externally.
+      parameters:
+      - description: Meter reading payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_meter_delivery_http.createMeterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_meter_domain.Meter'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Record an electricity meter reading
+      tags:
+      - meters
+  /meters/{id}:
+    delete:
+      parameters:
+      - description: Meter reading ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Delete a meter reading
+      tags:
+      - meters
+    get:
+      parameters:
+      - description: Meter reading ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_meter_domain.Meter'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get a meter reading by ID
+      tags:
+      - meters
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Meter reading ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Meter reading payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_meter_delivery_http.updateMeterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_meter_domain.Meter'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Update a meter reading
+      tags:
+      - meters
   /permissions:
     get:
       parameters:

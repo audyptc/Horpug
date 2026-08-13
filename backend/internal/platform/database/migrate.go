@@ -171,6 +171,36 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		`CREATE INDEX IF NOT EXISTS idx_contracts_tenant_id ON contracts(tenant_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_contracts_room_id ON contracts(room_id)`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_contracts_active_room ON contracts(room_id) WHERE status = 'active'`,
+		`CREATE TABLE IF NOT EXISTS electricity_meters (
+			id UUID PRIMARY KEY,
+			room_id UUID NOT NULL,
+			billing_method VARCHAR(20) NOT NULL DEFAULT 'metered',
+			reading_date DATE NOT NULL,
+			previous_unit NUMERIC(10,2) NOT NULL DEFAULT 0,
+			current_unit NUMERIC(10,2) NOT NULL DEFAULT 0,
+			unit_used NUMERIC(10,2) GENERATED ALWAYS AS (current_unit - previous_unit) STORED,
+			price_per_unit NUMERIC(10,2) NOT NULL DEFAULT 0,
+			flat_amount NUMERIC(10,2),
+			total_amount NUMERIC(10,2) GENERATED ALWAYS AS (
+				CASE WHEN billing_method = 'flat' THEN COALESCE(flat_amount, 0)
+				ELSE (current_unit - previous_unit) * price_per_unit
+				END
+			) STORED,
+			note VARCHAR(255) DEFAULT '',
+			created_by UUID,
+			updated_by UUID,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			CONSTRAINT electricity_meters_room_fkey FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+			CONSTRAINT electricity_meters_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+			CONSTRAINT electricity_meters_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
+			CONSTRAINT uq_electricity_meters_room_date UNIQUE (room_id, reading_date),
+			CONSTRAINT chk_electricity_meters_units CHECK (previous_unit >= 0 AND current_unit >= previous_unit),
+			CONSTRAINT chk_electricity_meters_billing_method CHECK (billing_method IN ('metered', 'flat')),
+			CONSTRAINT chk_electricity_meters_flat_amount CHECK (billing_method <> 'flat' OR flat_amount IS NOT NULL),
+			CONSTRAINT chk_electricity_meters_flat_amount_nonneg CHECK (flat_amount IS NULL OR flat_amount >= 0)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_electricity_meters_room_id ON electricity_meters(room_id)`,
 		`CREATE TABLE IF NOT EXISTS activity_logs (
 			id UUID PRIMARY KEY,
 			user_id UUID,
@@ -221,6 +251,9 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		`ALTER TABLE roles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_roles_name ON roles(name)`,
 
+		`ALTER TABLE electricity_meters ADD COLUMN IF NOT EXISTS billing_method VARCHAR(20) NOT NULL DEFAULT 'metered'`,
+		`ALTER TABLE electricity_meters ADD COLUMN IF NOT EXISTS flat_amount NUMERIC(10,2)`,
+
 		`ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(80)`,
 		`ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(180)`,
 		`ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255)`,
@@ -236,6 +269,43 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		if _, err := db.Exec(ctx, stmt); err != nil {
 			return err
 		}
+	}
+
+	// electricity_meters.total_amount originally only supported the metered
+	// formula; re-generate it to also support flat-rate billing once
+	// billing_method/flat_amount exist. Only rewrites tables still on the old
+	// expression, so re-running this is a no-op once upgraded.
+	if _, err := db.Exec(ctx, `
+		DO $$
+		BEGIN
+			IF EXISTS (
+				SELECT 1
+				FROM information_schema.columns
+				WHERE table_name = 'electricity_meters'
+				AND column_name = 'total_amount'
+				AND generation_expression NOT ILIKE '%billing_method%'
+			) THEN
+				ALTER TABLE electricity_meters DROP COLUMN total_amount;
+				ALTER TABLE electricity_meters ADD COLUMN total_amount NUMERIC(10,2) GENERATED ALWAYS AS (
+					CASE WHEN billing_method = 'flat' THEN COALESCE(flat_amount, 0)
+					ELSE (current_unit - previous_unit) * price_per_unit
+					END
+				) STORED;
+			END IF;
+
+			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_electricity_meters_billing_method') THEN
+				ALTER TABLE electricity_meters ADD CONSTRAINT chk_electricity_meters_billing_method CHECK (billing_method IN ('metered', 'flat'));
+			END IF;
+			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_electricity_meters_flat_amount') THEN
+				ALTER TABLE electricity_meters ADD CONSTRAINT chk_electricity_meters_flat_amount CHECK (billing_method <> 'flat' OR flat_amount IS NOT NULL);
+			END IF;
+			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_electricity_meters_flat_amount_nonneg') THEN
+				ALTER TABLE electricity_meters ADD CONSTRAINT chk_electricity_meters_flat_amount_nonneg CHECK (flat_amount IS NULL OR flat_amount >= 0);
+			END IF;
+		END
+		$$;
+	`); err != nil {
+		return err
 	}
 
 	if _, err := db.Exec(ctx, `
