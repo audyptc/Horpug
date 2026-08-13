@@ -71,6 +71,43 @@ func (r *Repository) List(ctx context.Context, limit, offset int) ([]roledomain.
 	return roles, nil
 }
 
+func (r *Repository) ListActive(ctx context.Context, search string, limit int) ([]roledomain.Role, error) {
+	query := `
+		SELECT id, name, description, is_active, full_dormitory_access, created_by, updated_by, created_at, updated_at
+		FROM roles
+		WHERE is_active = true
+	`
+	args := make([]any, 0)
+	argIdx := 1
+	if search != "" {
+		query += fmt.Sprintf(" AND name ILIKE $%d", argIdx)
+		args = append(args, "%"+search+"%")
+		argIdx++
+	}
+	query += fmt.Sprintf(" ORDER BY name ASC LIMIT $%d", argIdx)
+	args = append(args, limit)
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	roles := make([]roledomain.Role, 0)
+	for rows.Next() {
+		var role roledomain.Role
+		if err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.FullDormitoryAccess, &role.CreatedBy, &role.UpdatedBy, &role.CreatedAt, &role.UpdatedAt); err != nil {
+			return nil, err
+		}
+		roles = append(roles, role)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return roles, nil
+}
+
 func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (roledomain.Role, error) {
 	role, err := r.loadRoleByID(ctx, id)
 	if err != nil {

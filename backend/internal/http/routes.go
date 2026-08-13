@@ -82,6 +82,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Get("/menus", menuHandler.List)
 
 	api.Get("/roles", requirePermission("/roles", permissiondomain.ActionRead), roleHandler.List)
+	api.Get("/roles/active", requirePermission("/roles", permissiondomain.ActionRead), roleHandler.ListActive)
 	api.Get("/roles/:id", requirePermission("/roles", permissiondomain.ActionRead), roleHandler.Get)
 	api.Post("/roles", requirePermission("/roles", permissiondomain.ActionCreate), roleHandler.Create)
 	api.Put("/roles/:id", requirePermission("/roles", permissiondomain.ActionUpdate), roleHandler.Update)

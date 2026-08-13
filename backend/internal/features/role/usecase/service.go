@@ -37,6 +37,7 @@ type UpdateInput struct {
 type Repository interface {
 	Count(ctx context.Context) (int64, error)
 	List(ctx context.Context, limit, offset int) ([]roledomain.Role, error)
+	ListActive(ctx context.Context, search string, limit int) ([]roledomain.Role, error)
 	GetByID(ctx context.Context, id uuid.UUID) (roledomain.Role, error)
 	Create(ctx context.Context, input CreateInput) (roledomain.Role, error)
 	Update(ctx context.Context, id uuid.UUID, input UpdateInput) (roledomain.Role, error)
@@ -63,6 +64,10 @@ func (s *Service) List(ctx context.Context, limit, offset int) ([]roledomain.Rol
 	}
 
 	return roles, total, nil
+}
+
+func (s *Service) ListActive(ctx context.Context, search string, limit int) ([]roledomain.Role, error) {
+	return s.repo.ListActive(ctx, strings.TrimSpace(search), limit)
 }
 
 func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (roledomain.Role, error) {

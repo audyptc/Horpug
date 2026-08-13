@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
@@ -48,6 +49,8 @@ func NewHandler(usecase *roleusecase.Service) *Handler {
 	return &Handler{usecase: usecase}
 }
 
+const defaultActiveListLimit = 50
+
 // List godoc
 // @Summary List roles
 // @Tags roles
@@ -74,6 +77,44 @@ func (h *Handler) List(c fiber.Ctx) error {
 	}
 
 	return apiresponse.Paginated(c, roles, page, perPage, total)
+}
+
+// ListActive godoc
+// @Summary List active roles
+// @Description Returns active roles. Intended for populating role selectors; results are capped rather than paginated.
+// @Tags roles
+// @Produce json
+// @Param q query string false "Filter by name"
+// @Param limit query int false "Max results (default 50, max 100)"
+// @Success 200 {array} roledomain.Role
+// @Failure 400 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /roles/active [get]
+func (h *Handler) ListActive(c fiber.Ctx) error {
+	search := strings.TrimSpace(c.Query("q"))
+
+	limit := defaultActiveListLimit
+	if raw := c.Query("limit"); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil || parsed < 1 {
+			return apierror.BadRequest("limit must be a positive integer")
+		}
+		limit = parsed
+	}
+	if limit > httputil.MaxPerPage {
+		limit = httputil.MaxPerPage
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	roles, err := h.usecase.ListActive(ctx, search, limit)
+	if err != nil {
+		return apierror.Internal("failed to list active roles")
+	}
+
+	return apiresponse.OK(c, roles)
 }
 
 // Get godoc
