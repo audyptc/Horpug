@@ -41,7 +41,7 @@ const en = {
   timeYesterday: 'Yesterday',
   menuUsers: 'Users',
   menuUsersDescription: 'Manage user accounts and their assigned roles.',
-  menuGroupRooms: 'Rooms',
+  menuGroupRooms: 'Check-in',
   menuRooms: 'Rooms',
   menuRoomsDescription: 'Manage individual rooms within each dormitory.',
   roomNumberColumn: 'Room Number',

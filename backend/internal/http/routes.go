@@ -7,6 +7,9 @@ import (
 	activitylogrepository "apihorpug/internal/features/activitylog/repository/postgres"
 	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
 	authhttp "apihorpug/internal/features/auth/delivery/http"
+	contracthttp "apihorpug/internal/features/contract/delivery/http"
+	contractrepository "apihorpug/internal/features/contract/repository/postgres"
+	contractusecase "apihorpug/internal/features/contract/usecase"
 	authrepository "apihorpug/internal/features/auth/repository/postgres"
 	authusecase "apihorpug/internal/features/auth/usecase"
 	dormitoryhttp "apihorpug/internal/features/dormitory/delivery/http"
@@ -28,6 +31,9 @@ import (
 	roomtypehttp "apihorpug/internal/features/roomtype/delivery/http"
 	roomtyperepository "apihorpug/internal/features/roomtype/repository/postgres"
 	roomtypeusecase "apihorpug/internal/features/roomtype/usecase"
+	tenanthttp "apihorpug/internal/features/tenant/delivery/http"
+	tenantrepository "apihorpug/internal/features/tenant/repository/postgres"
+	tenantusecase "apihorpug/internal/features/tenant/usecase"
 	userhttp "apihorpug/internal/features/user/delivery/http"
 	userrepository "apihorpug/internal/features/user/repository/postgres"
 	userusecase "apihorpug/internal/features/user/usecase"
@@ -59,6 +65,12 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	roomRepo := roomrepository.NewRepository(db)
 	roomService := roomusecase.New(roomRepo)
 	roomHandler := roomhttp.NewHandler(roomService)
+	tenantRepo := tenantrepository.NewRepository(db)
+	tenantService := tenantusecase.New(tenantRepo)
+	tenantHandler := tenanthttp.NewHandler(tenantService)
+	contractRepo := contractrepository.NewRepository(db)
+	contractService := contractusecase.New(contractRepo)
+	contractHandler := contracthttp.NewHandler(contractService)
 	activityLogRepo := activitylogrepository.NewRepository(db)
 	activityLogService := activitylogusecase.New(activityLogRepo)
 	activityLogHandler := activityloghttp.NewHandler(activityLogService)
@@ -122,6 +134,19 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Post("/rooms", requirePermission("/rooms", permissiondomain.ActionCreate), roomHandler.Create)
 	api.Put("/rooms/:id", requirePermission("/rooms", permissiondomain.ActionUpdate), roomHandler.Update)
 	api.Delete("/rooms/:id", requirePermission("/rooms", permissiondomain.ActionDelete), roomHandler.Delete)
+
+	api.Get("/tenants", requirePermission("/tenants", permissiondomain.ActionRead), tenantHandler.List)
+	api.Get("/tenants/active", requirePermission("/tenants", permissiondomain.ActionRead), tenantHandler.ListActive)
+	api.Get("/tenants/:id", requirePermission("/tenants", permissiondomain.ActionRead), tenantHandler.Get)
+	api.Post("/tenants", requirePermission("/tenants", permissiondomain.ActionCreate), tenantHandler.Create)
+	api.Put("/tenants/:id", requirePermission("/tenants", permissiondomain.ActionUpdate), tenantHandler.Update)
+	api.Delete("/tenants/:id", requirePermission("/tenants", permissiondomain.ActionDelete), tenantHandler.Delete)
+
+	api.Get("/contracts", requirePermission("/contracts", permissiondomain.ActionRead), contractHandler.List)
+	api.Get("/contracts/:id", requirePermission("/contracts", permissiondomain.ActionRead), contractHandler.Get)
+	api.Post("/contracts", requirePermission("/contracts", permissiondomain.ActionCreate), contractHandler.Create)
+	api.Put("/contracts/:id", requirePermission("/contracts", permissiondomain.ActionUpdate), contractHandler.Update)
+	api.Delete("/contracts/:id", requirePermission("/contracts", permissiondomain.ActionDelete), contractHandler.Delete)
 
 	api.Get("/activity-logs", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.List)
 	api.Get("/activity-logs/:id", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.Get)

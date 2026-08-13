@@ -23,11 +23,23 @@ export type MenuMeta = {
 // backend/internal/features/menu/repository/postgres/seed.go). It has no
 // concept of locale, so the icon and bilingual label for each one live here.
 export const menuMeta: Record<string, MenuMeta> = {
+  '/dormitories': {
+    icon: Building2,
+    labelKey: 'menuDormitories',
+    descriptionKey: 'menuDormitoriesDescription',
+    group: 'settings',
+  },
+  '/room-types': {
+    icon: BedDouble,
+    labelKey: 'menuRoomTypes',
+    descriptionKey: 'menuRoomTypesDescription',
+    group: 'settings',
+  },
   '/rooms': {
     icon: DoorOpen,
     labelKey: 'menuRooms',
     descriptionKey: 'menuRoomsDescription',
-    group: 'rooms',
+    group: 'settings',
   },
   '/roles': {
     icon: ShieldCheck,
@@ -40,18 +52,6 @@ export const menuMeta: Record<string, MenuMeta> = {
     labelKey: 'menuUsers',
     descriptionKey: 'menuUsersDescription',
     group: 'access',
-  },
-  '/room-types': {
-    icon: BedDouble,
-    labelKey: 'menuRoomTypes',
-    descriptionKey: 'menuRoomTypesDescription',
-    group: 'settings',
-  },
-  '/dormitories': {
-    icon: Building2,
-    labelKey: 'menuDormitories',
-    descriptionKey: 'menuDormitoriesDescription',
-    group: 'settings',
   },
   '/activity-logs': {
     icon: History,

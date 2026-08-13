@@ -21,6 +21,55 @@ definitions:
       username:
         type: string
     type: object
+  apihorpug_internal_features_contract_domain.Contract:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      deposit:
+        type: number
+      dormitory_id:
+        type: string
+      dormitory_name:
+        type: string
+      end_date:
+        type: string
+      id:
+        type: string
+      note:
+        type: string
+      num_occupants:
+        type: integer
+      rent_price:
+        type: number
+      room_id:
+        type: string
+      room_number:
+        type: string
+      start_date:
+        type: string
+      status:
+        $ref: '#/definitions/apihorpug_internal_features_contract_domain.ContractStatus'
+      tenant_id:
+        type: string
+      tenant_name:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  apihorpug_internal_features_contract_domain.ContractStatus:
+    enum:
+    - active
+    - expired
+    - terminated
+    type: string
+    x-enum-varnames:
+    - ContractStatusActive
+    - ContractStatusExpired
+    - ContractStatusTerminated
   apihorpug_internal_features_dormitory_domain.Dormitory:
     properties:
       address:
@@ -204,6 +253,35 @@ definitions:
       updated_by:
         type: string
     type: object
+  apihorpug_internal_features_tenant_domain.Tenant:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      email:
+        type: string
+      emergency_contact:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      id_card:
+        type: string
+      is_active:
+        type: boolean
+      last_name:
+        type: string
+      note:
+        type: string
+      phone:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
   apihorpug_internal_features_user_domain.User:
     properties:
       created_at:
@@ -285,6 +363,40 @@ definitions:
       access_token_expires_at:
         type: string
       user: {}
+    type: object
+  internal_features_contract_delivery_http.createContractRequest:
+    properties:
+      deposit:
+        type: number
+      end_date:
+        type: string
+      note:
+        type: string
+      num_occupants:
+        type: integer
+      rent_price:
+        type: number
+      room_id:
+        type: string
+      start_date:
+        type: string
+      tenant_id:
+        type: string
+    type: object
+  internal_features_contract_delivery_http.updateContractRequest:
+    properties:
+      deposit:
+        type: number
+      end_date:
+        type: string
+      note:
+        type: string
+      num_occupants:
+        type: integer
+      rent_price:
+        type: number
+      status:
+        $ref: '#/definitions/apihorpug_internal_features_contract_domain.ContractStatus'
     type: object
   internal_features_dormitory_delivery_http.createDormitoryRequest:
     properties:
@@ -425,6 +537,44 @@ definitions:
         type: string
       price:
         type: number
+    type: object
+  internal_features_tenant_delivery_http.createTenantRequest:
+    properties:
+      email:
+        type: string
+      emergency_contact:
+        type: string
+      first_name:
+        type: string
+      id_card:
+        type: string
+      is_active:
+        type: boolean
+      last_name:
+        type: string
+      note:
+        type: string
+      phone:
+        type: string
+    type: object
+  internal_features_tenant_delivery_http.updateTenantRequest:
+    properties:
+      email:
+        type: string
+      emergency_contact:
+        type: string
+      first_name:
+        type: string
+      id_card:
+        type: string
+      is_active:
+        type: boolean
+      last_name:
+        type: string
+      note:
+        type: string
+      phone:
+        type: string
     type: object
   internal_features_user_delivery_http.createUserRequest:
     properties:
@@ -622,6 +772,208 @@ paths:
       summary: Exchange the refresh token cookie for a new access/refresh token pair
       tags:
       - auth
+  /contracts:
+    get:
+      description: Returns every contract for roles with full dormitory access, otherwise
+        only contracts under dormitories the caller manages. Optionally filter by
+        tenant, room, dormitory or status.
+      parameters:
+      - description: Filter by tenant ID
+        in: query
+        name: tenant_id
+        type: string
+      - description: Filter by room ID
+        in: query
+        name: room_id
+        type: string
+      - description: Filter by dormitory ID
+        in: query
+        name: dormitory_id
+        type: string
+      - description: Filter by status (active, expired, terminated)
+        in: query
+        name: status
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List contracts
+      tags:
+      - contracts
+    post:
+      consumes:
+      - application/json
+      description: Creates a lease contract linking a tenant to a room. A room may
+        only have one active contract at a time.
+      parameters:
+      - description: Contract payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_contract_delivery_http.createContractRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_contract_domain.Contract'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Create a contract
+      tags:
+      - contracts
+  /contracts/{id}:
+    delete:
+      parameters:
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Delete a contract
+      tags:
+      - contracts
+    get:
+      parameters:
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_contract_domain.Contract'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get a contract by ID
+      tags:
+      - contracts
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Contract payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_contract_delivery_http.updateContractRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_contract_domain.Contract'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Update a contract
+      tags:
+      - contracts
   /dormitories:
     get:
       description: Returns every dormitory for roles with full dormitory access, otherwise
@@ -1605,6 +1957,222 @@ paths:
       summary: List active rooms
       tags:
       - rooms
+  /tenants:
+    get:
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List tenants
+      tags:
+      - tenants
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Tenant payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_tenant_delivery_http.createTenantRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_tenant_domain.Tenant'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Create a tenant
+      tags:
+      - tenants
+  /tenants/{id}:
+    delete:
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Delete a tenant
+      tags:
+      - tenants
+    get:
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_tenant_domain.Tenant'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get a tenant by ID
+      tags:
+      - tenants
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Tenant payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_tenant_delivery_http.updateTenantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_tenant_domain.Tenant'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Update a tenant
+      tags:
+      - tenants
+  /tenants/active:
+    get:
+      description: Returns active tenants. Intended for populating tenant selectors;
+        results are capped rather than paginated.
+      parameters:
+      - description: Filter by name, phone or id card
+        in: query
+        name: q
+        type: string
+      - description: Max results (default 50, max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/apihorpug_internal_features_tenant_domain.Tenant'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List active tenants
+      tags:
+      - tenants
   /users:
     get:
       parameters:

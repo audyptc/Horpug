@@ -43,7 +43,7 @@ const th: Record<TranslationKey, string> = {
   timeYesterday: 'เมื่อวาน',
   menuUsers: 'ผู้ใช้งาน',
   menuUsersDescription: 'จัดการบัญชีผู้ใช้และบทบาทที่ได้รับมอบหมาย',
-  menuGroupRooms: 'ห้องพัก',
+  menuGroupRooms: 'เข้าพัก',
   menuRooms: 'ห้องพัก',
   menuRoomsDescription: 'จัดการห้องพักแต่ละห้องภายในหอพัก',
   roomNumberColumn: 'หมายเลขห้อง',
