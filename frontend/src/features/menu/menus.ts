@@ -8,6 +8,7 @@ import {
   FileText,
   Gauge,
   History,
+  Receipt,
   ShieldCheck,
   Users2,
   type LucideIcon,
@@ -75,6 +76,12 @@ export const menuMeta: Record<string, MenuMeta> = {
     icon: Droplets,
     labelKey: 'menuWaterMeters',
     descriptionKey: 'menuWaterMetersDescription',
+    group: 'finance',
+  },
+  '/invoices': {
+    icon: Receipt,
+    labelKey: 'menuInvoices',
+    descriptionKey: 'menuInvoicesDescription',
     group: 'finance',
   },
   '/roles': {

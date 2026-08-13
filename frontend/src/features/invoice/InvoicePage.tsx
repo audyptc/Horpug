@@ -1,0 +1,283 @@
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
+import { useLanguage } from '@/shared/i18n/language'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import type { ApiContract } from '@/features/contract/types'
+import { InvoiceListCard } from './components/InvoiceListCard'
+import { InvoiceFormSheet } from './components/InvoiceFormSheet'
+import type { ApiInvoice, InvoiceStatus } from './types'
+import { INVOICE_PAGE_SIZE_OPTIONS, parsePeriodInputValue, toApiDate, toDateInputValue } from './utils'
+
+export default function InvoicePage() {
+  const { t } = useLanguage()
+
+  const [invoices, setInvoices] = useState<ApiInvoice[] | null>(null)
+  const [contracts, setContracts] = useState<ApiContract[]>([])
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(INVOICE_PAGE_SIZE_OPTIONS[0])
+
+  const [formOpen, setFormOpen] = useState(false)
+  const [formInvoiceId, setFormInvoiceId] = useState<string | null>(null)
+  const [formInvoiceDetail, setFormInvoiceDetail] = useState<ApiInvoice | null>(null)
+  const [formDetailLoading, setFormDetailLoading] = useState(false)
+  const [formContractId, setFormContractId] = useState('')
+  const [formPeriod, setFormPeriod] = useState('')
+  const [formIssueDate, setFormIssueDate] = useState('')
+  const [formDueDate, setFormDueDate] = useState('')
+  const [formStatus, setFormStatus] = useState<InvoiceStatus>('unpaid')
+  const [formNote, setFormNote] = useState('')
+  const [formSaving, setFormSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+
+  const [deletingInvoiceId, setDeletingInvoiceId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [confirmDeleteInvoice, setConfirmDeleteInvoice] = useState<ApiInvoice | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    Promise.all([
+      api.get<ApiPage<ApiInvoice[]>>('/invoices', { params: { per_page: 100 } }),
+      api.get<ApiPage<ApiContract[]>>('/contracts', { params: { status: 'active', per_page: 100 } }),
+    ])
+      .then(([invoicesRes, contractsRes]) => {
+        if (cancelled) return
+        setInvoices(invoicesRes.data.data)
+        setContracts(contractsRes.data.data)
+      })
+      .catch((err) => {
+        if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
+      })
+
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const filteredInvoices = useMemo(() => {
+    const q = query.trim().toLocaleLowerCase()
+    if (!q) return invoices ?? []
+
+    return (invoices ?? []).filter((invoice) => {
+      return (
+        (invoice.tenant_name ?? '').toLocaleLowerCase().includes(q) ||
+        (invoice.room_number ?? '').toLocaleLowerCase().includes(q) ||
+        (invoice.dormitory_name ?? '').toLocaleLowerCase().includes(q)
+      )
+    })
+  }, [query, invoices])
+
+  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / pageSize))
+  const currentPage = Math.min(page, totalPages)
+  const rangeStart = filteredInvoices.length === 0 ? 0 : (currentPage - 1) * pageSize + 1
+  const rangeEnd = Math.min(currentPage * pageSize, filteredInvoices.length)
+  const paginatedInvoices = filteredInvoices.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  const isLoading = !loadError && invoices === null
+
+  function openCreateForm() {
+    setFormInvoiceId(null)
+    setFormInvoiceDetail(null)
+    setFormDetailLoading(false)
+    setFormContractId('')
+    setFormPeriod('')
+    setFormIssueDate('')
+    setFormDueDate('')
+    setFormStatus('unpaid')
+    setFormNote('')
+    setFormError(null)
+    setFormOpen(true)
+  }
+
+  function openEditForm(invoice: ApiInvoice) {
+    setFormInvoiceId(invoice.id)
+    setFormInvoiceDetail(null)
+    setFormDueDate(toDateInputValue(invoice.due_date))
+    setFormStatus(invoice.status)
+    setFormNote(invoice.note)
+    setFormError(null)
+    setFormOpen(true)
+
+    setFormDetailLoading(true)
+    api
+      .get<ApiInvoice>(`/invoices/${invoice.id}`)
+      .then(({ data }) => {
+        setFormInvoiceDetail(data)
+        setFormDueDate(toDateInputValue(data.due_date))
+        setFormStatus(data.status)
+        setFormNote(data.note)
+      })
+      .catch((err) => {
+        setFormError(extractErrorMessage(err, t('resourceLoadError')))
+      })
+      .finally(() => {
+        setFormDetailLoading(false)
+      })
+  }
+
+  async function handleFormSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const isEdit = formInvoiceId !== null
+
+    if (!isEdit) {
+      if (!formContractId) {
+        setFormError(t('invoiceContractRequired'))
+        return
+      }
+      const period = parsePeriodInputValue(formPeriod)
+      if (!period) {
+        setFormError(t('invoicePeriodRequired'))
+        return
+      }
+      if (!formIssueDate) {
+        setFormError(t('invoiceIssueDateRequired'))
+        return
+      }
+      if (!formDueDate) {
+        setFormError(t('invoiceDueDateRequired'))
+        return
+      }
+
+      setFormSaving(true)
+      setFormError(null)
+
+      try {
+        const payload = {
+          contract_id: formContractId,
+          period_year: period.year,
+          period_month: period.month,
+          issue_date: toApiDate(formIssueDate),
+          due_date: toApiDate(formDueDate),
+          note: formNote.trim(),
+        }
+        const { data } = await api.post<ApiInvoice>('/invoices', payload)
+        setInvoices((prev) => [...(prev ?? []), data])
+        setFormOpen(false)
+      } catch (err) {
+        setFormError(extractErrorMessage(err, t('invoiceCreateError')))
+      } finally {
+        setFormSaving(false)
+      }
+      return
+    }
+
+    if (!formDueDate) {
+      setFormError(t('invoiceDueDateRequired'))
+      return
+    }
+
+    setFormSaving(true)
+    setFormError(null)
+
+    try {
+      const payload = {
+        status: formStatus,
+        due_date: toApiDate(formDueDate),
+        note: formNote.trim(),
+      }
+      const { data } = await api.put<ApiInvoice>(`/invoices/${formInvoiceId}`, payload)
+      setInvoices((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
+      setFormOpen(false)
+    } catch (err) {
+      setFormError(extractErrorMessage(err, t('invoiceUpdateError')))
+    } finally {
+      setFormSaving(false)
+    }
+  }
+
+  async function handleDeleteInvoice() {
+    if (!confirmDeleteInvoice) return
+    const invoice = confirmDeleteInvoice
+
+    setDeletingInvoiceId(invoice.id)
+    setDeleteError(null)
+
+    try {
+      await api.delete(`/invoices/${invoice.id}`)
+      setInvoices((prev) => prev?.filter((item) => item.id !== invoice.id) ?? prev)
+      setConfirmDeleteInvoice(null)
+    } catch (err) {
+      setDeleteError(extractErrorMessage(err, t('invoiceDeleteError')))
+    } finally {
+      setDeletingInvoiceId(null)
+    }
+  }
+
+  return (
+    <main className="content">
+      <section className="welcome">
+        <h1>{t('menuInvoices')}</h1>
+        <p>{t('menuInvoicesDescription')}</p>
+      </section>
+
+      <InvoiceListCard
+        isLoading={isLoading}
+        loadError={loadError}
+        deleteError={deleteError}
+        invoices={invoices}
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
+        filteredInvoices={filteredInvoices}
+        paginatedInvoices={paginatedInvoices}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+        pageSize={pageSize}
+        onPageSizeChange={(size) => {
+          setPageSize(size)
+          setPage(1)
+        }}
+        onPrevPage={() => setPage((p) => Math.max(1, p - 1))}
+        onNextPage={() => setPage((p) => Math.min(totalPages, p + 1))}
+        deletingInvoiceId={deletingInvoiceId}
+        onCreateInvoice={openCreateForm}
+        onEditInvoice={openEditForm}
+        onDeleteInvoice={setConfirmDeleteInvoice}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteInvoice !== null}
+        onOpenChange={(open) => !open && setConfirmDeleteInvoice(null)}
+        title={t('confirmDeleteTitle')}
+        description={t('invoiceDeleteConfirm')}
+        confirmLabel={t('invoiceDelete')}
+        cancelLabel={t('cancel')}
+        loading={deletingInvoiceId === confirmDeleteInvoice?.id}
+        onConfirm={handleDeleteInvoice}
+      />
+
+      <InvoiceFormSheet
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        isEdit={formInvoiceId !== null}
+        contracts={contracts}
+        contractId={formContractId}
+        onContractIdChange={setFormContractId}
+        period={formPeriod}
+        onPeriodChange={setFormPeriod}
+        issueDate={formIssueDate}
+        onIssueDateChange={setFormIssueDate}
+        dueDate={formDueDate}
+        onDueDateChange={setFormDueDate}
+        status={formStatus}
+        onStatusChange={setFormStatus}
+        note={formNote}
+        onNoteChange={setFormNote}
+        invoice={formInvoiceDetail}
+        detailLoading={formDetailLoading}
+        saving={formSaving}
+        error={formError}
+        onSubmit={handleFormSubmit}
+      />
+    </main>
+  )
+}
