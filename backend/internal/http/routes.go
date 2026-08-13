@@ -15,6 +15,9 @@ import (
 	dormitoryhttp "apihorpug/internal/features/dormitory/delivery/http"
 	dormitoryrepository "apihorpug/internal/features/dormitory/repository/postgres"
 	dormitoryusecase "apihorpug/internal/features/dormitory/usecase"
+	expensehttp "apihorpug/internal/features/expense/delivery/http"
+	expenserepository "apihorpug/internal/features/expense/repository/postgres"
+	expenseusecase "apihorpug/internal/features/expense/usecase"
 	invoicehttp "apihorpug/internal/features/invoice/delivery/http"
 	invoicerepository "apihorpug/internal/features/invoice/repository/postgres"
 	invoiceusecase "apihorpug/internal/features/invoice/usecase"
@@ -95,6 +98,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	paymentRepo := paymentrepository.NewRepository(db)
 	paymentService := paymentusecase.New(paymentRepo)
 	paymentHandler := paymenthttp.NewHandler(paymentService)
+	expenseRepo := expenserepository.NewRepository(db)
+	expenseService := expenseusecase.New(expenseRepo)
+	expenseHandler := expensehttp.NewHandler(expenseService)
 	activityLogRepo := activitylogrepository.NewRepository(db)
 	activityLogService := activitylogusecase.New(activityLogRepo)
 	activityLogHandler := activityloghttp.NewHandler(activityLogService)
@@ -194,6 +200,12 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Get("/payments/:id", requirePermission("/payments", permissiondomain.ActionRead), paymentHandler.Get)
 	api.Post("/payments", requirePermission("/payments", permissiondomain.ActionCreate), paymentHandler.Create)
 	api.Delete("/payments/:id", requirePermission("/payments", permissiondomain.ActionDelete), paymentHandler.Delete)
+
+	api.Get("/expenses", requirePermission("/expenses", permissiondomain.ActionRead), expenseHandler.List)
+	api.Get("/expenses/:id", requirePermission("/expenses", permissiondomain.ActionRead), expenseHandler.Get)
+	api.Post("/expenses", requirePermission("/expenses", permissiondomain.ActionCreate), expenseHandler.Create)
+	api.Put("/expenses/:id", requirePermission("/expenses", permissiondomain.ActionUpdate), expenseHandler.Update)
+	api.Delete("/expenses/:id", requirePermission("/expenses", permissiondomain.ActionDelete), expenseHandler.Delete)
 
 	api.Get("/activity-logs", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.List)
 	api.Get("/activity-logs/:id", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.Get)

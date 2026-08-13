@@ -295,6 +295,25 @@ func AutoMigrate(db *pgxpool.Pool) error {
 			CONSTRAINT chk_payment_items_method CHECK (payment_method IN ('cash', 'transfer', 'credit_card', 'other'))
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_payment_items_payment_id ON payment_items(payment_id)`,
+		`CREATE TABLE IF NOT EXISTS expenses (
+			id UUID PRIMARY KEY,
+			dormitory_id UUID NOT NULL,
+			category VARCHAR(20) NOT NULL DEFAULT 'other',
+			expense_date DATE NOT NULL,
+			amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+			description VARCHAR(255) DEFAULT '',
+			created_by UUID,
+			updated_by UUID,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			CONSTRAINT expenses_dormitory_fkey FOREIGN KEY (dormitory_id) REFERENCES dormitories(id) ON DELETE CASCADE,
+			CONSTRAINT expenses_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+			CONSTRAINT expenses_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
+			CONSTRAINT chk_expenses_amount CHECK (amount > 0),
+			CONSTRAINT chk_expenses_category CHECK (category IN ('maintenance', 'utility', 'salary', 'supplies', 'other'))
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_expenses_dormitory_id ON expenses(dormitory_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_expenses_expense_date ON expenses(expense_date)`,
 		`CREATE TABLE IF NOT EXISTS activity_logs (
 			id UUID PRIMARY KEY,
 			user_id UUID,
