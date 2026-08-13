@@ -4,6 +4,7 @@ import {
   Building2,
   Contact,
   DoorOpen,
+  Droplets,
   FileText,
   Gauge,
   History,
@@ -68,6 +69,12 @@ export const menuMeta: Record<string, MenuMeta> = {
     icon: Gauge,
     labelKey: 'menuMeters',
     descriptionKey: 'menuMetersDescription',
+    group: 'finance',
+  },
+  '/water-meters': {
+    icon: Droplets,
+    labelKey: 'menuWaterMeters',
+    descriptionKey: 'menuWaterMetersDescription',
     group: 'finance',
   },
   '/roles': {
