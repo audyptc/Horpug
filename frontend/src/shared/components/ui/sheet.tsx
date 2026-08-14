@@ -45,8 +45,8 @@ function SheetContent({
         data-slot="sheet-content"
         className={cn(
           'fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out',
-          side === 'right' && 'inset-y-0 right-0 h-full w-3/4 border-l border-border sm:max-w-sm',
-          side === 'left' && 'inset-y-0 left-0 h-full w-3/4 border-r border-border sm:max-w-sm',
+          side === 'right' && 'inset-y-0 right-0 h-full w-3/4 border-l border-border sm:max-w-lg',
+          side === 'left' && 'inset-y-0 left-0 h-full w-3/4 border-r border-border sm:max-w-lg',
           side === 'top' && 'inset-x-0 top-0 border-b border-border',
           side === 'bottom' && 'inset-x-0 bottom-0 border-t border-border',
           className

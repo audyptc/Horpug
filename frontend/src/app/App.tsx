@@ -16,6 +16,7 @@ import WaterMeterPage from '@/features/watermeter/WaterMeterPage'
 import InvoicePage from '@/features/invoice/InvoicePage'
 import PaymentPage from '@/features/payment/PaymentPage'
 import ExpensePage from '@/features/expense/ExpensePage'
+import RepairRequestPage from '@/features/repairrequest/RepairRequestPage'
 import UserPage from '@/features/user/UserPage'
 import ActivityLogPage from '@/features/activitylog/ActivityLogPage'
 import { menuMeta } from '@/features/menu/menus'
@@ -124,6 +125,14 @@ function App() {
             }
           />
           <Route
+            path="/repair-requests"
+            element={
+              <AdminLayout>
+                <RepairRequestPage />
+              </AdminLayout>
+            }
+          />
+          <Route
             path="/users"
             element={
               <AdminLayout>
@@ -153,6 +162,7 @@ function App() {
                 path !== '/invoices' &&
                 path !== '/payments' &&
                 path !== '/expenses' &&
+                path !== '/repair-requests' &&
                 path !== '/users' &&
                 path !== '/activity-logs'
             )
