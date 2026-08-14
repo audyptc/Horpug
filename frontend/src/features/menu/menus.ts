@@ -12,6 +12,7 @@ import {
   HandCoins,
   History,
   Megaphone,
+  Package,
   Receipt,
   ShieldCheck,
   Users2,
@@ -117,6 +118,12 @@ export const menuMeta: Record<string, MenuMeta> = {
     icon: Car,
     labelKey: 'menuParking',
     descriptionKey: 'menuParkingDescription',
+    group: 'services',
+  },
+  '/parcels': {
+    icon: Package,
+    labelKey: 'menuParcels',
+    descriptionKey: 'menuParcelsDescription',
     group: 'services',
   },
   '/roles': {
