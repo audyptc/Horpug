@@ -36,6 +36,7 @@ func SeedMenus(db *pgxpool.Pool) error {
 		{Name: "Parcels", Path: "/parcels", Description: "Tenant parcel and package receiving records", IsActive: true},
 		{Name: "Activity Logs", Path: "/activity-logs", Description: "Activity log records", IsActive: true},
 		{Name: "Announcements", Path: "/announcements", Description: "Dormitory announcements posted to tenants", IsActive: true},
+		{Name: "Documents", Path: "/documents", Description: "Dormitory document and file attachment records", IsActive: true},
 	}
 
 	for _, menu := range menus {
