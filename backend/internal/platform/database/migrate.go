@@ -336,6 +336,22 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		`CREATE INDEX IF NOT EXISTS idx_repair_requests_room_id ON repair_requests(room_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_repair_requests_tenant_id ON repair_requests(tenant_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_repair_requests_status ON repair_requests(status)`,
+		`CREATE TABLE IF NOT EXISTS parking_registrations (
+			id UUID PRIMARY KEY,
+			tenant_id UUID NOT NULL,
+			vehicle_type VARCHAR(20) NOT NULL DEFAULT 'motorcycle',
+			license_plate VARCHAR(20) NOT NULL DEFAULT '',
+			parking_spot VARCHAR(20) DEFAULT '',
+			created_by UUID,
+			updated_by UUID,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			CONSTRAINT parking_registrations_tenant_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+			CONSTRAINT parking_registrations_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+			CONSTRAINT parking_registrations_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
+			CONSTRAINT chk_parking_registrations_vehicle_type CHECK (vehicle_type IN ('car', 'motorcycle', 'other'))
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_parking_registrations_tenant_id ON parking_registrations(tenant_id)`,
 		`CREATE TABLE IF NOT EXISTS activity_logs (
 			id UUID PRIMARY KEY,
 			user_id UUID,

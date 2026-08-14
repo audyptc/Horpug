@@ -27,6 +27,9 @@ import (
 	meterhttp "apihorpug/internal/features/meter/delivery/http"
 	meterrepository "apihorpug/internal/features/meter/repository/postgres"
 	meterusecase "apihorpug/internal/features/meter/usecase"
+	parkinghttp "apihorpug/internal/features/parking/delivery/http"
+	parkingrepository "apihorpug/internal/features/parking/repository/postgres"
+	parkingusecase "apihorpug/internal/features/parking/usecase"
 	paymenthttp "apihorpug/internal/features/payment/delivery/http"
 	paymentrepository "apihorpug/internal/features/payment/repository/postgres"
 	paymentusecase "apihorpug/internal/features/payment/usecase"
@@ -107,6 +110,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	repairRequestRepo := repairrequestrepository.NewRepository(db)
 	repairRequestService := repairrequestusecase.New(repairRequestRepo)
 	repairRequestHandler := repairrequesthttp.NewHandler(repairRequestService)
+	parkingRepo := parkingrepository.NewRepository(db)
+	parkingService := parkingusecase.New(parkingRepo)
+	parkingHandler := parkinghttp.NewHandler(parkingService)
 	activityLogRepo := activitylogrepository.NewRepository(db)
 	activityLogService := activitylogusecase.New(activityLogRepo)
 	activityLogHandler := activityloghttp.NewHandler(activityLogService)
@@ -218,6 +224,12 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Post("/repair-requests", requirePermission("/repair-requests", permissiondomain.ActionCreate), repairRequestHandler.Create)
 	api.Put("/repair-requests/:id", requirePermission("/repair-requests", permissiondomain.ActionUpdate), repairRequestHandler.Update)
 	api.Delete("/repair-requests/:id", requirePermission("/repair-requests", permissiondomain.ActionDelete), repairRequestHandler.Delete)
+
+	api.Get("/parking", requirePermission("/parking", permissiondomain.ActionRead), parkingHandler.List)
+	api.Get("/parking/:id", requirePermission("/parking", permissiondomain.ActionRead), parkingHandler.Get)
+	api.Post("/parking", requirePermission("/parking", permissiondomain.ActionCreate), parkingHandler.Create)
+	api.Put("/parking/:id", requirePermission("/parking", permissiondomain.ActionUpdate), parkingHandler.Update)
+	api.Delete("/parking/:id", requirePermission("/parking", permissiondomain.ActionDelete), parkingHandler.Delete)
 
 	api.Get("/activity-logs", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.List)
 	api.Get("/activity-logs/:id", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.Get)

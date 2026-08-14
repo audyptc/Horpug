@@ -32,6 +32,7 @@ func SeedMenus(db *pgxpool.Pool) error {
 		{Name: "Payments", Path: "/payments", Description: "Invoice payment records", IsActive: true},
 		{Name: "Expenses", Path: "/expenses", Description: "Dormitory operating expense records", IsActive: true},
 		{Name: "Repair Requests", Path: "/repair-requests", Description: "Tenant and staff-reported room maintenance issues", IsActive: true},
+		{Name: "Parking", Path: "/parking", Description: "Tenant vehicle parking registrations", IsActive: true},
 		{Name: "Activity Logs", Path: "/activity-logs", Description: "Activity log records", IsActive: true},
 	}
 
