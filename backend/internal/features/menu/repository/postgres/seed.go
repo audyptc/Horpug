@@ -34,6 +34,7 @@ func SeedMenus(db *pgxpool.Pool) error {
 		{Name: "Repair Requests", Path: "/repair-requests", Description: "Tenant and staff-reported room maintenance issues", IsActive: true},
 		{Name: "Parking", Path: "/parking", Description: "Tenant vehicle parking registrations", IsActive: true},
 		{Name: "Activity Logs", Path: "/activity-logs", Description: "Activity log records", IsActive: true},
+		{Name: "Announcements", Path: "/announcements", Description: "Dormitory announcements posted to tenants", IsActive: true},
 	}
 
 	for _, menu := range menus {

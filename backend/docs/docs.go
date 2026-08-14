@@ -182,6 +182,306 @@ const docTemplate = `{
                 }
             }
         },
+        "/announcements": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns every announcement for roles with full dormitory access, otherwise only announcements under dormitories the caller manages. Optionally filter by dormitory, published status or published date range.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "announcements"
+                ],
+                "summary": "List announcements",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by dormitory ID",
+                        "name": "dormitory_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by published status",
+                        "name": "is_published",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by published date, inclusive (YYYY-MM-DD)",
+                        "name": "date_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by published date, inclusive (YYYY-MM-DD)",
+                        "name": "date_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Results per page (default 10, max 100)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apiresponse.Meta"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Posts a notice (e.g. maintenance schedule, rule change, event) to tenants of a dormitory.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "announcements"
+                ],
+                "summary": "Post an announcement",
+                "parameters": [
+                    {
+                        "description": "Announcement payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_announcement_delivery_http.createAnnouncementRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_announcement_domain.Announcement"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/announcements/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "announcements"
+                ],
+                "summary": "Get an announcement by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Announcement ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_announcement_domain.Announcement"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "announcements"
+                ],
+                "summary": "Update an announcement",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Announcement ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Announcement payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_announcement_delivery_http.updateAnnouncementRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_announcement_domain.Announcement"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "announcements"
+                ],
+                "summary": "Delete an announcement",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Announcement ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "consumes": [
@@ -915,6 +1215,306 @@ const docTemplate = `{
                 }
             }
         },
+        "/expenses": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns every expense for roles with full dormitory access, otherwise only expenses under dormitories the caller manages. Optionally filter by dormitory, category or expense date range.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "expenses"
+                ],
+                "summary": "List expenses",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by dormitory ID",
+                        "name": "dormitory_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by category (maintenance, utility, salary, supplies, other)",
+                        "name": "category",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by expense date, inclusive (YYYY-MM-DD)",
+                        "name": "date_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by expense date, inclusive (YYYY-MM-DD)",
+                        "name": "date_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Results per page (default 10, max 100)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apiresponse.Meta"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Records an operating expense (e.g. maintenance, salary, supplies) against a dormitory.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "expenses"
+                ],
+                "summary": "Create an expense",
+                "parameters": [
+                    {
+                        "description": "Expense payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_expense_delivery_http.createExpenseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_expense_domain.Expense"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/expenses/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "expenses"
+                ],
+                "summary": "Get an expense by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Expense ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_expense_domain.Expense"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "expenses"
+                ],
+                "summary": "Update an expense",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Expense ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Expense payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_expense_delivery_http.updateExpenseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_expense_domain.Expense"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "expenses"
+                ],
+                "summary": "Delete an expense",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Expense ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/invoices": {
             "get": {
                 "security": [
@@ -1589,6 +2189,306 @@ const docTemplate = `{
                 }
             }
         },
+        "/parking": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns parking registrations for roles with full dormitory access, otherwise only registrations whose room belongs to a dormitory the caller manages (registrations without a room are only visible to roles with full access). Optionally filter by tenant, room, dormitory or vehicle type.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "parking"
+                ],
+                "summary": "List parking registrations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by tenant ID",
+                        "name": "tenant_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by room ID",
+                        "name": "room_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by dormitory ID",
+                        "name": "dormitory_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by vehicle type (car, motorcycle, other)",
+                        "name": "vehicle_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Results per page (default 10, max 100)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apiresponse.Meta"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Registers a tenant's vehicle, optionally tied to the room they occupy so it can be scoped to a dormitory.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "parking"
+                ],
+                "summary": "Register a tenant vehicle for parking",
+                "parameters": [
+                    {
+                        "description": "Parking registration payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_parking_delivery_http.createParkingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_parking_domain.Parking"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/parking/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "parking"
+                ],
+                "summary": "Get a parking registration by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Parking registration ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_parking_domain.Parking"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "parking"
+                ],
+                "summary": "Update a parking registration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Parking registration ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Parking registration payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_parking_delivery_http.updateParkingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_parking_domain.Parking"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "parking"
+                ],
+                "summary": "Delete a parking registration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Parking registration ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/payments": {
             "get": {
                 "security": [
@@ -1938,6 +2838,312 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/repair-requests": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns every repair request for roles with full dormitory access, otherwise only requests under dormitories the caller manages. Optionally filter by room, dormitory, tenant, category or status.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "repair-requests"
+                ],
+                "summary": "List repair requests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by room ID",
+                        "name": "room_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by dormitory ID",
+                        "name": "dormitory_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by reporting tenant ID",
+                        "name": "tenant_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by category (electrical, plumbing, furniture, aircon, other)",
+                        "name": "category",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (pending, in_progress, completed, cancelled)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Results per page (default 10, max 100)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apiresponse.Meta"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Records a maintenance issue reported for a room, optionally attributed to the tenant who reported it.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "repair-requests"
+                ],
+                "summary": "Report a repair request",
+                "parameters": [
+                    {
+                        "description": "Repair request payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_repairrequest_delivery_http.createRepairRequestRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_repairrequest_domain.RepairRequest"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/repair-requests/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "repair-requests"
+                ],
+                "summary": "Get a repair request by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Repair request ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_repairrequest_domain.RepairRequest"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "repair-requests"
+                ],
+                "summary": "Update a repair request",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Repair request ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Repair request payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_repairrequest_delivery_http.updateRepairRequestRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_repairrequest_domain.RepairRequest"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "repair-requests"
+                ],
+                "summary": "Delete a repair request",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Repair request ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
                         }
@@ -4059,6 +5265,44 @@ const docTemplate = `{
                 }
             }
         },
+        "apihorpug_internal_features_announcement_domain.Announcement": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "dormitory_id": {
+                    "type": "string"
+                },
+                "dormitory_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_published": {
+                    "type": "boolean"
+                },
+                "published_date": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
         "apihorpug_internal_features_contract_domain.Contract": {
             "type": "object",
             "properties": {
@@ -4188,6 +5432,61 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "apihorpug_internal_features_expense_domain.Expense": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "category": {
+                    "$ref": "#/definitions/apihorpug_internal_features_expense_domain.ExpenseCategory"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "dormitory_id": {
+                    "type": "string"
+                },
+                "dormitory_name": {
+                    "type": "string"
+                },
+                "expense_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_expense_domain.ExpenseCategory": {
+            "type": "string",
+            "enum": [
+                "maintenance",
+                "utility",
+                "salary",
+                "supplies",
+                "other"
+            ],
+            "x-enum-varnames": [
+                "ExpenseCategoryMaintenance",
+                "ExpenseCategoryUtility",
+                "ExpenseCategorySalary",
+                "ExpenseCategorySupplies",
+                "ExpenseCategoryOther"
+            ]
         },
         "apihorpug_internal_features_invoice_domain.Invoice": {
             "type": "object",
@@ -4412,6 +5711,66 @@ const docTemplate = `{
                 }
             }
         },
+        "apihorpug_internal_features_parking_domain.Parking": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "dormitory_id": {
+                    "type": "string"
+                },
+                "dormitory_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "license_plate": {
+                    "type": "string"
+                },
+                "parking_spot": {
+                    "type": "string"
+                },
+                "room_id": {
+                    "type": "string"
+                },
+                "room_number": {
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "type": "string"
+                },
+                "tenant_name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                },
+                "vehicle_type": {
+                    "$ref": "#/definitions/apihorpug_internal_features_parking_domain.VehicleType"
+                }
+            }
+        },
+        "apihorpug_internal_features_parking_domain.VehicleType": {
+            "type": "string",
+            "enum": [
+                "car",
+                "motorcycle",
+                "other"
+            ],
+            "x-enum-varnames": [
+                "VehicleTypeCar",
+                "VehicleTypeMotorcycle",
+                "VehicleTypeOther"
+            ]
+        },
         "apihorpug_internal_features_payment_domain.Payment": {
             "type": "object",
             "properties": {
@@ -4519,6 +5878,88 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "apihorpug_internal_features_repairrequest_domain.RepairCategory": {
+            "type": "string",
+            "enum": [
+                "electrical",
+                "plumbing",
+                "furniture",
+                "aircon",
+                "other"
+            ],
+            "x-enum-varnames": [
+                "RepairCategoryElectrical",
+                "RepairCategoryPlumbing",
+                "RepairCategoryFurniture",
+                "RepairCategoryAircon",
+                "RepairCategoryOther"
+            ]
+        },
+        "apihorpug_internal_features_repairrequest_domain.RepairRequest": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "$ref": "#/definitions/apihorpug_internal_features_repairrequest_domain.RepairCategory"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "dormitory_id": {
+                    "type": "string"
+                },
+                "dormitory_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "reported_date": {
+                    "type": "string"
+                },
+                "room_id": {
+                    "type": "string"
+                },
+                "room_number": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/apihorpug_internal_features_repairrequest_domain.RepairStatus"
+                },
+                "tenant_id": {
+                    "type": "string"
+                },
+                "tenant_name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_repairrequest_domain.RepairStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "in_progress",
+                "completed",
+                "cancelled"
+            ],
+            "x-enum-varnames": [
+                "RepairStatusPending",
+                "RepairStatusInProgress",
+                "RepairStatusCompleted",
+                "RepairStatusCancelled"
+            ]
         },
         "apihorpug_internal_features_role_domain.Role": {
             "type": "object",
@@ -4910,6 +6351,43 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_features_announcement_delivery_http.createAnnouncementRequest": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "dormitory_id": {
+                    "type": "string"
+                },
+                "is_published": {
+                    "type": "boolean"
+                },
+                "published_date": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_announcement_delivery_http.updateAnnouncementRequest": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "is_published": {
+                    "type": "boolean"
+                },
+                "published_date": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_features_auth_delivery_http.loginRequest": {
             "type": "object",
             "properties": {
@@ -5037,6 +6515,43 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_features_expense_delivery_http.createExpenseRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "category": {
+                    "$ref": "#/definitions/apihorpug_internal_features_expense_domain.ExpenseCategory"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "dormitory_id": {
+                    "type": "string"
+                },
+                "expense_date": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_expense_delivery_http.updateExpenseRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "category": {
+                    "$ref": "#/definitions/apihorpug_internal_features_expense_domain.ExpenseCategory"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "expense_date": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_features_invoice_delivery_http.createInvoiceRequest": {
             "type": "object",
             "properties": {
@@ -5129,6 +6644,43 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_features_parking_delivery_http.createParkingRequest": {
+            "type": "object",
+            "properties": {
+                "license_plate": {
+                    "type": "string"
+                },
+                "parking_spot": {
+                    "type": "string"
+                },
+                "room_id": {
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "type": "string"
+                },
+                "vehicle_type": {
+                    "$ref": "#/definitions/apihorpug_internal_features_parking_domain.VehicleType"
+                }
+            }
+        },
+        "internal_features_parking_delivery_http.updateParkingRequest": {
+            "type": "object",
+            "properties": {
+                "license_plate": {
+                    "type": "string"
+                },
+                "parking_spot": {
+                    "type": "string"
+                },
+                "room_id": {
+                    "type": "string"
+                },
+                "vehicle_type": {
+                    "$ref": "#/definitions/apihorpug_internal_features_parking_domain.VehicleType"
+                }
+            }
+        },
         "internal_features_payment_delivery_http.createPaymentItemRequest": {
             "type": "object",
             "properties": {
@@ -5170,6 +6722,49 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_repairrequest_delivery_http.createRepairRequestRequest": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "$ref": "#/definitions/apihorpug_internal_features_repairrequest_domain.RepairCategory"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "reported_date": {
+                    "type": "string"
+                },
+                "room_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/apihorpug_internal_features_repairrequest_domain.RepairStatus"
+                },
+                "tenant_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_repairrequest_delivery_http.updateRepairRequestRequest": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "$ref": "#/definitions/apihorpug_internal_features_repairrequest_domain.RepairCategory"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "reported_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/apihorpug_internal_features_repairrequest_domain.RepairStatus"
+                },
+                "tenant_id": {
                     "type": "string"
                 }
             }

@@ -6,6 +6,9 @@ import (
 	activityloghttp "apihorpug/internal/features/activitylog/delivery/http"
 	activitylogrepository "apihorpug/internal/features/activitylog/repository/postgres"
 	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
+	announcementhttp "apihorpug/internal/features/announcement/delivery/http"
+	announcementrepository "apihorpug/internal/features/announcement/repository/postgres"
+	announcementusecase "apihorpug/internal/features/announcement/usecase"
 	authhttp "apihorpug/internal/features/auth/delivery/http"
 	authrepository "apihorpug/internal/features/auth/repository/postgres"
 	authusecase "apihorpug/internal/features/auth/usecase"
@@ -116,6 +119,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	activityLogRepo := activitylogrepository.NewRepository(db)
 	activityLogService := activitylogusecase.New(activityLogRepo)
 	activityLogHandler := activityloghttp.NewHandler(activityLogService)
+	announcementRepo := announcementrepository.NewRepository(db)
+	announcementService := announcementusecase.New(announcementRepo)
+	announcementHandler := announcementhttp.NewHandler(announcementService)
 	authTokenRepo := authrepository.NewRepository(db)
 	authService := authusecase.New(userRepo, authTokenRepo, activityLogService, secretKey, accessTokenTTL, refreshTokenTTL)
 	authHandler := authhttp.NewHandler(authService, cookieSecure)
@@ -234,4 +240,10 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Get("/activity-logs", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.List)
 	api.Get("/activity-logs/:id", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.Get)
 	api.Post("/activity-logs", requirePermission("/activity-logs", permissiondomain.ActionCreate), activityLogHandler.Create)
+
+	api.Get("/announcements", requirePermission("/announcements", permissiondomain.ActionRead), announcementHandler.List)
+	api.Get("/announcements/:id", requirePermission("/announcements", permissiondomain.ActionRead), announcementHandler.Get)
+	api.Post("/announcements", requirePermission("/announcements", permissiondomain.ActionCreate), announcementHandler.Create)
+	api.Put("/announcements/:id", requirePermission("/announcements", permissiondomain.ActionUpdate), announcementHandler.Update)
+	api.Delete("/announcements/:id", requirePermission("/announcements", permissiondomain.ActionDelete), announcementHandler.Delete)
 }

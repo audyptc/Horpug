@@ -354,6 +354,23 @@ func AutoMigrate(db *pgxpool.Pool) error {
 			CONSTRAINT chk_parking_registrations_vehicle_type CHECK (vehicle_type IN ('car', 'motorcycle', 'other'))
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_parking_registrations_tenant_id ON parking_registrations(tenant_id)`,
+		`CREATE TABLE IF NOT EXISTS announcements (
+			id UUID PRIMARY KEY,
+			dormitory_id UUID NOT NULL,
+			title VARCHAR(200) NOT NULL,
+			content TEXT NOT NULL DEFAULT '',
+			is_published BOOLEAN NOT NULL DEFAULT TRUE,
+			published_date DATE NOT NULL DEFAULT CURRENT_DATE,
+			created_by UUID,
+			updated_by UUID,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			CONSTRAINT announcements_dormitory_fkey FOREIGN KEY (dormitory_id) REFERENCES dormitories(id) ON DELETE CASCADE,
+			CONSTRAINT announcements_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+			CONSTRAINT announcements_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_announcements_dormitory_id ON announcements(dormitory_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_announcements_published_date ON announcements(published_date DESC)`,
 		`CREATE TABLE IF NOT EXISTS activity_logs (
 			id UUID PRIMARY KEY,
 			user_id UUID,

@@ -21,6 +21,31 @@ definitions:
       username:
         type: string
     type: object
+  apihorpug_internal_features_announcement_domain.Announcement:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      dormitory_id:
+        type: string
+      dormitory_name:
+        type: string
+      id:
+        type: string
+      is_published:
+        type: boolean
+      published_date:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
   apihorpug_internal_features_contract_domain.Contract:
     properties:
       created_at:
@@ -108,6 +133,45 @@ definitions:
       username:
         type: string
     type: object
+  apihorpug_internal_features_expense_domain.Expense:
+    properties:
+      amount:
+        type: number
+      category:
+        $ref: '#/definitions/apihorpug_internal_features_expense_domain.ExpenseCategory'
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      dormitory_id:
+        type: string
+      dormitory_name:
+        type: string
+      expense_date:
+        type: string
+      id:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  apihorpug_internal_features_expense_domain.ExpenseCategory:
+    enum:
+    - maintenance
+    - utility
+    - salary
+    - supplies
+    - other
+    type: string
+    x-enum-varnames:
+    - ExpenseCategoryMaintenance
+    - ExpenseCategoryUtility
+    - ExpenseCategorySalary
+    - ExpenseCategorySupplies
+    - ExpenseCategoryOther
   apihorpug_internal_features_invoice_domain.Invoice:
     properties:
       contract_id:
@@ -260,6 +324,47 @@ definitions:
       updated_by:
         type: string
     type: object
+  apihorpug_internal_features_parking_domain.Parking:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      dormitory_id:
+        type: string
+      dormitory_name:
+        type: string
+      id:
+        type: string
+      license_plate:
+        type: string
+      parking_spot:
+        type: string
+      room_id:
+        type: string
+      room_number:
+        type: string
+      tenant_id:
+        type: string
+      tenant_name:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      vehicle_type:
+        $ref: '#/definitions/apihorpug_internal_features_parking_domain.VehicleType'
+    type: object
+  apihorpug_internal_features_parking_domain.VehicleType:
+    enum:
+    - car
+    - motorcycle
+    - other
+    type: string
+    x-enum-varnames:
+    - VehicleTypeCar
+    - VehicleTypeMotorcycle
+    - VehicleTypeOther
   apihorpug_internal_features_payment_domain.Payment:
     properties:
       created_at:
@@ -333,6 +438,65 @@ definitions:
       updated_at:
         type: string
     type: object
+  apihorpug_internal_features_repairrequest_domain.RepairCategory:
+    enum:
+    - electrical
+    - plumbing
+    - furniture
+    - aircon
+    - other
+    type: string
+    x-enum-varnames:
+    - RepairCategoryElectrical
+    - RepairCategoryPlumbing
+    - RepairCategoryFurniture
+    - RepairCategoryAircon
+    - RepairCategoryOther
+  apihorpug_internal_features_repairrequest_domain.RepairRequest:
+    properties:
+      category:
+        $ref: '#/definitions/apihorpug_internal_features_repairrequest_domain.RepairCategory'
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      dormitory_id:
+        type: string
+      dormitory_name:
+        type: string
+      id:
+        type: string
+      reported_date:
+        type: string
+      room_id:
+        type: string
+      room_number:
+        type: string
+      status:
+        $ref: '#/definitions/apihorpug_internal_features_repairrequest_domain.RepairStatus'
+      tenant_id:
+        type: string
+      tenant_name:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  apihorpug_internal_features_repairrequest_domain.RepairStatus:
+    enum:
+    - pending
+    - in_progress
+    - completed
+    - cancelled
+    type: string
+    x-enum-varnames:
+    - RepairStatusPending
+    - RepairStatusInProgress
+    - RepairStatusCompleted
+    - RepairStatusCancelled
   apihorpug_internal_features_role_domain.Role:
     properties:
       created_at:
@@ -591,6 +755,30 @@ definitions:
       user_id:
         type: string
     type: object
+  internal_features_announcement_delivery_http.createAnnouncementRequest:
+    properties:
+      content:
+        type: string
+      dormitory_id:
+        type: string
+      is_published:
+        type: boolean
+      published_date:
+        type: string
+      title:
+        type: string
+    type: object
+  internal_features_announcement_delivery_http.updateAnnouncementRequest:
+    properties:
+      content:
+        type: string
+      is_published:
+        type: boolean
+      published_date:
+        type: string
+      title:
+        type: string
+    type: object
   internal_features_auth_delivery_http.loginRequest:
     properties:
       password:
@@ -674,6 +862,30 @@ definitions:
       phone:
         type: string
     type: object
+  internal_features_expense_delivery_http.createExpenseRequest:
+    properties:
+      amount:
+        type: number
+      category:
+        $ref: '#/definitions/apihorpug_internal_features_expense_domain.ExpenseCategory'
+      description:
+        type: string
+      dormitory_id:
+        type: string
+      expense_date:
+        type: string
+    type: object
+  internal_features_expense_delivery_http.updateExpenseRequest:
+    properties:
+      amount:
+        type: number
+      category:
+        $ref: '#/definitions/apihorpug_internal_features_expense_domain.ExpenseCategory'
+      description:
+        type: string
+      expense_date:
+        type: string
+    type: object
   internal_features_invoice_delivery_http.createInvoiceRequest:
     properties:
       contract_id:
@@ -734,6 +946,30 @@ definitions:
       reading_date:
         type: string
     type: object
+  internal_features_parking_delivery_http.createParkingRequest:
+    properties:
+      license_plate:
+        type: string
+      parking_spot:
+        type: string
+      room_id:
+        type: string
+      tenant_id:
+        type: string
+      vehicle_type:
+        $ref: '#/definitions/apihorpug_internal_features_parking_domain.VehicleType'
+    type: object
+  internal_features_parking_delivery_http.updateParkingRequest:
+    properties:
+      license_plate:
+        type: string
+      parking_spot:
+        type: string
+      room_id:
+        type: string
+      vehicle_type:
+        $ref: '#/definitions/apihorpug_internal_features_parking_domain.VehicleType'
+    type: object
   internal_features_payment_delivery_http.createPaymentItemRequest:
     properties:
       amount:
@@ -761,6 +997,34 @@ definitions:
       description:
         type: string
       name:
+        type: string
+    type: object
+  internal_features_repairrequest_delivery_http.createRepairRequestRequest:
+    properties:
+      category:
+        $ref: '#/definitions/apihorpug_internal_features_repairrequest_domain.RepairCategory'
+      description:
+        type: string
+      reported_date:
+        type: string
+      room_id:
+        type: string
+      status:
+        $ref: '#/definitions/apihorpug_internal_features_repairrequest_domain.RepairStatus'
+      tenant_id:
+        type: string
+    type: object
+  internal_features_repairrequest_delivery_http.updateRepairRequestRequest:
+    properties:
+      category:
+        $ref: '#/definitions/apihorpug_internal_features_repairrequest_domain.RepairCategory'
+      description:
+        type: string
+      reported_date:
+        type: string
+      status:
+        $ref: '#/definitions/apihorpug_internal_features_repairrequest_domain.RepairStatus'
+      tenant_id:
         type: string
     type: object
   internal_features_role_delivery_http.createRoleRequest:
@@ -1073,6 +1337,200 @@ paths:
       summary: Get an activity log by ID
       tags:
       - activity-logs
+  /announcements:
+    get:
+      description: Returns every announcement for roles with full dormitory access,
+        otherwise only announcements under dormitories the caller manages. Optionally
+        filter by dormitory, published status or published date range.
+      parameters:
+      - description: Filter by dormitory ID
+        in: query
+        name: dormitory_id
+        type: string
+      - description: Filter by published status
+        in: query
+        name: is_published
+        type: boolean
+      - description: Filter by published date, inclusive (YYYY-MM-DD)
+        in: query
+        name: date_from
+        type: string
+      - description: Filter by published date, inclusive (YYYY-MM-DD)
+        in: query
+        name: date_to
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List announcements
+      tags:
+      - announcements
+    post:
+      consumes:
+      - application/json
+      description: Posts a notice (e.g. maintenance schedule, rule change, event)
+        to tenants of a dormitory.
+      parameters:
+      - description: Announcement payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_announcement_delivery_http.createAnnouncementRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_announcement_domain.Announcement'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Post an announcement
+      tags:
+      - announcements
+  /announcements/{id}:
+    delete:
+      parameters:
+      - description: Announcement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Delete an announcement
+      tags:
+      - announcements
+    get:
+      parameters:
+      - description: Announcement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_announcement_domain.Announcement'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get an announcement by ID
+      tags:
+      - announcements
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Announcement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Announcement payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_announcement_delivery_http.updateAnnouncementRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_announcement_domain.Announcement'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Update an announcement
+      tags:
+      - announcements
   /auth/login:
     post:
       consumes:
@@ -1545,6 +2003,200 @@ paths:
       summary: List active dormitories
       tags:
       - dormitories
+  /expenses:
+    get:
+      description: Returns every expense for roles with full dormitory access, otherwise
+        only expenses under dormitories the caller manages. Optionally filter by dormitory,
+        category or expense date range.
+      parameters:
+      - description: Filter by dormitory ID
+        in: query
+        name: dormitory_id
+        type: string
+      - description: Filter by category (maintenance, utility, salary, supplies, other)
+        in: query
+        name: category
+        type: string
+      - description: Filter by expense date, inclusive (YYYY-MM-DD)
+        in: query
+        name: date_from
+        type: string
+      - description: Filter by expense date, inclusive (YYYY-MM-DD)
+        in: query
+        name: date_to
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List expenses
+      tags:
+      - expenses
+    post:
+      consumes:
+      - application/json
+      description: Records an operating expense (e.g. maintenance, salary, supplies)
+        against a dormitory.
+      parameters:
+      - description: Expense payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_expense_delivery_http.createExpenseRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_expense_domain.Expense'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Create an expense
+      tags:
+      - expenses
+  /expenses/{id}:
+    delete:
+      parameters:
+      - description: Expense ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Delete an expense
+      tags:
+      - expenses
+    get:
+      parameters:
+      - description: Expense ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_expense_domain.Expense'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get an expense by ID
+      tags:
+      - expenses
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Expense ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Expense payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_expense_delivery_http.updateExpenseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_expense_domain.Expense'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Update an expense
+      tags:
+      - expenses
   /invoices:
     get:
       description: Returns every invoice for roles with full dormitory access, otherwise
@@ -1983,6 +2635,201 @@ paths:
       summary: Update a meter reading
       tags:
       - meters
+  /parking:
+    get:
+      description: Returns parking registrations for roles with full dormitory access,
+        otherwise only registrations whose room belongs to a dormitory the caller
+        manages (registrations without a room are only visible to roles with full
+        access). Optionally filter by tenant, room, dormitory or vehicle type.
+      parameters:
+      - description: Filter by tenant ID
+        in: query
+        name: tenant_id
+        type: string
+      - description: Filter by room ID
+        in: query
+        name: room_id
+        type: string
+      - description: Filter by dormitory ID
+        in: query
+        name: dormitory_id
+        type: string
+      - description: Filter by vehicle type (car, motorcycle, other)
+        in: query
+        name: vehicle_type
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List parking registrations
+      tags:
+      - parking
+    post:
+      consumes:
+      - application/json
+      description: Registers a tenant's vehicle, optionally tied to the room they
+        occupy so it can be scoped to a dormitory.
+      parameters:
+      - description: Parking registration payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_parking_delivery_http.createParkingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_parking_domain.Parking'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Register a tenant vehicle for parking
+      tags:
+      - parking
+  /parking/{id}:
+    delete:
+      parameters:
+      - description: Parking registration ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Delete a parking registration
+      tags:
+      - parking
+    get:
+      parameters:
+      - description: Parking registration ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_parking_domain.Parking'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get a parking registration by ID
+      tags:
+      - parking
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Parking registration ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Parking registration payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_parking_delivery_http.updateParkingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_parking_domain.Parking'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Update a parking registration
+      tags:
+      - parking
   /payments:
     get:
       description: Returns every payment for roles with full dormitory access, otherwise
@@ -2220,6 +3067,205 @@ paths:
       summary: Create a permission
       tags:
       - permissions
+  /repair-requests:
+    get:
+      description: Returns every repair request for roles with full dormitory access,
+        otherwise only requests under dormitories the caller manages. Optionally filter
+        by room, dormitory, tenant, category or status.
+      parameters:
+      - description: Filter by room ID
+        in: query
+        name: room_id
+        type: string
+      - description: Filter by dormitory ID
+        in: query
+        name: dormitory_id
+        type: string
+      - description: Filter by reporting tenant ID
+        in: query
+        name: tenant_id
+        type: string
+      - description: Filter by category (electrical, plumbing, furniture, aircon,
+          other)
+        in: query
+        name: category
+        type: string
+      - description: Filter by status (pending, in_progress, completed, cancelled)
+        in: query
+        name: status
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List repair requests
+      tags:
+      - repair-requests
+    post:
+      consumes:
+      - application/json
+      description: Records a maintenance issue reported for a room, optionally attributed
+        to the tenant who reported it.
+      parameters:
+      - description: Repair request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_repairrequest_delivery_http.createRepairRequestRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_repairrequest_domain.RepairRequest'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Report a repair request
+      tags:
+      - repair-requests
+  /repair-requests/{id}:
+    delete:
+      parameters:
+      - description: Repair request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Delete a repair request
+      tags:
+      - repair-requests
+    get:
+      parameters:
+      - description: Repair request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_repairrequest_domain.RepairRequest'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get a repair request by ID
+      tags:
+      - repair-requests
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Repair request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Repair request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_repairrequest_delivery_http.updateRepairRequestRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_repairrequest_domain.RepairRequest'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Update a repair request
+      tags:
+      - repair-requests
   /roles:
     get:
       parameters:
