@@ -30,6 +30,9 @@ import (
 	meterhttp "apihorpug/internal/features/meter/delivery/http"
 	meterrepository "apihorpug/internal/features/meter/repository/postgres"
 	meterusecase "apihorpug/internal/features/meter/usecase"
+	parcelhttp "apihorpug/internal/features/parcel/delivery/http"
+	parcelrepository "apihorpug/internal/features/parcel/repository/postgres"
+	parcelusecase "apihorpug/internal/features/parcel/usecase"
 	parkinghttp "apihorpug/internal/features/parking/delivery/http"
 	parkingrepository "apihorpug/internal/features/parking/repository/postgres"
 	parkingusecase "apihorpug/internal/features/parking/usecase"
@@ -116,6 +119,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	parkingRepo := parkingrepository.NewRepository(db)
 	parkingService := parkingusecase.New(parkingRepo)
 	parkingHandler := parkinghttp.NewHandler(parkingService)
+	parcelRepo := parcelrepository.NewRepository(db)
+	parcelService := parcelusecase.New(parcelRepo)
+	parcelHandler := parcelhttp.NewHandler(parcelService)
 	activityLogRepo := activitylogrepository.NewRepository(db)
 	activityLogService := activitylogusecase.New(activityLogRepo)
 	activityLogHandler := activityloghttp.NewHandler(activityLogService)
@@ -236,6 +242,12 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Post("/parking", requirePermission("/parking", permissiondomain.ActionCreate), parkingHandler.Create)
 	api.Put("/parking/:id", requirePermission("/parking", permissiondomain.ActionUpdate), parkingHandler.Update)
 	api.Delete("/parking/:id", requirePermission("/parking", permissiondomain.ActionDelete), parkingHandler.Delete)
+
+	api.Get("/parcels", requirePermission("/parcels", permissiondomain.ActionRead), parcelHandler.List)
+	api.Get("/parcels/:id", requirePermission("/parcels", permissiondomain.ActionRead), parcelHandler.Get)
+	api.Post("/parcels", requirePermission("/parcels", permissiondomain.ActionCreate), parcelHandler.Create)
+	api.Put("/parcels/:id", requirePermission("/parcels", permissiondomain.ActionUpdate), parcelHandler.Update)
+	api.Delete("/parcels/:id", requirePermission("/parcels", permissiondomain.ActionDelete), parcelHandler.Delete)
 
 	api.Get("/activity-logs", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.List)
 	api.Get("/activity-logs/:id", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.Get)

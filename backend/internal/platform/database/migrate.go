@@ -354,6 +354,28 @@ func AutoMigrate(db *pgxpool.Pool) error {
 			CONSTRAINT chk_parking_registrations_vehicle_type CHECK (vehicle_type IN ('car', 'motorcycle', 'other'))
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_parking_registrations_tenant_id ON parking_registrations(tenant_id)`,
+		`CREATE TABLE IF NOT EXISTS parcels (
+			id UUID PRIMARY KEY,
+			tenant_id UUID NOT NULL,
+			room_id UUID,
+			courier VARCHAR(80) NOT NULL DEFAULT '',
+			tracking_number VARCHAR(100) NOT NULL DEFAULT '',
+			status VARCHAR(20) NOT NULL DEFAULT 'pending',
+			received_date DATE NOT NULL,
+			note VARCHAR(255) DEFAULT '',
+			created_by UUID,
+			updated_by UUID,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			CONSTRAINT parcels_tenant_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+			CONSTRAINT parcels_room_fkey FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE SET NULL,
+			CONSTRAINT parcels_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+			CONSTRAINT parcels_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
+			CONSTRAINT chk_parcels_status CHECK (status IN ('pending', 'picked_up', 'returned'))
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_parcels_tenant_id ON parcels(tenant_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_parcels_room_id ON parcels(room_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_parcels_status ON parcels(status)`,
 		`CREATE TABLE IF NOT EXISTS announcements (
 			id UUID PRIMARY KEY,
 			dormitory_id UUID NOT NULL,
