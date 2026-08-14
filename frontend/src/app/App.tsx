@@ -20,6 +20,7 @@ import AnnouncementPage from '@/features/announcement/AnnouncementPage'
 import RepairRequestPage from '@/features/repairrequest/RepairRequestPage'
 import ParkingPage from '@/features/parking/ParkingPage'
 import ParcelPage from '@/features/parcel/ParcelPage'
+import DocumentPage from '@/features/document/DocumentPage'
 import UserPage from '@/features/user/UserPage'
 import ActivityLogPage from '@/features/activitylog/ActivityLogPage'
 import { menuMeta } from '@/features/menu/menus'
@@ -160,6 +161,14 @@ function App() {
             }
           />
           <Route
+            path="/documents"
+            element={
+              <AdminLayout>
+                <DocumentPage />
+              </AdminLayout>
+            }
+          />
+          <Route
             path="/users"
             element={
               <AdminLayout>
@@ -193,6 +202,7 @@ function App() {
                 path !== '/repair-requests' &&
                 path !== '/parking' &&
                 path !== '/parcels' &&
+                path !== '/documents' &&
                 path !== '/users' &&
                 path !== '/activity-logs'
             )

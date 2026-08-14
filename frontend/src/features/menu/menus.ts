@@ -8,6 +8,7 @@ import {
   DoorOpen,
   Droplets,
   FileText,
+  Files,
   Gauge,
   HandCoins,
   History,
@@ -124,6 +125,12 @@ export const menuMeta: Record<string, MenuMeta> = {
     icon: Package,
     labelKey: 'menuParcels',
     descriptionKey: 'menuParcelsDescription',
+    group: 'services',
+  },
+  '/documents': {
+    icon: Files,
+    labelKey: 'menuDocuments',
+    descriptionKey: 'menuDocumentsDescription',
     group: 'services',
   },
   '/roles': {
