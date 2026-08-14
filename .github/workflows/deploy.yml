@@ -14,14 +14,16 @@ jobs:
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.2.0
         env:
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           APP_SECRETKEY: ${{ secrets.APP_SECRETKEY }}
           CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: DB_PASSWORD,APP_SECRETKEY,CORS_ORIGINS
+          envs: APP_SECRETKEY,CORS_ORIGINS,DB_USERNAME,DB_NAME,DB_PASSWORD
           script: |
             set -e
             cd /opt/horpug
@@ -29,12 +31,9 @@ jobs:
             echo "==> Pull latest code"
             git pull origin master
 
-            echo "==> Write root .env"
-            printf 'DB_PASSWORD=%s\n' "$DB_PASSWORD" > .env
-
             echo "==> Write backend/.env"
-            printf 'APP_SECRETKEY=%s\nCORS_ORIGINS=%s\n' \
-              "$APP_SECRETKEY" "$CORS_ORIGINS" > backend/.env
+            printf 'APP_SECRETKEY=%s\nCORS_ORIGINS=%s\nDB_USERNAME=%s\nDB_NAME=%s\nDB_PASSWORD=%s\n' \
+              "$APP_SECRETKEY" "$CORS_ORIGINS" "$DB_USERNAME" "$DB_NAME" "$DB_PASSWORD" > backend/.env
 
             echo "==> Build and restart containers"
             docker compose up --build -d --remove-orphans

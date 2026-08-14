@@ -24,20 +24,30 @@ Horpug/
 
 ## การติดตั้งและรัน
 
-### 1. ตั้งค่า Environment
+### 1. ตั้งค่า Database
+
+PostgreSQL ไม่ได้รันผ่าน Docker — ติดตั้งบน host ตามปกติ แล้วสร้าง database/user ที่ต้องใช้ไว้ล่วงหน้า
+
+### 2. ตั้งค่า Environment
 
 ```bash
 cp .env.example .env
+cp backend/.env.example backend/.env   # ถ้ายังไม่มี
 ```
 
-แก้ไข `.env` ตั้งรหัสผ่านที่ต้องการ:
+แก้ไข `backend/.env` ให้ชี้ไปที่ database ที่ติดตั้งไว้:
 
 ```env
-POSTGRES_PASSWORD=your_strong_password
-CORS_ORIGINS=http://localhost
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=your_strong_password
+DB_NAME=phorpug
 ```
 
-### 2. รันด้วย Docker Compose
+(เมื่อรันผ่าน `docker compose`, `DB_HOST` จะถูก override เป็น `host.docker.internal` โดยอัตโนมัติเพื่อให้ container เชื่อมต่อ database บน host ได้)
+
+### 3. รันด้วย Docker Compose
 
 ```bash
 docker compose up --build -d
@@ -45,14 +55,10 @@ docker compose up --build -d
 
 เปิด browser ที่ `http://localhost`
 
-### 3. หยุดระบบ
+### 4. หยุดระบบ
 
 ```bash
-# หยุด containers
 docker compose down
-
-# หยุดและลบ volume (ข้อมูล DB จะหายด้วย)
-docker compose down -v
 ```
 
 ## อัปเดต Code

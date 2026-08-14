@@ -1,53 +1,4 @@
 services:
-  postgres:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_DB: phorpug
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required - copy .env.example to .env}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - db_net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d phorpug"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    restart: always
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512M
-        reservations:
-          memory: 256M
-
-  pgbouncer:
-    image: edoburu/pgbouncer:latest
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: phorpug
-      DB_USER: postgres
-      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required - copy .env.example to .env}
-      POOL_MODE: transaction
-      MAX_CLIENT_CONN: 200
-      DEFAULT_POOL_SIZE: 20
-      AUTH_TYPE: scram-sha-256
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - db_net
-    restart: always
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 64M
-
   frontend:
     build:
       context: ./frontend
@@ -73,24 +24,18 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    depends_on:
-      postgres:
-        condition: service_healthy
-      pgbouncer:
-        condition: service_started
     env_file:
       - ./backend/.env
     environment:
       APP_PORT: 8080
-      DB_HOST: pgbouncer
-      DB_PORT: 5432
-      DB_USERNAME: postgres
-      DB_NAME: phorpug
-      DB_SSLMODE: disable
-      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required - copy .env.example to .env}
+      # Database runs directly on the host (not in Docker); reach it via the
+      # host gateway. Works on Docker Desktop out of the box, and on Linux
+      # Docker Engine 20.10+ via the extra_hosts entry below.
+      DB_HOST: host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - backend_net
-      - db_net
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health >/dev/null || exit 1"]
       interval: 15s
@@ -137,7 +82,3 @@ services:
 networks:
   frontend_net:
   backend_net:
-  db_net:
-
-volumes:
-  postgres_data:
