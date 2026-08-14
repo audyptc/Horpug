@@ -55,9 +55,21 @@ func dsn(cfg config.Config, dbName string) string {
 // ensureDatabaseExists creates cfg.DBName via the maintenance "postgres"
 // database if it doesn't exist yet. Postgres has no "CREATE DATABASE IF NOT
 // EXISTS", so this checks pg_database first and only creates it when missing.
+//
+// It tries cfg.DBName directly first and returns early on success, since
+// connection poolers such as pgbouncer are commonly configured to proxy only
+// the application database and reject connections to "postgres" itself. The
+// maintenance connection is only needed the first time the database doesn't
+// exist yet, which happens against the database directly (e.g. local dev),
+// never through a pooler that already targets an existing database.
 func ensureDatabaseExists(cfg config.Config) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	if targetConn, err := pgx.Connect(ctx, dsn(cfg, cfg.DBName)); err == nil {
+		targetConn.Close(ctx)
+		return nil
+	}
 
 	adminConn, err := pgx.Connect(ctx, dsn(cfg, "postgres"))
 	if err != nil {
