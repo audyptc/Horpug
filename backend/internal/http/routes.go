@@ -34,6 +34,9 @@ import (
 	permissiondomain "apihorpug/internal/features/permission/domain"
 	permissionrepository "apihorpug/internal/features/permission/repository/postgres"
 	permissionusecase "apihorpug/internal/features/permission/usecase"
+	repairrequesthttp "apihorpug/internal/features/repairrequest/delivery/http"
+	repairrequestrepository "apihorpug/internal/features/repairrequest/repository/postgres"
+	repairrequestusecase "apihorpug/internal/features/repairrequest/usecase"
 	rolehttp "apihorpug/internal/features/role/delivery/http"
 	rolerepository "apihorpug/internal/features/role/repository/postgres"
 	roleusecase "apihorpug/internal/features/role/usecase"
@@ -101,6 +104,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	expenseRepo := expenserepository.NewRepository(db)
 	expenseService := expenseusecase.New(expenseRepo)
 	expenseHandler := expensehttp.NewHandler(expenseService)
+	repairRequestRepo := repairrequestrepository.NewRepository(db)
+	repairRequestService := repairrequestusecase.New(repairRequestRepo)
+	repairRequestHandler := repairrequesthttp.NewHandler(repairRequestService)
 	activityLogRepo := activitylogrepository.NewRepository(db)
 	activityLogService := activitylogusecase.New(activityLogRepo)
 	activityLogHandler := activityloghttp.NewHandler(activityLogService)
@@ -206,6 +212,12 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Post("/expenses", requirePermission("/expenses", permissiondomain.ActionCreate), expenseHandler.Create)
 	api.Put("/expenses/:id", requirePermission("/expenses", permissiondomain.ActionUpdate), expenseHandler.Update)
 	api.Delete("/expenses/:id", requirePermission("/expenses", permissiondomain.ActionDelete), expenseHandler.Delete)
+
+	api.Get("/repair-requests", requirePermission("/repair-requests", permissiondomain.ActionRead), repairRequestHandler.List)
+	api.Get("/repair-requests/:id", requirePermission("/repair-requests", permissiondomain.ActionRead), repairRequestHandler.Get)
+	api.Post("/repair-requests", requirePermission("/repair-requests", permissiondomain.ActionCreate), repairRequestHandler.Create)
+	api.Put("/repair-requests/:id", requirePermission("/repair-requests", permissiondomain.ActionUpdate), repairRequestHandler.Update)
+	api.Delete("/repair-requests/:id", requirePermission("/repair-requests", permissiondomain.ActionDelete), repairRequestHandler.Delete)
 
 	api.Get("/activity-logs", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.List)
 	api.Get("/activity-logs/:id", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.Get)

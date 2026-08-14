@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChartNoAxesColumn, ChevronDown, ClipboardList, DoorOpen, Lock, Settings, Wallet } from 'lucide-react'
+import { ChartNoAxesColumn, ChevronDown, ClipboardList, ConciergeBell, DoorOpen, Lock, Settings, Wallet } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useLanguage } from '@/shared/i18n/language'
 import { menuMeta, useMenus, type ApiMenu } from './menus'
@@ -19,18 +19,21 @@ export function SidebarNav({
 
   const mainMenus = menus.filter((menu) => !menuMeta[menu.path]?.group).sort(byMetaOrder)
   const roomMenus = menus.filter((menu) => menuMeta[menu.path]?.group === 'rooms').sort(byMetaOrder)
+  const serviceMenus = menus.filter((menu) => menuMeta[menu.path]?.group === 'services').sort(byMetaOrder)
   const financeMenus = menus.filter((menu) => menuMeta[menu.path]?.group === 'finance').sort(byMetaOrder)
   const reportMenus = menus.filter((menu) => menuMeta[menu.path]?.group === 'reports').sort(byMetaOrder)
   const accessMenus = menus.filter((menu) => menuMeta[menu.path]?.group === 'access').sort(byMetaOrder)
   const settingsMenus = menus.filter((menu) => menuMeta[menu.path]?.group === 'settings').sort(byMetaOrder)
 
   const [isRoomsOpen, setIsRoomsOpen] = useState(true)
+  const [isServicesOpen, setIsServicesOpen] = useState(true)
   const [isFinanceOpen, setIsFinanceOpen] = useState(true)
   const [isReportsOpen, setIsReportsOpen] = useState(true)
   const [isAccessOpen, setIsAccessOpen] = useState(true)
   const [isSettingsOpen, setIsSettingsOpen] = useState(true)
 
   const showRoomMenus = collapsed || isRoomsOpen
+  const showServiceMenus = collapsed || isServicesOpen
   const showFinanceMenus = collapsed || isFinanceOpen
   const showReportMenus = collapsed || isReportsOpen
   const showAccessMenus = collapsed || isAccessOpen
@@ -127,6 +130,36 @@ export function SidebarNav({
           {showFinanceMenus && (
             <nav className="menu-list menu-group" aria-label={t('menuGroupFinance')}>
               {financeMenus.map(renderMenuLink)}
+            </nav>
+          )}
+        </div>
+      )}
+
+      {serviceMenus.length > 0 && (
+        <div className="menu-group-section">
+          <button
+            type="button"
+            className={`sidebar-label menu-group-label menu-group-toggle ${collapsed ? 'collapsed' : ''}`}
+            onClick={() => setIsServicesOpen((open) => !open)}
+            aria-expanded={showServiceMenus}
+            disabled={collapsed}
+            title={t('menuGroupServices')}
+          >
+            <span className="menu-group-toggle-label">
+              <ConciergeBell size={14} aria-hidden="true" />
+              <span className="menu-text">{t('menuGroupServices')}</span>
+            </span>
+            {!collapsed && (
+              <ChevronDown
+                size={14}
+                className={`menu-group-chevron ${isServicesOpen ? 'open' : ''}`}
+                aria-hidden="true"
+              />
+            )}
+          </button>
+          {showServiceMenus && (
+            <nav className="menu-list menu-group" aria-label={t('menuGroupServices')}>
+              {serviceMenus.map(renderMenuLink)}
             </nav>
           )}
         </div>

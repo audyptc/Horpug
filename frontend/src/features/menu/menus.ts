@@ -13,6 +13,7 @@ import {
   Receipt,
   ShieldCheck,
   Users2,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react'
 import { api, type ApiPage } from '@/shared/api/client'
@@ -31,7 +32,7 @@ export type MenuMeta = {
   icon: LucideIcon
   labelKey: TranslationKey
   descriptionKey: TranslationKey
-  group?: 'rooms' | 'finance' | 'reports' | 'access' | 'settings'
+  group?: 'rooms' | 'services' | 'finance' | 'reports' | 'access' | 'settings'
 }
 
 // The backend seeds a fixed, known set of menu paths (see
@@ -97,6 +98,12 @@ export const menuMeta: Record<string, MenuMeta> = {
     labelKey: 'menuExpenses',
     descriptionKey: 'menuExpensesDescription',
     group: 'finance',
+  },
+  '/repair-requests': {
+    icon: Wrench,
+    labelKey: 'menuRepairRequests',
+    descriptionKey: 'menuRepairRequestsDescription',
+    group: 'services',
   },
   '/roles': {
     icon: ShieldCheck,
