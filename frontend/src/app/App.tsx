@@ -16,6 +16,7 @@ import WaterMeterPage from '@/features/watermeter/WaterMeterPage'
 import InvoicePage from '@/features/invoice/InvoicePage'
 import PaymentPage from '@/features/payment/PaymentPage'
 import ExpensePage from '@/features/expense/ExpensePage'
+import AnnouncementPage from '@/features/announcement/AnnouncementPage'
 import RepairRequestPage from '@/features/repairrequest/RepairRequestPage'
 import ParkingPage from '@/features/parking/ParkingPage'
 import UserPage from '@/features/user/UserPage'
@@ -126,6 +127,14 @@ function App() {
             }
           />
           <Route
+            path="/announcements"
+            element={
+              <AdminLayout>
+                <AnnouncementPage />
+              </AdminLayout>
+            }
+          />
+          <Route
             path="/repair-requests"
             element={
               <AdminLayout>
@@ -171,6 +180,7 @@ function App() {
                 path !== '/invoices' &&
                 path !== '/payments' &&
                 path !== '/expenses' &&
+                path !== '/announcements' &&
                 path !== '/repair-requests' &&
                 path !== '/parking' &&
                 path !== '/users' &&

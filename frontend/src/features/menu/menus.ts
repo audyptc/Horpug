@@ -11,6 +11,7 @@ import {
   Gauge,
   HandCoins,
   History,
+  Megaphone,
   Receipt,
   ShieldCheck,
   Users2,
@@ -99,6 +100,12 @@ export const menuMeta: Record<string, MenuMeta> = {
     labelKey: 'menuExpenses',
     descriptionKey: 'menuExpensesDescription',
     group: 'finance',
+  },
+  '/announcements': {
+    icon: Megaphone,
+    labelKey: 'menuAnnouncements',
+    descriptionKey: 'menuAnnouncementsDescription',
+    group: 'services',
   },
   '/repair-requests': {
     icon: Wrench,
