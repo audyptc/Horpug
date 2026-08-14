@@ -7,4 +7,5 @@ var (
 	ErrRequiredParkingData = errors.New("tenant_id and license_plate are required")
 	ErrInvalidVehicleType  = errors.New("invalid vehicle type")
 	ErrTenantNotFound      = errors.New("tenant not found")
+	ErrRoomNotFound        = errors.New("room not found")
 )

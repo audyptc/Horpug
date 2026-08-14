@@ -339,6 +339,7 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		`CREATE TABLE IF NOT EXISTS parking_registrations (
 			id UUID PRIMARY KEY,
 			tenant_id UUID NOT NULL,
+			room_id UUID,
 			vehicle_type VARCHAR(20) NOT NULL DEFAULT 'motorcycle',
 			license_plate VARCHAR(20) NOT NULL DEFAULT '',
 			parking_spot VARCHAR(20) DEFAULT '',
@@ -347,6 +348,7 @@ func AutoMigrate(db *pgxpool.Pool) error {
 			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			CONSTRAINT parking_registrations_tenant_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+			CONSTRAINT parking_registrations_room_fkey FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE SET NULL,
 			CONSTRAINT parking_registrations_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
 			CONSTRAINT parking_registrations_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
 			CONSTRAINT chk_parking_registrations_vehicle_type CHECK (vehicle_type IN ('car', 'motorcycle', 'other'))
@@ -394,6 +396,9 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_permissions_name ON permissions(name)`,
 
 		`ALTER TABLE room_types ADD COLUMN IF NOT EXISTS price NUMERIC(10,2) NOT NULL DEFAULT 0`,
+
+		`ALTER TABLE parking_registrations ADD COLUMN IF NOT EXISTS room_id UUID`,
+		`CREATE INDEX IF NOT EXISTS idx_parking_registrations_room_id ON parking_registrations(room_id)`,
 
 		`ALTER TABLE roles ADD COLUMN IF NOT EXISTS description VARCHAR(255) DEFAULT ''`,
 		`ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`,
@@ -503,6 +508,9 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		BEGIN
 			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'activity_logs_user_fkey') THEN
 				ALTER TABLE activity_logs ADD CONSTRAINT activity_logs_user_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
+			END IF;
+			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'parking_registrations_room_fkey') THEN
+				ALTER TABLE parking_registrations ADD CONSTRAINT parking_registrations_room_fkey FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE SET NULL;
 			END IF;
 			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_created_by_fkey') THEN
 				ALTER TABLE users ADD CONSTRAINT users_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;

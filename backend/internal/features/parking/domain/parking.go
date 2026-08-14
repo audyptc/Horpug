@@ -22,16 +22,22 @@ func (v VehicleType) Valid() bool {
 	return false
 }
 
-// Parking is a tenant's registered vehicle and its assigned parking spot.
+// Parking is a tenant's registered vehicle and its assigned parking spot,
+// optionally tied to the room the tenant occupies (which also determines
+// which dormitory the registration belongs to).
 type Parking struct {
-	ID           uuid.UUID   `json:"id"`
-	TenantID     uuid.UUID   `json:"tenant_id"`
-	TenantName   string      `json:"tenant_name,omitempty"`
-	VehicleType  VehicleType `json:"vehicle_type"`
-	LicensePlate string      `json:"license_plate"`
-	ParkingSpot  string      `json:"parking_spot"`
-	CreatedBy    *uuid.UUID  `json:"created_by,omitempty"`
-	UpdatedBy    *uuid.UUID  `json:"updated_by,omitempty"`
-	CreatedAt    time.Time   `json:"created_at"`
-	UpdatedAt    time.Time   `json:"updated_at"`
+	ID            uuid.UUID   `json:"id"`
+	TenantID      uuid.UUID   `json:"tenant_id"`
+	TenantName    string      `json:"tenant_name,omitempty"`
+	RoomID        *uuid.UUID  `json:"room_id,omitempty"`
+	RoomNumber    *string     `json:"room_number,omitempty"`
+	DormitoryID   *uuid.UUID  `json:"dormitory_id,omitempty"`
+	DormitoryName *string     `json:"dormitory_name,omitempty"`
+	VehicleType   VehicleType `json:"vehicle_type"`
+	LicensePlate  string      `json:"license_plate"`
+	ParkingSpot   string      `json:"parking_spot"`
+	CreatedBy     *uuid.UUID  `json:"created_by,omitempty"`
+	UpdatedBy     *uuid.UUID  `json:"updated_by,omitempty"`
+	CreatedAt     time.Time   `json:"created_at"`
+	UpdatedAt     time.Time   `json:"updated_at"`
 }

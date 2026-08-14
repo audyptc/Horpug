@@ -17,6 +17,7 @@ import InvoicePage from '@/features/invoice/InvoicePage'
 import PaymentPage from '@/features/payment/PaymentPage'
 import ExpensePage from '@/features/expense/ExpensePage'
 import RepairRequestPage from '@/features/repairrequest/RepairRequestPage'
+import ParkingPage from '@/features/parking/ParkingPage'
 import UserPage from '@/features/user/UserPage'
 import ActivityLogPage from '@/features/activitylog/ActivityLogPage'
 import { menuMeta } from '@/features/menu/menus'
@@ -133,6 +134,14 @@ function App() {
             }
           />
           <Route
+            path="/parking"
+            element={
+              <AdminLayout>
+                <ParkingPage />
+              </AdminLayout>
+            }
+          />
+          <Route
             path="/users"
             element={
               <AdminLayout>
@@ -163,6 +172,7 @@ function App() {
                 path !== '/payments' &&
                 path !== '/expenses' &&
                 path !== '/repair-requests' &&
+                path !== '/parking' &&
                 path !== '/users' &&
                 path !== '/activity-logs'
             )

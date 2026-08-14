@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   BedDouble,
   Building2,
+  Car,
   Contact,
   CreditCard,
   DoorOpen,
@@ -103,6 +104,12 @@ export const menuMeta: Record<string, MenuMeta> = {
     icon: Wrench,
     labelKey: 'menuRepairRequests',
     descriptionKey: 'menuRepairRequestsDescription',
+    group: 'services',
+  },
+  '/parking': {
+    icon: Car,
+    labelKey: 'menuParking',
+    descriptionKey: 'menuParkingDescription',
     group: 'services',
   },
   '/roles': {

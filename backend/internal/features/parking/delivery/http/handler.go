@@ -23,12 +23,14 @@ type Handler struct {
 
 type createParkingRequest struct {
 	TenantID     uuid.UUID                 `json:"tenant_id"`
+	RoomID       *uuid.UUID                `json:"room_id"`
 	VehicleType  parkingdomain.VehicleType `json:"vehicle_type"`
 	LicensePlate string                    `json:"license_plate"`
 	ParkingSpot  string                    `json:"parking_spot"`
 }
 
 type updateParkingRequest struct {
+	RoomID       *uuid.UUID                 `json:"room_id"`
 	VehicleType  *parkingdomain.VehicleType `json:"vehicle_type"`
 	LicensePlate *string                    `json:"license_plate"`
 	ParkingSpot  *string                    `json:"parking_spot"`
@@ -55,6 +57,14 @@ func parseListFilters(c fiber.Ctx) (parkingusecase.ListFilters, error) {
 	if err != nil {
 		return parkingusecase.ListFilters{}, err
 	}
+	roomID, err := parseUUIDQuery(c, "room_id")
+	if err != nil {
+		return parkingusecase.ListFilters{}, err
+	}
+	dormitoryID, err := parseUUIDQuery(c, "dormitory_id")
+	if err != nil {
+		return parkingusecase.ListFilters{}, err
+	}
 
 	var vehicleType *parkingdomain.VehicleType
 	if raw := strings.TrimSpace(c.Query("vehicle_type")); raw != "" {
@@ -67,16 +77,20 @@ func parseListFilters(c fiber.Ctx) (parkingusecase.ListFilters, error) {
 
 	return parkingusecase.ListFilters{
 		TenantID:    tenantID,
+		RoomID:      roomID,
+		DormitoryID: dormitoryID,
 		VehicleType: vehicleType,
 	}, nil
 }
 
 // List godoc
 // @Summary List parking registrations
-// @Description Returns tenant vehicle parking registrations. Optionally filter by tenant or vehicle type.
+// @Description Returns parking registrations for roles with full dormitory access, otherwise only registrations whose room belongs to a dormitory the caller manages (registrations without a room are only visible to roles with full access). Optionally filter by tenant, room, dormitory or vehicle type.
 // @Tags parking
 // @Produce json
 // @Param tenant_id query string false "Filter by tenant ID"
+// @Param room_id query string false "Filter by room ID"
+// @Param dormitory_id query string false "Filter by dormitory ID"
 // @Param vehicle_type query string false "Filter by vehicle type (car, motorcycle, other)"
 // @Param page query int false "Page number (default 1)"
 // @Param per_page query int false "Results per page (default 10, max 100)"
@@ -87,7 +101,8 @@ func parseListFilters(c fiber.Ctx) (parkingusecase.ListFilters, error) {
 // @Security BearerAuth
 // @Router /parking [get]
 func (h *Handler) List(c fiber.Ctx) error {
-	if _, ok := middleware.UserID(c); !ok {
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
 		return apierror.Unauthorized("authentication required")
 	}
 
@@ -104,7 +119,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	parkings, total, err := h.usecase.List(ctx, filters, perPage, offset)
+	parkings, total, err := h.usecase.List(ctx, requesterID, filters, perPage, offset)
 	if err != nil {
 		return apierror.Internal("failed to list parking registrations")
 	}
@@ -129,14 +144,15 @@ func (h *Handler) Get(c fiber.Ctx) error {
 		return apierror.BadRequest("invalid parking registration id")
 	}
 
-	if _, ok := middleware.UserID(c); !ok {
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
 		return apierror.Unauthorized("authentication required")
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	parking, err := h.usecase.GetByID(ctx, id)
+	parking, err := h.usecase.GetByID(ctx, id, requesterID)
 	if err != nil {
 		if errors.Is(err, parkingdomain.ErrParkingNotFound) {
 			return apierror.NotFound("parking registration not found")
@@ -149,6 +165,7 @@ func (h *Handler) Get(c fiber.Ctx) error {
 
 // Create godoc
 // @Summary Register a tenant vehicle for parking
+// @Description Registers a tenant's vehicle, optionally tied to the room they occupy so it can be scoped to a dormitory.
 // @Tags parking
 // @Accept json
 // @Produce json
@@ -175,6 +192,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 
 	parking, err := h.usecase.Create(ctx, parkingusecase.CreateInput{
 		TenantID:     req.TenantID,
+		RoomID:       req.RoomID,
 		VehicleType:  req.VehicleType,
 		LicensePlate: req.LicensePlate,
 		ParkingSpot:  req.ParkingSpot,
@@ -189,6 +207,9 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		}
 		if errors.Is(err, parkingdomain.ErrTenantNotFound) {
 			return apierror.NotFound("tenant not found")
+		}
+		if errors.Is(err, parkingdomain.ErrRoomNotFound) {
+			return apierror.NotFound("room not found")
 		}
 		return apierror.Internal("failed to register parking")
 	}
@@ -228,7 +249,8 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	parking, err := h.usecase.Update(ctx, id, parkingusecase.UpdateInput{
+	parking, err := h.usecase.Update(ctx, id, requesterID, parkingusecase.UpdateInput{
+		RoomID:       req.RoomID,
 		VehicleType:  req.VehicleType,
 		LicensePlate: req.LicensePlate,
 		ParkingSpot:  req.ParkingSpot,
@@ -243,6 +265,9 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		}
 		if errors.Is(err, parkingdomain.ErrInvalidVehicleType) {
 			return apierror.BadRequest("invalid vehicle type")
+		}
+		if errors.Is(err, parkingdomain.ErrRoomNotFound) {
+			return apierror.NotFound("room not found")
 		}
 		return apierror.Internal("failed to update parking registration")
 	}
@@ -267,14 +292,15 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 		return apierror.BadRequest("invalid parking registration id")
 	}
 
-	if _, ok := middleware.UserID(c); !ok {
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
 		return apierror.Unauthorized("authentication required")
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := h.usecase.Delete(ctx, id); err != nil {
+	if err := h.usecase.Delete(ctx, id, requesterID); err != nil {
 		if errors.Is(err, parkingdomain.ErrParkingNotFound) {
 			return apierror.NotFound("parking registration not found")
 		}
