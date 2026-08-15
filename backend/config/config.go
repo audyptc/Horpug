@@ -42,10 +42,11 @@ func Load() Config {
 		AdminUsername:   getEnv("ADMIN_USERNAME", "admin"),
 		AdminEmail:      getEnv("ADMIN_EMAIL", "admin@horpug.local"),
 		AdminPassword:   getEnv("ADMIN_PASSWORD", "Admin@12345"),
-		// The refresh-token cookie's Secure flag. nginx.conf currently terminates
-		// plain HTTP (no TLS), so this defaults to false; flip it to true once
-		// the deployment sits behind HTTPS, or browsers will silently drop the
-		// cookie.
+		// The refresh-token cookie's Secure flag. Defaults to false so bare
+		// `go run` / `npm run dev` local dev (plain HTTP) still works; set to
+		// true in backend/.env when running behind the dockerized nginx, which
+		// now terminates HTTPS (see nginx/nginx.conf), or browsers will
+		// silently drop the cookie.
 		CookieSecure: getEnvBool("APP_COOKIE_SECURE", false),
 	}
 }

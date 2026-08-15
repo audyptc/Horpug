@@ -32,7 +32,7 @@ jobs:
             git pull origin master
 
             echo "==> Write backend/.env"
-            printf 'APP_SECRETKEY=%s\nCORS_ORIGINS=%s\nDB_USERNAME=%s\nDB_NAME=%s\nDB_PASSWORD=%s\n' \
+            printf 'APP_SECRETKEY=%s\nCORS_ORIGINS=%s\nDB_USERNAME=%s\nDB_NAME=%s\nDB_PASSWORD=%s\nAPP_COOKIE_SECURE=true\n' \
               "$APP_SECRETKEY" "$CORS_ORIGINS" "$DB_USERNAME" "$DB_NAME" "$DB_PASSWORD" > backend/.env
 
             echo "==> Build and restart containers"
