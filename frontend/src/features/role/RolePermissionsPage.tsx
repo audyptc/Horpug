@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
+import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiMenu } from '@/features/menu/menus'
@@ -21,8 +22,6 @@ export default function RolePermissionsPage() {
 
   const [view, setView] = useState<View>('list')
   const [roleQuery, setRoleQuery] = useState('')
-  const [rolePage, setRolePage] = useState(1)
-  const [rolePageSize, setRolePageSize] = useState<number>(ROLE_PAGE_SIZE_OPTIONS[0])
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
   const [matrix, setMatrix] = useState<Record<string, Set<string>>>({})
   const [menuQuery, setMenuQuery] = useState('')
@@ -121,14 +120,18 @@ export default function RolePermissionsPage() {
     })
   }, [roleQuery, roles])
 
-  const totalRolePages = Math.max(1, Math.ceil(filteredRoles.length / rolePageSize))
-  const currentRolePage = Math.min(rolePage, totalRolePages)
-  const rolesRangeStart = filteredRoles.length === 0 ? 0 : (currentRolePage - 1) * rolePageSize + 1
-  const rolesRangeEnd = Math.min(currentRolePage * rolePageSize, filteredRoles.length)
-  const paginatedRoles = filteredRoles.slice(
-    (currentRolePage - 1) * rolePageSize,
-    currentRolePage * rolePageSize
-  )
+  const {
+    page: currentRolePage,
+    pageSize: rolePageSize,
+    setPageSize: setRolePageSize,
+    totalPages: totalRolePages,
+    rangeStart: rolesRangeStart,
+    rangeEnd: rolesRangeEnd,
+    paginatedItems: paginatedRoles,
+    resetPage: resetRolePage,
+    prevPage: prevRolePage,
+    nextPage: nextRolePage,
+  } = usePagination(filteredRoles, ROLE_PAGE_SIZE_OPTIONS[0])
 
   function toggleCell(menuId: string, permissionId: string) {
     setMatrix((prev) => {
@@ -297,7 +300,7 @@ export default function RolePermissionsPage() {
           roleQuery={roleQuery}
           onRoleQueryChange={(query) => {
             setRoleQuery(query)
-            setRolePage(1)
+            resetRolePage()
           }}
           filteredRoles={filteredRoles}
           paginatedRoles={paginatedRoles}
@@ -306,12 +309,9 @@ export default function RolePermissionsPage() {
           rolesRangeStart={rolesRangeStart}
           rolesRangeEnd={rolesRangeEnd}
           rolePageSize={rolePageSize}
-          onRolePageSizeChange={(size) => {
-            setRolePageSize(size)
-            setRolePage(1)
-          }}
-          onPrevPage={() => setRolePage((page) => Math.max(1, page - 1))}
-          onNextPage={() => setRolePage((page) => Math.min(totalRolePages, page + 1))}
+          onRolePageSizeChange={setRolePageSize}
+          onPrevPage={prevRolePage}
+          onNextPage={nextRolePage}
           deletingRoleId={deletingRoleId}
           onCreateRole={openCreateForm}
           onManageRole={openPermissions}

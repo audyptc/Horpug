@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react'
+import { useMemo, type FormEvent } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Button } from '@/shared/components/ui/button'
@@ -61,7 +61,10 @@ export function PaymentFormSheet({
 }: PaymentFormSheetProps) {
   const { t } = useLanguage()
 
-  const total = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+  const total = useMemo(
+    () => items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0),
+    [items]
+  )
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

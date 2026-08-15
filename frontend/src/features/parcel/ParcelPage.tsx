@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
+import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiTenant } from '@/features/tenant/types'
@@ -18,8 +19,6 @@ export default function ParcelPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState<number>(PARCEL_PAGE_SIZE_OPTIONS[0])
 
   const [formOpen, setFormOpen] = useState(false)
   const [formParcelId, setFormParcelId] = useState<string | null>(null)
@@ -77,11 +76,18 @@ export default function ParcelPage() {
     })
   }, [query, parcels])
 
-  const totalPages = Math.max(1, Math.ceil(filteredParcels.length / pageSize))
-  const currentPage = Math.min(page, totalPages)
-  const rangeStart = filteredParcels.length === 0 ? 0 : (currentPage - 1) * pageSize + 1
-  const rangeEnd = Math.min(currentPage * pageSize, filteredParcels.length)
-  const paginatedParcels = filteredParcels.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const {
+    page: currentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    paginatedItems: paginatedParcels,
+    resetPage,
+    prevPage,
+    nextPage,
+  } = usePagination(filteredParcels, PARCEL_PAGE_SIZE_OPTIONS[0])
 
   const isLoading = !loadError && parcels === null
 
@@ -197,7 +203,7 @@ export default function ParcelPage() {
         query={query}
         onQueryChange={(value) => {
           setQuery(value)
-          setPage(1)
+          resetPage()
         }}
         filteredParcels={filteredParcels}
         paginatedParcels={paginatedParcels}
@@ -206,12 +212,9 @@ export default function ParcelPage() {
         rangeStart={rangeStart}
         rangeEnd={rangeEnd}
         pageSize={pageSize}
-        onPageSizeChange={(size) => {
-          setPageSize(size)
-          setPage(1)
-        }}
-        onPrevPage={() => setPage((p) => Math.max(1, p - 1))}
-        onNextPage={() => setPage((p) => Math.min(totalPages, p + 1))}
+        onPageSizeChange={setPageSize}
+        onPrevPage={prevPage}
+        onNextPage={nextPage}
         deletingParcelId={deletingParcelId}
         onCreateParcel={openCreateForm}
         onEditParcel={openEditForm}

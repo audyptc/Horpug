@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
+import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiDormitory } from '@/features/dormitory/types'
@@ -16,8 +17,6 @@ export default function RoomTypePage() {
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState<number>(ROOM_TYPE_PAGE_SIZE_OPTIONS[0])
 
   const [formOpen, setFormOpen] = useState(false)
   const [formRoomTypeId, setFormRoomTypeId] = useState<string | null>(null)
@@ -67,14 +66,18 @@ export default function RoomTypePage() {
     })
   }, [query, roomTypes])
 
-  const totalPages = Math.max(1, Math.ceil(filteredRoomTypes.length / pageSize))
-  const currentPage = Math.min(page, totalPages)
-  const rangeStart = filteredRoomTypes.length === 0 ? 0 : (currentPage - 1) * pageSize + 1
-  const rangeEnd = Math.min(currentPage * pageSize, filteredRoomTypes.length)
-  const paginatedRoomTypes = filteredRoomTypes.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  )
+  const {
+    page: currentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    paginatedItems: paginatedRoomTypes,
+    resetPage,
+    prevPage,
+    nextPage,
+  } = usePagination(filteredRoomTypes, ROOM_TYPE_PAGE_SIZE_OPTIONS[0])
 
   const isLoading = !loadError && roomTypes === null
 
@@ -184,7 +187,7 @@ export default function RoomTypePage() {
         query={query}
         onQueryChange={(value) => {
           setQuery(value)
-          setPage(1)
+          resetPage()
         }}
         filteredRoomTypes={filteredRoomTypes}
         paginatedRoomTypes={paginatedRoomTypes}
@@ -193,12 +196,9 @@ export default function RoomTypePage() {
         rangeStart={rangeStart}
         rangeEnd={rangeEnd}
         pageSize={pageSize}
-        onPageSizeChange={(size) => {
-          setPageSize(size)
-          setPage(1)
-        }}
-        onPrevPage={() => setPage((p) => Math.max(1, p - 1))}
-        onNextPage={() => setPage((p) => Math.min(totalPages, p + 1))}
+        onPageSizeChange={setPageSize}
+        onPrevPage={prevPage}
+        onNextPage={nextPage}
         deletingRoomTypeId={deletingRoomTypeId}
         onCreateRoomType={openCreateForm}
         onEditRoomType={openEditForm}

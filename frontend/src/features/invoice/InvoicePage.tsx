@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
+import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiContract } from '@/features/contract/types'
@@ -16,8 +17,6 @@ export default function InvoicePage() {
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState<number>(INVOICE_PAGE_SIZE_OPTIONS[0])
 
   const [formOpen, setFormOpen] = useState(false)
   const [formInvoiceId, setFormInvoiceId] = useState<string | null>(null)
@@ -71,11 +70,18 @@ export default function InvoicePage() {
     })
   }, [query, invoices])
 
-  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / pageSize))
-  const currentPage = Math.min(page, totalPages)
-  const rangeStart = filteredInvoices.length === 0 ? 0 : (currentPage - 1) * pageSize + 1
-  const rangeEnd = Math.min(currentPage * pageSize, filteredInvoices.length)
-  const paginatedInvoices = filteredInvoices.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const {
+    page: currentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    paginatedItems: paginatedInvoices,
+    resetPage,
+    prevPage,
+    nextPage,
+  } = usePagination(filteredInvoices, INVOICE_PAGE_SIZE_OPTIONS[0])
 
   const isLoading = !loadError && invoices === null
 
@@ -223,7 +229,7 @@ export default function InvoicePage() {
         query={query}
         onQueryChange={(value) => {
           setQuery(value)
-          setPage(1)
+          resetPage()
         }}
         filteredInvoices={filteredInvoices}
         paginatedInvoices={paginatedInvoices}
@@ -232,12 +238,9 @@ export default function InvoicePage() {
         rangeStart={rangeStart}
         rangeEnd={rangeEnd}
         pageSize={pageSize}
-        onPageSizeChange={(size) => {
-          setPageSize(size)
-          setPage(1)
-        }}
-        onPrevPage={() => setPage((p) => Math.max(1, p - 1))}
-        onNextPage={() => setPage((p) => Math.min(totalPages, p + 1))}
+        onPageSizeChange={setPageSize}
+        onPrevPage={prevPage}
+        onNextPage={nextPage}
         deletingInvoiceId={deletingInvoiceId}
         onCreateInvoice={openCreateForm}
         onEditInvoice={openEditForm}

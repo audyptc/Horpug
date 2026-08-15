@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
+import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiRoom } from '@/features/room/types'
@@ -18,8 +19,6 @@ export default function RepairRequestPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState<number>(REPAIR_REQUEST_PAGE_SIZE_OPTIONS[0])
 
   const [formOpen, setFormOpen] = useState(false)
   const [formRepairRequestId, setFormRepairRequestId] = useState<string | null>(null)
@@ -75,14 +74,18 @@ export default function RepairRequestPage() {
     })
   }, [query, repairRequests])
 
-  const totalPages = Math.max(1, Math.ceil(filteredRepairRequests.length / pageSize))
-  const currentPage = Math.min(page, totalPages)
-  const rangeStart = filteredRepairRequests.length === 0 ? 0 : (currentPage - 1) * pageSize + 1
-  const rangeEnd = Math.min(currentPage * pageSize, filteredRepairRequests.length)
-  const paginatedRepairRequests = filteredRepairRequests.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  )
+  const {
+    page: currentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    paginatedItems: paginatedRepairRequests,
+    resetPage,
+    prevPage,
+    nextPage,
+  } = usePagination(filteredRepairRequests, REPAIR_REQUEST_PAGE_SIZE_OPTIONS[0])
 
   const isLoading = !loadError && repairRequests === null
 
@@ -200,7 +203,7 @@ export default function RepairRequestPage() {
         query={query}
         onQueryChange={(value) => {
           setQuery(value)
-          setPage(1)
+          resetPage()
         }}
         filteredRepairRequests={filteredRepairRequests}
         paginatedRepairRequests={paginatedRepairRequests}
@@ -209,12 +212,9 @@ export default function RepairRequestPage() {
         rangeStart={rangeStart}
         rangeEnd={rangeEnd}
         pageSize={pageSize}
-        onPageSizeChange={(size) => {
-          setPageSize(size)
-          setPage(1)
-        }}
-        onPrevPage={() => setPage((p) => Math.max(1, p - 1))}
-        onNextPage={() => setPage((p) => Math.min(totalPages, p + 1))}
+        onPageSizeChange={setPageSize}
+        onPrevPage={prevPage}
+        onNextPage={nextPage}
         deletingRepairRequestId={deletingRepairRequestId}
         onCreateRepairRequest={openCreateForm}
         onEditRepairRequest={openEditForm}
