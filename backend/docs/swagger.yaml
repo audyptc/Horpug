@@ -95,6 +95,53 @@ definitions:
     - ContractStatusActive
     - ContractStatusExpired
     - ContractStatusTerminated
+  apihorpug_internal_features_document_domain.Document:
+    properties:
+      category:
+        $ref: '#/definitions/apihorpug_internal_features_document_domain.DocumentCategory'
+      created_at:
+        type: string
+      created_by:
+        type: string
+      dormitory_id:
+        type: string
+      dormitory_name:
+        type: string
+      file_url:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      note:
+        type: string
+      room_id:
+        type: string
+      room_number:
+        type: string
+      tenant_id:
+        type: string
+      tenant_name:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      uploaded_date:
+        type: string
+    type: object
+  apihorpug_internal_features_document_domain.DocumentCategory:
+    enum:
+    - contract
+    - id_card
+    - receipt
+    - other
+    type: string
+    x-enum-varnames:
+    - DocumentCategoryContract
+    - DocumentCategoryIDCard
+    - DocumentCategoryReceipt
+    - DocumentCategoryOther
   apihorpug_internal_features_dormitory_domain.Dormitory:
     properties:
       address:
@@ -132,6 +179,13 @@ definitions:
         type: string
       username:
         type: string
+    type: object
+  apihorpug_internal_features_dormitory_usecase.DeletionCheck:
+    properties:
+      can_delete:
+        type: boolean
+      room_count:
+        type: integer
     type: object
   apihorpug_internal_features_expense_domain.Expense:
     properties:
@@ -324,6 +378,51 @@ definitions:
       updated_by:
         type: string
     type: object
+  apihorpug_internal_features_parcel_domain.Parcel:
+    properties:
+      courier:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      dormitory_id:
+        type: string
+      dormitory_name:
+        type: string
+      id:
+        type: string
+      note:
+        type: string
+      received_date:
+        type: string
+      room_id:
+        type: string
+      room_number:
+        type: string
+      status:
+        $ref: '#/definitions/apihorpug_internal_features_parcel_domain.ParcelStatus'
+      tenant_id:
+        type: string
+      tenant_name:
+        type: string
+      tracking_number:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  apihorpug_internal_features_parcel_domain.ParcelStatus:
+    enum:
+    - pending
+    - picked_up
+    - returned
+    type: string
+    x-enum-varnames:
+    - ParcelStatusPending
+    - ParcelStatusPickedUp
+    - ParcelStatusReturned
   apihorpug_internal_features_parking_domain.Parking:
     properties:
       created_at:
@@ -828,6 +927,42 @@ definitions:
       status:
         $ref: '#/definitions/apihorpug_internal_features_contract_domain.ContractStatus'
     type: object
+  internal_features_document_delivery_http.createDocumentRequest:
+    properties:
+      category:
+        $ref: '#/definitions/apihorpug_internal_features_document_domain.DocumentCategory'
+      dormitory_id:
+        type: string
+      file_url:
+        type: string
+      name:
+        type: string
+      note:
+        type: string
+      room_id:
+        type: string
+      tenant_id:
+        type: string
+      uploaded_date:
+        type: string
+    type: object
+  internal_features_document_delivery_http.updateDocumentRequest:
+    properties:
+      category:
+        $ref: '#/definitions/apihorpug_internal_features_document_domain.DocumentCategory'
+      file_url:
+        type: string
+      name:
+        type: string
+      note:
+        type: string
+      room_id:
+        type: string
+      tenant_id:
+        type: string
+      uploaded_date:
+        type: string
+    type: object
   internal_features_dormitory_delivery_http.createDormitoryRequest:
     properties:
       address:
@@ -944,6 +1079,38 @@ definitions:
       price_per_unit:
         type: number
       reading_date:
+        type: string
+    type: object
+  internal_features_parcel_delivery_http.createParcelRequest:
+    properties:
+      courier:
+        type: string
+      note:
+        type: string
+      received_date:
+        type: string
+      room_id:
+        type: string
+      status:
+        $ref: '#/definitions/apihorpug_internal_features_parcel_domain.ParcelStatus'
+      tenant_id:
+        type: string
+      tracking_number:
+        type: string
+    type: object
+  internal_features_parcel_delivery_http.updateParcelRequest:
+    properties:
+      courier:
+        type: string
+      note:
+        type: string
+      received_date:
+        type: string
+      room_id:
+        type: string
+      status:
+        $ref: '#/definitions/apihorpug_internal_features_parcel_domain.ParcelStatus'
+      tracking_number:
         type: string
     type: object
   internal_features_parking_delivery_http.createParkingRequest:
@@ -1792,6 +1959,200 @@ paths:
       summary: Update a contract
       tags:
       - contracts
+  /documents:
+    get:
+      description: Returns document records for roles with full dormitory access,
+        otherwise only records under dormitories the caller manages. Optionally filter
+        by dormitory, tenant, room or category.
+      parameters:
+      - description: Filter by dormitory ID
+        in: query
+        name: dormitory_id
+        type: string
+      - description: Filter by tenant ID
+        in: query
+        name: tenant_id
+        type: string
+      - description: Filter by room ID
+        in: query
+        name: room_id
+        type: string
+      - description: Filter by category (contract, id_card, receipt, other)
+        in: query
+        name: category
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List documents
+      tags:
+      - documents
+    post:
+      consumes:
+      - application/json
+      description: Records a general file attachment stored for a dormitory, optionally
+        tied to the tenant or room it concerns.
+      parameters:
+      - description: Document payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_document_delivery_http.createDocumentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_document_domain.Document'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Upload a document record
+      tags:
+      - documents
+  /documents/{id}:
+    delete:
+      parameters:
+      - description: Document ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Delete a document record
+      tags:
+      - documents
+    get:
+      parameters:
+      - description: Document ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_document_domain.Document'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get a document by ID
+      tags:
+      - documents
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Document ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Document payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_document_delivery_http.updateDocumentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_document_domain.Document'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Update a document record
+      tags:
+      - documents
   /dormitories:
     get:
       description: Returns every dormitory for roles with full dormitory access, otherwise
@@ -1884,6 +2245,10 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
         "500":
           description: Internal Server Error
           schema:
@@ -1961,6 +2326,42 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a dormitory
+      tags:
+      - dormitories
+  /dormitories/{id}/deletion-check:
+    get:
+      parameters:
+      - description: Dormitory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_dormitory_usecase.DeletionCheck'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Check whether a dormitory can be deleted
       tags:
       - dormitories
   /dormitories/active:
@@ -2635,6 +3036,201 @@ paths:
       summary: Update a meter reading
       tags:
       - meters
+  /parcels:
+    get:
+      description: Returns parcel records for roles with full dormitory access, otherwise
+        only records whose room belongs to a dormitory the caller manages (records
+        without a room are only visible to roles with full access). Optionally filter
+        by tenant, room, dormitory or status.
+      parameters:
+      - description: Filter by tenant ID
+        in: query
+        name: tenant_id
+        type: string
+      - description: Filter by room ID
+        in: query
+        name: room_id
+        type: string
+      - description: Filter by dormitory ID
+        in: query
+        name: dormitory_id
+        type: string
+      - description: Filter by status (pending, picked_up, returned)
+        in: query
+        name: status
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Results per page (default 10, max 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List parcels
+      tags:
+      - parcels
+    post:
+      consumes:
+      - application/json
+      description: Records a package delivered to the dormitory office for a tenant,
+        optionally tied to the room they occupy so it can be scoped to a dormitory.
+      parameters:
+      - description: Parcel payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_parcel_delivery_http.createParcelRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_parcel_domain.Parcel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Record a parcel received for a tenant
+      tags:
+      - parcels
+  /parcels/{id}:
+    delete:
+      parameters:
+      - description: Parcel ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Delete a parcel record
+      tags:
+      - parcels
+    get:
+      parameters:
+      - description: Parcel ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_parcel_domain.Parcel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get a parcel by ID
+      tags:
+      - parcels
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Parcel ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Parcel payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_parcel_delivery_http.updateParcelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_parcel_domain.Parcel'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Update a parcel record
+      tags:
+      - parcels
   /parking:
     get:
       description: Returns parking registrations for roles with full dormitory access,

@@ -17,6 +17,11 @@ export type ApiDormitory = {
   updated_at: string
 }
 
+export type ApiDormitoryDeletionCheck = {
+  can_delete: boolean
+  room_count: number
+}
+
 export type ApiUser = {
   id: string
   username: string

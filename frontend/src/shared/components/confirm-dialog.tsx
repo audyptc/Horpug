@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { TriangleAlert } from 'lucide-react'
 import {
   AlertDialog,
@@ -33,6 +34,20 @@ export function ConfirmDialog({
   error = null,
   onConfirm,
 }: ConfirmDialogProps) {
+  const hasReportedError = useRef(false)
+
+  useEffect(() => {
+    if (!error) {
+      hasReportedError.current = false
+      return
+    }
+
+    if (!hasReportedError.current && open && !loading) {
+      hasReportedError.current = true
+      onOpenChange(false)
+    }
+  }, [error, loading, onOpenChange, open])
+
   return (
     <AlertDialog open={open} onOpenChange={(next) => !loading && onOpenChange(next)}>
       <AlertDialogContent>
@@ -43,7 +58,6 @@ export function ConfirmDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
-        {error && <p className="resource-error">{error}</p>}
         <AlertDialogFooter>
           <AlertDialogCancel asChild>
             <Button type="button" variant="outline" disabled={loading}>

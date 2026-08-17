@@ -316,8 +316,8 @@ func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) erro
 		return err
 	}
 
-	var roomCount int64
-	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM rooms WHERE dormitory_id = $1`, id).Scan(&roomCount); err != nil {
+	roomCount, err := r.CountRooms(ctx, id)
+	if err != nil {
 		return err
 	}
 	if roomCount > 0 {
@@ -333,6 +333,12 @@ func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) erro
 	}
 
 	return nil
+}
+
+func (r *Repository) CountRooms(ctx context.Context, id uuid.UUID) (int64, error) {
+	var roomCount int64
+	err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM rooms WHERE dormitory_id = $1`, id).Scan(&roomCount)
+	return roomCount, err
 }
 
 func (r *Repository) loadDormitoryByID(ctx context.Context, id uuid.UUID) (dormdomain.Dormitory, error) {

@@ -3,9 +3,10 @@ import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { InformationDialog } from '@/shared/components/information-dialog'
 import { DormitoryListCard } from './components/DormitoryListCard'
 import { DormitoryFormSheet } from './components/DormitoryFormSheet'
-import type { ApiDormitory, ApiUser } from './types'
+import type { ApiDormitory, ApiDormitoryDeletionCheck, ApiUser } from './types'
 import { DORMITORY_PAGE_SIZE_OPTIONS } from './utils'
 
 export default function DormitoryPage() {
@@ -29,8 +30,10 @@ export default function DormitoryPage() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const [deletingDormitoryId, setDeletingDormitoryId] = useState<string | null>(null)
+  const [checkingDormitoryId, setCheckingDormitoryId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [confirmDeleteDormitory, setConfirmDeleteDormitory] = useState<ApiDormitory | null>(null)
+  const [blockedDeletionRoomCount, setBlockedDeletionRoomCount] = useState<number | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -167,6 +170,24 @@ export default function DormitoryPage() {
     }
   }
 
+  async function handleRequestDeleteDormitory(dormitory: ApiDormitory) {
+    setCheckingDormitoryId(dormitory.id)
+    setDeleteError(null)
+
+    try {
+      const { data } = await api.get<ApiDormitoryDeletionCheck>(`/dormitories/${dormitory.id}/deletion-check`)
+      if (data.can_delete) {
+        setConfirmDeleteDormitory(dormitory)
+      } else {
+        setBlockedDeletionRoomCount(data.room_count)
+      }
+    } catch (err) {
+      setDeleteError(extractErrorMessage(err, t('dormitoryDeleteError')))
+    } finally {
+      setCheckingDormitoryId(null)
+    }
+  }
+
   return (
     <main className="content">
       <section className="welcome">
@@ -194,10 +215,10 @@ export default function DormitoryPage() {
         onPageSizeChange={setPageSize}
         onPrevPage={prevPage}
         onNextPage={nextPage}
-        deletingDormitoryId={deletingDormitoryId}
+        deletingDormitoryId={checkingDormitoryId ?? deletingDormitoryId}
         onCreateDormitory={openCreateForm}
         onEditDormitory={openEditForm}
-        onDeleteDormitory={setConfirmDeleteDormitory}
+        onDeleteDormitory={handleRequestDeleteDormitory}
       />
 
       <ConfirmDialog
@@ -210,6 +231,14 @@ export default function DormitoryPage() {
         loading={deletingDormitoryId === confirmDeleteDormitory?.id}
         error={deleteError}
         onConfirm={handleDeleteDormitory}
+      />
+
+      <InformationDialog
+        open={blockedDeletionRoomCount !== null}
+        onOpenChange={(open) => !open && setBlockedDeletionRoomCount(null)}
+        title={t('dormitoryDeleteBlockedTitle')}
+        description={t('dormitoryDeleteBlockedDescription').replace('{count}', String(blockedDeletionRoomCount ?? 0))}
+        actionLabel={t('acknowledge')}
       />
 
       <DormitoryFormSheet

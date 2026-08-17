@@ -161,6 +161,43 @@ func (h *Handler) Get(c fiber.Ctx) error {
 	return apiresponse.OK(c, dormitory)
 }
 
+// CheckDeletion godoc
+// @Summary Check whether a dormitory can be deleted
+// @Tags dormitories
+// @Produce json
+// @Param id path string true "Dormitory ID"
+// @Success 200 {object} dormusecase.DeletionCheck
+// @Failure 400 {object} apierror.Error
+// @Failure 401 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /dormitories/{id}/deletion-check [get]
+func (h *Handler) CheckDeletion(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return apierror.BadRequest("invalid dormitory id")
+	}
+
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	defer cancel()
+
+	check, err := h.usecase.CheckDeletion(ctx, id, requesterID)
+	if err != nil {
+		if errors.Is(err, dormdomain.ErrDormitoryNotFound) {
+			return apierror.NotFound("dormitory not found")
+		}
+		return apierror.Internal("failed to check dormitory deletion")
+	}
+
+	return apiresponse.OK(c, check)
+}
+
 // Create godoc
 // @Summary Create a dormitory
 // @Tags dormitories
