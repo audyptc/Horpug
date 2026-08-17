@@ -335,10 +335,15 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 		return apierror.BadRequest("invalid role id")
 	}
 
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := h.usecase.Delete(ctx, id); err != nil {
+	if err := h.usecase.Delete(ctx, id, requesterID); err != nil {
 		if errors.Is(err, roledomain.ErrRoleNotFound) {
 			return apierror.NotFound("role not found")
 		}

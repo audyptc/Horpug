@@ -2,8 +2,12 @@ package usecase
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"strings"
 
+	activitylogdomain "apihorpug/internal/features/activitylog/domain"
+	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
 	roledomain "apihorpug/internal/features/role/domain"
 
 	"github.com/google/uuid"
@@ -51,12 +55,37 @@ type Repository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
-type Service struct {
-	repo Repository
+// ActivityLogger records role create/update/delete events for the audit
+// trail. Failures to record are logged but never block the role flow.
+type ActivityLogger interface {
+	Create(ctx context.Context, input activitylogusecase.CreateInput) (activitylogdomain.ActivityLog, error)
 }
 
-func New(repo Repository) *Service {
-	return &Service{repo: repo}
+type Service struct {
+	repo        Repository
+	activityLog ActivityLogger
+}
+
+func New(repo Repository, activityLog ActivityLogger) *Service {
+	return &Service{repo: repo, activityLog: activityLog}
+}
+
+// recordActivity is best-effort: a failure to write the audit trail must
+// never fail the role CRUD flow itself.
+func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, entityID uuid.UUID, description string) {
+	if s.activityLog == nil {
+		return
+	}
+	_, err := s.activityLog.Create(ctx, activitylogusecase.CreateInput{
+		UserID:      userID,
+		Action:      action,
+		EntityType:  "role",
+		EntityID:    &entityID,
+		Description: description,
+	})
+	if err != nil {
+		log.Printf("failed to record activity log (action=%s): %v", action, err)
+	}
 }
 
 func (s *Service) List(ctx context.Context, limit, offset int) ([]roledomain.Role, int64, error) {
@@ -84,7 +113,14 @@ func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (roledomain.Role, e
 func (s *Service) Create(ctx context.Context, input CreateInput) (roledomain.Role, error) {
 	input.Name = strings.TrimSpace(input.Name)
 	input.Description = strings.TrimSpace(input.Description)
-	return s.repo.Create(ctx, input)
+
+	role, err := s.repo.Create(ctx, input)
+	if err != nil {
+		return roledomain.Role{}, err
+	}
+
+	s.recordActivity(ctx, input.CreatedBy, "CREATE", role.ID, fmt.Sprintf("Created role: %s", role.Name))
+	return role, nil
 }
 
 func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput) (roledomain.Role, error) {
@@ -104,10 +140,17 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput) (
 		description := strings.TrimSpace(*input.Description)
 		input.Description = &description
 	}
-	return s.repo.Update(ctx, id, input)
+
+	updated, err := s.repo.Update(ctx, id, input)
+	if err != nil {
+		return roledomain.Role{}, err
+	}
+
+	s.recordActivity(ctx, input.UpdatedBy, "UPDATE", updated.ID, fmt.Sprintf("Updated role: %s", updated.Name))
+	return updated, nil
 }
 
-func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
+func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
 	role, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return err
@@ -116,7 +159,12 @@ func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
 		return roledomain.ErrRoleProtected
 	}
 
-	return s.repo.Delete(ctx, id)
+	if err := s.repo.Delete(ctx, id); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, &requesterID, "DELETE", id, fmt.Sprintf("Deleted role: %s", role.Name))
+	return nil
 }
 
 func (s *Service) CheckDeletion(ctx context.Context, id uuid.UUID) (DeletionCheck, error) {
