@@ -278,6 +278,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} apierror.Error
 // @Failure 404 {object} apierror.Error
+// @Failure 409 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
 // @Security BearerAuth
 // @Router /dormitories/{id} [delete]
@@ -298,6 +299,9 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	if err := h.usecase.Delete(ctx, id, requesterID); err != nil {
 		if errors.Is(err, dormdomain.ErrDormitoryNotFound) {
 			return apierror.NotFound("dormitory not found")
+		}
+		if errors.Is(err, dormdomain.ErrDormitoryHasRooms) {
+			return apierror.Conflict("dormitory has rooms and cannot be deleted")
 		}
 		return apierror.Internal("failed to delete dormitory")
 	}

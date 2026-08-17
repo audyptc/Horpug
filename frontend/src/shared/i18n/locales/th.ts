@@ -732,6 +732,7 @@ const th: Record<TranslationKey, string> = {
   dormitoryDeleting: 'กำลังลบ...',
   dormitoryDeleteConfirm: 'ต้องการลบหอพักนี้ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้',
   dormitoryDeleteError: 'ลบหอพักไม่สำเร็จ',
+  dormitoryHasRoomsError: 'ไม่สามารถลบหอพักได้ เนื่องจากยังมีห้องพักอยู่ในระบบ กรุณาลบห้องพักทั้งหมดก่อน',
   dormitoryCreateError: 'สร้างหอพักไม่สำเร็จ',
   dormitoryUpdateError: 'อัปเดตหอพักไม่สำเร็จ',
   dormitoryNameRequired: 'กรุณากรอกชื่อ',

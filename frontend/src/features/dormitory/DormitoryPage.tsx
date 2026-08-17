@@ -156,7 +156,12 @@ export default function DormitoryPage() {
       setDormitories((prev) => prev?.filter((item) => item.id !== dormitory.id) ?? prev)
       setConfirmDeleteDormitory(null)
     } catch (err) {
-      setDeleteError(extractErrorMessage(err, t('dormitoryDeleteError')))
+      const message = extractErrorMessage(err, t('dormitoryDeleteError'))
+      setDeleteError(
+        message === 'dormitory has rooms and cannot be deleted'
+          ? t('dormitoryHasRoomsError')
+          : message
+      )
     } finally {
       setDeletingDormitoryId(null)
     }

@@ -730,6 +730,7 @@ const en = {
   dormitoryDeleting: 'Deleting...',
   dormitoryDeleteConfirm: 'Delete this dormitory? This cannot be undone.',
   dormitoryDeleteError: 'Failed to delete dormitory.',
+  dormitoryHasRoomsError: 'Cannot delete this dormitory because it still has rooms. Please remove all rooms first.',
   dormitoryCreateError: 'Failed to create dormitory.',
   dormitoryUpdateError: 'Failed to update dormitory.',
   dormitoryNameRequired: 'Name is required.',

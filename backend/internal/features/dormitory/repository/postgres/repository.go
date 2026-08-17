@@ -316,6 +316,14 @@ func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) erro
 		return err
 	}
 
+	var roomCount int64
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM rooms WHERE dormitory_id = $1`, id).Scan(&roomCount); err != nil {
+		return err
+	}
+	if roomCount > 0 {
+		return dormdomain.ErrDormitoryHasRooms
+	}
+
 	result, err := r.db.Exec(ctx, `DELETE FROM dormitories WHERE id = $1`, id)
 	if err != nil {
 		return err
