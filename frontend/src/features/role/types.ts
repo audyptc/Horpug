@@ -14,5 +14,6 @@ export type ApiRole = {
   name: string
   description: string
   is_active: boolean
+  is_protected: boolean
   menu_permissions?: ApiRoleMenuPermission[]
 }

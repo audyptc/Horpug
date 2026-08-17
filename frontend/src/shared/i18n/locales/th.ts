@@ -712,6 +712,8 @@ const th: Record<TranslationKey, string> = {
   rolePermissionsDeleting: 'กำลังลบ...',
   rolePermissionsDeleteConfirm: 'คุณกำลังจะลบบทบาทนี้ ข้อมูลจะถูกนำออกจากระบบและไม่สามารถกู้คืนได้',
   rolePermissionsDeleteError: 'ลบบทบาทไม่สำเร็จ',
+  rolePermissionsProtected: 'ป้องกันไว้',
+  rolePermissionsProtectedHint: 'บทบาทนี้ถูกป้องกันไว้ ไม่สามารถแก้ไขหรือลบได้',
   rolePermissionsCreateError: 'สร้างบทบาทไม่สำเร็จ',
   rolePermissionsUpdateError: 'อัปเดตบทบาทไม่สำเร็จ',
   rolePermissionsNameRequired: 'กรุณากรอกชื่อ',

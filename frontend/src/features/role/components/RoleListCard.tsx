@@ -107,7 +107,14 @@ export function RoleListCard({
                   <TableBody>
                     {paginatedRoles.map((role) => (
                       <TableRow key={role.id}>
-                        <TableCell className="font-semibold">{role.name}</TableCell>
+                        <TableCell className="font-semibold">
+                          <div className="flex items-center gap-2">
+                            {role.name}
+                            {role.is_protected && (
+                              <Badge variant="outline">{t('rolePermissionsProtected')}</Badge>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-muted-foreground">
                           {role.description || t('rolePermissionsDescriptionEmpty')}
                         </TableCell>
@@ -132,9 +139,10 @@ export function RoleListCard({
                               type="button"
                               size="icon"
                               variant="outline"
-                              title={t('rolePermissionsEditRole')}
+                              title={role.is_protected ? t('rolePermissionsProtectedHint') : t('rolePermissionsEditRole')}
                               aria-label={t('rolePermissionsEditRole')}
                               onClick={() => onEditRole(role)}
+                              disabled={role.is_protected}
                             >
                               <Pencil />
                             </Button>
@@ -142,10 +150,10 @@ export function RoleListCard({
                               type="button"
                               size="icon"
                               variant="destructive"
-                              title={t('rolePermissionsDeleteRole')}
+                              title={role.is_protected ? t('rolePermissionsProtectedHint') : t('rolePermissionsDeleteRole')}
                               aria-label={t('rolePermissionsDeleteRole')}
                               onClick={() => onDeleteRole(role)}
-                              disabled={deletingRoleId === role.id}
+                              disabled={deletingRoleId === role.id || role.is_protected}
                             >
                               <Trash2 />
                             </Button>

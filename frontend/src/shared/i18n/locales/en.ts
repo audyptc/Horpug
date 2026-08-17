@@ -710,6 +710,8 @@ const en = {
   rolePermissionsDeleting: 'Deleting...',
   rolePermissionsDeleteConfirm: 'You are about to delete this role. Its data will be removed from the system and cannot be recovered.',
   rolePermissionsDeleteError: 'Failed to delete role.',
+  rolePermissionsProtected: 'Protected',
+  rolePermissionsProtectedHint: 'This role is protected and cannot be edited or deleted.',
   rolePermissionsCreateError: 'Failed to create role.',
   rolePermissionsUpdateError: 'Failed to update role.',
   rolePermissionsNameRequired: 'Name is required.',

@@ -65,12 +65,21 @@ export function RolePermissionMatrixCard({
             <Badge variant={selectedRole.is_active ? 'default' : 'outline'}>
               {selectedRole.is_active ? t('statusActive') : t('statusInactive')}
             </Badge>
+            {selectedRole.is_protected && (
+              <Badge variant="outline">{t('rolePermissionsProtected')}</Badge>
+            )}
           </CardTitle>
           <CardDescription>
             {selectedRole.description || t('rolePermissionsDescriptionEmpty')}
           </CardDescription>
         </div>
-        <Button type="button" variant="outline" onClick={onEditRole}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onEditRole}
+          disabled={selectedRole.is_protected}
+          title={selectedRole.is_protected ? t('rolePermissionsProtectedHint') : undefined}
+        >
           {t('rolePermissionsEditRole')}
         </Button>
       </CardHeader>
@@ -158,9 +167,10 @@ export function RolePermissionMatrixCard({
         </div>
 
         <div className="flex items-center gap-3">
-          <Button onClick={onSave} disabled={saving || !hasUnsavedChanges}>
+          <Button onClick={onSave} disabled={saving || !hasUnsavedChanges || selectedRole.is_protected}>
             {saving ? t('rolePermissionsSaving') : t('rolePermissionsSave')}
           </Button>
+          {selectedRole.is_protected && <p className="metric-detail">{t('rolePermissionsProtectedHint')}</p>}
           {saveSuccess && <p className="metric-detail">{t('rolePermissionsSaved')}</p>}
           {!saveSuccess && hasUnsavedChanges && <p className="metric-detail">{t('rolePermissionsUnsaved')}</p>}
           {saveError && <p className="resource-error">{saveError}</p>}

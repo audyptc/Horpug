@@ -15,6 +15,7 @@ type Role struct {
 	Description         string               `json:"description" gorm:"size:255"`
 	IsActive            bool                 `json:"is_active" gorm:"not null;default:true"`
 	FullDormitoryAccess bool                 `json:"full_dormitory_access" gorm:"not null;default:false"`
+	IsProtected         bool                 `json:"is_protected" gorm:"not null;default:false"`
 	Dormitories         []RoleDormitory      `json:"dormitories,omitempty" gorm:"-"`
 	MenuPermissions     []RoleMenuPermission `json:"menu_permissions,omitempty" gorm:"foreignKey:RoleID;constraint:OnDelete:CASCADE"`
 	CreatedBy           *uuid.UUID           `json:"created_by,omitempty" gorm:"type:uuid"`

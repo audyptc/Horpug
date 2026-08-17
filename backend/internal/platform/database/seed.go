@@ -57,9 +57,9 @@ func SeedAdmin(db *pgxpool.Pool, cfg config.Config) error {
 
 	var roleID uuid.UUID
 	if err := db.QueryRow(ctx, `
-		INSERT INTO roles (id, name, description, is_active, full_dormitory_access)
-		VALUES ($1, 'Admin', 'Full system access', TRUE, TRUE)
-		ON CONFLICT (name) DO UPDATE SET full_dormitory_access = TRUE
+		INSERT INTO roles (id, name, description, is_active, full_dormitory_access, is_protected)
+		VALUES ($1, 'Admin', 'Full system access', TRUE, TRUE, TRUE)
+		ON CONFLICT (name) DO UPDATE SET full_dormitory_access = TRUE, is_protected = TRUE
 		RETURNING id
 	`, uuid.New()).Scan(&roleID); err != nil {
 		return err

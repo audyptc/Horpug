@@ -277,6 +277,9 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		if errors.Is(err, roledomain.ErrReferenceNotFound) {
 			return apierror.BadRequest("one or more menus, permissions or dormitories not found")
 		}
+		if errors.Is(err, roledomain.ErrRoleProtected) {
+			return apierror.Forbidden("this role is protected and cannot be modified")
+		}
 		return apierror.Internal("failed to update role")
 	}
 
@@ -310,6 +313,9 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 		}
 		if errors.Is(err, roledomain.ErrRoleInUse) {
 			return apierror.Conflict("role is being used by users")
+		}
+		if errors.Is(err, roledomain.ErrRoleProtected) {
+			return apierror.Forbidden("this role is protected and cannot be deleted")
 		}
 		return apierror.Internal("failed to delete role")
 	}

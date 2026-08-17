@@ -81,6 +81,14 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (roledomain.Rol
 }
 
 func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput) (roledomain.Role, error) {
+	role, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return roledomain.Role{}, err
+	}
+	if role.IsProtected {
+		return roledomain.Role{}, roledomain.ErrRoleProtected
+	}
+
 	if input.Name != nil {
 		name := strings.TrimSpace(*input.Name)
 		input.Name = &name
@@ -93,5 +101,13 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput) (
 }
 
 func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
+	role, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if role.IsProtected {
+		return roledomain.ErrRoleProtected
+	}
+
 	return s.repo.Delete(ctx, id)
 }

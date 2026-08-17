@@ -33,7 +33,7 @@ func (r *Repository) Count(ctx context.Context) (int64, error) {
 
 func (r *Repository) List(ctx context.Context, limit, offset int) ([]roledomain.Role, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, name, description, is_active, full_dormitory_access, created_by, updated_by, created_at, updated_at
+		SELECT id, name, description, is_active, full_dormitory_access, is_protected, created_by, updated_by, created_at, updated_at
 		FROM roles
 		ORDER BY name ASC
 		LIMIT $1 OFFSET $2
@@ -46,7 +46,7 @@ func (r *Repository) List(ctx context.Context, limit, offset int) ([]roledomain.
 	roles := make([]roledomain.Role, 0)
 	for rows.Next() {
 		var role roledomain.Role
-		if err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.FullDormitoryAccess, &role.CreatedBy, &role.UpdatedBy, &role.CreatedAt, &role.UpdatedAt); err != nil {
+		if err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.FullDormitoryAccess, &role.IsProtected, &role.CreatedBy, &role.UpdatedBy, &role.CreatedAt, &role.UpdatedAt); err != nil {
 			return nil, err
 		}
 
@@ -73,7 +73,7 @@ func (r *Repository) List(ctx context.Context, limit, offset int) ([]roledomain.
 
 func (r *Repository) ListActive(ctx context.Context, search string, limit int) ([]roledomain.Role, error) {
 	query := `
-		SELECT id, name, description, is_active, full_dormitory_access, created_by, updated_by, created_at, updated_at
+		SELECT id, name, description, is_active, full_dormitory_access, is_protected, created_by, updated_by, created_at, updated_at
 		FROM roles
 		WHERE is_active = true
 	`
@@ -96,7 +96,7 @@ func (r *Repository) ListActive(ctx context.Context, search string, limit int) (
 	roles := make([]roledomain.Role, 0)
 	for rows.Next() {
 		var role roledomain.Role
-		if err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.FullDormitoryAccess, &role.CreatedBy, &role.UpdatedBy, &role.CreatedAt, &role.UpdatedAt); err != nil {
+		if err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.FullDormitoryAccess, &role.IsProtected, &role.CreatedBy, &role.UpdatedBy, &role.CreatedAt, &role.UpdatedAt); err != nil {
 			return nil, err
 		}
 		roles = append(roles, role)
@@ -264,10 +264,10 @@ func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 func (r *Repository) loadRoleByID(ctx context.Context, roleID uuid.UUID) (roledomain.Role, error) {
 	var role roledomain.Role
 	err := r.db.QueryRow(ctx, `
-		SELECT id, name, description, is_active, full_dormitory_access, created_by, updated_by, created_at, updated_at
+		SELECT id, name, description, is_active, full_dormitory_access, is_protected, created_by, updated_by, created_at, updated_at
 		FROM roles
 		WHERE id = $1
-	`, roleID).Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.FullDormitoryAccess, &role.CreatedBy, &role.UpdatedBy, &role.CreatedAt, &role.UpdatedAt)
+	`, roleID).Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.FullDormitoryAccess, &role.IsProtected, &role.CreatedBy, &role.UpdatedBy, &role.CreatedAt, &role.UpdatedAt)
 	if err != nil {
 		return roledomain.Role{}, err
 	}
