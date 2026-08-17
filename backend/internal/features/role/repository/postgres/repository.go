@@ -245,6 +245,14 @@ func (r *Repository) Update(ctx context.Context, id uuid.UUID, input roleusecase
 	return r.loadRoleByID(ctx, id)
 }
 
+func (r *Repository) CountUsers(ctx context.Context, id uuid.UUID) (int64, error) {
+	var count int64
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM users WHERE role_id = $1`, id).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 	result, err := r.db.Exec(ctx, `DELETE FROM roles WHERE id = $1`, id)
 	if err != nil {

@@ -100,7 +100,7 @@ export function RolePermissionMatrixCard({
             <Switch
               checked={allVisibleSelected}
               onCheckedChange={onSetVisiblePermissions}
-              disabled={filteredMenus.length === 0 || sortedPermissions.length === 0}
+              disabled={filteredMenus.length === 0 || sortedPermissions.length === 0 || selectedRole.is_protected}
             />
             {allVisibleSelected ? t('rolePermissionsClearVisible') : t('rolePermissionsSelectAllVisible')}
           </label>
@@ -136,7 +136,7 @@ export function RolePermissionMatrixCard({
                               checked ? sortedPermissions.map((permission) => permission.id) : []
                             )
                           }
-                          disabled={sortedPermissions.length === 0}
+                          disabled={sortedPermissions.length === 0 || selectedRole.is_protected}
                         />
                         {isRowFullySelected(menu.id) ? t('rolePermissionsClearRow') : t('rolePermissionsSelectAllRow')}
                       </label>
@@ -149,7 +149,8 @@ export function RolePermissionMatrixCard({
                         aria-label={`${menuLabel(menu, t)} - ${permission.name}`}
                         checked={matrix[menu.id]?.has(permission.id) ?? false}
                         onChange={() => onToggleCell(menu.id, permission.id)}
-                        className="h-4 w-4 accent-primary"
+                        disabled={selectedRole.is_protected}
+                        className="h-4 w-4 accent-primary disabled:cursor-not-allowed disabled:opacity-50"
                       />
                     </TableCell>
                   ))}

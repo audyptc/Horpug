@@ -286,6 +286,37 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	return apiresponse.OK(c, updatedRole)
 }
 
+// CheckDeletion godoc
+// @Summary Check whether a role can be deleted
+// @Tags roles
+// @Produce json
+// @Param id path string true "Role ID"
+// @Success 200 {object} roleusecase.DeletionCheck
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /roles/{id}/deletion-check [get]
+func (h *Handler) CheckDeletion(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return apierror.BadRequest("invalid role id")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	defer cancel()
+
+	check, err := h.usecase.CheckDeletion(ctx, id)
+	if err != nil {
+		if errors.Is(err, roledomain.ErrRoleNotFound) {
+			return apierror.NotFound("role not found")
+		}
+		return apierror.Internal("failed to check role deletion")
+	}
+
+	return apiresponse.OK(c, check)
+}
+
 // Delete godoc
 // @Summary Delete a role
 // @Tags roles

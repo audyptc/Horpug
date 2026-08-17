@@ -17,3 +17,9 @@ export type ApiRole = {
   is_protected: boolean
   menu_permissions?: ApiRoleMenuPermission[]
 }
+
+export type ApiRoleDeletionCheck = {
+  can_delete: boolean
+  user_count: number
+  is_protected: boolean
+}

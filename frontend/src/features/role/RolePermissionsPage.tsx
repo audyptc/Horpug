@@ -3,8 +3,9 @@ import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { InformationDialog } from '@/shared/components/information-dialog'
 import type { ApiMenu } from '@/features/menu/menus'
-import type { ApiPermission, ApiRole } from './types'
+import type { ApiPermission, ApiRole, ApiRoleDeletionCheck } from './types'
 import { ACTION_ORDER, ROLE_PAGE_SIZE_OPTIONS, areMatricesEqual, buildRoleMatrix, menuLabel } from './utils'
 import { RoleListCard } from './components/RoleListCard'
 import { RolePermissionMatrixCard } from './components/RolePermissionMatrixCard'
@@ -39,8 +40,10 @@ export default function RolePermissionsPage() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const [deletingRoleId, setDeletingRoleId] = useState<string | null>(null)
+  const [checkingRoleId, setCheckingRoleId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [confirmDeleteRole, setConfirmDeleteRole] = useState<ApiRole | null>(null)
+  const [blockedRoleDeletion, setBlockedRoleDeletion] = useState<ApiRoleDeletionCheck | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -260,6 +263,24 @@ export default function RolePermissionsPage() {
     }
   }
 
+  async function handleRequestDeleteRole(role: ApiRole) {
+    setCheckingRoleId(role.id)
+    setDeleteError(null)
+
+    try {
+      const { data } = await api.get<ApiRoleDeletionCheck>(`/roles/${role.id}/deletion-check`)
+      if (data.can_delete) {
+        setConfirmDeleteRole(role)
+      } else {
+        setBlockedRoleDeletion(data)
+      }
+    } catch (err) {
+      setDeleteError(extractErrorMessage(err, t('rolePermissionsDeleteError')))
+    } finally {
+      setCheckingRoleId(null)
+    }
+  }
+
   async function handleDeleteRole() {
     if (!confirmDeleteRole) return
     const role = confirmDeleteRole
@@ -312,11 +333,11 @@ export default function RolePermissionsPage() {
           onRolePageSizeChange={setRolePageSize}
           onPrevPage={prevRolePage}
           onNextPage={nextRolePage}
-          deletingRoleId={deletingRoleId}
+          deletingRoleId={checkingRoleId ?? deletingRoleId}
           onCreateRole={openCreateForm}
           onManageRole={openPermissions}
           onEditRole={openEditForm}
-          onDeleteRole={setConfirmDeleteRole}
+          onDeleteRole={handleRequestDeleteRole}
         />
       )}
 
@@ -351,6 +372,21 @@ export default function RolePermissionsPage() {
         loading={deletingRoleId === confirmDeleteRole?.id}
         error={deleteError}
         onConfirm={handleDeleteRole}
+      />
+
+      <InformationDialog
+        open={blockedRoleDeletion !== null}
+        onOpenChange={(open) => !open && setBlockedRoleDeletion(null)}
+        title={t('rolePermissionsDeleteBlockedTitle')}
+        description={
+          blockedRoleDeletion?.is_protected
+            ? t('rolePermissionsProtectedHint')
+            : t('rolePermissionsDeleteBlockedDescription').replace(
+                '{count}',
+                String(blockedRoleDeletion?.user_count ?? 0)
+              )
+        }
+        actionLabel={t('acknowledge')}
       />
 
       <RoleFormSheet

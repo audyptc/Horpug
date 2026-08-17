@@ -34,11 +34,18 @@ type UpdateInput struct {
 	UpdatedBy           *uuid.UUID
 }
 
+type DeletionCheck struct {
+	CanDelete   bool  `json:"can_delete"`
+	UserCount   int64 `json:"user_count"`
+	IsProtected bool  `json:"is_protected"`
+}
+
 type Repository interface {
 	Count(ctx context.Context) (int64, error)
 	List(ctx context.Context, limit, offset int) ([]roledomain.Role, error)
 	ListActive(ctx context.Context, search string, limit int) ([]roledomain.Role, error)
 	GetByID(ctx context.Context, id uuid.UUID) (roledomain.Role, error)
+	CountUsers(ctx context.Context, id uuid.UUID) (int64, error)
 	Create(ctx context.Context, input CreateInput) (roledomain.Role, error)
 	Update(ctx context.Context, id uuid.UUID, input UpdateInput) (roledomain.Role, error)
 	Delete(ctx context.Context, id uuid.UUID) error
@@ -110,4 +117,22 @@ func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	return s.repo.Delete(ctx, id)
+}
+
+func (s *Service) CheckDeletion(ctx context.Context, id uuid.UUID) (DeletionCheck, error) {
+	role, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return DeletionCheck{}, err
+	}
+
+	userCount, err := s.repo.CountUsers(ctx, id)
+	if err != nil {
+		return DeletionCheck{}, err
+	}
+
+	return DeletionCheck{
+		CanDelete:   !role.IsProtected && userCount == 0,
+		UserCount:   userCount,
+		IsProtected: role.IsProtected,
+	}, nil
 }

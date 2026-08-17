@@ -710,6 +710,8 @@ const en = {
   rolePermissionsDeleting: 'Deleting...',
   rolePermissionsDeleteConfirm: 'You are about to delete this role. Its data will be removed from the system and cannot be recovered.',
   rolePermissionsDeleteError: 'Failed to delete role.',
+  rolePermissionsDeleteBlockedTitle: 'Cannot delete role',
+  rolePermissionsDeleteBlockedDescription: 'This role is still assigned to {count} user(s). Reassign them before deleting this role.',
   rolePermissionsProtected: 'Protected',
   rolePermissionsProtectedHint: 'This role is protected and cannot be edited or deleted.',
   rolePermissionsCreateError: 'Failed to create role.',
