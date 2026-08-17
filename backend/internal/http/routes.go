@@ -185,6 +185,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Get("/room-types", requirePermission("/room-types", permissiondomain.ActionRead), roomTypeHandler.List)
 	api.Get("/room-types/active", requirePermission("/room-types", permissiondomain.ActionRead), roomTypeHandler.ListActive)
 	api.Get("/room-types/:id", requirePermission("/room-types", permissiondomain.ActionRead), roomTypeHandler.Get)
+	api.Get("/room-types/:id/deletion-check", requirePermission("/room-types", permissiondomain.ActionDelete), roomTypeHandler.CheckDeletion)
 	api.Post("/room-types", requirePermission("/room-types", permissiondomain.ActionCreate), roomTypeHandler.Create)
 	api.Put("/room-types/:id", requirePermission("/room-types", permissiondomain.ActionUpdate), roomTypeHandler.Update)
 	api.Delete("/room-types/:id", requirePermission("/room-types", permissiondomain.ActionDelete), roomTypeHandler.Delete)

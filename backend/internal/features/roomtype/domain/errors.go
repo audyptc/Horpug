@@ -8,4 +8,5 @@ var (
 	ErrInvalidRoomTypePrice = errors.New("price must not be negative")
 	ErrDormitoryNotFound    = errors.New("dormitory not found")
 	ErrRoomTypeNameExists   = errors.New("room type name already exists in this dormitory")
+	ErrRoomTypeHasRooms     = errors.New("room type has rooms and cannot be deleted")
 )

@@ -26,11 +26,17 @@ type UpdateInput struct {
 	UpdatedBy   *uuid.UUID
 }
 
+type DeletionCheck struct {
+	CanDelete bool  `json:"can_delete"`
+	RoomCount int64 `json:"room_count"`
+}
+
 type Repository interface {
 	Count(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID) (int64, error)
 	List(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID, limit, offset int) ([]roomtypedomain.RoomType, error)
 	ListActive(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID, search string, limit int) ([]roomtypedomain.RoomType, error)
 	GetByID(ctx context.Context, id, requesterID uuid.UUID) (roomtypedomain.RoomType, error)
+	CountRooms(ctx context.Context, id uuid.UUID) (int64, error)
 	Create(ctx context.Context, input CreateInput) (roomtypedomain.RoomType, error)
 	Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (roomtypedomain.RoomType, error)
 	Delete(ctx context.Context, id, requesterID uuid.UUID) error
@@ -100,4 +106,17 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 
 func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
 	return s.repo.Delete(ctx, id, requesterID)
+}
+
+func (s *Service) CheckDeletion(ctx context.Context, id, requesterID uuid.UUID) (DeletionCheck, error) {
+	if _, err := s.repo.GetByID(ctx, id, requesterID); err != nil {
+		return DeletionCheck{}, err
+	}
+
+	roomCount, err := s.repo.CountRooms(ctx, id)
+	if err != nil {
+		return DeletionCheck{}, err
+	}
+
+	return DeletionCheck{CanDelete: roomCount == 0, RoomCount: roomCount}, nil
 }

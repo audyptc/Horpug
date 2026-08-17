@@ -765,6 +765,8 @@ const en = {
   roomTypeDelete: 'Delete room type',
   roomTypeDeleting: 'Deleting...',
   roomTypeDeleteConfirm: 'You are about to delete this room type. Its data will be removed from the system and cannot be recovered.',
+  roomTypeDeleteBlockedTitle: 'Cannot delete room type',
+  roomTypeDeleteBlockedDescription: 'This room type still has {count} room(s). Remove or move the rooms before deleting the room type.',
   roomTypeDeleteError: 'Failed to delete room type.',
   roomTypeCreateError: 'Failed to create room type.',
   roomTypeUpdateError: 'Failed to update room type.',

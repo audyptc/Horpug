@@ -182,6 +182,43 @@ func (h *Handler) Get(c fiber.Ctx) error {
 	return apiresponse.OK(c, roomType)
 }
 
+// CheckDeletion godoc
+// @Summary Check whether a room type can be deleted
+// @Tags room-types
+// @Produce json
+// @Param id path string true "Room type ID"
+// @Success 200 {object} roomtypeusecase.DeletionCheck
+// @Failure 400 {object} apierror.Error
+// @Failure 401 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /room-types/{id}/deletion-check [get]
+func (h *Handler) CheckDeletion(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return apierror.BadRequest("invalid room type id")
+	}
+
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	defer cancel()
+
+	check, err := h.usecase.CheckDeletion(ctx, id, requesterID)
+	if err != nil {
+		if errors.Is(err, roomtypedomain.ErrRoomTypeNotFound) {
+			return apierror.NotFound("room type not found")
+		}
+		return apierror.Internal("failed to check room type deletion")
+	}
+
+	return apiresponse.OK(c, check)
+}
+
 // Create godoc
 // @Summary Create a room type
 // @Tags room-types
@@ -308,6 +345,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} apierror.Error
 // @Failure 404 {object} apierror.Error
+// @Failure 409 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
 // @Security BearerAuth
 // @Router /room-types/{id} [delete]
@@ -328,6 +366,9 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	if err := h.usecase.Delete(ctx, id, requesterID); err != nil {
 		if errors.Is(err, roomtypedomain.ErrRoomTypeNotFound) {
 			return apierror.NotFound("room type not found")
+		}
+		if errors.Is(err, roomtypedomain.ErrRoomTypeHasRooms) {
+			return apierror.Conflict("room type has rooms and cannot be deleted")
 		}
 		return apierror.Internal("failed to delete room type")
 	}

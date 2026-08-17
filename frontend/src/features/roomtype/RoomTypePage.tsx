@@ -3,10 +3,11 @@ import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { InformationDialog } from '@/shared/components/information-dialog'
 import type { ApiDormitory } from '@/features/dormitory/types'
 import { RoomTypeListCard } from './components/RoomTypeListCard'
 import { RoomTypeFormSheet } from './components/RoomTypeFormSheet'
-import type { ApiRoomType } from './types'
+import type { ApiRoomType, ApiRoomTypeDeletionCheck } from './types'
 import { ROOM_TYPE_PAGE_SIZE_OPTIONS } from './utils'
 
 export default function RoomTypePage() {
@@ -29,8 +30,10 @@ export default function RoomTypePage() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const [deletingRoomTypeId, setDeletingRoomTypeId] = useState<string | null>(null)
+  const [checkingRoomTypeId, setCheckingRoomTypeId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [confirmDeleteRoomType, setConfirmDeleteRoomType] = useState<ApiRoomType | null>(null)
+  const [blockedDeletionRoomCount, setBlockedDeletionRoomCount] = useState<number | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -172,6 +175,24 @@ export default function RoomTypePage() {
     }
   }
 
+  async function handleRequestDeleteRoomType(roomType: ApiRoomType) {
+    setCheckingRoomTypeId(roomType.id)
+    setDeleteError(null)
+
+    try {
+      const { data } = await api.get<ApiRoomTypeDeletionCheck>(`/room-types/${roomType.id}/deletion-check`)
+      if (data.can_delete) {
+        setConfirmDeleteRoomType(roomType)
+      } else {
+        setBlockedDeletionRoomCount(data.room_count)
+      }
+    } catch (err) {
+      setDeleteError(extractErrorMessage(err, t('roomTypeDeleteError')))
+    } finally {
+      setCheckingRoomTypeId(null)
+    }
+  }
+
   return (
     <main className="content">
       <section className="welcome">
@@ -199,10 +220,10 @@ export default function RoomTypePage() {
         onPageSizeChange={setPageSize}
         onPrevPage={prevPage}
         onNextPage={nextPage}
-        deletingRoomTypeId={deletingRoomTypeId}
+        deletingRoomTypeId={checkingRoomTypeId ?? deletingRoomTypeId}
         onCreateRoomType={openCreateForm}
         onEditRoomType={openEditForm}
-        onDeleteRoomType={setConfirmDeleteRoomType}
+        onDeleteRoomType={handleRequestDeleteRoomType}
       />
 
       <ConfirmDialog
@@ -215,6 +236,14 @@ export default function RoomTypePage() {
         loading={deletingRoomTypeId === confirmDeleteRoomType?.id}
         error={deleteError}
         onConfirm={handleDeleteRoomType}
+      />
+
+      <InformationDialog
+        open={blockedDeletionRoomCount !== null}
+        onOpenChange={(open) => !open && setBlockedDeletionRoomCount(null)}
+        title={t('roomTypeDeleteBlockedTitle')}
+        description={t('roomTypeDeleteBlockedDescription').replace('{count}', String(blockedDeletionRoomCount ?? 0))}
+        actionLabel={t('acknowledge')}
       />
 
       <RoomTypeFormSheet

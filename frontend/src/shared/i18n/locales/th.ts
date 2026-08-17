@@ -767,6 +767,8 @@ const th: Record<TranslationKey, string> = {
   roomTypeDelete: 'ลบประเภทห้อง',
   roomTypeDeleting: 'กำลังลบ...',
   roomTypeDeleteConfirm: 'คุณกำลังจะลบประเภทห้องนี้ ข้อมูลจะถูกนำออกจากระบบและไม่สามารถกู้คืนได้',
+  roomTypeDeleteBlockedTitle: 'ไม่สามารถลบประเภทห้องได้',
+  roomTypeDeleteBlockedDescription: 'ประเภทห้องนี้ยังมีห้องพัก {count} ห้อง กรุณาย้ายหรือเปลี่ยนประเภทห้องพักก่อนลบประเภทห้องนี้',
   roomTypeDeleteError: 'ลบประเภทห้องไม่สำเร็จ',
   roomTypeCreateError: 'สร้างประเภทห้องไม่สำเร็จ',
   roomTypeUpdateError: 'อัปเดตประเภทห้องไม่สำเร็จ',
