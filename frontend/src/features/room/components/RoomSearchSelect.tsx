@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { ChevronsUpDown, Search } from 'lucide-react'
 import { api } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
+import { cn } from '@/shared/lib/utils'
 import type { ApiRoom, RoomStatus } from '../types'
 
 const SEARCH_LIMIT = 20
@@ -9,11 +11,10 @@ const DEBOUNCE_MS = 300
 type RoomSearchSelectProps = {
   selectedLabel: string
   onSelectRoom: (room: ApiRoom) => void
-  onClearSelection: () => void
   statusFilter?: RoomStatus
   dormitoryId?: string
   placeholder: string
-  changeLabel: string
+  searchPlaceholder: string
   noResultsLabel: string
   disabled?: boolean
 }
@@ -28,25 +29,35 @@ type RoomSearchSelectProps = {
 export function RoomSearchSelect({
   selectedLabel,
   onSelectRoom,
-  onClearSelection,
   statusFilter,
   dormitoryId,
   placeholder,
-  changeLabel,
+  searchPlaceholder,
   noResultsLabel,
-  disabled,
+  disabled = false,
 }: RoomSearchSelectProps) {
   const { t } = useLanguage()
-  const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
   const [results, setResults] = useState<ApiRoom[]>([])
   const [loading, setLoading] = useState(false)
+  const [highlightedIndex, setHighlightedIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  // Tracks whether the panel just opened, so that first fetch (still showing
+  // the placeholder query) skips the debounce instead of forcing a wait
+  // before anything appears — typed input still debounces normally.
+  const isInitialFetchRef = useRef(true)
 
   useEffect(() => {
-    if (!open || selectedLabel) return
+    if (!open) {
+      isInitialFetchRef.current = true
+      return
+    }
 
     let cancelled = false
+    const delay = isInitialFetchRef.current ? 0 : DEBOUNCE_MS
+    isInitialFetchRef.current = false
 
     const timer = setTimeout(() => {
       setLoading(true)
@@ -68,85 +79,115 @@ export function RoomSearchSelect({
         .finally(() => {
           if (!cancelled) setLoading(false)
         })
-    }, DEBOUNCE_MS)
+    }, delay)
 
     return () => {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [open, query, dormitoryId, statusFilter, selectedLabel])
+  }, [open, query, dormitoryId, statusFilter])
 
   useEffect(() => {
+    if (!open) return
+
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setOpen(false)
       }
     }
+
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [open])
 
-  if (selectedLabel) {
-    return (
-      <div className="flex items-center justify-between gap-2 rounded-md border border-input px-3 py-2 text-sm">
-        <span>{selectedLabel}</span>
-        {!disabled && (
-          <button
-            type="button"
-            className="shrink-0 text-xs font-medium text-primary underline-offset-2 hover:underline"
-            onClick={() => {
-              setQuery('')
-              setResults([])
-              onClearSelection()
-            }}
-          >
-            {changeLabel}
-          </button>
-        )}
-      </div>
-    )
+  useEffect(() => {
+    if (open) {
+      setQuery('')
+      setHighlightedIndex(0)
+      requestAnimationFrame(() => inputRef.current?.focus())
+    }
+  }, [open])
+
+  useEffect(() => {
+    setHighlightedIndex(0)
+  }, [query])
+
+  function selectRoom(room: ApiRoom) {
+    onSelectRoom(room)
+    setOpen(false)
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setHighlightedIndex((index) => Math.min(index + 1, results.length - 1))
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setHighlightedIndex((index) => Math.max(index - 1, 0))
+    } else if (event.key === 'Enter') {
+      event.preventDefault()
+      const room = results[highlightedIndex]
+      if (room) selectRoom(room)
+    } else if (event.key === 'Escape') {
+      event.preventDefault()
+      setOpen(false)
+    }
   }
 
   return (
-    <div ref={containerRef} className="relative flex flex-col gap-1.5">
-      <input
-        type="text"
-        className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-        placeholder={placeholder}
-        value={query}
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        className={cn(
+          'flex h-10 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50',
+          !selectedLabel && 'text-muted-foreground'
+        )}
+        onClick={() => setOpen((value) => !value)}
         disabled={disabled}
-        onFocus={() => setOpen(true)}
-        onChange={(event) => {
-          setQuery(event.target.value)
-          setOpen(true)
-        }}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') setOpen(false)
-        }}
-      />
+      >
+        <span className="truncate">{selectedLabel || placeholder}</span>
+        <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
+      </button>
+
       {open && (
-        <div className="max-h-56 overflow-y-auto rounded-md border border-input bg-popover text-popover-foreground shadow-md">
-          {loading && <p className="px-3 py-2 text-sm text-muted-foreground">{t('loading')}</p>}
-          {!loading && results.length === 0 && (
-            <p className="px-3 py-2 text-sm text-muted-foreground">{noResultsLabel}</p>
-          )}
-          {!loading &&
-            results.map((room) => (
+        <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md">
+          <div className="flex items-center gap-2 border-b border-border px-3">
+            <Search className="size-4 shrink-0 opacity-50" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={searchPlaceholder}
+              className="h-10 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            />
+          </div>
+
+          <div className="max-h-60 overflow-y-auto p-1">
+            {results.length === 0 && (
+              <p className="px-2 py-4 text-center text-sm text-muted-foreground">
+                {loading ? t('loading') : noResultsLabel}
+              </p>
+            )}
+            {results.map((room, index) => (
               <button
-                key={room.id}
                 type="button"
-                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
-                onClick={() => {
-                  onSelectRoom(room)
-                  setOpen(false)
-                }}
+                key={room.id}
+                className={cn(
+                  'flex w-full cursor-default items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors',
+                  index === highlightedIndex && 'bg-accent text-accent-foreground'
+                )}
+                onMouseEnter={() => setHighlightedIndex(index)}
+                onClick={() => selectRoom(room)}
               >
                 <span className="font-medium">{room.room_number}</span>
                 {room.dormitory_name && (
-                  <span className="text-muted-foreground">{room.dormitory_name}</span>
+                  <span className="truncate text-muted-foreground">{room.dormitory_name}</span>
                 )}
               </button>
             ))}
+          </div>
         </div>
       )}
     </div>

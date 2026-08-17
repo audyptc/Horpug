@@ -30,7 +30,6 @@ type ContractFormSheetProps = {
   tenants: ApiTenant[]
   tenantDisplayName: string
   onSelectRoom: (room: ApiRoom) => void
-  onClearRoomSelection: () => void
   roomDisplayLabel: string
   startDate: string
   onStartDateChange: (value: string) => void
@@ -60,7 +59,6 @@ export function ContractFormSheet({
   tenants,
   tenantDisplayName,
   onSelectRoom,
-  onClearRoomSelection,
   roomDisplayLabel,
   startDate,
   onStartDateChange,
@@ -136,10 +134,9 @@ export function ContractFormSheet({
                   <RoomSearchSelect
                     selectedLabel={roomDisplayLabel}
                     onSelectRoom={onSelectRoom}
-                    onClearSelection={onClearRoomSelection}
                     statusFilter="available"
                     placeholder={t('contractFormRoomPlaceholder')}
-                    changeLabel={t('contractFormRoomChange')}
+                    searchPlaceholder={t('contractFormRoomSearchPlaceholder')}
                     noResultsLabel={t('contractFormNoRooms')}
                   />
                 </label>

@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react'
 import { useLanguage } from '@/shared/i18n/language'
 import { Button } from '@/shared/components/ui/button'
+import { Combobox } from '@/shared/components/ui/combobox'
 import {
   Sheet,
   SheetContent,
@@ -73,19 +74,18 @@ export function RoomTypeFormSheet({
                   {t('roomTypeFormNoDormitories')}
                 </p>
               ) : (
-                <select
-                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                <Combobox
+                  options={dormitories.map((dormitory) => ({
+                    value: dormitory.id,
+                    label: dormitory.name,
+                  }))}
                   value={dormitoryId}
-                  onChange={(event) => onDormitoryIdChange(event.target.value)}
+                  onChange={onDormitoryIdChange}
+                  placeholder={t('roomTypeFormDormitoryPlaceholder')}
+                  searchPlaceholder={t('roomTypeFormDormitorySearchPlaceholder')}
+                  emptyText={t('roomTypeFormDormitoryNoResults')}
                   disabled={isEdit}
-                >
-                  <option value="">{t('roomTypeFormDormitoryPlaceholder')}</option>
-                  {dormitories.map((dormitory) => (
-                    <option key={dormitory.id} value={dormitory.id}>
-                      {dormitory.name}
-                    </option>
-                  ))}
-                </select>
+                />
               )}
             </label>
 
@@ -106,7 +106,7 @@ export function RoomTypeFormSheet({
                 type="number"
                 min="0"
                 step="0.01"
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm text-right"
                 value={price}
                 onChange={(event) => onPriceChange(event.target.value)}
               />

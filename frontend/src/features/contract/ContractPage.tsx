@@ -272,10 +272,6 @@ export default function ContractPage() {
           setFormRoomId(room.id)
           setFormRoomDisplayLabel([room.room_number, room.dormitory_name].filter(Boolean).join(' - '))
         }}
-        onClearRoomSelection={() => {
-          setFormRoomId('')
-          setFormRoomDisplayLabel('')
-        }}
         roomDisplayLabel={formRoomDisplayLabel}
         startDate={formStartDate}
         onStartDateChange={setFormStartDate}
