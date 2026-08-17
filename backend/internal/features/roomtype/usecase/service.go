@@ -2,8 +2,12 @@ package usecase
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"strings"
 
+	activitylogdomain "apihorpug/internal/features/activitylog/domain"
+	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
 	roomtypedomain "apihorpug/internal/features/roomtype/domain"
 
 	"github.com/google/uuid"
@@ -42,12 +46,37 @@ type Repository interface {
 	Delete(ctx context.Context, id, requesterID uuid.UUID) error
 }
 
-type Service struct {
-	repo Repository
+// ActivityLogger records room type create/update/delete events for the audit
+// trail. Failures to record are logged but never block the room type flow.
+type ActivityLogger interface {
+	Create(ctx context.Context, input activitylogusecase.CreateInput) (activitylogdomain.ActivityLog, error)
 }
 
-func New(repo Repository) *Service {
-	return &Service{repo: repo}
+type Service struct {
+	repo        Repository
+	activityLog ActivityLogger
+}
+
+func New(repo Repository, activityLog ActivityLogger) *Service {
+	return &Service{repo: repo, activityLog: activityLog}
+}
+
+// recordActivity is best-effort: a failure to write the audit trail must
+// never fail the room type CRUD flow itself.
+func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, entityID uuid.UUID, description string) {
+	if s.activityLog == nil {
+		return
+	}
+	_, err := s.activityLog.Create(ctx, activitylogusecase.CreateInput{
+		UserID:      userID,
+		Action:      action,
+		EntityType:  "roomtype",
+		EntityID:    &entityID,
+		Description: description,
+	})
+	if err != nil {
+		log.Printf("failed to record activity log (action=%s): %v", action, err)
+	}
 }
 
 func (s *Service) List(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID, limit, offset int) ([]roomtypedomain.RoomType, int64, error) {
@@ -82,7 +111,13 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (roomtypedomain
 		return roomtypedomain.RoomType{}, roomtypedomain.ErrInvalidRoomTypePrice
 	}
 
-	return s.repo.Create(ctx, input)
+	roomType, err := s.repo.Create(ctx, input)
+	if err != nil {
+		return roomtypedomain.RoomType{}, err
+	}
+
+	s.recordActivity(ctx, input.CreatedBy, "CREATE", roomType.ID, fmt.Sprintf("Created room type: %s", roomType.Name))
+	return roomType, nil
 }
 
 func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (roomtypedomain.RoomType, error) {
@@ -101,11 +136,24 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 		return roomtypedomain.RoomType{}, roomtypedomain.ErrInvalidRoomTypePrice
 	}
 
-	return s.repo.Update(ctx, id, requesterID, input)
+	roomType, err := s.repo.Update(ctx, id, requesterID, input)
+	if err != nil {
+		return roomtypedomain.RoomType{}, err
+	}
+
+	s.recordActivity(ctx, &requesterID, "UPDATE", roomType.ID, fmt.Sprintf("Updated room type: %s", roomType.Name))
+	return roomType, nil
 }
 
 func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
-	return s.repo.Delete(ctx, id, requesterID)
+	roomType, _ := s.repo.GetByID(ctx, id, requesterID)
+
+	if err := s.repo.Delete(ctx, id, requesterID); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, &requesterID, "DELETE", id, fmt.Sprintf("Deleted room type: %s", roomType.Name))
+	return nil
 }
 
 func (s *Service) CheckDeletion(ctx context.Context, id, requesterID uuid.UUID) (DeletionCheck, error) {

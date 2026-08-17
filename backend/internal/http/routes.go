@@ -93,7 +93,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	dormitoryService := dormitoryusecase.New(dormitoryRepo, activityLogService)
 	dormitoryHandler := dormitoryhttp.NewHandler(dormitoryService)
 	roomTypeRepo := roomtyperepository.NewRepository(db)
-	roomTypeService := roomtypeusecase.New(roomTypeRepo)
+	roomTypeService := roomtypeusecase.New(roomTypeRepo, activityLogService)
 	roomTypeHandler := roomtypehttp.NewHandler(roomTypeService)
 	roomRepo := roomrepository.NewRepository(db)
 	roomService := roomusecase.New(roomRepo)
