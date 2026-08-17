@@ -217,6 +217,7 @@ export default function UserPage() {
         confirmLabel={t('userDelete')}
         cancelLabel={t('cancel')}
         loading={deletingUserId === confirmDeleteUser?.id}
+        error={deleteError}
         onConfirm={handleDeleteUser}
       />
 

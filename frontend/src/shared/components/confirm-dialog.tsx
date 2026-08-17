@@ -18,6 +18,7 @@ type ConfirmDialogProps = {
   confirmLabel: string
   cancelLabel: string
   loading?: boolean
+  error?: string | null
   onConfirm: () => void
 }
 
@@ -29,6 +30,7 @@ export function ConfirmDialog({
   confirmLabel,
   cancelLabel,
   loading = false,
+  error = null,
   onConfirm,
 }: ConfirmDialogProps) {
   return (
@@ -41,6 +43,7 @@ export function ConfirmDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {error && <p className="resource-error">{error}</p>}
         <AlertDialogFooter>
           <AlertDialogCancel asChild>
             <Button type="button" variant="outline" disabled={loading}>

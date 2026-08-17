@@ -238,6 +238,7 @@ export default function DocumentPage() {
         confirmLabel={t('documentDelete')}
         cancelLabel={t('cancel')}
         loading={deletingDocumentId === confirmDeleteDocument?.id}
+        error={deleteError}
         onConfirm={handleDeleteDocument}
       />
 

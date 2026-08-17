@@ -229,6 +229,7 @@ export default function ParcelPage() {
         confirmLabel={t('parcelDelete')}
         cancelLabel={t('cancel')}
         loading={deletingParcelId === confirmDeleteParcel?.id}
+        error={deleteError}
         onConfirm={handleDeleteParcel}
       />
 

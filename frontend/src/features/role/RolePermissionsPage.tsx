@@ -349,6 +349,7 @@ export default function RolePermissionsPage() {
         confirmLabel={t('rolePermissionsDeleteRole')}
         cancelLabel={t('cancel')}
         loading={deletingRoleId === confirmDeleteRole?.id}
+        error={deleteError}
         onConfirm={handleDeleteRole}
       />
 

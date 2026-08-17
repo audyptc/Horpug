@@ -245,6 +245,7 @@ export default function RoomPage() {
         confirmLabel={t('roomDelete')}
         cancelLabel={t('cancel')}
         loading={deletingRoomId === confirmDeleteRoom?.id}
+        error={deleteError}
         onConfirm={handleDeleteRoom}
       />
 

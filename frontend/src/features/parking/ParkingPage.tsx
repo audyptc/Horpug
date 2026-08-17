@@ -219,6 +219,7 @@ export default function ParkingPage() {
         confirmLabel={t('parkingDelete')}
         cancelLabel={t('cancel')}
         loading={deletingParkingId === confirmDeleteParking?.id}
+        error={deleteError}
         onConfirm={handleDeleteParking}
       />
 

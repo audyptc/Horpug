@@ -213,6 +213,7 @@ export default function PaymentPage() {
         confirmLabel={t('paymentDelete')}
         cancelLabel={t('cancel')}
         loading={deletingPaymentId === confirmDeletePayment?.id}
+        error={deleteError}
         onConfirm={handleDeletePayment}
       />
 

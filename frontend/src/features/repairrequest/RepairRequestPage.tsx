@@ -229,6 +229,7 @@ export default function RepairRequestPage() {
         confirmLabel={t('repairDelete')}
         cancelLabel={t('cancel')}
         loading={deletingRepairRequestId === confirmDeleteRepairRequest?.id}
+        error={deleteError}
         onConfirm={handleDeleteRepairRequest}
       />
 

@@ -254,6 +254,7 @@ export default function MeterPage() {
         confirmLabel={t('meterDelete')}
         cancelLabel={t('cancel')}
         loading={deletingMeterId === confirmDeleteMeter?.id}
+        error={deleteError}
         onConfirm={handleDeleteMeter}
       />
 

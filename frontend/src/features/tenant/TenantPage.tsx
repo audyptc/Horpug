@@ -215,6 +215,7 @@ export default function TenantPage() {
         confirmLabel={t('tenantDelete')}
         cancelLabel={t('cancel')}
         loading={deletingTenantId === confirmDeleteTenant?.id}
+        error={deleteError}
         onConfirm={handleDeleteTenant}
       />
 

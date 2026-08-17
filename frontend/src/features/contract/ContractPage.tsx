@@ -256,6 +256,7 @@ export default function ContractPage() {
         confirmLabel={t('contractDelete')}
         cancelLabel={t('cancel')}
         loading={deletingContractId === confirmDeleteContract?.id}
+        error={deleteError}
         onConfirm={handleDeleteContract}
       />
 

@@ -210,6 +210,7 @@ export default function AnnouncementPage() {
         confirmLabel={t('announcementDelete')}
         cancelLabel={t('cancel')}
         loading={deletingAnnouncementId === confirmDeleteAnnouncement?.id}
+        error={deleteError}
         onConfirm={handleDeleteAnnouncement}
       />
 

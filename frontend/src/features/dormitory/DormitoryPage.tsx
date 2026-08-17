@@ -208,6 +208,7 @@ export default function DormitoryPage() {
         confirmLabel={t('dormitoryDelete')}
         cancelLabel={t('cancel')}
         loading={deletingDormitoryId === confirmDeleteDormitory?.id}
+        error={deleteError}
         onConfirm={handleDeleteDormitory}
       />
 

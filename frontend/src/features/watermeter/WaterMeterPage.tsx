@@ -254,6 +254,7 @@ export default function WaterMeterPage() {
         confirmLabel={t('waterMeterDelete')}
         cancelLabel={t('cancel')}
         loading={deletingMeterId === confirmDeleteMeter?.id}
+        error={deleteError}
         onConfirm={handleDeleteMeter}
       />
 

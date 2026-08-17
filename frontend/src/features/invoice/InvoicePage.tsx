@@ -255,6 +255,7 @@ export default function InvoicePage() {
         confirmLabel={t('invoiceDelete')}
         cancelLabel={t('cancel')}
         loading={deletingInvoiceId === confirmDeleteInvoice?.id}
+        error={deleteError}
         onConfirm={handleDeleteInvoice}
       />
 

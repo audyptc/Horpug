@@ -213,6 +213,7 @@ export default function RoomTypePage() {
         confirmLabel={t('roomTypeDelete')}
         cancelLabel={t('cancel')}
         loading={deletingRoomTypeId === confirmDeleteRoomType?.id}
+        error={deleteError}
         onConfirm={handleDeleteRoomType}
       />
 

@@ -212,6 +212,7 @@ export default function ExpensePage() {
         confirmLabel={t('expenseDelete')}
         cancelLabel={t('cancel')}
         loading={deletingExpenseId === confirmDeleteExpense?.id}
+        error={deleteError}
         onConfirm={handleDeleteExpense}
       />
 
