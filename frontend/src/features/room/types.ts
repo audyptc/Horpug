@@ -13,3 +13,8 @@ export type ApiRoom = {
   created_at: string
   updated_at: string
 }
+
+export type ApiRoomDeletionCheck = {
+  can_delete: boolean
+  contract_count: number
+}

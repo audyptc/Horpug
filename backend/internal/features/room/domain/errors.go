@@ -9,4 +9,5 @@ var (
 	ErrDormitoryNotFound = errors.New("dormitory not found")
 	ErrRoomTypeNotFound  = errors.New("room type not found")
 	ErrRoomNumberExists  = errors.New("room number already exists in this dormitory")
+	ErrRoomHasContracts  = errors.New("room has contracts and cannot be deleted")
 )

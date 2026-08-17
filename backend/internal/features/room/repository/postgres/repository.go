@@ -333,6 +333,14 @@ func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) erro
 		return err
 	}
 
+	contractCount, err := r.CountContracts(ctx, id)
+	if err != nil {
+		return err
+	}
+	if contractCount > 0 {
+		return roomdomain.ErrRoomHasContracts
+	}
+
 	result, err := r.db.Exec(ctx, `DELETE FROM rooms WHERE id = $1`, id)
 	if err != nil {
 		return err
@@ -342,6 +350,12 @@ func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) erro
 	}
 
 	return nil
+}
+
+func (r *Repository) CountContracts(ctx context.Context, id uuid.UUID) (int64, error) {
+	var contractCount int64
+	err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM contracts WHERE room_id = $1`, id).Scan(&contractCount)
+	return contractCount, err
 }
 
 func (r *Repository) loadRoomByID(ctx context.Context, id uuid.UUID) (roomdomain.Room, error) {

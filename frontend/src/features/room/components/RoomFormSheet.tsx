@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Button } from '@/shared/components/ui/button'
+import { Combobox } from '@/shared/components/ui/combobox'
 import {
   Sheet,
   SheetContent,
@@ -86,19 +87,18 @@ export function RoomFormSheet({
                   {t('roomFormNoDormitories')}
                 </p>
               ) : (
-                <select
-                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                <Combobox
+                  options={dormitories.map((dormitory) => ({
+                    value: dormitory.id,
+                    label: dormitory.name,
+                  }))}
                   value={dormitoryId}
-                  onChange={(event) => onDormitoryIdChange(event.target.value)}
+                  onChange={onDormitoryIdChange}
+                  placeholder={t('roomFormDormitoryPlaceholder')}
+                  searchPlaceholder={t('roomFormDormitorySearchPlaceholder')}
+                  emptyText={t('roomFormDormitoryNoResults')}
                   disabled={isEdit}
-                >
-                  <option value="">{t('roomFormDormitoryPlaceholder')}</option>
-                  {dormitories.map((dormitory) => (
-                    <option key={dormitory.id} value={dormitory.id}>
-                      {dormitory.name}
-                    </option>
-                  ))}
-                </select>
+                />
               )}
             </label>
 
@@ -109,19 +109,18 @@ export function RoomFormSheet({
                   {t('roomFormNoRoomTypes')}
                 </p>
               ) : (
-                <select
-                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                <Combobox
+                  options={roomTypes.map((roomType) => ({
+                    value: roomType.id,
+                    label: roomType.name,
+                  }))}
                   value={roomTypeId}
-                  onChange={(event) => onRoomTypeIdChange(event.target.value)}
+                  onChange={onRoomTypeIdChange}
+                  placeholder={t('roomFormRoomTypePlaceholder')}
+                  searchPlaceholder={t('roomFormRoomTypeSearchPlaceholder')}
+                  emptyText={t('roomFormRoomTypeNoResults')}
                   disabled={!dormitoryId}
-                >
-                  <option value="">{t('roomFormRoomTypePlaceholder')}</option>
-                  {roomTypes.map((roomType) => (
-                    <option key={roomType.id} value={roomType.id}>
-                      {roomType.name}
-                    </option>
-                  ))}
-                </select>
+                />
               )}
             </label>
 
@@ -149,17 +148,17 @@ export function RoomFormSheet({
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('roomFormStatusLabel')}
-              <select
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+              <Combobox
+                options={ROOM_STATUSES.map((value) => ({
+                  value,
+                  label: t(roomStatusLabelKeys[value]),
+                }))}
                 value={status}
-                onChange={(event) => onStatusChange(event.target.value as RoomStatus)}
-              >
-                {ROOM_STATUSES.map((value) => (
-                  <option key={value} value={value}>
-                    {t(roomStatusLabelKeys[value])}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => onStatusChange(value as RoomStatus)}
+                placeholder={t('roomFormStatusLabel')}
+                searchPlaceholder={t('roomFormStatusSearchPlaceholder')}
+                emptyText={t('roomFormStatusNoResults')}
+              />
             </label>
 
             <label className="flex items-center gap-2 text-sm font-medium">

@@ -184,6 +184,43 @@ func (h *Handler) Get(c fiber.Ctx) error {
 	return apiresponse.OK(c, room)
 }
 
+// CheckDeletion godoc
+// @Summary Check whether a room can be deleted
+// @Tags rooms
+// @Produce json
+// @Param id path string true "Room ID"
+// @Success 200 {object} roomusecase.DeletionCheck
+// @Failure 400 {object} apierror.Error
+// @Failure 401 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /rooms/{id}/deletion-check [get]
+func (h *Handler) CheckDeletion(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return apierror.BadRequest("invalid room id")
+	}
+
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	defer cancel()
+
+	check, err := h.usecase.CheckDeletion(ctx, id, requesterID)
+	if err != nil {
+		if errors.Is(err, roomdomain.ErrRoomNotFound) {
+			return apierror.NotFound("room not found")
+		}
+		return apierror.Internal("failed to check room deletion")
+	}
+
+	return apiresponse.OK(c, check)
+}
+
 // Create godoc
 // @Summary Create a room
 // @Tags rooms
@@ -338,6 +375,9 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	if err := h.usecase.Delete(ctx, id, requesterID); err != nil {
 		if errors.Is(err, roomdomain.ErrRoomNotFound) {
 			return apierror.NotFound("room not found")
+		}
+		if errors.Is(err, roomdomain.ErrRoomHasContracts) {
+			return apierror.Conflict("room has contracts and cannot be deleted")
 		}
 		return apierror.Internal("failed to delete room")
 	}

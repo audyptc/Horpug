@@ -3,11 +3,12 @@ import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { InformationDialog } from '@/shared/components/information-dialog'
 import type { ApiDormitory } from '@/features/dormitory/types'
 import type { ApiRoomType } from '@/features/roomtype/types'
 import { RoomListCard } from './components/RoomListCard'
 import { RoomFormSheet } from './components/RoomFormSheet'
-import type { ApiRoom, RoomStatus } from './types'
+import type { ApiRoom, ApiRoomDeletionCheck, RoomStatus } from './types'
 import { ROOM_PAGE_SIZE_OPTIONS } from './utils'
 
 export default function RoomPage() {
@@ -32,8 +33,10 @@ export default function RoomPage() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const [deletingRoomId, setDeletingRoomId] = useState<string | null>(null)
+  const [checkingRoomId, setCheckingRoomId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [confirmDeleteRoom, setConfirmDeleteRoom] = useState<ApiRoom | null>(null)
+  const [blockedDeletionContractCount, setBlockedDeletionContractCount] = useState<number | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -204,6 +207,24 @@ export default function RoomPage() {
     }
   }
 
+  async function handleRequestDeleteRoom(room: ApiRoom) {
+    setCheckingRoomId(room.id)
+    setDeleteError(null)
+
+    try {
+      const { data } = await api.get<ApiRoomDeletionCheck>(`/rooms/${room.id}/deletion-check`)
+      if (data.can_delete) {
+        setConfirmDeleteRoom(room)
+      } else {
+        setBlockedDeletionContractCount(data.contract_count)
+      }
+    } catch (err) {
+      setDeleteError(extractErrorMessage(err, t('roomDeleteError')))
+    } finally {
+      setCheckingRoomId(null)
+    }
+  }
+
   return (
     <main className="content">
       <section className="welcome">
@@ -231,10 +252,10 @@ export default function RoomPage() {
         onPageSizeChange={setPageSize}
         onPrevPage={prevPage}
         onNextPage={nextPage}
-        deletingRoomId={deletingRoomId}
+        deletingRoomId={checkingRoomId ?? deletingRoomId}
         onCreateRoom={openCreateForm}
         onEditRoom={openEditForm}
-        onDeleteRoom={setConfirmDeleteRoom}
+        onDeleteRoom={handleRequestDeleteRoom}
       />
 
       <ConfirmDialog
@@ -247,6 +268,14 @@ export default function RoomPage() {
         loading={deletingRoomId === confirmDeleteRoom?.id}
         error={deleteError}
         onConfirm={handleDeleteRoom}
+      />
+
+      <InformationDialog
+        open={blockedDeletionContractCount !== null}
+        onOpenChange={(open) => !open && setBlockedDeletionContractCount(null)}
+        title={t('roomDeleteBlockedTitle')}
+        description={t('roomDeleteBlockedDescription').replace('{count}', String(blockedDeletionContractCount ?? 0))}
+        actionLabel={t('acknowledge')}
       />
 
       <RoomFormSheet
