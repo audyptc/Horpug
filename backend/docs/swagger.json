@@ -5379,6 +5379,69 @@
                             "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
                         }
                     },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{id}/deletion-check": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tenants"
+                ],
+                "summary": "Check whether a tenant can be deleted",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tenant ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_tenant_usecase.DeletionCheck"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -7252,6 +7315,17 @@
                 },
                 "updated_by": {
                     "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_tenant_usecase.DeletionCheck": {
+            "type": "object",
+            "properties": {
+                "can_delete": {
+                    "type": "boolean"
+                },
+                "contract_count": {
+                    "type": "integer"
                 }
             }
         },

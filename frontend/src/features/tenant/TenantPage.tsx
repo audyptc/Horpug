@@ -3,9 +3,10 @@ import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { InformationDialog } from '@/shared/components/information-dialog'
 import { TenantListCard } from './components/TenantListCard'
 import { TenantFormSheet } from './components/TenantFormSheet'
-import type { ApiTenant } from './types'
+import type { ApiTenant, ApiTenantDeletionCheck } from './types'
 import { TENANT_PAGE_SIZE_OPTIONS } from './utils'
 
 export default function TenantPage() {
@@ -31,8 +32,10 @@ export default function TenantPage() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const [deletingTenantId, setDeletingTenantId] = useState<string | null>(null)
+  const [checkingTenantId, setCheckingTenantId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [confirmDeleteTenant, setConfirmDeleteTenant] = useState<ApiTenant | null>(null)
+  const [blockedDeletionContractCount, setBlockedDeletionContractCount] = useState<number | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -179,6 +182,24 @@ export default function TenantPage() {
     }
   }
 
+  async function handleRequestDeleteTenant(tenant: ApiTenant) {
+    setCheckingTenantId(tenant.id)
+    setDeleteError(null)
+
+    try {
+      const { data } = await api.get<ApiTenantDeletionCheck>(`/tenants/${tenant.id}/deletion-check`)
+      if (data.can_delete) {
+        setConfirmDeleteTenant(tenant)
+      } else {
+        setBlockedDeletionContractCount(data.contract_count)
+      }
+    } catch (err) {
+      setDeleteError(extractErrorMessage(err, t('tenantDeleteError')))
+    } finally {
+      setCheckingTenantId(null)
+    }
+  }
+
   return (
     <main className="content">
       <section className="welcome">
@@ -206,10 +227,10 @@ export default function TenantPage() {
         onPageSizeChange={setPageSize}
         onPrevPage={prevPage}
         onNextPage={nextPage}
-        deletingTenantId={deletingTenantId}
+        deletingTenantId={checkingTenantId ?? deletingTenantId}
         onCreateTenant={openCreateForm}
         onEditTenant={openEditForm}
-        onDeleteTenant={setConfirmDeleteTenant}
+        onDeleteTenant={handleRequestDeleteTenant}
       />
 
       <ConfirmDialog
@@ -222,6 +243,14 @@ export default function TenantPage() {
         loading={deletingTenantId === confirmDeleteTenant?.id}
         error={deleteError}
         onConfirm={handleDeleteTenant}
+      />
+
+      <InformationDialog
+        open={blockedDeletionContractCount !== null}
+        onOpenChange={(open) => !open && setBlockedDeletionContractCount(null)}
+        title={t('tenantDeleteBlockedTitle')}
+        description={t('tenantDeleteBlockedDescription').replace('{count}', String(blockedDeletionContractCount ?? 0))}
+        actionLabel={t('acknowledge')}
       />
 
       <TenantFormSheet

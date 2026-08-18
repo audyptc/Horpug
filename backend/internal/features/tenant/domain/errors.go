@@ -6,4 +6,5 @@ var (
 	ErrTenantNotFound     = errors.New("tenant not found")
 	ErrRequiredTenantData = errors.New("first_name and last_name are required")
 	ErrTenantIDCardExists = errors.New("id card already exists")
+	ErrTenantHasContracts = errors.New("tenant has contracts and cannot be deleted")
 )

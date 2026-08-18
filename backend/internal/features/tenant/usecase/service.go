@@ -2,8 +2,12 @@ package usecase
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"strings"
 
+	activitylogdomain "apihorpug/internal/features/activitylog/domain"
+	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
 	tenantdomain "apihorpug/internal/features/tenant/domain"
 
 	"github.com/google/uuid"
@@ -35,22 +39,54 @@ type UpdateInput struct {
 	UpdatedBy        *uuid.UUID
 }
 
+type DeletionCheck struct {
+	CanDelete     bool  `json:"can_delete"`
+	ContractCount int64 `json:"contract_count"`
+}
+
 type Repository interface {
 	Count(ctx context.Context) (int64, error)
 	List(ctx context.Context, limit, offset int) ([]tenantdomain.Tenant, error)
 	ListActive(ctx context.Context, search string, limit int) ([]tenantdomain.Tenant, error)
 	GetByID(ctx context.Context, id uuid.UUID) (tenantdomain.Tenant, error)
+	CountContracts(ctx context.Context, id uuid.UUID) (int64, error)
 	Create(ctx context.Context, input CreateInput) (tenantdomain.Tenant, error)
 	Update(ctx context.Context, id uuid.UUID, input UpdateInput) (tenantdomain.Tenant, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
-type Service struct {
-	repo Repository
+// ActivityLogger records tenant create/update/delete events for the audit
+// trail. Failures to record are logged but never block the tenant flow.
+type ActivityLogger interface {
+	Create(ctx context.Context, input activitylogusecase.CreateInput) (activitylogdomain.ActivityLog, error)
 }
 
-func New(repo Repository) *Service {
-	return &Service{repo: repo}
+type Service struct {
+	repo        Repository
+	activityLog ActivityLogger
+}
+
+func New(repo Repository, activityLog ActivityLogger) *Service {
+	return &Service{repo: repo, activityLog: activityLog}
+}
+
+// recordActivity is best-effort: a failure to write the audit trail must
+// never fail the tenant CRUD flow itself.
+func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, entityID uuid.UUID, description, ipAddress string) {
+	if s.activityLog == nil {
+		return
+	}
+	_, err := s.activityLog.Create(ctx, activitylogusecase.CreateInput{
+		UserID:      userID,
+		Action:      action,
+		EntityType:  "tenant",
+		EntityID:    &entityID,
+		Description: description,
+		IPAddress:   ipAddress,
+	})
+	if err != nil {
+		log.Printf("failed to record activity log (action=%s): %v", action, err)
+	}
 }
 
 func (s *Service) List(ctx context.Context, limit, offset int) ([]tenantdomain.Tenant, int64, error) {
@@ -75,7 +111,7 @@ func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (tenantdomain.Tenan
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *Service) Create(ctx context.Context, input CreateInput) (tenantdomain.Tenant, error) {
+func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress string) (tenantdomain.Tenant, error) {
 	input.FirstName = strings.TrimSpace(input.FirstName)
 	input.LastName = strings.TrimSpace(input.LastName)
 	input.Phone = strings.TrimSpace(input.Phone)
@@ -89,10 +125,16 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (tenantdomain.T
 		return tenantdomain.Tenant{}, tenantdomain.ErrRequiredTenantData
 	}
 
-	return s.repo.Create(ctx, input)
+	tenant, err := s.repo.Create(ctx, input)
+	if err != nil {
+		return tenantdomain.Tenant{}, err
+	}
+
+	s.recordActivity(ctx, input.CreatedBy, "CREATE", tenant.ID, fmt.Sprintf("Created tenant: %s %s", tenant.FirstName, tenant.LastName), ipAddress)
+	return tenant, nil
 }
 
-func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput) (tenantdomain.Tenant, error) {
+func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput, ipAddress string) (tenantdomain.Tenant, error) {
 	if input.FirstName != nil {
 		firstName := strings.TrimSpace(*input.FirstName)
 		if firstName == "" {
@@ -132,9 +174,35 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput) (
 		input.Note = &note
 	}
 
-	return s.repo.Update(ctx, id, input)
+	tenant, err := s.repo.Update(ctx, id, input)
+	if err != nil {
+		return tenantdomain.Tenant{}, err
+	}
+
+	s.recordActivity(ctx, input.UpdatedBy, "UPDATE", tenant.ID, fmt.Sprintf("Updated tenant: %s %s", tenant.FirstName, tenant.LastName), ipAddress)
+	return tenant, nil
 }
 
-func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
-	return s.repo.Delete(ctx, id)
+func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddress string) error {
+	tenant, _ := s.repo.GetByID(ctx, id)
+
+	if err := s.repo.Delete(ctx, id); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, &requesterID, "DELETE", id, fmt.Sprintf("Deleted tenant: %s %s", tenant.FirstName, tenant.LastName), ipAddress)
+	return nil
+}
+
+func (s *Service) CheckDeletion(ctx context.Context, id uuid.UUID) (DeletionCheck, error) {
+	if _, err := s.repo.GetByID(ctx, id); err != nil {
+		return DeletionCheck{}, err
+	}
+
+	contractCount, err := s.repo.CountContracts(ctx, id)
+	if err != nil {
+		return DeletionCheck{}, err
+	}
+
+	return DeletionCheck{CanDelete: contractCount == 0, ContractCount: contractCount}, nil
 }

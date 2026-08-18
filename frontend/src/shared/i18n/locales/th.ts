@@ -106,6 +106,8 @@ const th: Record<TranslationKey, string> = {
   tenantDelete: 'ลบผู้เช่า',
   tenantDeleting: 'กำลังลบ...',
   tenantDeleteConfirm: 'คุณกำลังจะลบผู้เช่านี้ ข้อมูลจะถูกนำออกจากระบบและไม่สามารถกู้คืนได้',
+  tenantDeleteBlockedTitle: 'ไม่สามารถลบผู้เช่าได้',
+  tenantDeleteBlockedDescription: 'ผู้เช่ารายนี้ยังมีสัญญาเช่า {count} สัญญา กรุณาย้ายหรือยกเลิกสัญญาก่อนลบผู้เช่ารายนี้',
   tenantDeleteError: 'ลบผู้เช่าไม่สำเร็จ',
   tenantCreateError: 'เพิ่มผู้เช่าไม่สำเร็จ',
   tenantUpdateError: 'อัปเดตผู้เช่าไม่สำเร็จ',

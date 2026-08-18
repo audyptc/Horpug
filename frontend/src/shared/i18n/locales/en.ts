@@ -104,6 +104,8 @@ const en = {
   tenantDelete: 'Delete tenant',
   tenantDeleting: 'Deleting...',
   tenantDeleteConfirm: 'You are about to delete this tenant. Its data will be removed from the system and cannot be recovered.',
+  tenantDeleteBlockedTitle: 'Cannot delete tenant',
+  tenantDeleteBlockedDescription: 'This tenant still has {count} contract(s). Remove or reassign the contracts before deleting the tenant.',
   tenantDeleteError: 'Failed to delete tenant.',
   tenantCreateError: 'Failed to create tenant.',
   tenantUpdateError: 'Failed to update tenant.',

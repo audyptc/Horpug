@@ -192,6 +192,14 @@ func (r *Repository) Update(ctx context.Context, id uuid.UUID, input tenantuseca
 }
 
 func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
+	contractCount, err := r.CountContracts(ctx, id)
+	if err != nil {
+		return err
+	}
+	if contractCount > 0 {
+		return tenantdomain.ErrTenantHasContracts
+	}
+
 	result, err := r.db.Exec(ctx, `DELETE FROM tenants WHERE id = $1`, id)
 	if err != nil {
 		return err
@@ -201,6 +209,12 @@ func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	return nil
+}
+
+func (r *Repository) CountContracts(ctx context.Context, id uuid.UUID) (int64, error) {
+	var contractCount int64
+	err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM contracts WHERE tenant_id = $1`, id).Scan(&contractCount)
+	return contractCount, err
 }
 
 func (r *Repository) ensureTenantExists(ctx context.Context, id uuid.UUID) error {

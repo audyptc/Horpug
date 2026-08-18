@@ -12,3 +12,8 @@ export type ApiTenant = {
   created_at: string
   updated_at: string
 }
+
+export type ApiTenantDeletionCheck = {
+  can_delete: boolean
+  contract_count: number
+}

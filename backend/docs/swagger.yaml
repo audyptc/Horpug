@@ -767,6 +767,13 @@ definitions:
       updated_by:
         type: string
     type: object
+  apihorpug_internal_features_tenant_usecase.DeletionCheck:
+    properties:
+      can_delete:
+        type: boolean
+      contract_count:
+        type: integer
+    type: object
   apihorpug_internal_features_user_domain.User:
     properties:
       created_at:
@@ -4790,6 +4797,10 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
         "500":
           description: Internal Server Error
           schema:
@@ -4871,6 +4882,42 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a tenant
+      tags:
+      - tenants
+  /tenants/{id}/deletion-check:
+    get:
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_tenant_usecase.DeletionCheck'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Check whether a tenant can be deleted
       tags:
       - tenants
   /tenants/active:

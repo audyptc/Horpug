@@ -276,6 +276,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} apierror.Error
 // @Failure 404 {object} apierror.Error
+// @Failure 409 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
 // @Security BearerAuth
 // @Router /tenants/{id} [delete]
@@ -292,8 +293,43 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 		if errors.Is(err, tenantdomain.ErrTenantNotFound) {
 			return apierror.NotFound("tenant not found")
 		}
+		if errors.Is(err, tenantdomain.ErrTenantHasContracts) {
+			return apierror.Conflict("tenant has contracts and cannot be deleted")
+		}
 		return apierror.Internal("failed to delete tenant")
 	}
 
 	return apiresponse.Message(c, "tenant deleted")
+}
+
+// CheckDeletion godoc
+// @Summary Check whether a tenant can be deleted
+// @Tags tenants
+// @Produce json
+// @Param id path string true "Tenant ID"
+// @Success 200 {object} tenantusecase.DeletionCheck
+// @Failure 400 {object} apierror.Error
+// @Failure 401 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /tenants/{id}/deletion-check [get]
+func (h *Handler) CheckDeletion(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return apierror.BadRequest("invalid tenant id")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	defer cancel()
+
+	check, err := h.usecase.CheckDeletion(ctx, id)
+	if err != nil {
+		if errors.Is(err, tenantdomain.ErrTenantNotFound) {
+			return apierror.NotFound("tenant not found")
+		}
+		return apierror.Internal("failed to check tenant deletion")
+	}
+
+	return apiresponse.OK(c, check)
 }
