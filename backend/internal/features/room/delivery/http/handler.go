@@ -261,7 +261,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		Status:      req.Status,
 		IsActive:    isActive,
 		CreatedBy:   &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, roomdomain.ErrRequiredRoomData) {
 			return apierror.BadRequest("room_number, dormitory_id and room_type_id are required")
@@ -324,7 +324,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		Status:     req.Status,
 		IsActive:   req.IsActive,
 		UpdatedBy:  &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, roomdomain.ErrRoomNotFound) {
 			return apierror.NotFound("room not found")
@@ -372,7 +372,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := h.usecase.Delete(ctx, id, requesterID); err != nil {
+	if err := h.usecase.Delete(ctx, id, requesterID, c.IP()); err != nil {
 		if errors.Is(err, roomdomain.ErrRoomNotFound) {
 			return apierror.NotFound("room not found")
 		}

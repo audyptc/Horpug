@@ -65,7 +65,7 @@ func New(repo Repository, activityLog ActivityLogger) *Service {
 
 // recordActivity is best-effort: a failure to write the audit trail must
 // never fail the room CRUD flow itself.
-func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, entityID uuid.UUID, description string) {
+func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, entityID uuid.UUID, description, ipAddress string) {
 	if s.activityLog == nil {
 		return
 	}
@@ -75,6 +75,7 @@ func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action 
 		EntityType:  "room",
 		EntityID:    &entityID,
 		Description: description,
+		IPAddress:   ipAddress,
 	})
 	if err != nil {
 		log.Printf("failed to record activity log (action=%s): %v", action, err)
@@ -103,7 +104,7 @@ func (s *Service) GetByID(ctx context.Context, id, requesterID uuid.UUID) (roomd
 	return s.repo.GetByID(ctx, id, requesterID)
 }
 
-func (s *Service) Create(ctx context.Context, input CreateInput) (roomdomain.Room, error) {
+func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress string) (roomdomain.Room, error) {
 	input.RoomNumber = strings.TrimSpace(input.RoomNumber)
 	if input.RoomNumber == "" || input.DormitoryID == uuid.Nil || input.RoomTypeID == uuid.Nil {
 		return roomdomain.Room{}, roomdomain.ErrRequiredRoomData
@@ -120,11 +121,11 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (roomdomain.Roo
 		return roomdomain.Room{}, err
 	}
 
-	s.recordActivity(ctx, input.CreatedBy, "CREATE", room.ID, fmt.Sprintf("Created room: %s", room.RoomNumber))
+	s.recordActivity(ctx, input.CreatedBy, "CREATE", room.ID, fmt.Sprintf("Created room: %s", room.RoomNumber), ipAddress)
 	return room, nil
 }
 
-func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (roomdomain.Room, error) {
+func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput, ipAddress string) (roomdomain.Room, error) {
 	if input.RoomNumber != nil {
 		roomNumber := strings.TrimSpace(*input.RoomNumber)
 		if roomNumber == "" {
@@ -141,18 +142,18 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 		return roomdomain.Room{}, err
 	}
 
-	s.recordActivity(ctx, &requesterID, "UPDATE", room.ID, fmt.Sprintf("Updated room: %s", room.RoomNumber))
+	s.recordActivity(ctx, &requesterID, "UPDATE", room.ID, fmt.Sprintf("Updated room: %s", room.RoomNumber), ipAddress)
 	return room, nil
 }
 
-func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
+func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddress string) error {
 	room, _ := s.repo.GetByID(ctx, id, requesterID)
 
 	if err := s.repo.Delete(ctx, id, requesterID); err != nil {
 		return err
 	}
 
-	s.recordActivity(ctx, &requesterID, "DELETE", id, fmt.Sprintf("Deleted room: %s", room.RoomNumber))
+	s.recordActivity(ctx, &requesterID, "DELETE", id, fmt.Sprintf("Deleted room: %s", room.RoomNumber), ipAddress)
 	return nil
 }
 

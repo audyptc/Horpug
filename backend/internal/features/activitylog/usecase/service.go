@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"strings"
+	"time"
 
 	activitylogdomain "apihorpug/internal/features/activitylog/domain"
 
@@ -22,6 +23,8 @@ type ListFilter struct {
 	UserID     *uuid.UUID
 	EntityType string
 	EntityID   *uuid.UUID
+	DateFrom   *time.Time
+	DateTo     *time.Time
 	Limit      int
 	Offset     int
 }

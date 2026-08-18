@@ -66,7 +66,7 @@ func New(repo Repository, activityLog ActivityLogger) *Service {
 
 // recordActivity is best-effort: a failure to write the audit trail must
 // never fail the dormitory CRUD flow itself.
-func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, entityID uuid.UUID, description string) {
+func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, entityID uuid.UUID, description, ipAddress string) {
 	if s.activityLog == nil {
 		return
 	}
@@ -76,6 +76,7 @@ func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action 
 		EntityType:  "dormitory",
 		EntityID:    &entityID,
 		Description: description,
+		IPAddress:   ipAddress,
 	})
 	if err != nil {
 		log.Printf("failed to record activity log (action=%s): %v", action, err)
@@ -117,7 +118,7 @@ func (s *Service) CheckDeletion(ctx context.Context, id, requesterID uuid.UUID) 
 	return DeletionCheck{CanDelete: roomCount == 0, RoomCount: roomCount}, nil
 }
 
-func (s *Service) Create(ctx context.Context, input CreateInput) (dormdomain.Dormitory, error) {
+func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress string) (dormdomain.Dormitory, error) {
 	input.Name = strings.TrimSpace(input.Name)
 	input.Address = strings.TrimSpace(input.Address)
 	input.Phone = strings.TrimSpace(input.Phone)
@@ -131,11 +132,11 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (dormdomain.Dor
 		return dormdomain.Dormitory{}, err
 	}
 
-	s.recordActivity(ctx, input.CreatedBy, "CREATE", dormitory.ID, fmt.Sprintf("Created dormitory: %s", dormitory.Name))
+	s.recordActivity(ctx, input.CreatedBy, "CREATE", dormitory.ID, fmt.Sprintf("Created dormitory: %s", dormitory.Name), ipAddress)
 	return dormitory, nil
 }
 
-func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (dormdomain.Dormitory, error) {
+func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput, ipAddress string) (dormdomain.Dormitory, error) {
 	if input.Name != nil {
 		name := strings.TrimSpace(*input.Name)
 		if name == "" {
@@ -161,17 +162,17 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 		return dormdomain.Dormitory{}, err
 	}
 
-	s.recordActivity(ctx, &requesterID, "UPDATE", dormitory.ID, fmt.Sprintf("Updated dormitory: %s", dormitory.Name))
+	s.recordActivity(ctx, &requesterID, "UPDATE", dormitory.ID, fmt.Sprintf("Updated dormitory: %s", dormitory.Name), ipAddress)
 	return dormitory, nil
 }
 
-func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
+func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddress string) error {
 	dormitory, _ := s.repo.GetByID(ctx, id, requesterID)
 
 	if err := s.repo.Delete(ctx, id, requesterID); err != nil {
 		return err
 	}
 
-	s.recordActivity(ctx, &requesterID, "DELETE", id, fmt.Sprintf("Deleted dormitory: %s", dormitory.Name))
+	s.recordActivity(ctx, &requesterID, "DELETE", id, fmt.Sprintf("Deleted dormitory: %s", dormitory.Name), ipAddress)
 	return nil
 }

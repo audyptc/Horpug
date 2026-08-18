@@ -241,7 +241,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		RoleID:    req.RoleID,
 		IsActive:  isActive,
 		CreatedBy: &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, userdomain.ErrRequiredUserData) {
 			return apierror.BadRequest("username, email and password are required")
@@ -301,7 +301,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		RoleID:    req.RoleID,
 		IsActive:  req.IsActive,
 		UpdatedBy: &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, userdomain.ErrUserNotFound) {
 			return apierror.NotFound("user not found")
@@ -347,10 +347,15 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 		return apierror.BadRequest("invalid user id")
 	}
 
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := h.usecase.Delete(ctx, id); err != nil {
+	if err := h.usecase.Delete(ctx, id, requesterID, c.IP()); err != nil {
 		if errors.Is(err, userdomain.ErrUserNotFound) {
 			return apierror.NotFound("user not found")
 		}

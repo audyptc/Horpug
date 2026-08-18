@@ -15,6 +15,8 @@ export default function ActivityLogPage() {
 
   const [entityTypeInput, setEntityTypeInput] = useState('')
   const [entityType, setEntityType] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<number>(ACTIVITY_LOG_PAGE_SIZE_OPTIONS[0])
 
@@ -37,6 +39,8 @@ export default function ActivityLogPage() {
           page,
           per_page: pageSize,
           ...(entityType ? { entity_type: entityType } : {}),
+          ...(dateFrom ? { date_from: dateFrom } : {}),
+          ...(dateTo ? { date_to: dateTo } : {}),
         },
       })
       .then(({ data }) => {
@@ -54,7 +58,7 @@ export default function ActivityLogPage() {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize, entityType])
+  }, [page, pageSize, entityType, dateFrom, dateTo])
 
   const currentPage = Math.min(page, totalPages)
   const rangeStart = total === 0 ? 0 : (currentPage - 1) * pageSize + 1
@@ -74,6 +78,16 @@ export default function ActivityLogPage() {
         logs={logs}
         entityTypeFilter={entityTypeInput}
         onEntityTypeFilterChange={setEntityTypeInput}
+        dateFrom={dateFrom}
+        onDateFromChange={(value) => {
+          setDateFrom(value)
+          setPage(1)
+        }}
+        dateTo={dateTo}
+        onDateToChange={(value) => {
+          setDateTo(value)
+          setPage(1)
+        }}
         currentPage={currentPage}
         totalPages={totalPages}
         rangeStart={rangeStart}

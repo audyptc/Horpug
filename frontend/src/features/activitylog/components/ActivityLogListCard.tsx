@@ -13,6 +13,10 @@ type ActivityLogListCardProps = {
   logs: ApiActivityLog[] | null
   entityTypeFilter: string
   onEntityTypeFilterChange: (value: string) => void
+  dateFrom: string
+  onDateFromChange: (value: string) => void
+  dateTo: string
+  onDateToChange: (value: string) => void
   currentPage: number
   totalPages: number
   rangeStart: number
@@ -30,6 +34,10 @@ export function ActivityLogListCard({
   logs,
   entityTypeFilter,
   onEntityTypeFilterChange,
+  dateFrom,
+  onDateFromChange,
+  dateTo,
+  onDateToChange,
   currentPage,
   totalPages,
   rangeStart,
@@ -54,16 +62,40 @@ export function ActivityLogListCard({
 
         {!loadError && !isLoading && (
           <>
-            <label className="flex w-full max-w-md flex-col gap-1.5 text-sm font-medium">
-              {t('activityLogEntityTypeLabel')}
-              <input
-                type="search"
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                placeholder={t('activityLogEntityTypePlaceholder')}
-                value={entityTypeFilter}
-                onChange={(event) => onEntityTypeFilterChange(event.target.value)}
-              />
-            </label>
+            <div className="flex flex-wrap items-end gap-4">
+              <label className="flex w-full max-w-md flex-col gap-1.5 text-sm font-medium">
+                {t('activityLogEntityTypeLabel')}
+                <input
+                  type="search"
+                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                  placeholder={t('activityLogEntityTypePlaceholder')}
+                  value={entityTypeFilter}
+                  onChange={(event) => onEntityTypeFilterChange(event.target.value)}
+                />
+              </label>
+
+              <label className="flex flex-col gap-1.5 text-sm font-medium">
+                {t('activityLogDateFromLabel')}
+                <input
+                  type="date"
+                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                  value={dateFrom}
+                  max={dateTo || undefined}
+                  onChange={(event) => onDateFromChange(event.target.value)}
+                />
+              </label>
+
+              <label className="flex flex-col gap-1.5 text-sm font-medium">
+                {t('activityLogDateToLabel')}
+                <input
+                  type="date"
+                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                  value={dateTo}
+                  min={dateFrom || undefined}
+                  onChange={(event) => onDateToChange(event.target.value)}
+                />
+              </label>
+            </div>
 
             {logs && logs.length === 0 && <p className="metric-detail">{t('activityLogNoLogs')}</p>}
 

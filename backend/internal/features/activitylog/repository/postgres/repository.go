@@ -68,6 +68,16 @@ func buildListConditions(filter activitylogusecase.ListFilter) ([]string, []any,
 		args = append(args, *filter.EntityID)
 		argIdx++
 	}
+	if filter.DateFrom != nil {
+		conditions = append(conditions, fmt.Sprintf("al.created_at >= $%d", argIdx))
+		args = append(args, *filter.DateFrom)
+		argIdx++
+	}
+	if filter.DateTo != nil {
+		conditions = append(conditions, fmt.Sprintf("al.created_at < $%d", argIdx))
+		args = append(args, *filter.DateTo)
+		argIdx++
+	}
 
 	return conditions, args, argIdx
 }

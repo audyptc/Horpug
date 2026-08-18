@@ -853,6 +853,8 @@ const en = {
   activityLogIpColumn: 'IP Address',
   activityLogEntityTypeLabel: 'Filter by entity type',
   activityLogEntityTypePlaceholder: 'e.g. user, dormitory, role',
+  activityLogDateFromLabel: 'From date',
+  activityLogDateToLabel: 'To date',
   activityLogNoLogs: 'No activity logs found.',
   activityLogSystemUser: 'System',
 } as const

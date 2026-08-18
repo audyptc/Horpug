@@ -2,8 +2,12 @@ package usecase
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"strings"
 
+	activitylogdomain "apihorpug/internal/features/activitylog/domain"
+	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
 	userdomain "apihorpug/internal/features/user/domain"
 
 	"github.com/google/uuid"
@@ -54,12 +58,38 @@ type Repository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
-type Service struct {
-	repo Repository
+// ActivityLogger records user create/update/delete events for the audit
+// trail. Failures to record are logged but never block the user flow.
+type ActivityLogger interface {
+	Create(ctx context.Context, input activitylogusecase.CreateInput) (activitylogdomain.ActivityLog, error)
 }
 
-func New(repo Repository) *Service {
-	return &Service{repo: repo}
+type Service struct {
+	repo        Repository
+	activityLog ActivityLogger
+}
+
+func New(repo Repository, activityLog ActivityLogger) *Service {
+	return &Service{repo: repo, activityLog: activityLog}
+}
+
+// recordActivity is best-effort: a failure to write the audit trail must
+// never fail the user CRUD flow itself.
+func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, entityID uuid.UUID, description, ipAddress string) {
+	if s.activityLog == nil {
+		return
+	}
+	_, err := s.activityLog.Create(ctx, activitylogusecase.CreateInput{
+		UserID:      userID,
+		Action:      action,
+		EntityType:  "user",
+		EntityID:    &entityID,
+		Description: description,
+		IPAddress:   ipAddress,
+	})
+	if err != nil {
+		log.Printf("failed to record activity log (action=%s): %v", action, err)
+	}
 }
 
 func (s *Service) List(ctx context.Context, limit, offset int) ([]userdomain.User, int64, error) {
@@ -88,7 +118,7 @@ func (s *Service) GetPermissions(ctx context.Context, id uuid.UUID) ([]UserPermi
 	return s.repo.GetPermissions(ctx, id)
 }
 
-func (s *Service) Create(ctx context.Context, input CreateInput) (userdomain.User, error) {
+func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress string) (userdomain.User, error) {
 	input.Username = strings.TrimSpace(input.Username)
 	input.Email = strings.TrimSpace(strings.ToLower(input.Email))
 	if input.Username == "" || input.Email == "" || strings.TrimSpace(input.Password) == "" {
@@ -103,10 +133,16 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (userdomain.Use
 		return userdomain.User{}, err
 	}
 
-	return s.repo.Create(ctx, input, string(hashedPassword))
+	user, err := s.repo.Create(ctx, input, string(hashedPassword))
+	if err != nil {
+		return userdomain.User{}, err
+	}
+
+	s.recordActivity(ctx, input.CreatedBy, "CREATE", user.ID, fmt.Sprintf("Created user: %s", user.Username), ipAddress)
+	return user, nil
 }
 
-func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput) (userdomain.User, error) {
+func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput, ipAddress string) (userdomain.User, error) {
 	user, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return userdomain.User{}, err
@@ -147,10 +183,16 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput) (
 		hashedPassword = &hashedPasswordValue
 	}
 
-	return s.repo.Update(ctx, id, input, hashedPassword)
+	updated, err := s.repo.Update(ctx, id, input, hashedPassword)
+	if err != nil {
+		return userdomain.User{}, err
+	}
+
+	s.recordActivity(ctx, input.UpdatedBy, "UPDATE", updated.ID, fmt.Sprintf("Updated user: %s", updated.Username), ipAddress)
+	return updated, nil
 }
 
-func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
+func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddress string) error {
 	user, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return err
@@ -159,7 +201,12 @@ func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
 		return userdomain.ErrUserProtected
 	}
 
-	return s.repo.Delete(ctx, id)
+	if err := s.repo.Delete(ctx, id); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, &requesterID, "DELETE", id, fmt.Sprintf("Deleted user: %s", user.Username), ipAddress)
+	return nil
 }
 
 func (s *Service) CheckDeletion(ctx context.Context, id uuid.UUID) (DeletionCheck, error) {

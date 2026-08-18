@@ -855,6 +855,8 @@ const th: Record<TranslationKey, string> = {
   activityLogIpColumn: 'IP Address',
   activityLogEntityTypeLabel: 'กรองตามประเภทข้อมูล',
   activityLogEntityTypePlaceholder: 'เช่น user, dormitory, role',
+  activityLogDateFromLabel: 'ตั้งแต่วันที่',
+  activityLogDateToLabel: 'ถึงวันที่',
   activityLogNoLogs: 'ไม่พบบันทึกกิจกรรม',
   activityLogSystemUser: 'ระบบ',
 }

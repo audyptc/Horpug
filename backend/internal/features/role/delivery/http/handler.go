@@ -197,7 +197,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		DormitoryIDs:        req.DormitoryIDs,
 		MenuPermissions:     toUsecaseMenuPermissions(req.MenuPermissions),
 		CreatedBy:           &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, roledomain.ErrRoleNameExists) {
 			return apierror.Conflict("role name already exists")
@@ -266,7 +266,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		DormitoryIDs:        req.DormitoryIDs,
 		MenuPermissions:     menuPermissions,
 		UpdatedBy:           &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, roledomain.ErrRoleNotFound) {
 			return apierror.NotFound("role not found")
@@ -343,7 +343,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := h.usecase.Delete(ctx, id, requesterID); err != nil {
+	if err := h.usecase.Delete(ctx, id, requesterID, c.IP()); err != nil {
 		if errors.Is(err, roledomain.ErrRoleNotFound) {
 			return apierror.NotFound("role not found")
 		}

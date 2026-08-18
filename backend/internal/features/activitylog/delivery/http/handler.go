@@ -32,6 +32,18 @@ func NewHandler(usecase *activitylogusecase.Service) *Handler {
 	return &Handler{usecase: usecase}
 }
 
+func parseDateQuery(c fiber.Ctx, name string) (*time.Time, error) {
+	raw := strings.TrimSpace(c.Query(name))
+	if raw == "" {
+		return nil, nil
+	}
+	value, err := time.Parse("2006-01-02", raw)
+	if err != nil {
+		return nil, apierror.BadRequest("invalid " + name)
+	}
+	return &value, nil
+}
+
 // List godoc
 // @Summary List activity logs
 // @Tags activity-logs
@@ -39,6 +51,8 @@ func NewHandler(usecase *activitylogusecase.Service) *Handler {
 // @Param user_id query string false "Filter by user ID"
 // @Param entity_type query string false "Filter by entity type"
 // @Param entity_id query string false "Filter by entity ID"
+// @Param date_from query string false "Filter by date, inclusive (YYYY-MM-DD)"
+// @Param date_to query string false "Filter by date, inclusive (YYYY-MM-DD)"
 // @Param page query int false "Page number (default 1)"
 // @Param per_page query int false "Results per page (default 10, max 100)"
 // @Success 200 {object} apiresponse.Meta
@@ -65,6 +79,23 @@ func (h *Handler) List(c fiber.Ctx) error {
 			return apierror.BadRequest("invalid entity_id")
 		}
 		filter.EntityID = &entityID
+	}
+
+	dateFrom, err := parseDateQuery(c, "date_from")
+	if err != nil {
+		return err
+	}
+	filter.DateFrom = dateFrom
+
+	dateTo, err := parseDateQuery(c, "date_to")
+	if err != nil {
+		return err
+	}
+	if dateTo != nil {
+		// created_at is a timestamp, so make the bound exclusive of the
+		// following day to keep date_to inclusive of the whole day.
+		endOfDay := dateTo.AddDate(0, 0, 1)
+		filter.DateTo = &endOfDay
 	}
 
 	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
