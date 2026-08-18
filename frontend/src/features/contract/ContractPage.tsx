@@ -137,7 +137,7 @@ export default function ContractPage() {
       setFormError(t('contractRoomRequired'))
       return
     }
-    if (!isEdit && !formStartDate) {
+    if (!formStartDate) {
       setFormError(t('contractStartDateRequired'))
       return
     }
@@ -178,6 +178,7 @@ export default function ContractPage() {
         setContracts((prev) => [...(prev ?? []), data])
       } else {
         const payload = {
+          start_date: toApiDate(formStartDate),
           end_date: formEndDate ? toApiDate(formEndDate) : null,
           rent_price: rentPrice,
           deposit,

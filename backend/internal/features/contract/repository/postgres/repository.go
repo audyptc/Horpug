@@ -178,6 +178,11 @@ func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, inpu
 	args := make([]any, 0)
 	argIdx := 1
 
+	if input.StartDate != nil {
+		setClauses = append(setClauses, fmt.Sprintf("start_date = $%d", argIdx))
+		args = append(args, *input.StartDate)
+		argIdx++
+	}
 	if input.EndDate != nil {
 		setClauses = append(setClauses, fmt.Sprintf("end_date = $%d", argIdx))
 		args = append(args, *input.EndDate)

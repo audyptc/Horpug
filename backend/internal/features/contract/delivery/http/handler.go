@@ -33,6 +33,7 @@ type createContractRequest struct {
 }
 
 type updateContractRequest struct {
+	StartDate    *time.Time                     `json:"start_date"`
 	EndDate      *time.Time                     `json:"end_date"`
 	RentPrice    *float64                       `json:"rent_price"`
 	Deposit      *float64                       `json:"deposit"`
@@ -266,6 +267,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	defer cancel()
 
 	contract, err := h.usecase.Update(ctx, id, requesterID, contractusecase.UpdateInput{
+		StartDate:    req.StartDate,
 		EndDate:      req.EndDate,
 		RentPrice:    req.RentPrice,
 		Deposit:      req.Deposit,
@@ -277,6 +279,12 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	if err != nil {
 		if errors.Is(err, contractdomain.ErrContractNotFound) {
 			return apierror.NotFound("contract not found")
+		}
+		if errors.Is(err, contractdomain.ErrRequiredContractData) {
+			return apierror.BadRequest("start_date is required")
+		}
+		if errors.Is(err, contractdomain.ErrInvalidContractDates) {
+			return apierror.BadRequest("end_date must not be before start_date")
 		}
 		if errors.Is(err, contractdomain.ErrInvalidContractAmount) {
 			return apierror.BadRequest("rent_price and deposit must not be negative")

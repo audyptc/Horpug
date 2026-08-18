@@ -1,6 +1,11 @@
-import type { FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
+import { CalendarIcon, X } from 'lucide-react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
+import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/components/ui/button'
+import { Calendar } from '@/shared/components/ui/calendar'
+import { Combobox } from '@/shared/components/ui/combobox'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover'
 import {
   Sheet,
   SheetContent,
@@ -14,6 +19,78 @@ import type { ApiRoom } from '@/features/room/types'
 import { RoomSearchSelect } from '@/features/room/components/RoomSearchSelect'
 import type { ContractStatus } from '../types'
 import { CONTRACT_STATUSES } from '../utils'
+
+function parseDateInput(value: string): Date | undefined {
+  if (!value) return undefined
+  const [year, month, day] = value.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+function formatDateInput(date: Date | undefined): string {
+  if (!date) return ''
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+type DatePickerFieldProps = {
+  value: string
+  onChange: (value: string) => void
+  placeholder: string
+}
+
+function DatePickerField({ value, onChange, placeholder }: DatePickerFieldProps) {
+  const { t, language } = useLanguage()
+  const [open, setOpen] = useState(false)
+  const date = parseDateInput(value)
+  const dateLocale = language === 'th' ? 'th-TH' : 'en-US'
+
+  return (
+    <div className="flex min-w-0 items-center gap-1.5">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              'h-10 min-w-0 flex-1 justify-start gap-2 px-3 text-sm font-normal',
+              !date && 'text-muted-foreground'
+            )}
+          >
+            <CalendarIcon className="size-4 shrink-0" />
+            <span className="truncate">{date ? date.toLocaleDateString(dateLocale, { dateStyle: 'medium' }) : placeholder}</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            defaultMonth={date ?? new Date()}
+            selected={date}
+            onSelect={(next) => {
+              onChange(formatDateInput(next))
+              setOpen(false)
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+
+      {value && (
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="h-10 w-10 shrink-0 text-muted-foreground"
+          title={t('contractFormDateClear')}
+          aria-label={t('contractFormDateClear')}
+          onClick={() => onChange('')}
+        >
+          <X className="size-4" />
+        </Button>
+      )}
+    </div>
+  )
+}
 
 const contractStatusLabelKeys: Record<ContractStatus, TranslationKey> = {
   active: 'contractStatusActive',
@@ -104,7 +181,11 @@ export function ContractFormSheet({
                 </label>
                 <label className="flex flex-col gap-1.5 text-sm font-medium">
                   {t('contractFormStartDateLabel')}
-                  <p className="text-sm font-normal text-muted-foreground">{startDate || '—'}</p>
+                  <DatePickerField
+                    value={startDate}
+                    onChange={onStartDateChange}
+                    placeholder={t('contractFormStartDateLabel')}
+                  />
                 </label>
               </>
             ) : (
@@ -114,18 +195,17 @@ export function ContractFormSheet({
                   {tenants.length === 0 ? (
                     <p className="text-xs font-normal text-muted-foreground">{t('contractFormNoTenants')}</p>
                   ) : (
-                    <select
-                      className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                    <Combobox
+                      options={tenants.map((tenant) => ({
+                        value: tenant.id,
+                        label: `${tenant.first_name} ${tenant.last_name}`,
+                      }))}
                       value={tenantId}
-                      onChange={(event) => onTenantIdChange(event.target.value)}
-                    >
-                      <option value="">{t('contractFormTenantPlaceholder')}</option>
-                      {tenants.map((tenant) => (
-                        <option key={tenant.id} value={tenant.id}>
-                          {tenant.first_name} {tenant.last_name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={onTenantIdChange}
+                      placeholder={t('contractFormTenantPlaceholder')}
+                      searchPlaceholder={t('contractFormTenantSearchPlaceholder')}
+                      emptyText={t('contractFormTenantNoResults')}
+                    />
                   )}
                 </label>
 
@@ -143,11 +223,10 @@ export function ContractFormSheet({
 
                 <label className="flex flex-col gap-1.5 text-sm font-medium">
                   {t('contractFormStartDateLabel')}
-                  <input
-                    type="date"
-                    className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                  <DatePickerField
                     value={startDate}
-                    onChange={(event) => onStartDateChange(event.target.value)}
+                    onChange={onStartDateChange}
+                    placeholder={t('contractFormStartDateLabel')}
                   />
                 </label>
               </>
@@ -155,11 +234,10 @@ export function ContractFormSheet({
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('contractFormEndDateLabel')}
-              <input
-                type="date"
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+              <DatePickerField
                 value={endDate}
-                onChange={(event) => onEndDateChange(event.target.value)}
+                onChange={onEndDateChange}
+                placeholder={t('contractFormEndDateLabel')}
               />
             </label>
 
@@ -169,7 +247,7 @@ export function ContractFormSheet({
                 type="number"
                 step="0.01"
                 min="0"
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                className="h-10 rounded-md border border-input bg-transparent px-3 text-right text-sm"
                 value={rentPrice}
                 onChange={(event) => onRentPriceChange(event.target.value)}
               />
@@ -181,7 +259,7 @@ export function ContractFormSheet({
                 type="number"
                 step="0.01"
                 min="0"
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                className="h-10 rounded-md border border-input bg-transparent px-3 text-right text-sm"
                 value={deposit}
                 onChange={(event) => onDepositChange(event.target.value)}
               />
@@ -202,17 +280,17 @@ export function ContractFormSheet({
             {isEdit && (
               <label className="flex flex-col gap-1.5 text-sm font-medium">
                 {t('contractFormStatusLabel')}
-                <select
-                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                <Combobox
+                  options={CONTRACT_STATUSES.map((value) => ({
+                    value,
+                    label: t(contractStatusLabelKeys[value]),
+                  }))}
                   value={status}
-                  onChange={(event) => onStatusChange(event.target.value as ContractStatus)}
-                >
-                  {CONTRACT_STATUSES.map((value) => (
-                    <option key={value} value={value}>
-                      {t(contractStatusLabelKeys[value])}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => onStatusChange(value as ContractStatus)}
+                  placeholder={t('contractFormStatusLabel')}
+                  searchPlaceholder={t('contractFormStatusSearchPlaceholder')}
+                  emptyText={t('contractFormStatusNoResults')}
+                />
               </label>
             )}
 

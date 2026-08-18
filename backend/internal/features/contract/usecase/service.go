@@ -30,6 +30,7 @@ type CreateInput struct {
 }
 
 type UpdateInput struct {
+	StartDate    *time.Time
 	EndDate      *time.Time
 	RentPrice    *float64
 	Deposit      *float64
@@ -94,6 +95,12 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (contractdomain
 }
 
 func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (contractdomain.Contract, error) {
+	if input.StartDate != nil && input.StartDate.IsZero() {
+		return contractdomain.Contract{}, contractdomain.ErrRequiredContractData
+	}
+	if input.StartDate != nil && input.EndDate != nil && input.EndDate.Before(*input.StartDate) {
+		return contractdomain.Contract{}, contractdomain.ErrInvalidContractDates
+	}
 	if input.RentPrice != nil && *input.RentPrice < 0 {
 		return contractdomain.Contract{}, contractdomain.ErrInvalidContractAmount
 	}
