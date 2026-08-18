@@ -98,8 +98,10 @@ export default function ActivityLogPage() {
           setPageSize(size)
           setPage(1)
         }}
+        onFirstPage={() => setPage(1)}
         onPrevPage={() => setPage((p) => Math.max(1, p - 1))}
         onNextPage={() => setPage((p) => Math.min(totalPages, p + 1))}
+        onLastPage={() => setPage(totalPages)}
       />
     </main>
   )

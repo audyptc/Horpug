@@ -81,8 +81,10 @@ export default function UserPage() {
     rangeEnd,
     paginatedItems: paginatedUsers,
     resetPage,
+    firstPage,
     prevPage,
     nextPage,
+    lastPage,
   } = usePagination(filteredUsers, USER_PAGE_SIZE_OPTIONS[0])
 
   const isLoading = !loadError && users === null
@@ -242,8 +244,10 @@ export default function UserPage() {
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
+        onFirstPage={firstPage}
         onPrevPage={prevPage}
         onNextPage={nextPage}
+        onLastPage={lastPage}
         deletingUserId={checkingUserId ?? deletingUserId}
         togglingUserId={togglingUserId}
         onCreateUser={openCreateForm}

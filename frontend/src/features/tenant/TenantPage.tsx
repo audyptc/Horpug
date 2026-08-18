@@ -80,8 +80,10 @@ export default function TenantPage() {
     rangeEnd,
     paginatedItems: paginatedTenants,
     resetPage,
+    firstPage,
     prevPage,
     nextPage,
+    lastPage,
   } = usePagination(filteredTenants, TENANT_PAGE_SIZE_OPTIONS[0])
 
   const isLoading = !loadError && tenants === null
@@ -225,8 +227,10 @@ export default function TenantPage() {
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
+        onFirstPage={firstPage}
         onPrevPage={prevPage}
         onNextPage={nextPage}
+        onLastPage={lastPage}
         deletingTenantId={checkingTenantId ?? deletingTenantId}
         onCreateTenant={openCreateForm}
         onEditTenant={openEditForm}

@@ -88,8 +88,10 @@ export default function DocumentPage() {
     rangeEnd,
     paginatedItems: paginatedDocuments,
     resetPage,
+    firstPage,
     prevPage,
     nextPage,
+    lastPage,
   } = usePagination(filteredDocuments, DOCUMENT_PAGE_SIZE_OPTIONS[0])
 
   const isLoading = !loadError && documents === null
@@ -222,8 +224,10 @@ export default function DocumentPage() {
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
+        onFirstPage={firstPage}
         onPrevPage={prevPage}
         onNextPage={nextPage}
+        onLastPage={lastPage}
         deletingDocumentId={deletingDocumentId}
         onCreateDocument={openCreateForm}
         onEditDocument={openEditForm}

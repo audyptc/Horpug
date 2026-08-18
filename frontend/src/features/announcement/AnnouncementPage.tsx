@@ -76,8 +76,10 @@ export default function AnnouncementPage() {
     rangeEnd,
     paginatedItems: paginatedAnnouncements,
     resetPage,
+    firstPage,
     prevPage,
     nextPage,
+    lastPage,
   } = usePagination(filteredAnnouncements, ANNOUNCEMENT_PAGE_SIZE_OPTIONS[0])
 
   const isLoading = !loadError && announcements === null
@@ -194,8 +196,10 @@ export default function AnnouncementPage() {
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
+        onFirstPage={firstPage}
         onPrevPage={prevPage}
         onNextPage={nextPage}
+        onLastPage={lastPage}
         deletingAnnouncementId={deletingAnnouncementId}
         onCreateAnnouncement={openCreateForm}
         onEditAnnouncement={openEditForm}

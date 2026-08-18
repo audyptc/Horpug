@@ -79,8 +79,10 @@ export default function InvoicePage() {
     rangeEnd,
     paginatedItems: paginatedInvoices,
     resetPage,
+    firstPage,
     prevPage,
     nextPage,
+    lastPage,
   } = usePagination(filteredInvoices, INVOICE_PAGE_SIZE_OPTIONS[0])
 
   const isLoading = !loadError && invoices === null
@@ -239,8 +241,10 @@ export default function InvoicePage() {
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
+        onFirstPage={firstPage}
         onPrevPage={prevPage}
         onNextPage={nextPage}
+        onLastPage={lastPage}
         deletingInvoiceId={deletingInvoiceId}
         onCreateInvoice={openCreateForm}
         onEditInvoice={openEditForm}

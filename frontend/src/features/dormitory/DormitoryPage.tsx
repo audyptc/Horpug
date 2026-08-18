@@ -79,8 +79,10 @@ export default function DormitoryPage() {
     rangeEnd,
     paginatedItems: paginatedDormitories,
     resetPage,
+    firstPage,
     prevPage,
     nextPage,
+    lastPage,
   } = usePagination(filteredDormitories, DORMITORY_PAGE_SIZE_OPTIONS[0])
 
   const isLoading = !loadError && dormitories === null
@@ -213,8 +215,10 @@ export default function DormitoryPage() {
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
+        onFirstPage={firstPage}
         onPrevPage={prevPage}
         onNextPage={nextPage}
+        onLastPage={lastPage}
         deletingDormitoryId={checkingDormitoryId ?? deletingDormitoryId}
         onCreateDormitory={openCreateForm}
         onEditDormitory={openEditForm}

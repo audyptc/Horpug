@@ -75,8 +75,10 @@ export default function ExpensePage() {
     rangeEnd,
     paginatedItems: paginatedExpenses,
     resetPage,
+    firstPage,
     prevPage,
     nextPage,
+    lastPage,
   } = usePagination(filteredExpenses, EXPENSE_PAGE_SIZE_OPTIONS[0])
 
   const isLoading = !loadError && expenses === null
@@ -196,8 +198,10 @@ export default function ExpensePage() {
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
+        onFirstPage={firstPage}
         onPrevPage={prevPage}
         onNextPage={nextPage}
+        onLastPage={lastPage}
         deletingExpenseId={deletingExpenseId}
         onCreateExpense={openCreateForm}
         onEditExpense={openEditForm}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { DateRange } from 'react-day-picker'
-import { CalendarIcon, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { CalendarIcon, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, X } from 'lucide-react'
 import { useLanguage } from '@/shared/i18n/language'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/components/ui/badge'
@@ -43,8 +43,10 @@ type ActivityLogListCardProps = {
   totalItems: number
   pageSize: number
   onPageSizeChange: (size: number) => void
+  onFirstPage: () => void
   onPrevPage: () => void
   onNextPage: () => void
+  onLastPage: () => void
 }
 
 export function ActivityLogListCard({
@@ -64,8 +66,10 @@ export function ActivityLogListCard({
   totalItems,
   pageSize,
   onPageSizeChange,
+  onFirstPage,
   onPrevPage,
   onNextPage,
+  onLastPage,
 }: ActivityLogListCardProps) {
   const { t, language } = useLanguage()
   const [datePickerOpen, setDatePickerOpen] = useState(false)
@@ -238,6 +242,17 @@ export function ActivityLogListCard({
                         type="button"
                         size="icon"
                         variant="outline"
+                        title={t('rolePermissionsFirstPage')}
+                        aria-label={t('rolePermissionsFirstPage')}
+                        disabled={currentPage <= 1}
+                        onClick={onFirstPage}
+                      >
+                        <ChevronsLeft />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
                         title={t('rolePermissionsPrevPage')}
                         aria-label={t('rolePermissionsPrevPage')}
                         disabled={currentPage <= 1}
@@ -255,6 +270,17 @@ export function ActivityLogListCard({
                         onClick={onNextPage}
                       >
                         <ChevronRight />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        title={t('rolePermissionsLastPage')}
+                        aria-label={t('rolePermissionsLastPage')}
+                        disabled={currentPage >= totalPages}
+                        onClick={onLastPage}
+                      >
+                        <ChevronsRight />
                       </Button>
                     </div>
                   )}

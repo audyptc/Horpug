@@ -83,8 +83,10 @@ export default function ParkingPage() {
     rangeEnd,
     paginatedItems: paginatedParkings,
     resetPage,
+    firstPage,
     prevPage,
     nextPage,
+    lastPage,
   } = usePagination(filteredParkings, PARKING_PAGE_SIZE_OPTIONS[0])
 
   const isLoading = !loadError && parkings === null
@@ -203,8 +205,10 @@ export default function ParkingPage() {
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
+        onFirstPage={firstPage}
         onPrevPage={prevPage}
         onNextPage={nextPage}
+        onLastPage={lastPage}
         deletingParkingId={deletingParkingId}
         onCreateParking={openCreateForm}
         onEditParking={openEditForm}

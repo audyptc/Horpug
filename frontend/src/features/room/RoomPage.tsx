@@ -101,8 +101,10 @@ export default function RoomPage() {
     rangeEnd,
     paginatedItems: paginatedRooms,
     resetPage,
+    firstPage,
     prevPage,
     nextPage,
+    lastPage,
   } = usePagination(filteredRooms, ROOM_PAGE_SIZE_OPTIONS[0])
 
   const isLoading = !loadError && rooms === null
@@ -250,8 +252,10 @@ export default function RoomPage() {
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
+        onFirstPage={firstPage}
         onPrevPage={prevPage}
         onNextPage={nextPage}
+        onLastPage={lastPage}
         deletingRoomId={checkingRoomId ?? deletingRoomId}
         onCreateRoom={openCreateForm}
         onEditRoom={openEditForm}

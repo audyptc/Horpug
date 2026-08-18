@@ -82,8 +82,10 @@ export default function ContractPage() {
     rangeEnd,
     paginatedItems: paginatedContracts,
     resetPage,
+    firstPage,
     prevPage,
     nextPage,
+    lastPage,
   } = usePagination(filteredContracts, CONTRACT_PAGE_SIZE_OPTIONS[0])
 
   const isLoading = !loadError && contracts === null
@@ -241,8 +243,10 @@ export default function ContractPage() {
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
+        onFirstPage={firstPage}
         onPrevPage={prevPage}
         onNextPage={nextPage}
+        onLastPage={lastPage}
         deletingContractId={deletingContractId}
         onCreateContract={openCreateForm}
         onEditContract={openEditForm}

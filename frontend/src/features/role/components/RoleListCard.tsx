@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, KeyRound, Pencil, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, KeyRound, Pencil, Trash2 } from 'lucide-react'
 import { useLanguage } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
@@ -22,8 +22,10 @@ type RoleListCardProps = {
   rolesRangeEnd: number
   rolePageSize: number
   onRolePageSizeChange: (size: number) => void
+  onFirstPage: () => void
   onPrevPage: () => void
   onNextPage: () => void
+  onLastPage: () => void
   deletingRoleId: string | null
   onCreateRole: () => void
   onManageRole: (role: ApiRole) => void
@@ -46,8 +48,10 @@ export function RoleListCard({
   rolesRangeEnd,
   rolePageSize,
   onRolePageSizeChange,
+  onFirstPage,
   onPrevPage,
   onNextPage,
+  onLastPage,
   deletingRoleId,
   onCreateRole,
   onManageRole,
@@ -200,6 +204,17 @@ export function RoleListCard({
                         type="button"
                         size="icon"
                         variant="outline"
+                        title={t('rolePermissionsFirstPage')}
+                        aria-label={t('rolePermissionsFirstPage')}
+                        disabled={currentRolePage <= 1}
+                        onClick={onFirstPage}
+                      >
+                        <ChevronsLeft />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
                         title={t('rolePermissionsPrevPage')}
                         aria-label={t('rolePermissionsPrevPage')}
                         disabled={currentRolePage <= 1}
@@ -217,6 +232,17 @@ export function RoleListCard({
                         onClick={onNextPage}
                       >
                         <ChevronRight />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        title={t('rolePermissionsLastPage')}
+                        aria-label={t('rolePermissionsLastPage')}
+                        disabled={currentRolePage >= totalRolePages}
+                        onClick={onLastPage}
+                      >
+                        <ChevronsRight />
                       </Button>
                     </div>
                   )}

@@ -132,8 +132,10 @@ export default function RolePermissionsPage() {
     rangeEnd: rolesRangeEnd,
     paginatedItems: paginatedRoles,
     resetPage: resetRolePage,
+    firstPage: firstRolePage,
     prevPage: prevRolePage,
     nextPage: nextRolePage,
+    lastPage: lastRolePage,
   } = usePagination(filteredRoles, ROLE_PAGE_SIZE_OPTIONS[0])
 
   function toggleCell(menuId: string, permissionId: string) {
@@ -331,8 +333,10 @@ export default function RolePermissionsPage() {
           rolesRangeEnd={rolesRangeEnd}
           rolePageSize={rolePageSize}
           onRolePageSizeChange={setRolePageSize}
+          onFirstPage={firstRolePage}
           onPrevPage={prevRolePage}
           onNextPage={nextRolePage}
+          onLastPage={lastRolePage}
           deletingRoleId={checkingRoleId ?? deletingRoleId}
           onCreateRole={openCreateForm}
           onManageRole={openPermissions}

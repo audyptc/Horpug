@@ -83,8 +83,10 @@ export default function RepairRequestPage() {
     rangeEnd,
     paginatedItems: paginatedRepairRequests,
     resetPage,
+    firstPage,
     prevPage,
     nextPage,
+    lastPage,
   } = usePagination(filteredRepairRequests, REPAIR_REQUEST_PAGE_SIZE_OPTIONS[0])
 
   const isLoading = !loadError && repairRequests === null
@@ -213,8 +215,10 @@ export default function RepairRequestPage() {
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
+        onFirstPage={firstPage}
         onPrevPage={prevPage}
         onNextPage={nextPage}
+        onLastPage={lastPage}
         deletingRepairRequestId={deletingRepairRequestId}
         onCreateRepairRequest={openCreateForm}
         onEditRepairRequest={openEditForm}

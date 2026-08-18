@@ -23,12 +23,20 @@ export function usePagination<T>(items: T[], initialPageSize: number) {
     setPage(1)
   }
 
+  function firstPage() {
+    setPage(1)
+  }
+
   function prevPage() {
     setPage((value) => Math.max(1, value - 1))
   }
 
   function nextPage() {
     setPage((value) => Math.min(totalPages, value + 1))
+  }
+
+  function lastPage() {
+    setPage(totalPages)
   }
 
   return {
@@ -41,7 +49,9 @@ export function usePagination<T>(items: T[], initialPageSize: number) {
     rangeEnd,
     paginatedItems,
     resetPage,
+    firstPage,
     prevPage,
     nextPage,
+    lastPage,
   }
 }

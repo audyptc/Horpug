@@ -79,8 +79,10 @@ export default function WaterMeterPage() {
     rangeEnd,
     paginatedItems: paginatedMeters,
     resetPage,
+    firstPage,
     prevPage,
     nextPage,
+    lastPage,
   } = usePagination(filteredMeters, WATER_METER_PAGE_SIZE_OPTIONS[0])
 
   const isLoading = !loadError && meters === null
@@ -238,8 +240,10 @@ export default function WaterMeterPage() {
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
+        onFirstPage={firstPage}
         onPrevPage={prevPage}
         onNextPage={nextPage}
+        onLastPage={lastPage}
         deletingMeterId={deletingMeterId}
         onCreateMeter={openCreateForm}
         onEditMeter={openEditForm}

@@ -85,8 +85,10 @@ export default function ParcelPage() {
     rangeEnd,
     paginatedItems: paginatedParcels,
     resetPage,
+    firstPage,
     prevPage,
     nextPage,
+    lastPage,
   } = usePagination(filteredParcels, PARCEL_PAGE_SIZE_OPTIONS[0])
 
   const isLoading = !loadError && parcels === null
@@ -213,8 +215,10 @@ export default function ParcelPage() {
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
+        onFirstPage={firstPage}
         onPrevPage={prevPage}
         onNextPage={nextPage}
+        onLastPage={lastPage}
         deletingParcelId={deletingParcelId}
         onCreateParcel={openCreateForm}
         onEditParcel={openEditForm}
