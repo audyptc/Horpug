@@ -290,6 +290,9 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		if errors.Is(err, userdomain.ErrUserDuplicate) {
 			return apierror.Conflict("username or email already exists")
 		}
+		if errors.Is(err, userdomain.ErrUserProtected) {
+			return apierror.Forbidden("this user is protected and cannot be modified")
+		}
 		return apierror.Internal("failed to update user")
 	}
 
@@ -319,6 +322,9 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	if err := h.usecase.Delete(ctx, id); err != nil {
 		if errors.Is(err, userdomain.ErrUserNotFound) {
 			return apierror.NotFound("user not found")
+		}
+		if errors.Is(err, userdomain.ErrUserProtected) {
+			return apierror.Forbidden("this user is protected and cannot be deleted")
 		}
 		return apierror.Internal("failed to delete user")
 	}

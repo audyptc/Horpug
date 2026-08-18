@@ -104,10 +104,21 @@ export function UserListCard({
                   <TableBody>
                     {paginatedUsers.map((user) => (
                       <TableRow key={user.id}>
-                        <TableCell className="font-semibold">{user.username}</TableCell>
+                        <TableCell className="font-semibold">
+                          <div className="flex items-center gap-2">
+                            {user.username}
+                            {user.is_protected && (
+                              <Badge variant="outline">{t('userProtected')}</Badge>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {user.role?.name ?? '—'}
+                        <TableCell>
+                          {user.role ? (
+                            <Badge variant="outline">{user.role.name}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant={user.is_active ? 'default' : 'outline'}>
@@ -120,9 +131,10 @@ export function UserListCard({
                               type="button"
                               size="icon"
                               variant="outline"
-                              title={t('userEdit')}
+                              title={user.is_protected ? t('userProtectedHint') : t('userEdit')}
                               aria-label={t('userEdit')}
                               onClick={() => onEditUser(user)}
+                              disabled={user.is_protected}
                             >
                               <Pencil />
                             </Button>
@@ -130,10 +142,10 @@ export function UserListCard({
                               type="button"
                               size="icon"
                               variant="destructive"
-                              title={t('userDelete')}
+                              title={user.is_protected ? t('userProtectedHint') : t('userDelete')}
                               aria-label={t('userDelete')}
                               onClick={() => onDeleteUser(user)}
-                              disabled={deletingUserId === user.id}
+                              disabled={deletingUserId === user.id || user.is_protected}
                             >
                               <Trash2 />
                             </Button>

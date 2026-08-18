@@ -10,4 +10,5 @@ var (
 	ErrInvalidUsername  = errors.New("username cannot be empty")
 	ErrInvalidEmail     = errors.New("email cannot be empty")
 	ErrRequiredUserData = errors.New("username, email and password are required")
+	ErrUserProtected    = errors.New("user is protected and cannot be modified or deleted")
 )

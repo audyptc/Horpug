@@ -10,6 +10,7 @@ export type ApiUser = {
   role_id: string
   role?: ApiUserRole
   is_active: boolean
+  is_protected: boolean
   created_at: string
   updated_at: string
 }

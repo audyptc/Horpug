@@ -100,6 +100,14 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (userdomain.Use
 }
 
 func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput) (userdomain.User, error) {
+	user, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return userdomain.User{}, err
+	}
+	if user.IsProtected {
+		return userdomain.User{}, userdomain.ErrUserProtected
+	}
+
 	if input.Username != nil {
 		username := strings.TrimSpace(*input.Username)
 		if username == "" {
@@ -136,5 +144,13 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput) (
 }
 
 func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
+	user, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if user.IsProtected {
+		return userdomain.ErrUserProtected
+	}
+
 	return s.repo.Delete(ctx, id)
 }

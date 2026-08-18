@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react'
 import { useLanguage } from '@/shared/i18n/language'
 import { Button } from '@/shared/components/ui/button'
+import { Combobox } from '@/shared/components/ui/combobox'
 import {
   Sheet,
   SheetContent,
@@ -98,18 +99,23 @@ export function UserFormSheet({
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('userFormRoleLabel')}
-              <select
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                value={roleId}
-                onChange={(event) => onRoleIdChange(event.target.value)}
-              >
-                <option value="">{t('userFormRolePlaceholder')}</option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
-                  </option>
-                ))}
-              </select>
+              {roles.length === 0 ? (
+                <p className="text-xs font-normal text-muted-foreground">
+                  {t('userFormNoRoles')}
+                </p>
+              ) : (
+                <Combobox
+                  options={roles.map((role) => ({
+                    value: role.id,
+                    label: role.name,
+                  }))}
+                  value={roleId}
+                  onChange={onRoleIdChange}
+                  placeholder={t('userFormRolePlaceholder')}
+                  searchPlaceholder={t('userFormRoleSearchPlaceholder')}
+                  emptyText={t('userFormRoleNoResults')}
+                />
+              )}
             </label>
 
             <label className="flex items-center gap-2 text-sm font-medium">

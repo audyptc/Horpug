@@ -91,7 +91,7 @@ func SeedAdmin(db *pgxpool.Pool, cfg config.Config) error {
 	case lookupErr == nil:
 		if _, err := db.Exec(ctx, `
 			UPDATE users
-			SET username = $1, email = $2, password = $3, role_id = $4, is_active = TRUE
+			SET username = $1, email = $2, password = $3, role_id = $4, is_active = TRUE, is_protected = TRUE
 			WHERE id = $5
 		`, cfg.AdminUsername, cfg.AdminEmail, string(hashedPassword), roleID, adminID); err != nil {
 			return err
@@ -99,8 +99,8 @@ func SeedAdmin(db *pgxpool.Pool, cfg config.Config) error {
 	case errors.Is(lookupErr, pgx.ErrNoRows):
 		adminID = uuid.New()
 		if _, err := db.Exec(ctx, `
-			INSERT INTO users (id, username, email, password, role_id, is_active)
-			VALUES ($1, $2, $3, $4, $5, TRUE)
+			INSERT INTO users (id, username, email, password, role_id, is_active, is_protected)
+			VALUES ($1, $2, $3, $4, $5, TRUE, TRUE)
 		`, adminID, cfg.AdminUsername, cfg.AdminEmail, string(hashedPassword), roleID); err != nil {
 			return err
 		}
