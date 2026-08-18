@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { SidebarNav } from '@/features/menu/SidebarNav'
+import { SidebarFooter } from '@/features/menu/SidebarFooter'
 import { TopBar } from './components/TopBar'
 
 export function AdminLayout({ children }: { children: ReactNode }) {
@@ -17,7 +18,10 @@ export function AdminLayout({ children }: { children: ReactNode }) {
 
       <div className={`admin-grid ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <aside className="sidebar desktop-sidebar">
-          <SidebarNav collapsed={isSidebarCollapsed} />
+          <div className="sidebar-scroll">
+            <SidebarNav collapsed={isSidebarCollapsed} />
+          </div>
+          <SidebarFooter collapsed={isSidebarCollapsed} />
         </aside>
         {children}
       </div>

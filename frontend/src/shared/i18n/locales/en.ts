@@ -10,8 +10,6 @@ const en = {
   language: 'Language',
   accountMenu: 'Account menu',
   myAccount: 'My Account',
-  profile: 'Profile',
-  channelSettings: 'Channel settings',
   signOut: 'Sign out',
   mobileMenuTitle: 'Menu',
   mobileMenuDescription: 'Navigate to your admin sections',

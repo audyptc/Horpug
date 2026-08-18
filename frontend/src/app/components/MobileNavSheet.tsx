@@ -1,4 +1,5 @@
 import { SidebarNav } from '@/features/menu/SidebarNav'
+import { SidebarFooter } from '@/features/menu/SidebarFooter'
 import { Button } from '@/shared/components/ui/button'
 import {
   Sheet,
@@ -35,6 +36,7 @@ export function MobileNavSheet({
         <div className="mobile-sheet-nav">
           <SidebarNav onNavigate={() => onOpenChange(false)} />
         </div>
+        <SidebarFooter />
       </SheetContent>
     </Sheet>
   )

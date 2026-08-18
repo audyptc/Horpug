@@ -36,9 +36,6 @@ export function UserMenu() {
           {session?.user.role?.name && <p className="account-role">{session.user.role.name}</p>}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>{t('profile')}</DropdownMenuItem>
-        <DropdownMenuItem>{t('channelSettings')}</DropdownMenuItem>
-        <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={handleSignOut}>{t('signOut')}</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

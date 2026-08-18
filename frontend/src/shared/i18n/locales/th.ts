@@ -12,8 +12,6 @@ const th: Record<TranslationKey, string> = {
   language: 'ภาษา',
   accountMenu: 'เมนูบัญชี',
   myAccount: 'บัญชีของฉัน',
-  profile: 'โปรไฟล์',
-  channelSettings: 'การตั้งค่าช่อง',
   signOut: 'ออกจากระบบ',
   mobileMenuTitle: 'เมนู',
   mobileMenuDescription: 'ไปยังส่วนต่าง ๆ ของระบบแอดมิน',
