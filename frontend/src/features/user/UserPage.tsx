@@ -3,9 +3,10 @@ import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { InformationDialog } from '@/shared/components/information-dialog'
 import { UserListCard } from './components/UserListCard'
 import { UserFormSheet } from './components/UserFormSheet'
-import type { ApiUser, ApiUserRole } from './types'
+import type { ApiUser, ApiUserDeletionCheck, ApiUserRole } from './types'
 import { USER_PAGE_SIZE_OPTIONS } from './utils'
 
 export default function UserPage() {
@@ -30,6 +31,11 @@ export default function UserPage() {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<ApiUser | null>(null)
+  const [checkingUserId, setCheckingUserId] = useState<string | null>(null)
+  const [blockedUserDeletion, setBlockedUserDeletion] = useState<ApiUserDeletionCheck | null>(null)
+
+  const [togglingUserId, setTogglingUserId] = useState<string | null>(null)
+  const [toggleError, setToggleError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -158,6 +164,40 @@ export default function UserPage() {
     }
   }
 
+  async function handleRequestDeleteUser(user: ApiUser) {
+    setCheckingUserId(user.id)
+    setDeleteError(null)
+
+    try {
+      const { data } = await api.get<ApiUserDeletionCheck>(`/users/${user.id}/deletion-check`)
+      if (data.can_delete) {
+        setConfirmDeleteUser(user)
+      } else {
+        setBlockedUserDeletion(data)
+      }
+    } catch (err) {
+      setDeleteError(extractErrorMessage(err, t('userDeleteError')))
+    } finally {
+      setCheckingUserId(null)
+    }
+  }
+
+  async function handleToggleActiveUser(user: ApiUser) {
+    setTogglingUserId(user.id)
+    setToggleError(null)
+
+    try {
+      const { data } = await api.put<ApiUser>(`/users/${user.id}`, {
+        is_active: !user.is_active,
+      })
+      setUsers((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
+    } catch (err) {
+      setToggleError(extractErrorMessage(err, t('userToggleActiveError')))
+    } finally {
+      setTogglingUserId(null)
+    }
+  }
+
   async function handleDeleteUser() {
     if (!confirmDeleteUser) return
     const user = confirmDeleteUser
@@ -187,6 +227,7 @@ export default function UserPage() {
         isLoading={isLoading}
         loadError={loadError}
         deleteError={deleteError}
+        toggleError={toggleError}
         users={users}
         query={query}
         onQueryChange={(value) => {
@@ -203,10 +244,12 @@ export default function UserPage() {
         onPageSizeChange={setPageSize}
         onPrevPage={prevPage}
         onNextPage={nextPage}
-        deletingUserId={deletingUserId}
+        deletingUserId={checkingUserId ?? deletingUserId}
+        togglingUserId={togglingUserId}
         onCreateUser={openCreateForm}
         onEditUser={openEditForm}
-        onDeleteUser={setConfirmDeleteUser}
+        onDeleteUser={handleRequestDeleteUser}
+        onToggleActiveUser={handleToggleActiveUser}
       />
 
       <ConfirmDialog
@@ -219,6 +262,21 @@ export default function UserPage() {
         loading={deletingUserId === confirmDeleteUser?.id}
         error={deleteError}
         onConfirm={handleDeleteUser}
+      />
+
+      <InformationDialog
+        open={blockedUserDeletion !== null}
+        onOpenChange={(open) => !open && setBlockedUserDeletion(null)}
+        title={t('userDeleteBlockedTitle')}
+        description={
+          blockedUserDeletion?.is_protected
+            ? t('userProtectedHint')
+            : t('userDeleteBlockedDescription').replace(
+                '{count}',
+                String(blockedUserDeletion?.record_count ?? 0)
+              )
+        }
+        actionLabel={t('acknowledge')}
       />
 
       <UserFormSheet

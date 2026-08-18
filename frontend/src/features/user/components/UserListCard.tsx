@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Pencil, Power, Trash2 } from 'lucide-react'
 import { useLanguage } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
@@ -11,6 +11,7 @@ type UserListCardProps = {
   isLoading: boolean
   loadError: string | null
   deleteError: string | null
+  toggleError: string | null
   users: ApiUser[] | null
   query: string
   onQueryChange: (query: string) => void
@@ -25,15 +26,18 @@ type UserListCardProps = {
   onPrevPage: () => void
   onNextPage: () => void
   deletingUserId: string | null
+  togglingUserId: string | null
   onCreateUser: () => void
   onEditUser: (user: ApiUser) => void
   onDeleteUser: (user: ApiUser) => void
+  onToggleActiveUser: (user: ApiUser) => void
 }
 
 export function UserListCard({
   isLoading,
   loadError,
   deleteError,
+  toggleError,
   users,
   query,
   onQueryChange,
@@ -48,9 +52,11 @@ export function UserListCard({
   onPrevPage,
   onNextPage,
   deletingUserId,
+  togglingUserId,
   onCreateUser,
   onEditUser,
   onDeleteUser,
+  onToggleActiveUser,
 }: UserListCardProps) {
   const { t } = useLanguage()
 
@@ -67,6 +73,7 @@ export function UserListCard({
       <CardContent className="flex flex-col gap-4">
         {loadError && <p className="resource-error">{loadError}</p>}
         {deleteError && <p className="resource-error">{deleteError}</p>}
+        {toggleError && <p className="resource-error">{toggleError}</p>}
 
         {!loadError && isLoading && <p className="metric-detail">{t('loading')}</p>}
 
@@ -137,6 +144,23 @@ export function UserListCard({
                               disabled={user.is_protected}
                             >
                               <Pencil />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              title={
+                                user.is_protected
+                                  ? t('userProtectedHint')
+                                  : user.is_active
+                                    ? t('userDeactivate')
+                                    : t('userActivate')
+                              }
+                              aria-label={user.is_active ? t('userDeactivate') : t('userActivate')}
+                              onClick={() => onToggleActiveUser(user)}
+                              disabled={togglingUserId === user.id || user.is_protected}
+                            >
+                              <Power />
                             </Button>
                             <Button
                               type="button"

@@ -10,6 +10,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type DeletionCheck struct {
+	CanDelete   bool  `json:"can_delete"`
+	RecordCount int64 `json:"record_count"`
+	IsProtected bool  `json:"is_protected"`
+}
+
 type UserPermissionItem struct {
 	MenuID         uuid.UUID `json:"menu_id"`
 	MenuName       string    `json:"menu_name"`
@@ -42,6 +48,7 @@ type Repository interface {
 	ListActive(ctx context.Context, search string, limit int) ([]userdomain.User, error)
 	GetByID(ctx context.Context, id uuid.UUID) (userdomain.User, error)
 	GetPermissions(ctx context.Context, id uuid.UUID) ([]UserPermissionItem, error)
+	CountReferences(ctx context.Context, id uuid.UUID) (int64, error)
 	Create(ctx context.Context, input CreateInput, hashedPassword string) (userdomain.User, error)
 	Update(ctx context.Context, id uuid.UUID, input UpdateInput, hashedPassword *string) (userdomain.User, error)
 	Delete(ctx context.Context, id uuid.UUID) error
@@ -153,4 +160,22 @@ func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	return s.repo.Delete(ctx, id)
+}
+
+func (s *Service) CheckDeletion(ctx context.Context, id uuid.UUID) (DeletionCheck, error) {
+	user, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return DeletionCheck{}, err
+	}
+
+	recordCount, err := s.repo.CountReferences(ctx, id)
+	if err != nil {
+		return DeletionCheck{}, err
+	}
+
+	return DeletionCheck{
+		CanDelete:   !user.IsProtected && recordCount == 0,
+		RecordCount: recordCount,
+		IsProtected: user.IsProtected,
+	}, nil
 }

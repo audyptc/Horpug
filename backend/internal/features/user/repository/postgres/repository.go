@@ -276,6 +276,38 @@ func (r *Repository) GetPermissions(ctx context.Context, id uuid.UUID) ([]userus
 	return permissions, nil
 }
 
+// CountReferences counts rows across the tables that track who created or
+// last updated them (created_by/updated_by) referencing this user, so a
+// delete can be blocked in favor of deactivation when the user has audit
+// history worth preserving.
+func (r *Repository) CountReferences(ctx context.Context, id uuid.UUID) (int64, error) {
+	var count int64
+	err := r.db.QueryRow(ctx, `
+		SELECT
+			(SELECT COUNT(*) FROM room_types WHERE created_by = $1 OR updated_by = $1) +
+			(SELECT COUNT(*) FROM rooms WHERE created_by = $1 OR updated_by = $1) +
+			(SELECT COUNT(*) FROM tenants WHERE created_by = $1 OR updated_by = $1) +
+			(SELECT COUNT(*) FROM contracts WHERE created_by = $1 OR updated_by = $1) +
+			(SELECT COUNT(*) FROM electricity_meters WHERE created_by = $1 OR updated_by = $1) +
+			(SELECT COUNT(*) FROM water_meters WHERE created_by = $1 OR updated_by = $1) +
+			(SELECT COUNT(*) FROM invoices WHERE created_by = $1 OR updated_by = $1) +
+			(SELECT COUNT(*) FROM payments WHERE created_by = $1) +
+			(SELECT COUNT(*) FROM expenses WHERE created_by = $1 OR updated_by = $1) +
+			(SELECT COUNT(*) FROM repair_requests WHERE created_by = $1 OR updated_by = $1) +
+			(SELECT COUNT(*) FROM parking_registrations WHERE created_by = $1 OR updated_by = $1) +
+			(SELECT COUNT(*) FROM parcels WHERE created_by = $1 OR updated_by = $1) +
+			(SELECT COUNT(*) FROM announcements WHERE created_by = $1 OR updated_by = $1) +
+			(SELECT COUNT(*) FROM documents WHERE created_by = $1 OR updated_by = $1) +
+			(SELECT COUNT(*) FROM dormitories WHERE created_by = $1 OR updated_by = $1) +
+			(SELECT COUNT(*) FROM roles WHERE created_by = $1 OR updated_by = $1) +
+			(SELECT COUNT(*) FROM users WHERE created_by = $1 OR updated_by = $1)
+	`, id).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (r *Repository) Create(ctx context.Context, input userusecase.CreateInput, hashedPassword string) (userdomain.User, error) {
 	if err := r.ensureRoleExists(ctx, input.RoleID); err != nil {
 		return userdomain.User{}, err

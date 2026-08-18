@@ -172,6 +172,37 @@ func (h *Handler) GetPermissions(c fiber.Ctx) error {
 	return apiresponse.OK(c, permissions)
 }
 
+// CheckDeletion godoc
+// @Summary Check whether a user can be deleted
+// @Tags users
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} userusecase.DeletionCheck
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /users/{id}/deletion-check [get]
+func (h *Handler) CheckDeletion(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return apierror.BadRequest("invalid user id")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	defer cancel()
+
+	check, err := h.usecase.CheckDeletion(ctx, id)
+	if err != nil {
+		if errors.Is(err, userdomain.ErrUserNotFound) {
+			return apierror.NotFound("user not found")
+		}
+		return apierror.Internal("failed to check user deletion")
+	}
+
+	return apiresponse.OK(c, check)
+}
+
 // Create godoc
 // @Summary Create a user
 // @Tags users
