@@ -1,11 +1,30 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
+import type { DateRange } from 'react-day-picker'
+import { CalendarIcon, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { useLanguage } from '@/shared/i18n/language'
+import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/components/ui/badge'
+import { Calendar } from '@/shared/components/ui/calendar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
 import { Button } from '@/shared/components/ui/button'
 import type { ApiActivityLog } from '../types'
 import { ACTIVITY_LOG_PAGE_SIZE_OPTIONS, activityLogActionVariant } from '../utils'
+
+function parseDateInput(value: string): Date | undefined {
+  if (!value) return undefined
+  const [year, month, day] = value.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+function formatDateInput(date: Date | undefined): string {
+  if (!date) return ''
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 type ActivityLogListCardProps = {
   isLoading: boolean
@@ -49,6 +68,35 @@ export function ActivityLogListCard({
   onNextPage,
 }: ActivityLogListCardProps) {
   const { t, language } = useLanguage()
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
+
+  const selectedRange: DateRange = {
+    from: parseDateInput(dateFrom),
+    to: parseDateInput(dateTo),
+  }
+
+  function handleRangeSelect(range: DateRange | undefined) {
+    onDateFromChange(formatDateInput(range?.from))
+    onDateToChange(formatDateInput(range?.to))
+    // react-day-picker reports a single click as a same-day range (from === to),
+    // so only auto-close once the user has actually picked two distinct ends.
+    if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) {
+      setDatePickerOpen(false)
+    }
+  }
+
+  function clearDateRange() {
+    onDateFromChange('')
+    onDateToChange('')
+  }
+
+  const dateLocale = language === 'th' ? 'th-TH' : 'en-US'
+  const dateRangeLabel =
+    selectedRange.from || selectedRange.to
+      ? [selectedRange.from, selectedRange.to]
+          .map((date) => (date ? date.toLocaleDateString(dateLocale, { dateStyle: 'medium' }) : '?'))
+          .join(' – ')
+      : t('activityLogDateRangeLabel')
 
   return (
     <Card>
@@ -74,27 +122,49 @@ export function ActivityLogListCard({
                 />
               </label>
 
-              <label className="flex flex-col gap-1.5 text-sm font-medium">
-                {t('activityLogDateFromLabel')}
-                <input
-                  type="date"
-                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                  value={dateFrom}
-                  max={dateTo || undefined}
-                  onChange={(event) => onDateFromChange(event.target.value)}
-                />
-              </label>
+              <div className="flex flex-col gap-1.5 text-sm font-medium">
+                {t('activityLogDateRangeLabel')}
+                <div className="flex items-center gap-1.5">
+                  <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          'h-10 justify-start gap-2 px-3 text-sm font-normal',
+                          !(selectedRange.from || selectedRange.to) && 'text-muted-foreground'
+                        )}
+                      >
+                        <CalendarIcon className="size-4 shrink-0" />
+                        {dateRangeLabel}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="range"
+                        numberOfMonths={2}
+                        defaultMonth={selectedRange.from ?? new Date()}
+                        selected={selectedRange}
+                        onSelect={handleRangeSelect}
+                      />
+                    </PopoverContent>
+                  </Popover>
 
-              <label className="flex flex-col gap-1.5 text-sm font-medium">
-                {t('activityLogDateToLabel')}
-                <input
-                  type="date"
-                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                  value={dateTo}
-                  min={dateFrom || undefined}
-                  onChange={(event) => onDateToChange(event.target.value)}
-                />
-              </label>
+                  {(dateFrom || dateTo) && (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-10 w-10 text-muted-foreground"
+                      title={t('activityLogDateClear')}
+                      aria-label={t('activityLogDateClear')}
+                      onClick={clearDateRange}
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
 
             {logs && logs.length === 0 && <p className="metric-detail">{t('activityLogNoLogs')}</p>}
