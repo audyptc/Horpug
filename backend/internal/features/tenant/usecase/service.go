@@ -13,6 +13,7 @@ type CreateInput struct {
 	FirstName        string
 	LastName         string
 	Phone            string
+	LineID           string
 	IDCard           string
 	Email            string
 	EmergencyContact string
@@ -25,6 +26,7 @@ type UpdateInput struct {
 	FirstName        *string
 	LastName         *string
 	Phone            *string
+	LineID           *string
 	IDCard           *string
 	Email            *string
 	EmergencyContact *string
@@ -77,6 +79,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (tenantdomain.T
 	input.FirstName = strings.TrimSpace(input.FirstName)
 	input.LastName = strings.TrimSpace(input.LastName)
 	input.Phone = strings.TrimSpace(input.Phone)
+	input.LineID = strings.TrimSpace(input.LineID)
 	input.IDCard = strings.TrimSpace(input.IDCard)
 	input.Email = strings.TrimSpace(strings.ToLower(input.Email))
 	input.EmergencyContact = strings.TrimSpace(input.EmergencyContact)
@@ -107,6 +110,10 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput) (
 	if input.Phone != nil {
 		phone := strings.TrimSpace(*input.Phone)
 		input.Phone = &phone
+	}
+	if input.LineID != nil {
+		lineID := strings.TrimSpace(*input.LineID)
+		input.LineID = &lineID
 	}
 	if input.IDCard != nil {
 		idCard := strings.TrimSpace(*input.IDCard)

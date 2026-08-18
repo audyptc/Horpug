@@ -97,6 +97,7 @@ export function TenantListCard({
                       <TableHead>{t('tenantFirstNameColumn')}</TableHead>
                       <TableHead>{t('tenantLastNameColumn')}</TableHead>
                       <TableHead>{t('tenantPhoneColumn')}</TableHead>
+                      <TableHead>{t('tenantLineIdColumn')}</TableHead>
                       <TableHead>{t('tenantIdCardColumn')}</TableHead>
                       <TableHead>{t('tenantEmailColumn')}</TableHead>
                       <TableHead>{t('tenantActiveColumn')}</TableHead>
@@ -109,6 +110,7 @@ export function TenantListCard({
                         <TableCell className="font-semibold">{tenant.first_name}</TableCell>
                         <TableCell className="font-semibold">{tenant.last_name}</TableCell>
                         <TableCell className="text-muted-foreground">{tenant.phone || '—'}</TableCell>
+                        <TableCell className="text-muted-foreground">{tenant.line_id || '—'}</TableCell>
                         <TableCell className="text-muted-foreground">{tenant.id_card || '—'}</TableCell>
                         <TableCell className="text-muted-foreground">{tenant.email || '—'}</TableCell>
                         <TableCell>

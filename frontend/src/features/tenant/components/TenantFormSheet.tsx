@@ -20,6 +20,8 @@ type TenantFormSheetProps = {
   onLastNameChange: (value: string) => void
   phone: string
   onPhoneChange: (value: string) => void
+  lineId: string
+  onLineIdChange: (value: string) => void
   idCard: string
   onIdCardChange: (value: string) => void
   email: string
@@ -45,6 +47,8 @@ export function TenantFormSheet({
   onLastNameChange,
   phone,
   onPhoneChange,
+  lineId,
+  onLineIdChange,
   idCard,
   onIdCardChange,
   email,
@@ -101,6 +105,16 @@ export function TenantFormSheet({
                 className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
                 value={phone}
                 onChange={(event) => onPhoneChange(event.target.value)}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
+              {t('tenantFormLineIdLabel')}
+              <input
+                type="text"
+                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                value={lineId}
+                onChange={(event) => onLineIdChange(event.target.value)}
               />
             </label>
 

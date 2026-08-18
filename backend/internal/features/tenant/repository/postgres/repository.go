@@ -33,7 +33,7 @@ func (r *Repository) Count(ctx context.Context) (int64, error) {
 
 func (r *Repository) List(ctx context.Context, limit, offset int) ([]tenantdomain.Tenant, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, first_name, last_name, phone, id_card, email, emergency_contact, note, is_active, created_by, updated_by, created_at, updated_at
+		SELECT id, first_name, last_name, phone, line_id, id_card, email, emergency_contact, note, is_active, created_by, updated_by, created_at, updated_at
 		FROM tenants
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
@@ -48,7 +48,7 @@ func (r *Repository) List(ctx context.Context, limit, offset int) ([]tenantdomai
 
 func (r *Repository) ListActive(ctx context.Context, search string, limit int) ([]tenantdomain.Tenant, error) {
 	query := `
-		SELECT id, first_name, last_name, phone, id_card, email, emergency_contact, note, is_active, created_by, updated_by, created_at, updated_at
+		SELECT id, first_name, last_name, phone, line_id, id_card, email, emergency_contact, note, is_active, created_by, updated_by, created_at, updated_at
 		FROM tenants
 		WHERE is_active = true
 	`
@@ -88,6 +88,7 @@ func (r *Repository) Create(ctx context.Context, input tenantusecase.CreateInput
 		FirstName:        input.FirstName,
 		LastName:         input.LastName,
 		Phone:            input.Phone,
+		LineID:           input.LineID,
 		IDCard:           input.IDCard,
 		Email:            input.Email,
 		EmergencyContact: input.EmergencyContact,
@@ -98,10 +99,10 @@ func (r *Repository) Create(ctx context.Context, input tenantusecase.CreateInput
 	}
 
 	err := r.db.QueryRow(ctx, `
-		INSERT INTO tenants (id, first_name, last_name, phone, id_card, email, emergency_contact, note, is_active, created_by, updated_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO tenants (id, first_name, last_name, phone, line_id, id_card, email, emergency_contact, note, is_active, created_by, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING created_at, updated_at
-	`, tenant.ID, tenant.FirstName, tenant.LastName, tenant.Phone, tenant.IDCard, tenant.Email, tenant.EmergencyContact, tenant.Note, tenant.IsActive, tenant.CreatedBy, tenant.UpdatedBy).
+	`, tenant.ID, tenant.FirstName, tenant.LastName, tenant.Phone, tenant.LineID, tenant.IDCard, tenant.Email, tenant.EmergencyContact, tenant.Note, tenant.IsActive, tenant.CreatedBy, tenant.UpdatedBy).
 		Scan(&tenant.CreatedAt, &tenant.UpdatedAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -136,6 +137,11 @@ func (r *Repository) Update(ctx context.Context, id uuid.UUID, input tenantuseca
 	if input.Phone != nil {
 		setClauses = append(setClauses, fmt.Sprintf("phone = $%d", argIdx))
 		args = append(args, *input.Phone)
+		argIdx++
+	}
+	if input.LineID != nil {
+		setClauses = append(setClauses, fmt.Sprintf("line_id = $%d", argIdx))
+		args = append(args, *input.LineID)
 		argIdx++
 	}
 	if input.IDCard != nil {
@@ -211,7 +217,7 @@ func (r *Repository) ensureTenantExists(ctx context.Context, id uuid.UUID) error
 func (r *Repository) loadTenantByID(ctx context.Context, id uuid.UUID) (tenantdomain.Tenant, error) {
 	var tenant tenantdomain.Tenant
 	err := r.db.QueryRow(ctx, `
-		SELECT id, first_name, last_name, phone, id_card, email, emergency_contact, note, is_active, created_by, updated_by, created_at, updated_at
+		SELECT id, first_name, last_name, phone, line_id, id_card, email, emergency_contact, note, is_active, created_by, updated_by, created_at, updated_at
 		FROM tenants
 		WHERE id = $1
 	`, id).Scan(
@@ -219,6 +225,7 @@ func (r *Repository) loadTenantByID(ctx context.Context, id uuid.UUID) (tenantdo
 		&tenant.FirstName,
 		&tenant.LastName,
 		&tenant.Phone,
+		&tenant.LineID,
 		&tenant.IDCard,
 		&tenant.Email,
 		&tenant.EmergencyContact,
@@ -244,6 +251,7 @@ func scanTenants(rows pgx.Rows) ([]tenantdomain.Tenant, error) {
 			&tenant.FirstName,
 			&tenant.LastName,
 			&tenant.Phone,
+			&tenant.LineID,
 			&tenant.IDCard,
 			&tenant.Email,
 			&tenant.EmergencyContact,

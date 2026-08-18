@@ -138,6 +138,7 @@ func AutoMigrate(db *pgxpool.Pool) error {
 			first_name VARCHAR(100) NOT NULL,
 			last_name VARCHAR(100) NOT NULL,
 			phone VARCHAR(30) DEFAULT '',
+			line_id VARCHAR(100) DEFAULT '',
 			id_card VARCHAR(20) DEFAULT '',
 			email VARCHAR(180) DEFAULT '',
 			emergency_contact VARCHAR(150) DEFAULT '',
@@ -462,6 +463,8 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_permissions_name ON permissions(name)`,
 
 		`ALTER TABLE room_types ADD COLUMN IF NOT EXISTS price NUMERIC(10,2) NOT NULL DEFAULT 0`,
+
+		`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS line_id VARCHAR(100) DEFAULT ''`,
 
 		`ALTER TABLE parking_registrations ADD COLUMN IF NOT EXISTS room_id UUID`,
 		`CREATE INDEX IF NOT EXISTS idx_parking_registrations_room_id ON parking_registrations(room_id)`,

@@ -26,6 +26,7 @@ type createTenantRequest struct {
 	FirstName        string `json:"first_name"`
 	LastName         string `json:"last_name"`
 	Phone            string `json:"phone"`
+	LineID           string `json:"line_id"`
 	IDCard           string `json:"id_card"`
 	Email            string `json:"email"`
 	EmergencyContact string `json:"emergency_contact"`
@@ -37,6 +38,7 @@ type updateTenantRequest struct {
 	FirstName        *string `json:"first_name"`
 	LastName         *string `json:"last_name"`
 	Phone            *string `json:"phone"`
+	LineID           *string `json:"line_id"`
 	IDCard           *string `json:"id_card"`
 	Email            *string `json:"email"`
 	EmergencyContact *string `json:"emergency_contact"`
@@ -184,6 +186,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		FirstName:        req.FirstName,
 		LastName:         req.LastName,
 		Phone:            req.Phone,
+		LineID:           req.LineID,
 		IDCard:           req.IDCard,
 		Email:            req.Email,
 		EmergencyContact: req.EmergencyContact,
@@ -241,6 +244,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		FirstName:        req.FirstName,
 		LastName:         req.LastName,
 		Phone:            req.Phone,
+		LineID:           req.LineID,
 		IDCard:           req.IDCard,
 		Email:            req.Email,
 		EmergencyContact: req.EmergencyContact,

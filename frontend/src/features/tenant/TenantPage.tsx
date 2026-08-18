@@ -21,6 +21,7 @@ export default function TenantPage() {
   const [formFirstName, setFormFirstName] = useState('')
   const [formLastName, setFormLastName] = useState('')
   const [formPhone, setFormPhone] = useState('')
+  const [formLineId, setFormLineId] = useState('')
   const [formIdCard, setFormIdCard] = useState('')
   const [formEmail, setFormEmail] = useState('')
   const [formEmergencyContact, setFormEmergencyContact] = useState('')
@@ -60,6 +61,7 @@ export default function TenantPage() {
         tenant.first_name.toLocaleLowerCase().includes(q) ||
         tenant.last_name.toLocaleLowerCase().includes(q) ||
         tenant.phone.toLocaleLowerCase().includes(q) ||
+        tenant.line_id.toLocaleLowerCase().includes(q) ||
         tenant.id_card.toLocaleLowerCase().includes(q) ||
         tenant.email.toLocaleLowerCase().includes(q)
       )
@@ -86,6 +88,7 @@ export default function TenantPage() {
     setFormFirstName('')
     setFormLastName('')
     setFormPhone('')
+    setFormLineId('')
     setFormIdCard('')
     setFormEmail('')
     setFormEmergencyContact('')
@@ -100,6 +103,7 @@ export default function TenantPage() {
     setFormFirstName(tenant.first_name)
     setFormLastName(tenant.last_name)
     setFormPhone(tenant.phone)
+    setFormLineId(tenant.line_id)
     setFormIdCard(tenant.id_card)
     setFormEmail(tenant.email)
     setFormEmergencyContact(tenant.emergency_contact)
@@ -132,6 +136,7 @@ export default function TenantPage() {
       first_name: firstName,
       last_name: lastName,
       phone: formPhone.trim(),
+      line_id: formLineId.trim(),
       id_card: formIdCard.trim(),
       email: formEmail.trim(),
       emergency_contact: formEmergencyContact.trim(),
@@ -229,6 +234,8 @@ export default function TenantPage() {
         onLastNameChange={setFormLastName}
         phone={formPhone}
         onPhoneChange={setFormPhone}
+        lineId={formLineId}
+        onLineIdChange={setFormLineId}
         idCard={formIdCard}
         onIdCardChange={setFormIdCard}
         email={formEmail}

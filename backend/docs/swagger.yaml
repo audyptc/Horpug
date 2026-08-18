@@ -614,6 +614,8 @@ definitions:
         type: string
       is_active:
         type: boolean
+      is_protected:
+        type: boolean
       menu_permissions:
         items:
           $ref: '#/definitions/apihorpug_internal_features_role_domain.RoleMenuPermission'
@@ -646,6 +648,15 @@ definitions:
         type: string
       role_id:
         type: string
+    type: object
+  apihorpug_internal_features_role_usecase.DeletionCheck:
+    properties:
+      can_delete:
+        type: boolean
+      is_protected:
+        type: boolean
+      user_count:
+        type: integer
     type: object
   apihorpug_internal_features_room_domain.Room:
     properties:
@@ -686,6 +697,13 @@ definitions:
     - RoomStatusAvailable
     - RoomStatusOccupied
     - RoomStatusMaintenance
+  apihorpug_internal_features_room_usecase.DeletionCheck:
+    properties:
+      can_delete:
+        type: boolean
+      contract_count:
+        type: integer
+    type: object
   apihorpug_internal_features_roomtype_domain.RoomType:
     properties:
       created_at:
@@ -711,6 +729,13 @@ definitions:
       updated_by:
         type: string
     type: object
+  apihorpug_internal_features_roomtype_usecase.DeletionCheck:
+    properties:
+      can_delete:
+        type: boolean
+      room_count:
+        type: integer
+    type: object
   apihorpug_internal_features_tenant_domain.Tenant:
     properties:
       created_at:
@@ -730,6 +755,8 @@ definitions:
       is_active:
         type: boolean
       last_name:
+        type: string
+      line_id:
         type: string
       note:
         type: string
@@ -752,6 +779,8 @@ definitions:
         type: string
       is_active:
         type: boolean
+      is_protected:
+        type: boolean
       role:
         $ref: '#/definitions/apihorpug_internal_features_role_domain.Role'
       role_id:
@@ -762,6 +791,15 @@ definitions:
         type: string
       username:
         type: string
+    type: object
+  apihorpug_internal_features_user_usecase.DeletionCheck:
+    properties:
+      can_delete:
+        type: boolean
+      is_protected:
+        type: boolean
+      record_count:
+        type: integer
     type: object
   apihorpug_internal_features_user_usecase.UserPermissionItem:
     properties:
@@ -1307,6 +1345,8 @@ definitions:
         type: boolean
       last_name:
         type: string
+      line_id:
+        type: string
       note:
         type: string
       phone:
@@ -1325,6 +1365,8 @@ definitions:
       is_active:
         type: boolean
       last_name:
+        type: string
+      line_id:
         type: string
       note:
         type: string
@@ -1413,6 +1455,14 @@ paths:
       - description: Filter by entity ID
         in: query
         name: entity_id
+        type: string
+      - description: Filter by date, inclusive (YYYY-MM-DD)
+        in: query
+        name: date_from
+        type: string
+      - description: Filter by date, inclusive (YYYY-MM-DD)
+        in: query
+        name: date_to
         type: string
       - description: Page number (default 1)
         in: query
@@ -4039,6 +4089,38 @@ paths:
       summary: Update a role
       tags:
       - roles
+  /roles/{id}/deletion-check:
+    get:
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_role_usecase.DeletionCheck'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Check whether a role can be deleted
+      tags:
+      - roles
   /roles/active:
     get:
       description: Returns active roles. Intended for populating role selectors; results
@@ -4179,6 +4261,10 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
         "500":
           description: Internal Server Error
           schema:
@@ -4260,6 +4346,42 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a room type
+      tags:
+      - room-types
+  /room-types/{id}/deletion-check:
+    get:
+      parameters:
+      - description: Room type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_roomtype_usecase.DeletionCheck'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Check whether a room type can be deleted
       tags:
       - room-types
   /room-types/active:
@@ -4492,6 +4614,42 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a room
+      tags:
+      - rooms
+  /rooms/{id}/deletion-check:
+    get:
+      parameters:
+      - description: Room ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_room_usecase.DeletionCheck'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Check whether a room can be deleted
       tags:
       - rooms
   /rooms/active:
@@ -4925,6 +5083,38 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a user
+      tags:
+      - users
+  /users/{id}/deletion-check:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_user_usecase.DeletionCheck'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Check whether a user can be deleted
       tags:
       - users
   /users/{id}/permissions:
