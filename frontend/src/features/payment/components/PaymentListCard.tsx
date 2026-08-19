@@ -106,7 +106,7 @@ export function PaymentListCard({
             {filteredPayments.length === 0 && <p className="metric-detail">{t('paymentNoMatching')}</p>}
 
             {filteredPayments.length > 0 && (
-              <div className="table-wrap">
+              <div className="table-wrap payment-table-wrap">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -174,7 +174,7 @@ export function PaymentListCard({
             )}
 
             {filteredPayments.length > 0 && (
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted-foreground">
                   {t('rolePermissionsShowingLabel')} {rangeStart}-{rangeEnd}{' '}
                   {t('rolePermissionsOfLabel')} {filteredPayments.length} {t('rolePermissionsResultsLabel')}
@@ -185,7 +185,7 @@ export function PaymentListCard({
                     </>
                   )}
                 </p>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     {t('rolePermissionsPageSizeLabel')}
                     <select

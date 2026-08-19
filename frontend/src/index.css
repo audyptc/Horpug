@@ -441,6 +441,70 @@ body {
   min-width: 60rem;
 }
 
+.contract-table-wrap table {
+  min-width: 60rem;
+}
+
+.announcement-table-wrap table {
+  min-width: 44rem;
+}
+
+.invoice-table-wrap table {
+  min-width: 52rem;
+}
+
+.parcel-table-wrap table {
+  min-width: 52rem;
+}
+
+.expense-table-wrap table {
+  min-width: 52rem;
+}
+
+.watermeter-table-wrap table {
+  min-width: 68rem;
+}
+
+.repairrequest-table-wrap table {
+  min-width: 60rem;
+}
+
+.document-table-wrap table {
+  min-width: 52rem;
+}
+
+.parking-table-wrap table {
+  min-width: 44rem;
+}
+
+.payment-table-wrap table {
+  min-width: 60rem;
+}
+
+.dormitory-table-wrap table {
+  min-width: 52rem;
+}
+
+.roomtype-table-wrap table {
+  min-width: 40rem;
+}
+
+.room-table-wrap table {
+  min-width: 52rem;
+}
+
+.role-table-wrap table {
+  min-width: 40rem;
+}
+
+.user-table-wrap table {
+  min-width: 40rem;
+}
+
+.activitylog-table-wrap table {
+  min-width: 48rem;
+}
+
 .mobile-sheet {
   background: hsl(var(--card));
 }
