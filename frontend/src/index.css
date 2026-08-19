@@ -429,7 +429,16 @@ body {
 .table-wrap {
   border: 1px solid hsl(var(--border));
   border-radius: var(--radius);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.meter-table-wrap table {
+  min-width: 68rem;
+}
+
+.tenant-table-wrap table {
+  min-width: 60rem;
 }
 
 .mobile-sheet {
