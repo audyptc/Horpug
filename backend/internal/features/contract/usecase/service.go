@@ -105,7 +105,7 @@ func (s *Service) GetByID(ctx context.Context, id, requesterID uuid.UUID) (contr
 	return s.repo.GetByID(ctx, id, requesterID)
 }
 
-func (s *Service) Create(ctx context.Context, input CreateInput) (contractdomain.Contract, error) {
+func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress string) (contractdomain.Contract, error) {
 	input.Note = strings.TrimSpace(input.Note)
 
 	if input.TenantID == uuid.Nil || input.RoomID == uuid.Nil || input.StartDate.IsZero() {
@@ -121,10 +121,17 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (contractdomain
 		input.NumOccupants = 1
 	}
 
-	return s.repo.Create(ctx, input)
+	contract, err := s.repo.Create(ctx, input)
+	if err != nil {
+		return contractdomain.Contract{}, err
+	}
+
+	s.recordActivity(ctx, input.CreatedBy, "CREATE", contract.ID,
+		fmt.Sprintf("Created contract: %s - room %s", contract.TenantName, contract.RoomNumber), ipAddress)
+	return contract, nil
 }
 
-func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (contractdomain.Contract, error) {
+func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput, ipAddress string) (contractdomain.Contract, error) {
 	if input.StartDate != nil && input.StartDate.IsZero() {
 		return contractdomain.Contract{}, contractdomain.ErrRequiredContractData
 	}
@@ -148,7 +155,14 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 		input.Note = &note
 	}
 
-	return s.repo.Update(ctx, id, requesterID, input)
+	contract, err := s.repo.Update(ctx, id, requesterID, input)
+	if err != nil {
+		return contractdomain.Contract{}, err
+	}
+
+	s.recordActivity(ctx, &requesterID, "UPDATE", contract.ID,
+		fmt.Sprintf("Updated contract: %s - room %s", contract.TenantName, contract.RoomNumber), ipAddress)
+	return contract, nil
 }
 
 func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddress string) error {

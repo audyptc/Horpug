@@ -207,7 +207,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		NumOccupants: req.NumOccupants,
 		Note:         req.Note,
 		CreatedBy:    &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, contractdomain.ErrRequiredContractData) {
 			return apierror.BadRequest("tenant_id, room_id and start_date are required")
@@ -275,7 +275,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		Status:       req.Status,
 		Note:         req.Note,
 		UpdatedBy:    &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, contractdomain.ErrContractNotFound) {
 			return apierror.NotFound("contract not found")
