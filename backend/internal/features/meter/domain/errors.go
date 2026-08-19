@@ -11,4 +11,5 @@ var (
 	ErrRequiredFlatAmount   = errors.New("flat_amount is required and must not be negative when billing_method is flat")
 	ErrRoomNotFound         = errors.New("room not found")
 	ErrMeterReadingExists   = errors.New("a meter reading for this room and date already exists")
+	ErrMeterMonthExists     = errors.New("a meter reading for this room and month already exists")
 )

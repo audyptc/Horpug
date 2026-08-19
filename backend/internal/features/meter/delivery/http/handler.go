@@ -213,6 +213,9 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		if errors.Is(err, meterdomain.ErrMeterReadingExists) {
 			return apierror.Conflict("a meter reading for this room and date already exists")
 		}
+		if errors.Is(err, meterdomain.ErrMeterMonthExists) {
+			return apierror.Conflict("a meter reading for this room and month already exists")
+		}
 		return apierror.Internal("failed to record meter reading")
 	}
 
@@ -280,6 +283,9 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		}
 		if errors.Is(err, meterdomain.ErrMeterReadingExists) {
 			return apierror.Conflict("a meter reading for this room and date already exists")
+		}
+		if errors.Is(err, meterdomain.ErrMeterMonthExists) {
+			return apierror.Conflict("a meter reading for this room and month already exists")
 		}
 		return apierror.Internal("failed to update meter reading")
 	}

@@ -611,6 +611,13 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		return err
 	}
 
+	// Speeds up the "has this meter reading been billed yet" lookup
+	// (electricity_meters/water_meters joined against invoice_items by
+	// reference_id) used when listing meter readings.
+	if _, err := db.Exec(ctx, `CREATE INDEX IF NOT EXISTS idx_invoice_items_reference_id ON invoice_items(reference_id)`); err != nil {
+		return err
+	}
+
 	return nil
 }
 
