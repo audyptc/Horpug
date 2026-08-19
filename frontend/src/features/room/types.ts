@@ -6,6 +6,7 @@ export type ApiRoom = {
   dormitory_name?: string
   room_type_id: string
   room_type_name?: string
+  room_type_price: number
   room_number: string
   floor: number
   status: RoomStatus

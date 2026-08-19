@@ -144,6 +144,7 @@ const en = {
   contractCreate: 'Create contract',
   contractEdit: 'Edit contract',
   contractDelete: 'Delete contract',
+  contractDeleteActiveBlocked: 'Cannot delete an active contract. Change its status first.',
   contractDeleting: 'Deleting...',
   contractDeleteConfirm: 'You are about to delete this contract. Its data will be removed from the system and cannot be recovered.',
   contractDeleteError: 'Failed to delete contract.',

@@ -276,6 +276,7 @@ export default function ContractPage() {
         onSelectRoom={(room) => {
           setFormRoomId(room.id)
           setFormRoomDisplayLabel([room.room_number, room.dormitory_name].filter(Boolean).join(' - '))
+          setFormRentPrice(String(room.room_type_price))
         }}
         roomDisplayLabel={formRoomDisplayLabel}
         startDate={formStartDate}

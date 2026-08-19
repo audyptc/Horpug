@@ -12,4 +12,5 @@ var (
 	ErrTenantNotFound        = errors.New("tenant not found")
 	ErrRoomNotFound          = errors.New("room not found")
 	ErrRoomHasActiveContract = errors.New("room already has an active contract")
+	ErrContractIsActive      = errors.New("cannot delete an active contract; end it first")
 )

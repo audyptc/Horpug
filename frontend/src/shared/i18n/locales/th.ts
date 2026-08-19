@@ -146,6 +146,7 @@ const th: Record<TranslationKey, string> = {
   contractCreate: 'สร้างสัญญาเช่า',
   contractEdit: 'แก้ไขสัญญาเช่า',
   contractDelete: 'ลบสัญญาเช่า',
+  contractDeleteActiveBlocked: 'ไม่สามารถลบสัญญาที่ยังดำเนินการอยู่ได้ กรุณาเปลี่ยนสถานะก่อน',
   contractDeleting: 'กำลังลบ...',
   contractDeleteConfirm: 'คุณกำลังจะลบสัญญาเช่านี้ ข้อมูลจะถูกนำออกจากระบบและไม่สามารถกู้คืนได้',
   contractDeleteError: 'ลบสัญญาเช่าไม่สำเร็จ',

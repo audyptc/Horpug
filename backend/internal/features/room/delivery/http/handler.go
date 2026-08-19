@@ -105,6 +105,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 // @Produce json
 // @Param dormitory_id query string false "Filter by dormitory ID"
 // @Param q query string false "Filter by room number or dormitory name"
+// @Param status query string false "Filter by status (available, occupied, maintenance)"
 // @Param limit query int false "Max results (default 50, max 100)"
 // @Success 200 {array} roomdomain.Room
 // @Failure 400 {object} apierror.Error
@@ -121,6 +122,15 @@ func (h *Handler) ListActive(c fiber.Ctx) error {
 	dormitoryID, err := parseDormitoryIDQuery(c)
 	if err != nil {
 		return err
+	}
+
+	var status *roomdomain.RoomStatus
+	if raw := strings.TrimSpace(c.Query("status")); raw != "" {
+		s := roomdomain.RoomStatus(raw)
+		if !s.Valid() {
+			return apierror.BadRequest("invalid status")
+		}
+		status = &s
 	}
 
 	search := strings.TrimSpace(c.Query("q"))
@@ -140,7 +150,7 @@ func (h *Handler) ListActive(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	rooms, err := h.usecase.ListActive(ctx, requesterID, dormitoryID, search, limit)
+	rooms, err := h.usecase.ListActive(ctx, requesterID, dormitoryID, status, search, limit)
 	if err != nil {
 		return apierror.Internal("failed to list active rooms")
 	}

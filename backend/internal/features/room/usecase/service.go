@@ -40,7 +40,7 @@ type DeletionCheck struct {
 type Repository interface {
 	Count(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID) (int64, error)
 	List(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID, limit, offset int) ([]roomdomain.Room, error)
-	ListActive(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID, search string, limit int) ([]roomdomain.Room, error)
+	ListActive(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID, status *roomdomain.RoomStatus, search string, limit int) ([]roomdomain.Room, error)
 	GetByID(ctx context.Context, id, requesterID uuid.UUID) (roomdomain.Room, error)
 	CountContracts(ctx context.Context, id uuid.UUID) (int64, error)
 	Create(ctx context.Context, input CreateInput) (roomdomain.Room, error)
@@ -96,8 +96,8 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, dormitoryID *
 	return rooms, total, nil
 }
 
-func (s *Service) ListActive(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID, search string, limit int) ([]roomdomain.Room, error) {
-	return s.repo.ListActive(ctx, requesterID, dormitoryID, strings.TrimSpace(search), limit)
+func (s *Service) ListActive(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID, status *roomdomain.RoomStatus, search string, limit int) ([]roomdomain.Room, error) {
+	return s.repo.ListActive(ctx, requesterID, dormitoryID, status, strings.TrimSpace(search), limit)
 }
 
 func (s *Service) GetByID(ctx context.Context, id, requesterID uuid.UUID) (roomdomain.Room, error) {

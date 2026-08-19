@@ -161,10 +161,10 @@ export function ContractListCard({
                               type="button"
                               size="icon"
                               variant="destructive"
-                              title={t('contractDelete')}
+                              title={contract.status === 'active' ? t('contractDeleteActiveBlocked') : t('contractDelete')}
                               aria-label={t('contractDelete')}
                               onClick={() => onDeleteContract(contract)}
-                              disabled={deletingContractId === contract.id}
+                              disabled={deletingContractId === contract.id || contract.status === 'active'}
                             >
                               <Trash2 />
                             </Button>

@@ -2,9 +2,13 @@ package usecase
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"strings"
 	"time"
 
+	activitylogdomain "apihorpug/internal/features/activitylog/domain"
+	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
 	contractdomain "apihorpug/internal/features/contract/domain"
 
 	"github.com/google/uuid"
@@ -49,12 +53,38 @@ type Repository interface {
 	Delete(ctx context.Context, id, requesterID uuid.UUID) error
 }
 
-type Service struct {
-	repo Repository
+// ActivityLogger records contract create/update/delete events for the audit
+// trail. Failures to record are logged but never block the contract flow.
+type ActivityLogger interface {
+	Create(ctx context.Context, input activitylogusecase.CreateInput) (activitylogdomain.ActivityLog, error)
 }
 
-func New(repo Repository) *Service {
-	return &Service{repo: repo}
+type Service struct {
+	repo        Repository
+	activityLog ActivityLogger
+}
+
+func New(repo Repository, activityLog ActivityLogger) *Service {
+	return &Service{repo: repo, activityLog: activityLog}
+}
+
+// recordActivity is best-effort: a failure to write the audit trail must
+// never fail the contract CRUD flow itself.
+func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, entityID uuid.UUID, description, ipAddress string) {
+	if s.activityLog == nil {
+		return
+	}
+	_, err := s.activityLog.Create(ctx, activitylogusecase.CreateInput{
+		UserID:      userID,
+		Action:      action,
+		EntityType:  "contract",
+		EntityID:    &entityID,
+		Description: description,
+		IPAddress:   ipAddress,
+	})
+	if err != nil {
+		log.Printf("failed to record activity log (action=%s): %v", action, err)
+	}
 }
 
 func (s *Service) List(ctx context.Context, requesterID uuid.UUID, filters ListFilters, limit, offset int) ([]contractdomain.Contract, int64, error) {
@@ -121,6 +151,20 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 	return s.repo.Update(ctx, id, requesterID, input)
 }
 
-func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
-	return s.repo.Delete(ctx, id, requesterID)
+func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddress string) error {
+	contract, err := s.repo.GetByID(ctx, id, requesterID)
+	if err != nil {
+		return err
+	}
+	if contract.Status == contractdomain.ContractStatusActive {
+		return contractdomain.ErrContractIsActive
+	}
+
+	if err := s.repo.Delete(ctx, id, requesterID); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, &requesterID, "DELETE", id,
+		fmt.Sprintf("Deleted contract: %s - room %s", contract.TenantName, contract.RoomNumber), ipAddress)
+	return nil
 }

@@ -312,6 +312,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} apierror.Error
 // @Failure 404 {object} apierror.Error
+// @Failure 409 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
 // @Security BearerAuth
 // @Router /contracts/{id} [delete]
@@ -329,9 +330,12 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := h.usecase.Delete(ctx, id, requesterID); err != nil {
+	if err := h.usecase.Delete(ctx, id, requesterID, c.IP()); err != nil {
 		if errors.Is(err, contractdomain.ErrContractNotFound) {
 			return apierror.NotFound("contract not found")
+		}
+		if errors.Is(err, contractdomain.ErrContractIsActive) {
+			return apierror.Conflict("cannot delete an active contract; end it first")
 		}
 		return apierror.Internal("failed to delete contract")
 	}

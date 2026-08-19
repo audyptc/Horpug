@@ -102,7 +102,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	tenantService := tenantusecase.New(tenantRepo, activityLogService)
 	tenantHandler := tenanthttp.NewHandler(tenantService)
 	contractRepo := contractrepository.NewRepository(db)
-	contractService := contractusecase.New(contractRepo)
+	contractService := contractusecase.New(contractRepo, activityLogService)
 	contractHandler := contracthttp.NewHandler(contractService)
 	meterRepo := meterrepository.NewRepository(db)
 	meterService := meterusecase.New(meterRepo)

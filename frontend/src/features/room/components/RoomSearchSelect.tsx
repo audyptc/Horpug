@@ -66,12 +66,13 @@ export function RoomSearchSelect({
           params: {
             q: query.trim() || undefined,
             dormitory_id: dormitoryId || undefined,
+            status: statusFilter || undefined,
             limit: SEARCH_LIMIT,
           },
         })
         .then(({ data }) => {
           if (cancelled) return
-          setResults(statusFilter ? data.filter((room) => room.status === statusFilter) : data)
+          setResults(data)
         })
         .catch(() => {
           if (!cancelled) setResults([])

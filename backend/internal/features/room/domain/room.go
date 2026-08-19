@@ -28,6 +28,7 @@ type Room struct {
 	DormitoryName string     `json:"dormitory_name,omitempty"`
 	RoomTypeID    uuid.UUID  `json:"room_type_id"`
 	RoomTypeName  string     `json:"room_type_name,omitempty"`
+	RoomTypePrice float64    `json:"room_type_price"`
 	RoomNumber    string     `json:"room_number"`
 	Floor         int        `json:"floor"`
 	Status        RoomStatus `json:"status"`

@@ -66,7 +66,7 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, dormitoryI
 	}
 
 	query := `
-		SELECT rm.id, rm.dormitory_id, d.name, rm.room_type_id, rt.name, rm.room_number, rm.floor, rm.status, rm.is_active, rm.created_by, rm.updated_by, rm.created_at, rm.updated_at
+		SELECT rm.id, rm.dormitory_id, d.name, rm.room_type_id, rt.name, rt.price, rm.room_number, rm.floor, rm.status, rm.is_active, rm.created_by, rm.updated_by, rm.created_at, rm.updated_at
 		FROM rooms rm
 		JOIN dormitories d ON d.id = rm.dormitory_id
 		JOIN room_types rt ON rt.id = rm.room_type_id
@@ -110,6 +110,7 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, dormitoryI
 			&room.DormitoryName,
 			&room.RoomTypeID,
 			&room.RoomTypeName,
+			&room.RoomTypePrice,
 			&room.RoomNumber,
 			&room.Floor,
 			&room.Status,
@@ -130,14 +131,14 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, dormitoryI
 	return rooms, nil
 }
 
-func (r *Repository) ListActive(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID, search string, limit int) ([]roomdomain.Room, error) {
+func (r *Repository) ListActive(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID, status *roomdomain.RoomStatus, search string, limit int) ([]roomdomain.Room, error) {
 	full, roleID, err := r.dormitoryScope(ctx, requesterID)
 	if err != nil {
 		return nil, err
 	}
 
 	query := `
-		SELECT rm.id, rm.dormitory_id, d.name, rm.room_type_id, rt.name, rm.room_number, rm.floor, rm.status, rm.is_active, rm.created_by, rm.updated_by, rm.created_at, rm.updated_at
+		SELECT rm.id, rm.dormitory_id, d.name, rm.room_type_id, rt.name, rt.price, rm.room_number, rm.floor, rm.status, rm.is_active, rm.created_by, rm.updated_by, rm.created_at, rm.updated_at
 		FROM rooms rm
 		JOIN dormitories d ON d.id = rm.dormitory_id
 		JOIN room_types rt ON rt.id = rm.room_type_id
@@ -159,6 +160,20 @@ func (r *Repository) ListActive(ctx context.Context, requesterID uuid.UUID, dorm
 		query += fmt.Sprintf(` AND rm.dormitory_id = $%d`, argIdx)
 		args = append(args, *dormitoryID)
 		argIdx++
+	}
+	if status != nil {
+		query += fmt.Sprintf(` AND rm.status = $%d`, argIdx)
+		args = append(args, *status)
+		argIdx++
+
+		// rm.status is set manually and can drift out of sync with reality, so
+		// when filtering for available rooms also exclude any room that
+		// already has an active contract — otherwise a stale "available"
+		// status would let it be picked for a new contract and fail on the
+		// one-active-contract-per-room constraint.
+		if *status == roomdomain.RoomStatusAvailable {
+			query += ` AND NOT EXISTS (SELECT 1 FROM contracts ct WHERE ct.room_id = rm.id AND ct.status = 'active')`
+		}
 	}
 	if search != "" {
 		query += fmt.Sprintf(` AND (rm.room_number ILIKE $%d OR d.name ILIKE $%d)`, argIdx, argIdx)
@@ -183,6 +198,7 @@ func (r *Repository) ListActive(ctx context.Context, requesterID uuid.UUID, dorm
 			&room.DormitoryName,
 			&room.RoomTypeID,
 			&room.RoomTypeName,
+			&room.RoomTypePrice,
 			&room.RoomNumber,
 			&room.Floor,
 			&room.Status,
@@ -361,7 +377,7 @@ func (r *Repository) CountContracts(ctx context.Context, id uuid.UUID) (int64, e
 func (r *Repository) loadRoomByID(ctx context.Context, id uuid.UUID) (roomdomain.Room, error) {
 	var room roomdomain.Room
 	err := r.db.QueryRow(ctx, `
-		SELECT rm.id, rm.dormitory_id, d.name, rm.room_type_id, rt.name, rm.room_number, rm.floor, rm.status, rm.is_active, rm.created_by, rm.updated_by, rm.created_at, rm.updated_at
+		SELECT rm.id, rm.dormitory_id, d.name, rm.room_type_id, rt.name, rt.price, rm.room_number, rm.floor, rm.status, rm.is_active, rm.created_by, rm.updated_by, rm.created_at, rm.updated_at
 		FROM rooms rm
 		JOIN dormitories d ON d.id = rm.dormitory_id
 		JOIN room_types rt ON rt.id = rm.room_type_id
@@ -372,6 +388,7 @@ func (r *Repository) loadRoomByID(ctx context.Context, id uuid.UUID) (roomdomain
 		&room.DormitoryName,
 		&room.RoomTypeID,
 		&room.RoomTypeName,
+		&room.RoomTypePrice,
 		&room.RoomNumber,
 		&room.Floor,
 		&room.Status,
