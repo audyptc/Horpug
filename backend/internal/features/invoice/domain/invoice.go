@@ -47,6 +47,7 @@ type Invoice struct {
 	ContractID    uuid.UUID     `json:"contract_id"`
 	TenantID      uuid.UUID     `json:"tenant_id,omitempty"`
 	TenantName    string        `json:"tenant_name,omitempty"`
+	TenantLineID  string        `json:"tenant_line_id,omitempty"`
 	RoomID        uuid.UUID     `json:"room_id,omitempty"`
 	RoomNumber    string        `json:"room_number,omitempty"`
 	DormitoryID   uuid.UUID     `json:"dormitory_id,omitempty"`

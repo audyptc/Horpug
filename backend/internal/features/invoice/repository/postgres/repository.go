@@ -25,7 +25,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 }
 
 const selectInvoiceColumns = `
-	i.id, i.contract_id, c.tenant_id, t.first_name, t.last_name,
+	i.id, i.contract_id, c.tenant_id, t.first_name, t.last_name, t.line_id,
 	c.room_id, rm.room_number, rm.dormitory_id, d.name,
 	i.period_year, i.period_month, i.issue_date, i.due_date, i.total_amount, i.status, i.paid_at, i.note,
 	i.created_by, i.updated_by, i.created_at, i.updated_at
@@ -521,6 +521,7 @@ func scanInvoice(row pgx.Row) (invoicedomain.Invoice, error) {
 		&invoice.TenantID,
 		&firstName,
 		&lastName,
+		&invoice.TenantLineID,
 		&invoice.RoomID,
 		&invoice.RoomNumber,
 		&invoice.DormitoryID,

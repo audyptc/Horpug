@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MessageCircle, Pencil, Trash2 } from 'lucide-react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
@@ -145,6 +145,23 @@ export function InvoiceListCard({
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              title={invoice.tenant_line_id ? t('invoiceSendLine') : t('invoiceSendLineUnavailable')}
+                              aria-label={t('invoiceSendLine')}
+                              disabled={!invoice.tenant_line_id}
+                              onClick={() =>
+                                window.open(
+                                  `https://line.me/ti/p/~${encodeURIComponent(invoice.tenant_line_id ?? '')}`,
+                                  '_blank',
+                                  'noopener,noreferrer',
+                                )
+                              }
+                            >
+                              <MessageCircle />
+                            </Button>
                             <Button
                               type="button"
                               size="icon"

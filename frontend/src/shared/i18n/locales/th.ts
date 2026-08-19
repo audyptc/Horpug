@@ -307,6 +307,8 @@ const th: Record<TranslationKey, string> = {
   invoiceNoInvoices: 'ไม่พบข้อมูลใบแจ้งหนี้',
   invoiceCreate: 'สร้างใบแจ้งหนี้',
   invoiceEdit: 'จัดการใบแจ้งหนี้',
+  invoiceSendLine: 'ส่งทาง LINE',
+  invoiceSendLineUnavailable: 'ผู้เช่ายังไม่มี LINE ID ในระบบ',
   invoiceDelete: 'ลบรายการ',
   invoiceDeleting: 'กำลังลบ...',
   invoiceDeleteConfirm: 'คุณกำลังจะลบใบแจ้งหนี้นี้ ข้อมูลจะถูกนำออกจากระบบและไม่สามารถกู้คืนได้',

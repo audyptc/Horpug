@@ -305,6 +305,8 @@ const en = {
   invoiceNoInvoices: 'No invoices found.',
   invoiceCreate: 'Create invoice',
   invoiceEdit: 'Manage invoice',
+  invoiceSendLine: 'Send via LINE',
+  invoiceSendLineUnavailable: 'This tenant has no LINE ID on file',
   invoiceDelete: 'Delete invoice',
   invoiceDeleting: 'Deleting...',
   invoiceDeleteConfirm: 'You are about to delete this invoice. Its data will be removed from the system and cannot be recovered.',
