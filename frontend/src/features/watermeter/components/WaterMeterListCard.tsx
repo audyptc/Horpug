@@ -130,9 +130,14 @@ export function WaterMeterListCard({
                           {toDateInputValue(meter.reading_date)}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={billingMethodBadgeVariant[meter.billing_method]}>
-                            {t(billingMethodLabelKeys[meter.billing_method])}
-                          </Badge>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge variant={billingMethodBadgeVariant[meter.billing_method]}>
+                              {t(billingMethodLabelKeys[meter.billing_method])}
+                            </Badge>
+                            {!meter.is_billed && (
+                              <Badge variant="secondary">{t('waterMeterNotBilledBadge')}</Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {meter.billing_method === 'metered' ? meter.previous_unit.toLocaleString() : '—'}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	metdomain "apihorpug/internal/features/watermeter/domain"
 	metusecase "apihorpug/internal/features/watermeter/usecase"
@@ -25,8 +26,9 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 
 const selectMeterColumns = `
 	wm.id, wm.room_id, rm.room_number, rm.dormitory_id, d.name, wm.billing_method,
-	wm.reading_date, wm.previous_unit, wm.current_unit, wm.unit_used, wm.price_per_unit, wm.flat_amount, wm.total_amount, wm.note,
-	wm.created_by, wm.updated_by, wm.created_at, wm.updated_at
+	wm.reading_date, wm.previous_unit, wm.current_unit, wm.unit_used, wm.price_per_unit, wm.flat_amount, wm.total_amount,
+	EXISTS (SELECT 1 FROM invoice_items ii WHERE ii.reference_id = wm.id AND ii.item_type = 'water') AS is_billed,
+	wm.note, wm.created_by, wm.updated_by, wm.created_at, wm.updated_at
 `
 
 const meterFromJoins = `
@@ -131,8 +133,16 @@ func (r *Repository) Create(ctx context.Context, input metusecase.CreateInput) (
 		}
 	}
 
+	duplicate, err := r.monthDuplicateExists(ctx, input.RoomID, input.ReadingDate, nil)
+	if err != nil {
+		return metdomain.Meter{}, err
+	}
+	if duplicate {
+		return metdomain.Meter{}, metdomain.ErrMeterMonthExists
+	}
+
 	id := uuid.New()
-	err := r.db.QueryRow(ctx, `
+	err = r.db.QueryRow(ctx, `
 		INSERT INTO water_meters (id, room_id, billing_method, reading_date, previous_unit, current_unit, price_per_unit, flat_amount, note, created_by, updated_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id
@@ -165,6 +175,24 @@ func (r *Repository) Create(ctx context.Context, input metusecase.CreateInput) (
 func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, input metusecase.UpdateInput) (metdomain.Meter, error) {
 	if err := r.ensureMeterAccess(ctx, id, requesterID); err != nil {
 		return metdomain.Meter{}, err
+	}
+
+	if input.ReadingDate != nil {
+		var roomID uuid.UUID
+		if err := r.db.QueryRow(ctx, `SELECT room_id FROM water_meters WHERE id = $1`, id).Scan(&roomID); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return metdomain.Meter{}, metdomain.ErrMeterNotFound
+			}
+			return metdomain.Meter{}, err
+		}
+
+		duplicate, err := r.monthDuplicateExists(ctx, roomID, *input.ReadingDate, &id)
+		if err != nil {
+			return metdomain.Meter{}, err
+		}
+		if duplicate {
+			return metdomain.Meter{}, metdomain.ErrMeterMonthExists
+		}
 	}
 
 	setClauses := make([]string, 0)
@@ -281,6 +309,7 @@ func scanMeter(row pgx.Row) (metdomain.Meter, error) {
 		&meter.PricePerUnit,
 		&meter.FlatAmount,
 		&meter.TotalAmount,
+		&meter.IsBilled,
 		&meter.Note,
 		&meter.CreatedBy,
 		&meter.UpdatedBy,
@@ -322,6 +351,26 @@ func (r *Repository) dormitoryScope(ctx context.Context, userID uuid.UUID) (full
 		return false, uuid.Nil, err
 	}
 	return full, roleID, nil
+}
+
+// monthDuplicateExists reports whether the room already has another meter
+// reading whose reading_date falls in the same calendar month as
+// readingDate. excludeID, when non-nil, excludes that row from the check
+// (used on update, so a reading isn't flagged as a duplicate of itself).
+func (r *Repository) monthDuplicateExists(ctx context.Context, roomID uuid.UUID, readingDate time.Time, excludeID *uuid.UUID) (bool, error) {
+	var exists bool
+	err := r.db.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM water_meters
+			WHERE room_id = $1
+			AND date_trunc('month', reading_date) = date_trunc('month', $2::date)
+			AND ($3::uuid IS NULL OR id != $3)
+		)
+	`, roomID, readingDate, excludeID).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
 }
 
 // ensureRoomAccess confirms the room exists and the requester may record

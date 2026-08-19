@@ -14,6 +14,7 @@ export type ApiWaterMeter = {
   price_per_unit: number
   flat_amount?: number
   total_amount: number
+  is_billed: boolean
   note: string
   created_at: string
   updated_at: string

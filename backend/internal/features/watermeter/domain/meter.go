@@ -42,6 +42,7 @@ type Meter struct {
 	PricePerUnit  float64       `json:"price_per_unit"`
 	FlatAmount    *float64      `json:"flat_amount,omitempty"`
 	TotalAmount   float64       `json:"total_amount"`
+	IsBilled      bool          `json:"is_billed"`
 	Note          string        `json:"note"`
 	CreatedBy     *uuid.UUID    `json:"created_by,omitempty"`
 	UpdatedBy     *uuid.UUID    `json:"updated_by,omitempty"`
