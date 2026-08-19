@@ -37,6 +37,8 @@ export default function TenantPage() {
   const [confirmDeleteTenant, setConfirmDeleteTenant] = useState<ApiTenant | null>(null)
   const [blockedDeletionContractCount, setBlockedDeletionContractCount] = useState<number | null>(null)
 
+  const [lineLinkInfo, setLineLinkInfo] = useState<{ tenant: ApiTenant; link: string } | null>(null)
+
   useEffect(() => {
     let cancelled = false
 
@@ -202,6 +204,22 @@ export default function TenantPage() {
     }
   }
 
+  async function handleCopyLineLink(tenant: ApiTenant) {
+    const liffId = import.meta.env.VITE_LIFF_ID as string | undefined
+    const link = liffId
+      ? `https://liff.line.me/${liffId}?tenant_id=${tenant.id}`
+      : `${window.location.origin}/liff/link-tenant?tenant_id=${tenant.id}`
+
+    try {
+      await navigator.clipboard.writeText(link)
+    } catch {
+      // Clipboard API may be unavailable (e.g. insecure context); the dialog
+      // below still shows the link so it can be copied by hand.
+    }
+
+    setLineLinkInfo({ tenant, link })
+  }
+
   return (
     <main className="content">
       <section className="welcome">
@@ -235,6 +253,19 @@ export default function TenantPage() {
         onCreateTenant={openCreateForm}
         onEditTenant={openEditForm}
         onDeleteTenant={handleRequestDeleteTenant}
+        onCopyLineLink={handleCopyLineLink}
+      />
+
+      <InformationDialog
+        open={lineLinkInfo !== null}
+        onOpenChange={(open) => !open && setLineLinkInfo(null)}
+        title={t('tenantLineLinkDialogTitle')}
+        description={
+          lineLinkInfo
+            ? `${t('tenantLineLinkDialogDescription').replace('{name}', `${lineLinkInfo.tenant.first_name} ${lineLinkInfo.tenant.last_name}`)}\n\n${lineLinkInfo.link}`
+            : ''
+        }
+        actionLabel={t('acknowledge')}
       />
 
       <ConfirmDialog

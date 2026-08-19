@@ -12,6 +12,7 @@ type Tenant struct {
 	LastName         string     `json:"last_name"`
 	Phone            string     `json:"phone"`
 	LineID           string     `json:"line_id"`
+	LineUserID       string     `json:"line_user_id,omitempty"`
 	IDCard           string     `json:"id_card"`
 	Email            string     `json:"email"`
 	EmergencyContact string     `json:"emergency_contact"`

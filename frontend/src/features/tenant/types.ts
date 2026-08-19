@@ -4,6 +4,7 @@ export type ApiTenant = {
   last_name: string
   phone: string
   line_id: string
+  line_user_id?: string
   id_card: string
   email: string
   emergency_contact: string

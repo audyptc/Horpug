@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2 } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Link2, Pencil, Trash2 } from 'lucide-react'
 import { useLanguage } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
@@ -30,6 +30,7 @@ type TenantListCardProps = {
   onCreateTenant: () => void
   onEditTenant: (tenant: ApiTenant) => void
   onDeleteTenant: (tenant: ApiTenant) => void
+  onCopyLineLink: (tenant: ApiTenant) => void
 }
 
 export function TenantListCard({
@@ -55,6 +56,7 @@ export function TenantListCard({
   onCreateTenant,
   onEditTenant,
   onDeleteTenant,
+  onCopyLineLink,
 }: TenantListCardProps) {
   const { t } = useLanguage()
 
@@ -114,7 +116,19 @@ export function TenantListCard({
                         <TableCell className="font-semibold">{tenant.first_name}</TableCell>
                         <TableCell className="font-semibold">{tenant.last_name}</TableCell>
                         <TableCell className="text-muted-foreground">{tenant.phone || '—'}</TableCell>
-                        <TableCell className="text-muted-foreground">{tenant.line_id || '—'}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          <div className="flex items-center gap-1.5">
+                            {tenant.line_id || '—'}
+                            {tenant.line_user_id && (
+                              <CheckCircle2
+                                className="h-4 w-4 text-emerald-600"
+                                aria-label={t('tenantLineLinked')}
+                              >
+                                <title>{t('tenantLineLinked')}</title>
+                              </CheckCircle2>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-muted-foreground">{tenant.id_card || '—'}</TableCell>
                         <TableCell className="text-muted-foreground">{tenant.email || '—'}</TableCell>
                         <TableCell>
@@ -124,6 +138,16 @@ export function TenantListCard({
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              title={t('tenantCopyLineLink')}
+                              aria-label={t('tenantCopyLineLink')}
+                              onClick={() => onCopyLineLink(tenant)}
+                            >
+                              <Link2 />
+                            </Button>
                             <Button
                               type="button"
                               size="icon"

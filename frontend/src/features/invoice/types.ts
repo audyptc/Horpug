@@ -18,6 +18,7 @@ export type ApiInvoice = {
   tenant_id?: string
   tenant_name?: string
   tenant_line_id?: string
+  tenant_line_user_id?: string
   room_id?: string
   room_number?: string
   dormitory_id?: string

@@ -33,7 +33,7 @@ func (r *Repository) Count(ctx context.Context) (int64, error) {
 
 func (r *Repository) List(ctx context.Context, limit, offset int) ([]tenantdomain.Tenant, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, first_name, last_name, phone, line_id, id_card, email, emergency_contact, note, is_active, created_by, updated_by, created_at, updated_at
+		SELECT id, first_name, last_name, phone, line_id, line_user_id, id_card, email, emergency_contact, note, is_active, created_by, updated_by, created_at, updated_at
 		FROM tenants
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
@@ -48,7 +48,7 @@ func (r *Repository) List(ctx context.Context, limit, offset int) ([]tenantdomai
 
 func (r *Repository) ListActive(ctx context.Context, search string, limit int) ([]tenantdomain.Tenant, error) {
 	query := `
-		SELECT id, first_name, last_name, phone, line_id, id_card, email, emergency_contact, note, is_active, created_by, updated_by, created_at, updated_at
+		SELECT id, first_name, last_name, phone, line_id, line_user_id, id_card, email, emergency_contact, note, is_active, created_by, updated_by, created_at, updated_at
 		FROM tenants
 		WHERE is_active = true
 	`
@@ -211,6 +211,21 @@ func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// UpdateLineUserID stores the LINE userId obtained from a verified LIFF id
+// token, linking this tenant's record to their LINE account so invoices can
+// be pushed to them directly through the OA.
+func (r *Repository) UpdateLineUserID(ctx context.Context, id uuid.UUID, lineUserID string) (tenantdomain.Tenant, error) {
+	if err := r.ensureTenantExists(ctx, id); err != nil {
+		return tenantdomain.Tenant{}, err
+	}
+
+	if _, err := r.db.Exec(ctx, `UPDATE tenants SET line_user_id = $1, updated_at = NOW() WHERE id = $2`, lineUserID, id); err != nil {
+		return tenantdomain.Tenant{}, err
+	}
+
+	return r.loadTenantByID(ctx, id)
+}
+
 func (r *Repository) CountContracts(ctx context.Context, id uuid.UUID) (int64, error) {
 	var contractCount int64
 	err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM contracts WHERE tenant_id = $1`, id).Scan(&contractCount)
@@ -231,7 +246,7 @@ func (r *Repository) ensureTenantExists(ctx context.Context, id uuid.UUID) error
 func (r *Repository) loadTenantByID(ctx context.Context, id uuid.UUID) (tenantdomain.Tenant, error) {
 	var tenant tenantdomain.Tenant
 	err := r.db.QueryRow(ctx, `
-		SELECT id, first_name, last_name, phone, line_id, id_card, email, emergency_contact, note, is_active, created_by, updated_by, created_at, updated_at
+		SELECT id, first_name, last_name, phone, line_id, line_user_id, id_card, email, emergency_contact, note, is_active, created_by, updated_by, created_at, updated_at
 		FROM tenants
 		WHERE id = $1
 	`, id).Scan(
@@ -240,6 +255,7 @@ func (r *Repository) loadTenantByID(ctx context.Context, id uuid.UUID) (tenantdo
 		&tenant.LastName,
 		&tenant.Phone,
 		&tenant.LineID,
+		&tenant.LineUserID,
 		&tenant.IDCard,
 		&tenant.Email,
 		&tenant.EmergencyContact,
@@ -266,6 +282,7 @@ func scanTenants(rows pgx.Rows) ([]tenantdomain.Tenant, error) {
 			&tenant.LastName,
 			&tenant.Phone,
 			&tenant.LineID,
+			&tenant.LineUserID,
 			&tenant.IDCard,
 			&tenant.Email,
 			&tenant.EmergencyContact,

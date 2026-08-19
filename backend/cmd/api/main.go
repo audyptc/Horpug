@@ -57,7 +57,7 @@ func main() {
 			Private: true,
 		},
 	})
-	http.RegisterRoutes(app, db, cfg.SecretKey, cfg.AccessTokenTTL, cfg.RefreshTokenTTL, cfg.CookieSecure)
+	http.RegisterRoutes(app, db, cfg.SecretKey, cfg.AccessTokenTTL, cfg.RefreshTokenTTL, cfg.CookieSecure, cfg.LineChannelAccessToken, cfg.LineChannelID)
 	http.RegisterDocsRoutes(app)
 
 	go func() {

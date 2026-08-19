@@ -50,6 +50,10 @@ func NewHandler(usecase *tenantusecase.Service) *Handler {
 	return &Handler{usecase: usecase}
 }
 
+type linkTenantLineRequest struct {
+	IDToken string `json:"id_token"`
+}
+
 const defaultActiveListLimit = 50
 
 // List godoc
@@ -305,6 +309,46 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	}
 
 	return apiresponse.Message(c, "tenant deleted")
+}
+
+// LinkLine godoc
+// @Summary Link a tenant's LINE account
+// @Description Public endpoint called from the LIFF linking page: verifies the id token the tenant's LINE app produced after login and stores the resulting LINE userId on the tenant, so invoices can be pushed to them. Not authenticated, since the tenant has no login of their own — the tenant ID in the URL acts as the shared secret (only someone holding the tenant's personal linking link can call this).
+// @Tags tenants
+// @Accept json
+// @Produce json
+// @Param id path string true "Tenant ID"
+// @Param request body linkTenantLineRequest true "LIFF id token payload"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Router /public/tenants/{id}/line/link [post]
+func (h *Handler) LinkLine(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return apierror.BadRequest("invalid tenant id")
+	}
+
+	var req linkTenantLineRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return apierror.BadRequest("invalid request body")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	if _, err := h.usecase.LinkLine(ctx, id, req.IDToken); err != nil {
+		if errors.Is(err, tenantdomain.ErrTenantNotFound) {
+			return apierror.NotFound("tenant not found")
+		}
+		if errors.Is(err, tenantdomain.ErrInvalidLineToken) {
+			return apierror.BadRequest("invalid or expired LINE id token")
+		}
+		return apierror.Internal("failed to link LINE account")
+	}
+
+	return apiresponse.Message(c, "line account linked")
 }
 
 // CheckDeletion godoc

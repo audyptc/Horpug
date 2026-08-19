@@ -23,6 +23,7 @@ import ParcelPage from '@/features/parcel/ParcelPage'
 import DocumentPage from '@/features/document/DocumentPage'
 import UserPage from '@/features/user/UserPage'
 import ActivityLogPage from '@/features/activitylog/ActivityLogPage'
+import LineLinkPage from '@/features/line/LineLinkPage'
 import { menuMeta } from '@/features/menu/menus'
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/liff/link-tenant" element={<LineLinkPage />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route element={<ProtectedRoute />}>
           <Route

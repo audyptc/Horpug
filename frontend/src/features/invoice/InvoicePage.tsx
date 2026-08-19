@@ -40,6 +40,8 @@ export default function InvoicePage() {
   const [itemError, setItemError] = useState<string | null>(null)
   const [removingItemId, setRemovingItemId] = useState<string | null>(null)
 
+  const [sendingLineInvoiceId, setSendingLineInvoiceId] = useState<string | null>(null)
+
   useEffect(() => {
     let cancelled = false
 
@@ -238,6 +240,19 @@ export default function InvoicePage() {
     }
   }
 
+  async function handleSendLineInvoice(invoice: ApiInvoice) {
+    setSendingLineInvoiceId(invoice.id)
+
+    try {
+      await api.post(`/invoices/${invoice.id}/send-line`)
+      window.alert(t('invoiceSendLineSuccess'))
+    } catch (err) {
+      window.alert(extractErrorMessage(err, t('invoiceSendLineError')))
+    } finally {
+      setSendingLineInvoiceId(null)
+    }
+  }
+
   function applyInvoiceUpdate(data: ApiInvoice) {
     setFormInvoiceDetail(data)
     setInvoices((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
@@ -316,6 +331,8 @@ export default function InvoicePage() {
         onCreateInvoice={openCreateForm}
         onEditInvoice={openEditForm}
         onDeleteInvoice={setConfirmDeleteInvoice}
+        sendingLineInvoiceId={sendingLineInvoiceId}
+        onSendLineInvoice={handleSendLineInvoice}
       />
 
       <ConfirmDialog

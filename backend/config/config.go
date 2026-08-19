@@ -9,20 +9,22 @@ import (
 )
 
 type Config struct {
-	AppPort         string
-	DBHost          string
-	DBPort          string
-	DBUsername      string
-	DBPassword      string
-	DBName          string
-	DBSSLMode       string
-	SecretKey       string
-	AccessTokenTTL  time.Duration
-	RefreshTokenTTL time.Duration
-	AdminUsername   string
-	AdminEmail      string
-	AdminPassword   string
-	CookieSecure    bool
+	AppPort                string
+	DBHost                 string
+	DBPort                 string
+	DBUsername             string
+	DBPassword             string
+	DBName                 string
+	DBSSLMode              string
+	SecretKey              string
+	AccessTokenTTL         time.Duration
+	RefreshTokenTTL        time.Duration
+	AdminUsername          string
+	AdminEmail             string
+	AdminPassword          string
+	CookieSecure           bool
+	LineChannelAccessToken string
+	LineChannelID          string
 }
 
 func Load() Config {
@@ -48,6 +50,12 @@ func Load() Config {
 		// now terminates HTTPS (see nginx/nginx.conf), or browsers will
 		// silently drop the cookie.
 		CookieSecure: getEnvBool("APP_COOKIE_SECURE", false),
+
+		// LINE Messaging API credentials for the dormitory's LINE Official
+		// Account (see LINE Developers Console). LineChannelID is the numeric
+		// channel ID, used as the client_id when verifying a LIFF ID token.
+		LineChannelAccessToken: getEnv("LINE_CHANNEL_ACCESS_TOKEN", ""),
+		LineChannelID:          getEnv("LINE_CHANNEL_ID", ""),
 	}
 }
 

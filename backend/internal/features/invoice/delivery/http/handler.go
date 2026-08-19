@@ -419,6 +419,46 @@ func (h *Handler) RemoveItem(c fiber.Ctx) error {
 	return apiresponse.OK(c, invoice)
 }
 
+// SendLine godoc
+// @Summary Send an invoice to the tenant via LINE
+// @Description Pushes a text summary of the invoice to the tenant's linked LINE account through the dormitory's LINE Official Account. Requires the tenant to have completed the LIFF linking flow first.
+// @Tags invoices
+// @Produce json
+// @Param id path string true "Invoice ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 409 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /invoices/{id}/send-line [post]
+func (h *Handler) SendLine(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return apierror.BadRequest("invalid invoice id")
+	}
+
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	if err := h.usecase.SendLine(ctx, id, requesterID); err != nil {
+		if errors.Is(err, invoicedomain.ErrInvoiceNotFound) {
+			return apierror.NotFound("invoice not found")
+		}
+		if errors.Is(err, invoicedomain.ErrTenantLineNotLinked) {
+			return apierror.Conflict("tenant has not linked a LINE account")
+		}
+		return apierror.Internal("failed to send invoice via LINE")
+	}
+
+	return apiresponse.Message(c, "invoice sent via LINE")
+}
+
 // Delete godoc
 // @Summary Delete an invoice
 // @Tags invoices

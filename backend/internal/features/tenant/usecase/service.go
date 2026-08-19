@@ -53,6 +53,13 @@ type Repository interface {
 	Create(ctx context.Context, input CreateInput) (tenantdomain.Tenant, error)
 	Update(ctx context.Context, id uuid.UUID, input UpdateInput) (tenantdomain.Tenant, error)
 	Delete(ctx context.Context, id uuid.UUID) error
+	UpdateLineUserID(ctx context.Context, id uuid.UUID, lineUserID string) (tenantdomain.Tenant, error)
+}
+
+// LineVerifier confirms a LIFF id token was issued by this app's LINE
+// channel and returns the LINE userId it belongs to.
+type LineVerifier interface {
+	VerifyIDToken(ctx context.Context, idToken string) (string, error)
 }
 
 // ActivityLogger records tenant create/update/delete events for the audit
@@ -62,12 +69,13 @@ type ActivityLogger interface {
 }
 
 type Service struct {
-	repo        Repository
-	activityLog ActivityLogger
+	repo         Repository
+	activityLog  ActivityLogger
+	lineVerifier LineVerifier
 }
 
-func New(repo Repository, activityLog ActivityLogger) *Service {
-	return &Service{repo: repo, activityLog: activityLog}
+func New(repo Repository, activityLog ActivityLogger, lineVerifier LineVerifier) *Service {
+	return &Service{repo: repo, activityLog: activityLog, lineVerifier: lineVerifier}
 }
 
 // recordActivity is best-effort: a failure to write the audit trail must
@@ -192,6 +200,24 @@ func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddre
 
 	s.recordActivity(ctx, &requesterID, "DELETE", id, fmt.Sprintf("Deleted tenant: %s %s", tenant.FirstName, tenant.LastName), ipAddress)
 	return nil
+}
+
+// LinkLine verifies a LIFF id token (obtained client-side after the tenant
+// opens their personal linking link and logs into LINE) and stores the
+// resulting LINE userId on the tenant, so future invoices can be pushed to
+// them directly through the OA.
+func (s *Service) LinkLine(ctx context.Context, id uuid.UUID, idToken string) (tenantdomain.Tenant, error) {
+	idToken = strings.TrimSpace(idToken)
+	if idToken == "" {
+		return tenantdomain.Tenant{}, tenantdomain.ErrInvalidLineToken
+	}
+
+	lineUserID, err := s.lineVerifier.VerifyIDToken(ctx, idToken)
+	if err != nil {
+		return tenantdomain.Tenant{}, tenantdomain.ErrInvalidLineToken
+	}
+
+	return s.repo.UpdateLineUserID(ctx, id, lineUserID)
 }
 
 func (s *Service) CheckDeletion(ctx context.Context, id uuid.UUID) (DeletionCheck, error) {

@@ -7,4 +7,5 @@ var (
 	ErrRequiredTenantData = errors.New("first_name and last_name are required")
 	ErrTenantIDCardExists = errors.New("id card already exists")
 	ErrTenantHasContracts = errors.New("tenant has contracts and cannot be deleted")
+	ErrInvalidLineToken   = errors.New("invalid or expired LINE id token")
 )

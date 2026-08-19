@@ -465,6 +465,7 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		`ALTER TABLE room_types ADD COLUMN IF NOT EXISTS price NUMERIC(10,2) NOT NULL DEFAULT 0`,
 
 		`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS line_id VARCHAR(100) DEFAULT ''`,
+		`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS line_user_id VARCHAR(64) DEFAULT ''`,
 
 		`ALTER TABLE parking_registrations ADD COLUMN IF NOT EXISTS room_id UUID`,
 		`CREATE INDEX IF NOT EXISTS idx_parking_registrations_room_id ON parking_registrations(room_id)`,

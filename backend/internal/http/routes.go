@@ -68,12 +68,15 @@ import (
 	watermeterrepository "apihorpug/internal/features/watermeter/repository/postgres"
 	watermeterusecase "apihorpug/internal/features/watermeter/usecase"
 	"apihorpug/internal/http/middleware"
+	"apihorpug/internal/platform/lineapi"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTokenTTL, refreshTokenTTL time.Duration, cookieSecure bool) {
+func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTokenTTL, refreshTokenTTL time.Duration, cookieSecure bool, lineChannelAccessToken, lineChannelID string) {
+	lineClient := lineapi.New(lineChannelAccessToken, lineChannelID)
+
 	permissionRepo := permissionrepository.NewRepository(db)
 	permissionService := permissionusecase.New(permissionRepo)
 	permissionHandler := permissionhttp.NewHandler(permissionService)
@@ -99,7 +102,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	roomService := roomusecase.New(roomRepo, activityLogService)
 	roomHandler := roomhttp.NewHandler(roomService)
 	tenantRepo := tenantrepository.NewRepository(db)
-	tenantService := tenantusecase.New(tenantRepo, activityLogService)
+	tenantService := tenantusecase.New(tenantRepo, activityLogService, lineClient)
 	tenantHandler := tenanthttp.NewHandler(tenantService)
 	contractRepo := contractrepository.NewRepository(db)
 	contractService := contractusecase.New(contractRepo, activityLogService)
@@ -111,7 +114,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	waterMeterService := watermeterusecase.New(waterMeterRepo)
 	waterMeterHandler := watermeterhttp.NewHandler(waterMeterService)
 	invoiceRepo := invoicerepository.NewRepository(db)
-	invoiceService := invoiceusecase.New(invoiceRepo)
+	invoiceService := invoiceusecase.New(invoiceRepo, lineClient)
 	invoiceHandler := invoicehttp.NewHandler(invoiceService)
 	paymentRepo := paymentrepository.NewRepository(db)
 	paymentService := paymentusecase.New(paymentRepo)
@@ -146,6 +149,11 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	authGroup.Post("/login", authHandler.Login)
 	authGroup.Post("/refresh", authHandler.Refresh)
 	authGroup.Post("/logout", authHandler.Logout)
+
+	// Unauthenticated: called from the LIFF linking page a tenant opens from
+	// their own LINE app, before they have any session with this system.
+	publicGroup := app.Group("/api/v1/public")
+	publicGroup.Post("/tenants/:id/line/link", tenantHandler.LinkLine)
 
 	api := app.Group("/api/v1")
 	api.Use(middleware.RequireAuth(secretKey))
@@ -233,6 +241,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Delete("/invoices/:id", requirePermission("/invoices", permissiondomain.ActionDelete), invoiceHandler.Delete)
 	api.Post("/invoices/:id/items", requirePermission("/invoices", permissiondomain.ActionUpdate), invoiceHandler.AddItem)
 	api.Delete("/invoices/:id/items/:itemId", requirePermission("/invoices", permissiondomain.ActionUpdate), invoiceHandler.RemoveItem)
+	api.Post("/invoices/:id/send-line", requirePermission("/invoices", permissiondomain.ActionUpdate), invoiceHandler.SendLine)
 
 	api.Get("/payments", requirePermission("/payments", permissiondomain.ActionRead), paymentHandler.List)
 	api.Get("/payments/:id", requirePermission("/payments", permissiondomain.ActionRead), paymentHandler.Get)

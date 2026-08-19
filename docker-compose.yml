@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ""
+        VITE_LIFF_ID: ${VITE_LIFF_ID:-}
     networks:
       - frontend_net
     healthcheck:

@@ -44,6 +44,8 @@ type InvoiceListCardProps = {
   onCreateInvoice: () => void
   onEditInvoice: (invoice: ApiInvoice) => void
   onDeleteInvoice: (invoice: ApiInvoice) => void
+  sendingLineInvoiceId: string | null
+  onSendLineInvoice: (invoice: ApiInvoice) => void
 }
 
 export function InvoiceListCard({
@@ -69,6 +71,8 @@ export function InvoiceListCard({
   onCreateInvoice,
   onEditInvoice,
   onDeleteInvoice,
+  sendingLineInvoiceId,
+  onSendLineInvoice,
 }: InvoiceListCardProps) {
   const { t } = useLanguage()
 
@@ -149,16 +153,29 @@ export function InvoiceListCard({
                               type="button"
                               size="icon"
                               variant="outline"
-                              title={invoice.tenant_line_id ? t('invoiceSendLine') : t('invoiceSendLineUnavailable')}
+                              title={
+                                invoice.tenant_line_user_id
+                                  ? t('invoiceSendLine')
+                                  : invoice.tenant_line_id
+                                    ? t('invoiceOpenLineChat')
+                                    : t('invoiceSendLineUnavailable')
+                              }
                               aria-label={t('invoiceSendLine')}
-                              disabled={!invoice.tenant_line_id}
-                              onClick={() =>
+                              disabled={
+                                (!invoice.tenant_line_user_id && !invoice.tenant_line_id) ||
+                                sendingLineInvoiceId === invoice.id
+                              }
+                              onClick={() => {
+                                if (invoice.tenant_line_user_id) {
+                                  onSendLineInvoice(invoice)
+                                  return
+                                }
                                 window.open(
                                   `https://line.me/ti/p/~${encodeURIComponent(invoice.tenant_line_id ?? '')}`,
                                   '_blank',
                                   'noopener,noreferrer',
                                 )
-                              }
+                              }}
                             >
                               <MessageCircle />
                             </Button>

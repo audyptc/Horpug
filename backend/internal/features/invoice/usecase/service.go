@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -54,12 +55,19 @@ type Repository interface {
 	RemoveItem(ctx context.Context, invoiceID, itemID, requesterID uuid.UUID) (invoicedomain.Invoice, error)
 }
 
-type Service struct {
-	repo Repository
+// LinePusher sends a text message to a tenant's linked LINE account through
+// the dormitory's LINE Official Account.
+type LinePusher interface {
+	PushMessage(ctx context.Context, lineUserID, text string) error
 }
 
-func New(repo Repository) *Service {
-	return &Service{repo: repo}
+type Service struct {
+	repo       Repository
+	linePusher LinePusher
+}
+
+func New(repo Repository, linePusher LinePusher) *Service {
+	return &Service{repo: repo, linePusher: linePusher}
 }
 
 func (s *Service) List(ctx context.Context, requesterID uuid.UUID, filters ListFilters, limit, offset int) ([]invoicedomain.Invoice, int64, error) {
@@ -127,4 +135,27 @@ func (s *Service) AddItem(ctx context.Context, invoiceID, requesterID uuid.UUID,
 
 func (s *Service) RemoveItem(ctx context.Context, invoiceID, itemID, requesterID uuid.UUID) (invoicedomain.Invoice, error) {
 	return s.repo.RemoveItem(ctx, invoiceID, itemID, requesterID)
+}
+
+// SendLine pushes a text summary of the invoice to the tenant's linked LINE
+// account through the dormitory's LINE Official Account.
+func (s *Service) SendLine(ctx context.Context, invoiceID, requesterID uuid.UUID) error {
+	invoice, err := s.repo.GetByID(ctx, invoiceID, requesterID)
+	if err != nil {
+		return err
+	}
+	if invoice.TenantLineUserID == "" {
+		return invoicedomain.ErrTenantLineNotLinked
+	}
+
+	text := fmt.Sprintf(
+		"ใบแจ้งหนี้ห้อง %s\nงวด %02d/%d\nยอดรวม %.2f บาท\nครบกำหนดชำระ %s",
+		invoice.RoomNumber,
+		invoice.PeriodMonth,
+		invoice.PeriodYear,
+		invoice.TotalAmount,
+		invoice.DueDate.Format("02/01/2006"),
+	)
+
+	return s.linePusher.PushMessage(ctx, invoice.TenantLineUserID, text)
 }
