@@ -231,6 +231,8 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Post("/invoices", requirePermission("/invoices", permissiondomain.ActionCreate), invoiceHandler.Create)
 	api.Put("/invoices/:id", requirePermission("/invoices", permissiondomain.ActionUpdate), invoiceHandler.Update)
 	api.Delete("/invoices/:id", requirePermission("/invoices", permissiondomain.ActionDelete), invoiceHandler.Delete)
+	api.Post("/invoices/:id/items", requirePermission("/invoices", permissiondomain.ActionUpdate), invoiceHandler.AddItem)
+	api.Delete("/invoices/:id/items/:itemId", requirePermission("/invoices", permissiondomain.ActionUpdate), invoiceHandler.RemoveItem)
 
 	api.Get("/payments", requirePermission("/payments", permissiondomain.ActionRead), paymentHandler.List)
 	api.Get("/payments/:id", requirePermission("/payments", permissiondomain.ActionRead), paymentHandler.Get)

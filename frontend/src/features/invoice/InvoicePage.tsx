@@ -30,10 +30,15 @@ export default function InvoicePage() {
   const [formNote, setFormNote] = useState('')
   const [formSaving, setFormSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [formPendingItems, setFormPendingItems] = useState<{ description: string; amount: number }[]>([])
 
   const [deletingInvoiceId, setDeletingInvoiceId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [confirmDeleteInvoice, setConfirmDeleteInvoice] = useState<ApiInvoice | null>(null)
+
+  const [itemSaving, setItemSaving] = useState(false)
+  const [itemError, setItemError] = useState<string | null>(null)
+  const [removingItemId, setRemovingItemId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -98,6 +103,8 @@ export default function InvoicePage() {
     setFormStatus('unpaid')
     setFormNote('')
     setFormError(null)
+    setItemError(null)
+    setFormPendingItems([])
     setFormOpen(true)
   }
 
@@ -108,6 +115,7 @@ export default function InvoicePage() {
     setFormStatus(invoice.status)
     setFormNote(invoice.note)
     setFormError(null)
+    setItemError(null)
     setFormOpen(true)
 
     setFormDetailLoading(true)
@@ -163,8 +171,22 @@ export default function InvoicePage() {
           due_date: toApiDate(formDueDate),
           note: formNote.trim(),
         }
-        const { data } = await api.post<ApiInvoice>('/invoices', payload)
-        setInvoices((prev) => [...(prev ?? []), data])
+        const { data: created } = await api.post<ApiInvoice>('/invoices', payload)
+        setInvoices((prev) => [...(prev ?? []), created])
+
+        let finalInvoice = created
+        for (const item of formPendingItems) {
+          try {
+            const { data: updated } = await api.post<ApiInvoice>(`/invoices/${created.id}/items`, item)
+            finalInvoice = updated
+            setInvoices((prev) => prev?.map((inv) => (inv.id === updated.id ? updated : inv)) ?? prev)
+          } catch (err) {
+            openEditForm(finalInvoice)
+            setFormError(extractErrorMessage(err, t('invoiceItemAddError')))
+            return
+          }
+        }
+
         setFormOpen(false)
       } catch (err) {
         setFormError(extractErrorMessage(err, t('invoiceCreateError')))
@@ -213,6 +235,51 @@ export default function InvoicePage() {
       setDeleteError(extractErrorMessage(err, t('invoiceDeleteError')))
     } finally {
       setDeletingInvoiceId(null)
+    }
+  }
+
+  function applyInvoiceUpdate(data: ApiInvoice) {
+    setFormInvoiceDetail(data)
+    setInvoices((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
+  }
+
+  async function handleAddItem(description: string, amount: number) {
+    if (!formInvoiceId) return
+
+    setItemSaving(true)
+    setItemError(null)
+
+    try {
+      const { data } = await api.post<ApiInvoice>(`/invoices/${formInvoiceId}/items`, { description, amount })
+      applyInvoiceUpdate(data)
+    } catch (err) {
+      setItemError(extractErrorMessage(err, t('invoiceItemAddError')))
+    } finally {
+      setItemSaving(false)
+    }
+  }
+
+  function addPendingItem(description: string, amount: number) {
+    setFormPendingItems((prev) => [...prev, { description, amount }])
+  }
+
+  function removePendingItem(index: number) {
+    setFormPendingItems((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  async function handleRemoveItem(itemId: string) {
+    if (!formInvoiceId) return
+
+    setRemovingItemId(itemId)
+    setItemError(null)
+
+    try {
+      const { data } = await api.delete<ApiInvoice>(`/invoices/${formInvoiceId}/items/${itemId}`)
+      applyInvoiceUpdate(data)
+    } catch (err) {
+      setItemError(extractErrorMessage(err, t('invoiceItemRemoveError')))
+    } finally {
+      setRemovingItemId(null)
     }
   }
 
@@ -285,6 +352,14 @@ export default function InvoicePage() {
         saving={formSaving}
         error={formError}
         onSubmit={handleFormSubmit}
+        itemSaving={itemSaving}
+        itemError={itemError}
+        removingItemId={removingItemId}
+        onAddItem={handleAddItem}
+        onRemoveItem={handleRemoveItem}
+        pendingItems={formPendingItems}
+        onAddPendingItem={addPendingItem}
+        onRemovePendingItem={removePendingItem}
       />
     </main>
   )

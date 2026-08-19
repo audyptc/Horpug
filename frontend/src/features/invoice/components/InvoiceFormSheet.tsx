@@ -1,4 +1,5 @@
-import type { FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
+import { X } from 'lucide-react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Button } from '@/shared/components/ui/button'
 import {
@@ -49,6 +50,14 @@ type InvoiceFormSheetProps = {
   saving: boolean
   error: string | null
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  itemSaving: boolean
+  itemError: string | null
+  removingItemId: string | null
+  onAddItem: (description: string, amount: number) => void
+  onRemoveItem: (itemId: string) => void
+  pendingItems: { description: string; amount: number }[]
+  onAddPendingItem: (description: string, amount: number) => void
+  onRemovePendingItem: (index: number) => void
 }
 
 export function InvoiceFormSheet({
@@ -73,8 +82,39 @@ export function InvoiceFormSheet({
   saving,
   error,
   onSubmit,
+  itemSaving,
+  itemError,
+  removingItemId,
+  onAddItem,
+  onRemoveItem,
+  pendingItems,
+  onAddPendingItem,
+  onRemovePendingItem,
 }: InvoiceFormSheetProps) {
   const { t, language } = useLanguage()
+  const selectedContract = contracts.find((contract) => contract.id === contractId)
+  const [newItemDescription, setNewItemDescription] = useState('')
+  const [newItemAmount, setNewItemAmount] = useState('')
+  const [newPendingDescription, setNewPendingDescription] = useState('')
+  const [newPendingAmount, setNewPendingAmount] = useState('')
+
+  const canEditItems = !!invoice && invoice.status !== 'paid' && invoice.status !== 'cancelled'
+
+  function handleAddItemClick() {
+    const amount = Number(newItemAmount)
+    if (!newItemDescription.trim() || !Number.isFinite(amount) || amount <= 0) return
+    onAddItem(newItemDescription.trim(), amount)
+    setNewItemDescription('')
+    setNewItemAmount('')
+  }
+
+  function handleAddPendingItemClick() {
+    const amount = Number(newPendingAmount)
+    if (!newPendingDescription.trim() || !Number.isFinite(amount) || amount <= 0) return
+    onAddPendingItem(newPendingDescription.trim(), amount)
+    setNewPendingDescription('')
+    setNewPendingAmount('')
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -123,18 +163,67 @@ export function InvoiceFormSheet({
                           {(invoice.items ?? []).map((item) => (
                             <li
                               key={item.id}
-                              className="flex items-center justify-between px-3 py-2 text-sm font-normal"
+                              className="flex items-center justify-between gap-2 px-3 py-2 text-sm font-normal"
                             >
                               <span>
                                 {t(invoiceItemTypeLabelKeys[item.item_type] ?? 'invoiceItemTypeOther')}
                                 {item.description ? ` · ${item.description}` : ''}
                               </span>
-                              <span className="text-muted-foreground">{item.amount.toLocaleString()}</span>
+                              <span className="flex items-center gap-2">
+                                <span className="text-muted-foreground">{item.amount.toLocaleString()}</span>
+                                {canEditItems && item.item_type === 'other' && (
+                                  <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7 shrink-0 text-muted-foreground"
+                                    title={t('invoiceFormItemRemove')}
+                                    aria-label={t('invoiceFormItemRemove')}
+                                    onClick={() => onRemoveItem(item.id)}
+                                    disabled={removingItemId === item.id}
+                                  >
+                                    <X className="size-3.5" />
+                                  </Button>
+                                )}
+                              </span>
                             </li>
                           ))}
                         </ul>
                       )}
                     </div>
+
+                    {canEditItems ? (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <input
+                          type="text"
+                          className="h-9 min-w-0 flex-1 rounded-md border border-input bg-transparent px-2.5 text-sm"
+                          placeholder={t('invoiceFormItemDescriptionPlaceholder')}
+                          value={newItemDescription}
+                          onChange={(event) => setNewItemDescription(event.target.value)}
+                        />
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="h-9 w-28 shrink-0 rounded-md border border-input bg-transparent px-2.5 text-right text-sm"
+                          placeholder={t('invoiceFormItemAmountPlaceholder')}
+                          value={newItemAmount}
+                          onChange={(event) => setNewItemAmount(event.target.value)}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleAddItemClick}
+                          disabled={itemSaving || !newItemDescription.trim() || !newItemAmount}
+                        >
+                          {t('invoiceFormAddItem')}
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="text-xs font-normal text-muted-foreground">{t('invoiceFormItemsLocked')}</p>
+                    )}
+                    {itemError && <p className="resource-error">{itemError}</p>}
                   </div>
 
                   <label className="flex flex-col gap-1.5 text-sm font-medium">
@@ -192,6 +281,18 @@ export function InvoiceFormSheet({
                   )}
                 </label>
 
+                {selectedContract && (
+                  <label className="flex flex-col gap-1.5 text-sm font-medium">
+                    {t('invoiceFormRentPricePreviewLabel')}
+                    <p className="text-sm font-normal text-muted-foreground">
+                      {selectedContract.room_number || '—'}
+                      {selectedContract.dormitory_name ? ` (${selectedContract.dormitory_name})` : ''}
+                      {' · '}
+                      {selectedContract.rent_price.toLocaleString()}
+                    </p>
+                  </label>
+                )}
+
                 <label className="flex flex-col gap-1.5 text-sm font-medium">
                   {t('invoiceFormPeriodLabel')}
                   <input
@@ -211,6 +312,65 @@ export function InvoiceFormSheet({
                     onChange={(event) => onIssueDateChange(event.target.value)}
                   />
                 </label>
+
+                <div className="flex flex-col gap-1.5 text-sm font-medium">
+                  {t('invoiceFormItemsLabel')}
+                  {pendingItems.length > 0 && (
+                    <div className="rounded-md border border-input">
+                      <ul className="divide-y divide-border">
+                        {pendingItems.map((item, index) => (
+                          <li
+                            key={`${item.description}-${index}`}
+                            className="flex items-center justify-between gap-2 px-3 py-2 text-sm font-normal"
+                          >
+                            <span>{item.description}</span>
+                            <span className="flex items-center gap-2">
+                              <span className="text-muted-foreground">{item.amount.toLocaleString()}</span>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 shrink-0 text-muted-foreground"
+                                title={t('invoiceFormItemRemove')}
+                                aria-label={t('invoiceFormItemRemove')}
+                                onClick={() => onRemovePendingItem(index)}
+                              >
+                                <X className="size-3.5" />
+                              </Button>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <input
+                      type="text"
+                      className="h-9 min-w-0 flex-1 rounded-md border border-input bg-transparent px-2.5 text-sm"
+                      placeholder={t('invoiceFormItemDescriptionPlaceholder')}
+                      value={newPendingDescription}
+                      onChange={(event) => setNewPendingDescription(event.target.value)}
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="h-9 w-28 shrink-0 rounded-md border border-input bg-transparent px-2.5 text-right text-sm"
+                      placeholder={t('invoiceFormItemAmountPlaceholder')}
+                      value={newPendingAmount}
+                      onChange={(event) => setNewPendingAmount(event.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddPendingItemClick}
+                      disabled={!newPendingDescription.trim() || !newPendingAmount}
+                    >
+                      {t('invoiceFormAddItem')}
+                    </Button>
+                  </div>
+                </div>
               </>
             )}
 

@@ -37,6 +37,11 @@ type updateInvoiceRequest struct {
 	Note    *string                      `json:"note"`
 }
 
+type addInvoiceItemRequest struct {
+	Description string  `json:"description"`
+	Amount      float64 `json:"amount"`
+}
+
 func NewHandler(usecase *invoiceusecase.Service) *Handler {
 	return &Handler{usecase: usecase}
 }
@@ -299,6 +304,116 @@ func (h *Handler) Update(c fiber.Ctx) error {
 			return apierror.BadRequest("invalid status")
 		}
 		return apierror.Internal("failed to update invoice")
+	}
+
+	return apiresponse.OK(c, invoice)
+}
+
+// AddItem godoc
+// @Summary Add a manual line item to an invoice
+// @Description Adds an ad-hoc "other" charge to the invoice and updates its total. Not allowed once the invoice is paid or cancelled.
+// @Tags invoices
+// @Accept json
+// @Produce json
+// @Param id path string true "Invoice ID"
+// @Param request body addInvoiceItemRequest true "Item payload"
+// @Success 201 {object} invoicedomain.Invoice
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 409 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /invoices/{id}/items [post]
+func (h *Handler) AddItem(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return apierror.BadRequest("invalid invoice id")
+	}
+
+	var req addInvoiceItemRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return apierror.BadRequest("invalid request body")
+	}
+
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	invoice, err := h.usecase.AddItem(ctx, id, requesterID, invoiceusecase.AddItemInput{
+		Description: req.Description,
+		Amount:      req.Amount,
+		UpdatedBy:   &requesterID,
+	})
+	if err != nil {
+		if errors.Is(err, invoicedomain.ErrInvoiceNotFound) {
+			return apierror.NotFound("invoice not found")
+		}
+		if errors.Is(err, invoicedomain.ErrRequiredInvoiceItemData) {
+			return apierror.BadRequest("description and amount are required")
+		}
+		if errors.Is(err, invoicedomain.ErrInvalidInvoiceItemAmount) {
+			return apierror.BadRequest("amount must be greater than zero")
+		}
+		if errors.Is(err, invoicedomain.ErrInvoiceLocked) {
+			return apierror.Conflict("invoice items cannot be changed once the invoice is paid or cancelled")
+		}
+		return apierror.Internal("failed to add invoice item")
+	}
+
+	return apiresponse.Created(c, invoice)
+}
+
+// RemoveItem godoc
+// @Summary Remove a manually added line item from an invoice
+// @Description Removes an "other" charge from the invoice and updates its total. System-generated rent/electricity/water items can't be removed this way, and neither can any item once the invoice is paid or cancelled.
+// @Tags invoices
+// @Produce json
+// @Param id path string true "Invoice ID"
+// @Param itemId path string true "Invoice item ID"
+// @Success 200 {object} invoicedomain.Invoice
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 409 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /invoices/{id}/items/{itemId} [delete]
+func (h *Handler) RemoveItem(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return apierror.BadRequest("invalid invoice id")
+	}
+	itemID, err := uuid.Parse(c.Params("itemId"))
+	if err != nil {
+		return apierror.BadRequest("invalid invoice item id")
+	}
+
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	invoice, err := h.usecase.RemoveItem(ctx, id, itemID, requesterID)
+	if err != nil {
+		if errors.Is(err, invoicedomain.ErrInvoiceNotFound) {
+			return apierror.NotFound("invoice not found")
+		}
+		if errors.Is(err, invoicedomain.ErrInvoiceItemNotFound) {
+			return apierror.NotFound("invoice item not found")
+		}
+		if errors.Is(err, invoicedomain.ErrInvoiceItemNotRemovable) {
+			return apierror.BadRequest("only manually added items can be removed")
+		}
+		if errors.Is(err, invoicedomain.ErrInvoiceLocked) {
+			return apierror.Conflict("invoice items cannot be changed once the invoice is paid or cancelled")
+		}
+		return apierror.Internal("failed to remove invoice item")
 	}
 
 	return apiresponse.OK(c, invoice)

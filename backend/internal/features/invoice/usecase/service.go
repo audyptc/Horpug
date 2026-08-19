@@ -37,6 +37,12 @@ type UpdateInput struct {
 	UpdatedBy *uuid.UUID
 }
 
+type AddItemInput struct {
+	Description string
+	Amount      float64
+	UpdatedBy   *uuid.UUID
+}
+
 type Repository interface {
 	Count(ctx context.Context, requesterID uuid.UUID, filters ListFilters) (int64, error)
 	List(ctx context.Context, requesterID uuid.UUID, filters ListFilters, limit, offset int) ([]invoicedomain.Invoice, error)
@@ -44,6 +50,8 @@ type Repository interface {
 	Create(ctx context.Context, input CreateInput) (invoicedomain.Invoice, error)
 	Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (invoicedomain.Invoice, error)
 	Delete(ctx context.Context, id, requesterID uuid.UUID) error
+	AddItem(ctx context.Context, invoiceID, requesterID uuid.UUID, input AddItemInput) (invoicedomain.Invoice, error)
+	RemoveItem(ctx context.Context, invoiceID, itemID, requesterID uuid.UUID) (invoicedomain.Invoice, error)
 }
 
 type Service struct {
@@ -102,4 +110,21 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 
 func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
 	return s.repo.Delete(ctx, id, requesterID)
+}
+
+func (s *Service) AddItem(ctx context.Context, invoiceID, requesterID uuid.UUID, input AddItemInput) (invoicedomain.Invoice, error) {
+	input.Description = strings.TrimSpace(input.Description)
+
+	if input.Description == "" {
+		return invoicedomain.Invoice{}, invoicedomain.ErrRequiredInvoiceItemData
+	}
+	if input.Amount <= 0 {
+		return invoicedomain.Invoice{}, invoicedomain.ErrInvalidInvoiceItemAmount
+	}
+
+	return s.repo.AddItem(ctx, invoiceID, requesterID, input)
+}
+
+func (s *Service) RemoveItem(ctx context.Context, invoiceID, itemID, requesterID uuid.UUID) (invoicedomain.Invoice, error) {
+	return s.repo.RemoveItem(ctx, invoiceID, itemID, requesterID)
 }

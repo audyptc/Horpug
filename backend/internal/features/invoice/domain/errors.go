@@ -10,4 +10,10 @@ var (
 	ErrInvalidInvoiceStatus = errors.New("invalid invoice status")
 	ErrContractNotFound     = errors.New("contract not found")
 	ErrInvoiceExists        = errors.New("an invoice for this contract and period already exists")
+
+	ErrRequiredInvoiceItemData  = errors.New("description and amount are required")
+	ErrInvalidInvoiceItemAmount = errors.New("amount must be greater than zero")
+	ErrInvoiceItemNotFound      = errors.New("invoice item not found")
+	ErrInvoiceItemNotRemovable  = errors.New("only manually added items can be removed")
+	ErrInvoiceLocked            = errors.New("invoice items cannot be changed once the invoice is paid or cancelled")
 )

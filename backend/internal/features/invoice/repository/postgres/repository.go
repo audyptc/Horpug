@@ -352,6 +352,120 @@ func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, inpu
 	return invoice, nil
 }
 
+// AddItem appends a manually-entered "other" line item to the invoice and
+// keeps total_amount in sync, in a single transaction. Blocked once the
+// invoice is paid or cancelled, since those states are meant to be settled.
+func (r *Repository) AddItem(ctx context.Context, invoiceID, requesterID uuid.UUID, input invoiceusecase.AddItemInput) (invoicedomain.Invoice, error) {
+	if err := r.ensureInvoiceAccess(ctx, invoiceID, requesterID); err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+
+	status, err := r.loadInvoiceStatus(ctx, invoiceID)
+	if err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+	if status == invoicedomain.InvoiceStatusPaid || status == invoicedomain.InvoiceStatusCancelled {
+		return invoicedomain.Invoice{}, invoicedomain.ErrInvoiceLocked
+	}
+
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := insertInvoiceItem(ctx, tx, invoiceID, invoicedomain.InvoiceItemTypeOther, input.Description, nil, input.Amount); err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE invoices SET total_amount = total_amount + $1, updated_by = $2, updated_at = NOW() WHERE id = $3
+	`, input.Amount, input.UpdatedBy, invoiceID); err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+
+	return r.loadInvoiceWithItems(ctx, invoiceID)
+}
+
+// RemoveItem deletes a manually-entered "other" line item and keeps
+// total_amount in sync, in a single transaction. System-generated items
+// (rent/electricity/water) can't be removed this way, and neither can any
+// item once the invoice is paid or cancelled.
+func (r *Repository) RemoveItem(ctx context.Context, invoiceID, itemID, requesterID uuid.UUID) (invoicedomain.Invoice, error) {
+	if err := r.ensureInvoiceAccess(ctx, invoiceID, requesterID); err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+
+	status, err := r.loadInvoiceStatus(ctx, invoiceID)
+	if err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+	if status == invoicedomain.InvoiceStatusPaid || status == invoicedomain.InvoiceStatusCancelled {
+		return invoicedomain.Invoice{}, invoicedomain.ErrInvoiceLocked
+	}
+
+	var itemType invoicedomain.InvoiceItemType
+	var amount float64
+	err = r.db.QueryRow(ctx, `
+		SELECT item_type, amount FROM invoice_items WHERE id = $1 AND invoice_id = $2
+	`, itemID, invoiceID).Scan(&itemType, &amount)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return invoicedomain.Invoice{}, invoicedomain.ErrInvoiceItemNotFound
+		}
+		return invoicedomain.Invoice{}, err
+	}
+	if itemType != invoicedomain.InvoiceItemTypeOther {
+		return invoicedomain.Invoice{}, invoicedomain.ErrInvoiceItemNotRemovable
+	}
+
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, `DELETE FROM invoice_items WHERE id = $1`, itemID); err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE invoices SET total_amount = total_amount - $1, updated_by = $2, updated_at = NOW() WHERE id = $3
+	`, amount, requesterID, invoiceID); err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+
+	return r.loadInvoiceWithItems(ctx, invoiceID)
+}
+
+func (r *Repository) loadInvoiceStatus(ctx context.Context, invoiceID uuid.UUID) (invoicedomain.InvoiceStatus, error) {
+	var status invoicedomain.InvoiceStatus
+	err := r.db.QueryRow(ctx, `SELECT status FROM invoices WHERE id = $1`, invoiceID).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", invoicedomain.ErrInvoiceNotFound
+	}
+	return status, err
+}
+
+func (r *Repository) loadInvoiceWithItems(ctx context.Context, invoiceID uuid.UUID) (invoicedomain.Invoice, error) {
+	invoice, err := r.loadInvoiceByID(ctx, invoiceID)
+	if err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+	items, err := r.loadInvoiceItems(ctx, invoiceID)
+	if err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+	invoice.Items = items
+	return invoice, nil
+}
+
 func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
 	if err := r.ensureInvoiceAccess(ctx, id, requesterID); err != nil {
 		return err
