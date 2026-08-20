@@ -322,6 +322,9 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 		if errors.Is(err, meterdomain.ErrMeterNotFound) {
 			return apierror.NotFound("meter reading not found")
 		}
+		if errors.Is(err, meterdomain.ErrMeterHasBilledUsage) {
+			return apierror.Conflict("meter reading has already been billed and cannot be deleted")
+		}
 		return apierror.Internal("failed to delete meter reading")
 	}
 

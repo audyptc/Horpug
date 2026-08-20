@@ -3,6 +3,7 @@ import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { InformationDialog } from '@/shared/components/information-dialog'
 import type { ApiRoom } from '@/features/room/types'
 import { WaterMeterListCard } from './components/WaterMeterListCard'
 import { WaterMeterFormSheet } from './components/WaterMeterFormSheet'
@@ -35,6 +36,7 @@ export default function WaterMeterPage() {
   const [deletingMeterId, setDeletingMeterId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [confirmDeleteMeter, setConfirmDeleteMeter] = useState<ApiWaterMeter | null>(null)
+  const [deleteBlocked, setDeleteBlocked] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -197,6 +199,14 @@ export default function WaterMeterPage() {
     }
   }
 
+  function handleRequestDeleteMeter(meter: ApiWaterMeter) {
+    if (meter.is_billed) {
+      setDeleteBlocked(true)
+      return
+    }
+    setConfirmDeleteMeter(meter)
+  }
+
   async function handleDeleteMeter() {
     if (!confirmDeleteMeter) return
     const meter = confirmDeleteMeter
@@ -247,7 +257,7 @@ export default function WaterMeterPage() {
         deletingMeterId={deletingMeterId}
         onCreateMeter={openCreateForm}
         onEditMeter={openEditForm}
-        onDeleteMeter={setConfirmDeleteMeter}
+        onDeleteMeter={handleRequestDeleteMeter}
       />
 
       <ConfirmDialog
@@ -260,6 +270,14 @@ export default function WaterMeterPage() {
         loading={deletingMeterId === confirmDeleteMeter?.id}
         error={deleteError}
         onConfirm={handleDeleteMeter}
+      />
+
+      <InformationDialog
+        open={deleteBlocked}
+        onOpenChange={(open) => !open && setDeleteBlocked(false)}
+        title={t('waterMeterDeleteBlockedTitle')}
+        description={t('waterMeterDeleteBlockedDescription')}
+        actionLabel={t('acknowledge')}
       />
 
       <WaterMeterFormSheet

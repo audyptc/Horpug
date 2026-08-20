@@ -277,6 +277,14 @@ func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) erro
 		return err
 	}
 
+	billed, err := r.isBilled(ctx, id)
+	if err != nil {
+		return err
+	}
+	if billed {
+		return meterdomain.ErrMeterHasBilledUsage
+	}
+
 	result, err := r.db.Exec(ctx, `DELETE FROM electricity_meters WHERE id = $1`, id)
 	if err != nil {
 		return err
@@ -286,6 +294,20 @@ func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) erro
 	}
 
 	return nil
+}
+
+// isBilled reports whether an invoice item already references this meter
+// reading, so deleting it would orphan the invoice item's link back to the
+// reading it was billed from.
+func (r *Repository) isBilled(ctx context.Context, id uuid.UUID) (bool, error) {
+	var billed bool
+	err := r.db.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM invoice_items WHERE reference_id = $1 AND item_type = 'electricity')
+	`, id).Scan(&billed)
+	if err != nil {
+		return false, err
+	}
+	return billed, nil
 }
 
 func (r *Repository) loadMeterByID(ctx context.Context, id uuid.UUID) (meterdomain.Meter, error) {

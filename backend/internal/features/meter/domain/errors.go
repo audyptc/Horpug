@@ -12,4 +12,5 @@ var (
 	ErrRoomNotFound         = errors.New("room not found")
 	ErrMeterReadingExists   = errors.New("a meter reading for this room and date already exists")
 	ErrMeterMonthExists     = errors.New("a meter reading for this room and month already exists")
+	ErrMeterHasBilledUsage  = errors.New("meter reading has already been billed and cannot be deleted")
 )
