@@ -4,10 +4,19 @@ import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiContract } from '@/features/contract/types'
+import type { ApiMeter } from '@/features/meter/types'
+import type { ApiWaterMeter } from '@/features/watermeter/types'
 import { InvoiceListCard } from './components/InvoiceListCard'
 import { InvoiceFormSheet } from './components/InvoiceFormSheet'
 import type { ApiInvoice, InvoiceStatus } from './types'
-import { INVOICE_PAGE_SIZE_OPTIONS, parsePeriodInputValue, toApiDate, toDateInputValue } from './utils'
+import {
+  INVOICE_PAGE_SIZE_OPTIONS,
+  parsePeriodInputValue,
+  sumMeterAmountForPeriod,
+  toApiDate,
+  toDateInputValue,
+  toPeriodInputValue,
+} from './utils'
 
 export default function InvoicePage() {
   const { t } = useLanguage()
@@ -31,6 +40,11 @@ export default function InvoicePage() {
   const [formSaving, setFormSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [formPendingItems, setFormPendingItems] = useState<{ description: string; amount: number }[]>([])
+  // Keyed by "roomId|YYYY-MM" so switching back and forth between contracts/periods
+  // within one sheet session doesn't refetch. Reset whenever the create sheet reopens.
+  const [utilityPreviewCache, setUtilityPreviewCache] = useState<
+    Record<string, { electricity: number | null; water: number | null }>
+  >({})
 
   const [deletingInvoiceId, setDeletingInvoiceId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -94,6 +108,53 @@ export default function InvoicePage() {
 
   const isLoading = !loadError && invoices === null
 
+  const selectedFormContract = contracts.find((item) => item.id === formContractId)
+  const selectedFormPeriod = parsePeriodInputValue(formPeriod)
+  const utilityPreviewKey =
+    selectedFormContract && selectedFormPeriod
+      ? `${selectedFormContract.room_id}|${toPeriodInputValue(selectedFormPeriod.year, selectedFormPeriod.month)}`
+      : null
+  const utilityPreview = utilityPreviewKey ? utilityPreviewCache[utilityPreviewKey] : undefined
+  const formUtilityLoading = utilityPreviewKey !== null && utilityPreview === undefined
+
+  // Preview the electricity/water charges the backend will auto-pull onto the
+  // invoice (see Repository.Create), so the create form shows the same
+  // rent + electricity + water breakdown before the user submits.
+  useEffect(() => {
+    if (formInvoiceId !== null || !formOpen || !utilityPreviewKey || utilityPreviewKey in utilityPreviewCache) return
+
+    const contract = selectedFormContract
+    const period = selectedFormPeriod
+    if (!contract || !period) return
+
+    let cancelled = false
+
+    Promise.all([
+      api.get<ApiPage<ApiMeter[]>>('/meters', { params: { room_id: contract.room_id, per_page: 100 } }),
+      api.get<ApiPage<ApiWaterMeter[]>>('/water-meters', { params: { room_id: contract.room_id, per_page: 100 } }),
+    ])
+      .then(([electricityRes, waterRes]) => {
+        if (cancelled) return
+        setUtilityPreviewCache((prev) => ({
+          ...prev,
+          [utilityPreviewKey]: {
+            electricity: sumMeterAmountForPeriod(electricityRes.data.data, period.year, period.month),
+            water: sumMeterAmountForPeriod(waterRes.data.data, period.year, period.month),
+          },
+        }))
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setUtilityPreviewCache((prev) => ({ ...prev, [utilityPreviewKey]: { electricity: null, water: null } }))
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [utilityPreviewKey, formInvoiceId, formOpen])
+
   function openCreateForm() {
     setFormInvoiceId(null)
     setFormInvoiceDetail(null)
@@ -107,6 +168,7 @@ export default function InvoicePage() {
     setFormError(null)
     setItemError(null)
     setFormPendingItems([])
+    setUtilityPreviewCache({})
     setFormOpen(true)
   }
 
@@ -356,6 +418,9 @@ export default function InvoicePage() {
         onContractIdChange={setFormContractId}
         period={formPeriod}
         onPeriodChange={setFormPeriod}
+        electricityAmount={utilityPreview?.electricity ?? null}
+        waterAmount={utilityPreview?.water ?? null}
+        utilityLoading={formUtilityLoading}
         issueDate={formIssueDate}
         onIssueDateChange={setFormIssueDate}
         dueDate={formDueDate}

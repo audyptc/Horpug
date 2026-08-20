@@ -2,9 +2,13 @@ package usecase
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"strings"
 	"time"
 
+	activitylogdomain "apihorpug/internal/features/activitylog/domain"
+	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
 	meterdomain "apihorpug/internal/features/meter/domain"
 
 	"github.com/google/uuid"
@@ -47,12 +51,42 @@ type Repository interface {
 	Delete(ctx context.Context, id, requesterID uuid.UUID) error
 }
 
-type Service struct {
-	repo Repository
+// ActivityLogger records meter reading create/update/delete events for the
+// audit trail. Failures to record are logged but never block the meter flow.
+type ActivityLogger interface {
+	Create(ctx context.Context, input activitylogusecase.CreateInput) (activitylogdomain.ActivityLog, error)
 }
 
-func New(repo Repository) *Service {
-	return &Service{repo: repo}
+type Service struct {
+	repo        Repository
+	activityLog ActivityLogger
+}
+
+func New(repo Repository, activityLog ActivityLogger) *Service {
+	return &Service{repo: repo, activityLog: activityLog}
+}
+
+// recordActivity is best-effort: a failure to write the audit trail must
+// never fail the meter CRUD flow itself.
+func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, entityID uuid.UUID, description, ipAddress string) {
+	if s.activityLog == nil {
+		return
+	}
+	_, err := s.activityLog.Create(ctx, activitylogusecase.CreateInput{
+		UserID:      userID,
+		Action:      action,
+		EntityType:  "meter",
+		EntityID:    &entityID,
+		Description: description,
+		IPAddress:   ipAddress,
+	})
+	if err != nil {
+		log.Printf("failed to record activity log (action=%s): %v", action, err)
+	}
+}
+
+func meterActivityDescription(meter meterdomain.Meter) string {
+	return fmt.Sprintf("electricity meter reading: room %s (%s)", meter.RoomNumber, meter.ReadingDate.Format("2006-01-02"))
 }
 
 func (s *Service) List(ctx context.Context, requesterID uuid.UUID, filters ListFilters, limit, offset int) ([]meterdomain.Meter, int64, error) {
@@ -73,7 +107,7 @@ func (s *Service) GetByID(ctx context.Context, id, requesterID uuid.UUID) (meter
 	return s.repo.GetByID(ctx, id, requesterID)
 }
 
-func (s *Service) Create(ctx context.Context, input CreateInput) (meterdomain.Meter, error) {
+func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress string) (meterdomain.Meter, error) {
 	input.Note = strings.TrimSpace(input.Note)
 
 	if input.RoomID == uuid.Nil || input.ReadingDate.IsZero() {
@@ -102,10 +136,16 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (meterdomain.Me
 		input.FlatAmount = nil
 	}
 
-	return s.repo.Create(ctx, input)
+	meter, err := s.repo.Create(ctx, input)
+	if err != nil {
+		return meterdomain.Meter{}, err
+	}
+
+	s.recordActivity(ctx, input.CreatedBy, "CREATE", meter.ID, "Created "+meterActivityDescription(meter), ipAddress)
+	return meter, nil
 }
 
-func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (meterdomain.Meter, error) {
+func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput, ipAddress string) (meterdomain.Meter, error) {
 	if input.BillingMethod != nil && !input.BillingMethod.Valid() {
 		return meterdomain.Meter{}, meterdomain.ErrInvalidBillingMethod
 	}
@@ -135,9 +175,25 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 		input.Note = &note
 	}
 
-	return s.repo.Update(ctx, id, requesterID, input)
+	meter, err := s.repo.Update(ctx, id, requesterID, input)
+	if err != nil {
+		return meterdomain.Meter{}, err
+	}
+
+	s.recordActivity(ctx, &requesterID, "UPDATE", meter.ID, "Updated "+meterActivityDescription(meter), ipAddress)
+	return meter, nil
 }
 
-func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
-	return s.repo.Delete(ctx, id, requesterID)
+func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddress string) error {
+	meter, err := s.repo.GetByID(ctx, id, requesterID)
+	if err != nil {
+		return err
+	}
+
+	if err := s.repo.Delete(ctx, id, requesterID); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, &requesterID, "DELETE", id, "Deleted "+meterActivityDescription(meter), ipAddress)
+	return nil
 }

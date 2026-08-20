@@ -190,7 +190,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		FlatAmount:    req.FlatAmount,
 		Note:          req.Note,
 		CreatedBy:     &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, metdomain.ErrRequiredMeterData) {
 			return apierror.BadRequest("room_id and reading_date are required")
@@ -264,7 +264,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		FlatAmount:    req.FlatAmount,
 		Note:          req.Note,
 		UpdatedBy:     &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, metdomain.ErrMeterNotFound) {
 			return apierror.NotFound("water meter reading not found")
@@ -318,7 +318,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := h.usecase.Delete(ctx, id, requesterID); err != nil {
+	if err := h.usecase.Delete(ctx, id, requesterID, c.IP()); err != nil {
 		if errors.Is(err, metdomain.ErrMeterNotFound) {
 			return apierror.NotFound("water meter reading not found")
 		}

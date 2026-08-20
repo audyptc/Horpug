@@ -27,3 +27,19 @@ export function toPeriodInputValue(year: number, month: number): string {
 export function formatPeriod(year: number, month: number): string {
   return `${String(month).padStart(2, '0')}/${year}`
 }
+
+// Sums total_amount for meter readings whose reading_date falls in the given
+// billing period, mirroring the backend's own [periodStart, periodEnd) filter
+// so the create-invoice preview matches what gets billed on submit. Returns
+// null when no reading was recorded for the period, so callers can tell that
+// apart from a reading that happens to total zero.
+export function sumMeterAmountForPeriod(
+  readings: { reading_date: string; total_amount: number }[],
+  year: number,
+  month: number
+): number | null {
+  const periodValue = toPeriodInputValue(year, month)
+  const matches = readings.filter((reading) => toDateInputValue(reading.reading_date).slice(0, 7) === periodValue)
+  if (matches.length === 0) return null
+  return matches.reduce((sum, reading) => sum + reading.total_amount, 0)
+}

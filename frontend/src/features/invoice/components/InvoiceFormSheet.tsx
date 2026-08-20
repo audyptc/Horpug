@@ -1,7 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import { X } from 'lucide-react'
+import { CalendarIcon, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
+import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/components/ui/button'
+import { Calendar } from '@/shared/components/ui/calendar'
+import { Combobox } from '@/shared/components/ui/combobox'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover'
 import {
   Sheet,
   SheetContent,
@@ -12,7 +16,7 @@ import {
 } from '@/shared/components/ui/sheet'
 import type { ApiContract } from '@/features/contract/types'
 import type { ApiInvoice, InvoiceStatus } from '../types'
-import { INVOICE_STATUSES, formatPeriod } from '../utils'
+import { INVOICE_STATUSES, formatPeriod, parsePeriodInputValue, toPeriodInputValue } from '../utils'
 
 const invoiceStatusLabelKeys: Record<InvoiceStatus, TranslationKey> = {
   unpaid: 'invoiceStatusUnpaid',
@@ -28,6 +32,186 @@ const invoiceItemTypeLabelKeys: Record<string, TranslationKey> = {
   other: 'invoiceItemTypeOther',
 }
 
+function parseDateInput(value: string): Date | undefined {
+  if (!value) return undefined
+  const [year, month, day] = value.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+function formatDateInput(date: Date | undefined): string {
+  if (!date) return ''
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+type DatePickerFieldProps = {
+  value: string
+  onChange: (value: string) => void
+  placeholder: string
+}
+
+function DatePickerField({ value, onChange, placeholder }: DatePickerFieldProps) {
+  const { t, language } = useLanguage()
+  const [open, setOpen] = useState(false)
+  const date = parseDateInput(value)
+  const dateLocale = language === 'th' ? 'th-TH' : 'en-US'
+
+  return (
+    <div className="flex min-w-0 items-center gap-1.5">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              'h-10 min-w-0 flex-1 justify-start gap-2 px-3 text-sm font-normal',
+              !date && 'text-muted-foreground'
+            )}
+          >
+            <CalendarIcon className="size-4 shrink-0" />
+            <span className="truncate">{date ? date.toLocaleDateString(dateLocale, { dateStyle: 'medium' }) : placeholder}</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            defaultMonth={date ?? new Date()}
+            selected={date}
+            onSelect={(next) => {
+              onChange(formatDateInput(next))
+              setOpen(false)
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+
+      {value && (
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="h-10 w-10 shrink-0 text-muted-foreground"
+          title={t('invoiceFormDateClear')}
+          aria-label={t('invoiceFormDateClear')}
+          onClick={() => onChange('')}
+        >
+          <X className="size-4" />
+        </Button>
+      )}
+    </div>
+  )
+}
+
+type MonthPickerFieldProps = {
+  value: string
+  onChange: (value: string) => void
+  placeholder: string
+}
+
+function MonthPickerField({ value, onChange, placeholder }: MonthPickerFieldProps) {
+  const { t, language } = useLanguage()
+  const [open, setOpen] = useState(false)
+  const parsed = parsePeriodInputValue(value)
+  const [viewYear, setViewYear] = useState(parsed?.year ?? new Date().getFullYear())
+  const dateLocale = language === 'th' ? 'th-TH' : 'en-US'
+
+  function handleOpenChange(next: boolean) {
+    if (next) setViewYear(parsed?.year ?? new Date().getFullYear())
+    setOpen(next)
+  }
+
+  const monthLabels = Array.from({ length: 12 }, (_, index) =>
+    new Date(2000, index, 1).toLocaleDateString(dateLocale, { month: 'short' })
+  )
+
+  return (
+    <div className="flex min-w-0 items-center gap-1.5">
+      <Popover open={open} onOpenChange={handleOpenChange}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              'h-10 min-w-0 flex-1 justify-start gap-2 px-3 text-sm font-normal',
+              !parsed && 'text-muted-foreground'
+            )}
+          >
+            <CalendarIcon className="size-4 shrink-0" />
+            <span className="truncate">
+              {parsed
+                ? new Date(parsed.year, parsed.month - 1, 1).toLocaleDateString(dateLocale, {
+                    year: 'numeric',
+                    month: 'long',
+                  })
+                : placeholder}
+            </span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-3" align="start">
+          <div className="flex items-center justify-between pb-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={() => setViewYear((year) => year - 1)}
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <span className="text-sm font-medium">{viewYear}</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={() => setViewYear((year) => year + 1)}
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {monthLabels.map((label, index) => {
+              const month = index + 1
+              const isSelected = parsed?.year === viewYear && parsed.month === month
+              return (
+                <Button
+                  key={label}
+                  type="button"
+                  variant={isSelected ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-8"
+                  onClick={() => {
+                    onChange(toPeriodInputValue(viewYear, month))
+                    setOpen(false)
+                  }}
+                >
+                  {label}
+                </Button>
+              )
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {value && (
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="h-10 w-10 shrink-0 text-muted-foreground"
+          title={t('invoiceFormDateClear')}
+          aria-label={t('invoiceFormDateClear')}
+          onClick={() => onChange('')}
+        >
+          <X className="size-4" />
+        </Button>
+      )}
+    </div>
+  )
+}
+
 type InvoiceFormSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -37,6 +221,9 @@ type InvoiceFormSheetProps = {
   onContractIdChange: (contractId: string) => void
   period: string
   onPeriodChange: (value: string) => void
+  electricityAmount: number | null
+  waterAmount: number | null
+  utilityLoading: boolean
   issueDate: string
   onIssueDateChange: (value: string) => void
   dueDate: string
@@ -69,6 +256,9 @@ export function InvoiceFormSheet({
   onContractIdChange,
   period,
   onPeriodChange,
+  electricityAmount,
+  waterAmount,
+  utilityLoading,
   issueDate,
   onIssueDateChange,
   dueDate,
@@ -265,19 +455,19 @@ export function InvoiceFormSheet({
                   {contracts.length === 0 ? (
                     <p className="text-xs font-normal text-muted-foreground">{t('invoiceFormNoContracts')}</p>
                   ) : (
-                    <select
-                      className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                    <Combobox
+                      options={contracts.map((contract) => ({
+                        value: contract.id,
+                        label: `${contract.tenant_name} · ${contract.room_number}${
+                          contract.dormitory_name ? ` (${contract.dormitory_name})` : ''
+                        }`,
+                      }))}
                       value={contractId}
-                      onChange={(event) => onContractIdChange(event.target.value)}
-                    >
-                      <option value="">{t('invoiceFormContractPlaceholder')}</option>
-                      {contracts.map((contract) => (
-                        <option key={contract.id} value={contract.id}>
-                          {contract.tenant_name} · {contract.room_number}
-                          {contract.dormitory_name ? ` (${contract.dormitory_name})` : ''}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={onContractIdChange}
+                      placeholder={t('invoiceFormContractPlaceholder')}
+                      searchPlaceholder={t('invoiceFormContractSearchPlaceholder')}
+                      emptyText={t('invoiceFormContractNoResults')}
+                    />
                   )}
                 </label>
 
@@ -295,21 +485,59 @@ export function InvoiceFormSheet({
 
                 <label className="flex flex-col gap-1.5 text-sm font-medium">
                   {t('invoiceFormPeriodLabel')}
-                  <input
-                    type="month"
-                    className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                  <MonthPickerField
                     value={period}
-                    onChange={(event) => onPeriodChange(event.target.value)}
+                    onChange={onPeriodChange}
+                    placeholder={t('invoiceFormPeriodLabel')}
                   />
                 </label>
 
+                {selectedContract && parsePeriodInputValue(period) && (
+                  <div className="flex flex-col gap-1.5 text-sm font-medium">
+                    {t('invoiceFormUtilityPreviewLabel')}
+                    {utilityLoading ? (
+                      <p className="text-sm font-normal text-muted-foreground">{t('loading')}</p>
+                    ) : (
+                      <div className="rounded-md border border-input">
+                        <ul className="divide-y divide-border text-sm font-normal">
+                          <li className="flex items-center justify-between gap-2 px-3 py-2">
+                            <span>{t('invoiceItemTypeElectricity')}</span>
+                            <span className="text-muted-foreground">
+                              {electricityAmount !== null
+                                ? electricityAmount.toLocaleString()
+                                : t('invoiceFormUtilityNoReading')}
+                            </span>
+                          </li>
+                          <li className="flex items-center justify-between gap-2 px-3 py-2">
+                            <span>{t('invoiceItemTypeWater')}</span>
+                            <span className="text-muted-foreground">
+                              {waterAmount !== null
+                                ? waterAmount.toLocaleString()
+                                : t('invoiceFormUtilityNoReading')}
+                            </span>
+                          </li>
+                          <li className="flex items-center justify-between gap-2 px-3 py-2 font-medium">
+                            <span>{t('invoiceFormEstimatedTotalLabel')}</span>
+                            <span>
+                              {(
+                                selectedContract.rent_price +
+                                (electricityAmount ?? 0) +
+                                (waterAmount ?? 0)
+                              ).toLocaleString()}
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <label className="flex flex-col gap-1.5 text-sm font-medium">
                   {t('invoiceFormIssueDateLabel')}
-                  <input
-                    type="date"
-                    className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                  <DatePickerField
                     value={issueDate}
-                    onChange={(event) => onIssueDateChange(event.target.value)}
+                    onChange={onIssueDateChange}
+                    placeholder={t('invoiceFormIssueDateLabel')}
                   />
                 </label>
 
@@ -377,11 +605,10 @@ export function InvoiceFormSheet({
             {(!isEdit || (!detailLoading && invoice)) && (
               <label className="flex flex-col gap-1.5 text-sm font-medium">
                 {t('invoiceFormDueDateLabel')}
-                <input
-                  type="date"
-                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                <DatePickerField
                   value={dueDate}
-                  onChange={(event) => onDueDateChange(event.target.value)}
+                  onChange={onDueDateChange}
+                  placeholder={t('invoiceFormDueDateLabel')}
                 />
               </label>
             )}
