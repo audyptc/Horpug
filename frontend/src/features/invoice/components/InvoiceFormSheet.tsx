@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { CalendarIcon, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { cn } from '@/shared/lib/utils'
@@ -212,6 +212,20 @@ function MonthPickerField({ value, onChange, placeholder }: MonthPickerFieldProp
   )
 }
 
+type FormSectionProps = {
+  title?: string
+  children: ReactNode
+}
+
+function FormSection({ title, children }: FormSectionProps) {
+  return (
+    <div className="flex flex-col gap-3">
+      {title && <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>}
+      {children}
+    </div>
+  )
+}
+
 type InvoiceFormSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -283,6 +297,12 @@ export function InvoiceFormSheet({
 }: InvoiceFormSheetProps) {
   const { t, language } = useLanguage()
   const selectedContract = contracts.find((contract) => contract.id === contractId)
+  const selectedPeriod = parsePeriodInputValue(period)
+  const estimatedTotal = selectedContract
+    ? selectedContract.rent_price + (electricityAmount ?? 0) + (waterAmount ?? 0)
+    : 0
+  const pendingItemsTotal = pendingItems.reduce((sum, item) => sum + item.amount, 0)
+  const grandTotal = estimatedTotal + pendingItemsTotal
   const [newItemDescription, setNewItemDescription] = useState('')
   const [newItemAmount, setNewItemAmount] = useState('')
   const [newPendingDescription, setNewPendingDescription] = useState('')
@@ -317,32 +337,37 @@ export function InvoiceFormSheet({
             </SheetDescription>
           </SheetHeader>
 
-          <div className="flex flex-1 flex-col gap-4 overflow-y-auto pr-1">
+          <div className="flex flex-1 flex-col gap-6 overflow-y-auto pr-1">
             {isEdit ? (
               detailLoading || !invoice ? (
                 <p className="metric-detail">{t('loading')}</p>
               ) : (
                 <>
-                  <label className="flex flex-col gap-1.5 text-sm font-medium">
-                    {t('invoiceFormTenantLabel')}
-                    <p className="text-sm font-normal text-muted-foreground">{invoice.tenant_name || '—'}</p>
-                  </label>
-                  <label className="flex flex-col gap-1.5 text-sm font-medium">
-                    {t('invoiceFormRoomLabel')}
-                    <p className="text-sm font-normal text-muted-foreground">
-                      {invoice.room_number || '—'}
-                      {invoice.dormitory_name ? ` (${invoice.dormitory_name})` : ''}
-                    </p>
-                  </label>
-                  <label className="flex flex-col gap-1.5 text-sm font-medium">
-                    {t('invoiceFormPeriodLabel')}
-                    <p className="text-sm font-normal text-muted-foreground">
-                      {formatPeriod(invoice.period_year, invoice.period_month)}
-                    </p>
-                  </label>
+                  <FormSection title={t('invoiceFormSectionBilling')}>
+                    <div className="rounded-md border border-input">
+                      <ul className="divide-y divide-border text-sm font-normal">
+                        <li className="flex items-center justify-between gap-2 px-3 py-2">
+                          <span className="font-medium">{t('invoiceFormTenantLabel')}</span>
+                          <span className="text-muted-foreground">{invoice.tenant_name || '—'}</span>
+                        </li>
+                        <li className="flex items-center justify-between gap-2 px-3 py-2">
+                          <span className="font-medium">{t('invoiceFormRoomLabel')}</span>
+                          <span className="text-muted-foreground">
+                            {invoice.room_number || '—'}
+                            {invoice.dormitory_name ? ` (${invoice.dormitory_name})` : ''}
+                          </span>
+                        </li>
+                        <li className="flex items-center justify-between gap-2 px-3 py-2">
+                          <span className="font-medium">{t('invoiceFormPeriodLabel')}</span>
+                          <span className="text-muted-foreground">
+                            {formatPeriod(invoice.period_year, invoice.period_month)}
+                          </span>
+                        </li>
+                      </ul>
+                    </div>
+                  </FormSection>
 
-                  <div className="flex flex-col gap-1.5 text-sm font-medium">
-                    {t('invoiceFormItemsLabel')}
+                  <FormSection title={t('invoiceFormItemsLabel')}>
                     <div className="rounded-md border border-input">
                       {(invoice.items ?? []).length === 0 ? (
                         <p className="px-3 py-2 text-sm font-normal text-muted-foreground">
@@ -414,135 +439,169 @@ export function InvoiceFormSheet({
                       <p className="text-xs font-normal text-muted-foreground">{t('invoiceFormItemsLocked')}</p>
                     )}
                     {itemError && <p className="resource-error">{itemError}</p>}
-                  </div>
+                  </FormSection>
 
-                  <label className="flex flex-col gap-1.5 text-sm font-medium">
-                    {t('invoiceFormTotalAmountLabel')}
-                    <p className="text-sm font-normal text-muted-foreground">
-                      {invoice.total_amount.toLocaleString()}
-                    </p>
-                  </label>
+                  <FormSection title={t('invoiceFormSectionSummary')}>
+                    <div className="rounded-md border border-input">
+                      <ul className="divide-y divide-border text-sm font-normal">
+                        <li className="flex items-center justify-between gap-2 px-3 py-2 font-medium">
+                          <span>{t('invoiceFormTotalAmountLabel')}</span>
+                          <span>{invoice.total_amount.toLocaleString()}</span>
+                        </li>
+                        {invoice.paid_at && (
+                          <li className="flex items-center justify-between gap-2 px-3 py-2">
+                            <span>{t('invoiceFormPaidAtLabel')}</span>
+                            <span className="text-muted-foreground">
+                              {new Date(invoice.paid_at).toLocaleString(language === 'th' ? 'th-TH' : 'en-US')}
+                            </span>
+                          </li>
+                        )}
+                      </ul>
+                    </div>
 
-                  {invoice.paid_at && (
                     <label className="flex flex-col gap-1.5 text-sm font-medium">
-                      {t('invoiceFormPaidAtLabel')}
-                      <p className="text-sm font-normal text-muted-foreground">
-                        {new Date(invoice.paid_at).toLocaleString(language === 'th' ? 'th-TH' : 'en-US')}
-                      </p>
+                      {t('invoiceFormStatusLabel')}
+                      <select
+                        className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                        value={status}
+                        onChange={(event) => onStatusChange(event.target.value as InvoiceStatus)}
+                      >
+                        {INVOICE_STATUSES.map((value) => (
+                          <option key={value} value={value}>
+                            {t(invoiceStatusLabelKeys[value])}
+                          </option>
+                        ))}
+                      </select>
                     </label>
-                  )}
+                  </FormSection>
 
-                  <label className="flex flex-col gap-1.5 text-sm font-medium">
-                    {t('invoiceFormStatusLabel')}
-                    <select
-                      className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                      value={status}
-                      onChange={(event) => onStatusChange(event.target.value as InvoiceStatus)}
-                    >
-                      {INVOICE_STATUSES.map((value) => (
-                        <option key={value} value={value}>
-                          {t(invoiceStatusLabelKeys[value])}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <FormSection title={t('invoiceFormSectionDates')}>
+                    <label className="flex flex-col gap-1.5 text-sm font-medium">
+                      {t('invoiceFormDueDateLabel')}
+                      <DatePickerField
+                        value={dueDate}
+                        onChange={onDueDateChange}
+                        placeholder={t('invoiceFormDueDateLabel')}
+                      />
+                    </label>
+                  </FormSection>
+
+                  <FormSection title={t('invoiceFormNoteLabel')}>
+                    <textarea
+                      className="min-h-20 rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                      value={note}
+                      onChange={(event) => onNoteChange(event.target.value)}
+                    />
+                  </FormSection>
                 </>
               )
             ) : (
               <>
-                <label className="flex flex-col gap-1.5 text-sm font-medium">
-                  {t('invoiceFormContractLabel')}
-                  {contracts.length === 0 ? (
-                    <p className="text-xs font-normal text-muted-foreground">{t('invoiceFormNoContracts')}</p>
-                  ) : (
-                    <Combobox
-                      options={contracts.map((contract) => ({
-                        value: contract.id,
-                        label: `${contract.tenant_name} · ${contract.room_number}${
-                          contract.dormitory_name ? ` (${contract.dormitory_name})` : ''
-                        }`,
-                      }))}
-                      value={contractId}
-                      onChange={onContractIdChange}
-                      placeholder={t('invoiceFormContractPlaceholder')}
-                      searchPlaceholder={t('invoiceFormContractSearchPlaceholder')}
-                      emptyText={t('invoiceFormContractNoResults')}
+                <FormSection title={t('invoiceFormSectionBilling')}>
+                  <label className="flex flex-col gap-1.5 text-sm font-medium">
+                    {t('invoiceFormContractLabel')}
+                    {contracts.length === 0 ? (
+                      <p className="text-xs font-normal text-muted-foreground">{t('invoiceFormNoContracts')}</p>
+                    ) : (
+                      <Combobox
+                        options={contracts.map((contract) => ({
+                          value: contract.id,
+                          label: `${contract.tenant_name} · ${contract.room_number}${
+                            contract.dormitory_name ? ` (${contract.dormitory_name})` : ''
+                          }`,
+                        }))}
+                        value={contractId}
+                        onChange={onContractIdChange}
+                        placeholder={t('invoiceFormContractPlaceholder')}
+                        searchPlaceholder={t('invoiceFormContractSearchPlaceholder')}
+                        emptyText={t('invoiceFormContractNoResults')}
+                      />
+                    )}
+                  </label>
+
+                  <label className="flex flex-col gap-1.5 text-sm font-medium">
+                    {t('invoiceFormPeriodLabel')}
+                    <MonthPickerField
+                      value={period}
+                      onChange={onPeriodChange}
+                      placeholder={t('invoiceFormPeriodLabel')}
                     />
-                  )}
-                </label>
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="flex flex-col gap-1.5 text-sm font-medium">
+                      {t('invoiceFormIssueDateLabel')}
+                      <DatePickerField
+                        value={issueDate}
+                        onChange={onIssueDateChange}
+                        placeholder={t('invoiceFormIssueDateLabel')}
+                      />
+                    </label>
+
+                    <label className="flex flex-col gap-1.5 text-sm font-medium">
+                      {t('invoiceFormDueDateLabel')}
+                      <DatePickerField
+                        value={dueDate}
+                        onChange={onDueDateChange}
+                        placeholder={t('invoiceFormDueDateLabel')}
+                      />
+                    </label>
+                  </div>
+                </FormSection>
 
                 {selectedContract && (
-                  <label className="flex flex-col gap-1.5 text-sm font-medium">
-                    {t('invoiceFormRentPricePreviewLabel')}
-                    <p className="text-sm font-normal text-muted-foreground">
-                      {selectedContract.room_number || '—'}
-                      {selectedContract.dormitory_name ? ` (${selectedContract.dormitory_name})` : ''}
-                      {' · '}
-                      {selectedContract.rent_price.toLocaleString()}
-                    </p>
-                  </label>
+                  <FormSection title={t('invoiceFormChargesPreviewLabel')}>
+                    <div className="rounded-md border border-input">
+                      <ul className="divide-y divide-border text-sm font-normal">
+                        <li className="flex items-center justify-between gap-2 px-3 py-2">
+                          <span>{t('invoiceFormRoomLabel')}</span>
+                          <span className="text-muted-foreground">
+                            {selectedContract.room_number || '—'}
+                            {selectedContract.dormitory_name ? ` (${selectedContract.dormitory_name})` : ''}
+                          </span>
+                        </li>
+                        <li className="flex items-center justify-between gap-2 px-3 py-2">
+                          <span>{t('invoiceItemTypeRent')}</span>
+                          <span className="text-muted-foreground">
+                            {selectedContract.rent_price.toLocaleString()}
+                          </span>
+                        </li>
+                        {!selectedPeriod ? (
+                          <li className="px-3 py-2 text-xs text-muted-foreground">
+                            {t('invoiceFormSelectPeriodHint')}
+                          </li>
+                        ) : utilityLoading ? (
+                          <li className="px-3 py-2 text-sm text-muted-foreground">{t('loading')}</li>
+                        ) : (
+                          <>
+                            <li className="flex items-center justify-between gap-2 px-3 py-2">
+                              <span>{t('invoiceItemTypeElectricity')}</span>
+                              <span className="text-muted-foreground">
+                                {electricityAmount !== null
+                                  ? electricityAmount.toLocaleString()
+                                  : t('invoiceFormUtilityNoReading')}
+                              </span>
+                            </li>
+                            <li className="flex items-center justify-between gap-2 px-3 py-2">
+                              <span>{t('invoiceItemTypeWater')}</span>
+                              <span className="text-muted-foreground">
+                                {waterAmount !== null
+                                  ? waterAmount.toLocaleString()
+                                  : t('invoiceFormUtilityNoReading')}
+                              </span>
+                            </li>
+                            <li className="flex items-center justify-between gap-2 px-3 py-2 font-medium">
+                              <span>{t('invoiceFormEstimatedTotalLabel')}</span>
+                              <span>{estimatedTotal.toLocaleString()}</span>
+                            </li>
+                          </>
+                        )}
+                      </ul>
+                    </div>
+                  </FormSection>
                 )}
 
-                <label className="flex flex-col gap-1.5 text-sm font-medium">
-                  {t('invoiceFormPeriodLabel')}
-                  <MonthPickerField
-                    value={period}
-                    onChange={onPeriodChange}
-                    placeholder={t('invoiceFormPeriodLabel')}
-                  />
-                </label>
-
-                {selectedContract && parsePeriodInputValue(period) && (
-                  <div className="flex flex-col gap-1.5 text-sm font-medium">
-                    {t('invoiceFormUtilityPreviewLabel')}
-                    {utilityLoading ? (
-                      <p className="text-sm font-normal text-muted-foreground">{t('loading')}</p>
-                    ) : (
-                      <div className="rounded-md border border-input">
-                        <ul className="divide-y divide-border text-sm font-normal">
-                          <li className="flex items-center justify-between gap-2 px-3 py-2">
-                            <span>{t('invoiceItemTypeElectricity')}</span>
-                            <span className="text-muted-foreground">
-                              {electricityAmount !== null
-                                ? electricityAmount.toLocaleString()
-                                : t('invoiceFormUtilityNoReading')}
-                            </span>
-                          </li>
-                          <li className="flex items-center justify-between gap-2 px-3 py-2">
-                            <span>{t('invoiceItemTypeWater')}</span>
-                            <span className="text-muted-foreground">
-                              {waterAmount !== null
-                                ? waterAmount.toLocaleString()
-                                : t('invoiceFormUtilityNoReading')}
-                            </span>
-                          </li>
-                          <li className="flex items-center justify-between gap-2 px-3 py-2 font-medium">
-                            <span>{t('invoiceFormEstimatedTotalLabel')}</span>
-                            <span>
-                              {(
-                                selectedContract.rent_price +
-                                (electricityAmount ?? 0) +
-                                (waterAmount ?? 0)
-                              ).toLocaleString()}
-                            </span>
-                          </li>
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <label className="flex flex-col gap-1.5 text-sm font-medium">
-                  {t('invoiceFormIssueDateLabel')}
-                  <DatePickerField
-                    value={issueDate}
-                    onChange={onIssueDateChange}
-                    placeholder={t('invoiceFormIssueDateLabel')}
-                  />
-                </label>
-
-                <div className="flex flex-col gap-1.5 text-sm font-medium">
-                  {t('invoiceFormItemsLabel')}
+                <FormSection title={t('invoiceFormItemsLabel')}>
                   {pendingItems.length > 0 && (
                     <div className="rounded-md border border-input">
                       <ul className="divide-y divide-border">
@@ -598,30 +657,23 @@ export function InvoiceFormSheet({
                       {t('invoiceFormAddItem')}
                     </Button>
                   </div>
-                </div>
+                </FormSection>
+
+                <FormSection>
+                  <div className="flex items-center justify-between gap-2 rounded-md border border-input px-3 py-2 text-sm font-semibold">
+                    <span>{t('invoiceFormGrandTotalLabel')}</span>
+                    <span>{grandTotal.toLocaleString()}</span>
+                  </div>
+                </FormSection>
+
+                <FormSection title={t('invoiceFormNoteLabel')}>
+                  <textarea
+                    className="min-h-20 rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                    value={note}
+                    onChange={(event) => onNoteChange(event.target.value)}
+                  />
+                </FormSection>
               </>
-            )}
-
-            {(!isEdit || (!detailLoading && invoice)) && (
-              <label className="flex flex-col gap-1.5 text-sm font-medium">
-                {t('invoiceFormDueDateLabel')}
-                <DatePickerField
-                  value={dueDate}
-                  onChange={onDueDateChange}
-                  placeholder={t('invoiceFormDueDateLabel')}
-                />
-              </label>
-            )}
-
-            {(!isEdit || (!detailLoading && invoice)) && (
-              <label className="flex flex-col gap-1.5 text-sm font-medium">
-                {t('invoiceFormNoteLabel')}
-                <textarea
-                  className="min-h-20 rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-                  value={note}
-                  onChange={(event) => onNoteChange(event.target.value)}
-                />
-              </label>
             )}
           </div>
 
