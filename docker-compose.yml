@@ -29,12 +29,12 @@ services:
       - ./backend/.env
     environment:
       APP_PORT: 8080
-      # Database runs directly on the host (not in Docker); reach it via the
-      # host gateway. Works on Docker Desktop out of the box, and on Linux
-      # Docker Engine 20.10+ via the extra_hosts entry below.
-      DB_HOST: host.docker.internal
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      # Postgres runs as the `postgres` service below; reach it by service
+      # name on the shared backend_net network.
+      DB_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - backend_net
     healthcheck:
@@ -43,6 +43,32 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  postgres:
+    image: postgres:17-alpine
+    env_file:
+      - ./backend/.env
+    # postgres only reads POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB (see
+    # the matching keys added to backend/.env) - kept equal to
+    # DB_USERNAME/DB_PASSWORD/DB_NAME, which the Go app itself reads.
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: always
     deploy:
       resources:
@@ -94,3 +120,4 @@ networks:
 
 volumes:
   certs:
+  postgres_data:
