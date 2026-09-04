@@ -19,11 +19,13 @@ jobs:
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_NAME: ${{ secrets.DB_NAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          CF_ORIGIN_CERT: ${{ secrets.CF_ORIGIN_CERT }}
+          CF_ORIGIN_KEY: ${{ secrets.CF_ORIGIN_KEY }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: APP_SECRETKEY,CORS_ORIGINS,DB_USERNAME,DB_NAME,DB_PASSWORD
+          envs: APP_SECRETKEY,CORS_ORIGINS,DB_USERNAME,DB_NAME,DB_PASSWORD,CF_ORIGIN_CERT,CF_ORIGIN_KEY
           script: |
             set -e
             cd /opt/horpug
@@ -34,6 +36,12 @@ jobs:
             echo "==> Write backend/.env"
             printf 'APP_SECRETKEY=%s\nCORS_ORIGINS=%s\nDB_USERNAME=%s\nDB_NAME=%s\nDB_PASSWORD=%s\nAPP_COOKIE_SECURE=true\nPOSTGRES_USER=%s\nPOSTGRES_DB=%s\nPOSTGRES_PASSWORD=%s\n' \
               "$APP_SECRETKEY" "$CORS_ORIGINS" "$DB_USERNAME" "$DB_NAME" "$DB_PASSWORD" "$DB_USERNAME" "$DB_NAME" "$DB_PASSWORD" > backend/.env
+
+            echo "==> Write nginx TLS cert (Cloudflare Origin CA, from GitHub secrets — never committed to the repo)"
+            mkdir -p nginx/certs
+            printf '%s\n' "$CF_ORIGIN_CERT" > nginx/certs/fullchain.pem
+            printf '%s\n' "$CF_ORIGIN_KEY" > nginx/certs/privkey.pem
+            chmod 600 nginx/certs/privkey.pem
 
             echo "==> Build and restart containers"
             docker compose up --build -d --remove-orphans
