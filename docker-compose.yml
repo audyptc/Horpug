@@ -117,4 +117,6 @@ services:
 networks:
   frontend_net:
   backend_net:
+
+volumes:
   postgres_data:
