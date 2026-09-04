@@ -22,3 +22,8 @@ node_modules
 
 # claude
 .claude
+
+# TLS cert/key placed on the VPS (Cloudflare Origin CA or Let's Encrypt) —
+# never commit private key material. See nginx/generate-cert.sh.
+nginx/certs/*
+!nginx/certs/.gitkeep
