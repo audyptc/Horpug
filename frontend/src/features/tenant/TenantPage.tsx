@@ -6,6 +6,7 @@ import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { InformationDialog } from '@/shared/components/information-dialog'
 import { TenantListCard } from './components/TenantListCard'
 import { TenantFormSheet } from './components/TenantFormSheet'
+import { TenantLineLinkDialog } from './components/TenantLineLinkDialog'
 import type { ApiTenant, ApiTenantDeletionCheck } from './types'
 import { TENANT_PAGE_SIZE_OPTIONS } from './utils'
 
@@ -256,16 +257,11 @@ export default function TenantPage() {
         onCopyLineLink={handleCopyLineLink}
       />
 
-      <InformationDialog
+      <TenantLineLinkDialog
         open={lineLinkInfo !== null}
         onOpenChange={(open) => !open && setLineLinkInfo(null)}
-        title={t('tenantLineLinkDialogTitle')}
-        description={
-          lineLinkInfo
-            ? `${t('tenantLineLinkDialogDescription').replace('{name}', `${lineLinkInfo.tenant.first_name} ${lineLinkInfo.tenant.last_name}`)}\n\n${lineLinkInfo.link}`
-            : ''
-        }
-        actionLabel={t('acknowledge')}
+        tenant={lineLinkInfo?.tenant ?? null}
+        link={lineLinkInfo?.link ?? ''}
       />
 
       <ConfirmDialog
