@@ -51,9 +51,16 @@ func Load() Config {
 		// silently drop the cookie.
 		CookieSecure: getEnvBool("APP_COOKIE_SECURE", false),
 
-		// LINE Messaging API credentials for the dormitory's LINE Official
-		// Account (see LINE Developers Console). LineChannelID is the numeric
-		// channel ID, used as the client_id when verifying a LIFF ID token.
+		// LineChannelAccessToken is the Messaging API channel's token, used
+		// to push messages through the dormitory's LINE OA.
+		//
+		// LineChannelID is NOT that same channel — LINE no longer allows
+		// attaching a LIFF app to a Messaging API channel, so the LIFF app
+		// (frontend/src/features/line/LineLinkPage.tsx) lives under a
+		// separate LINE Login channel created in the same Provider. This
+		// must be that LINE Login channel's Channel ID (Basic settings tab),
+		// since it's used as the client_id when verifying the LIFF id token
+		// (its "aud" claim is the channel that owns the LIFF app).
 		LineChannelAccessToken: getEnv("LINE_CHANNEL_ACCESS_TOKEN", ""),
 		LineChannelID:          getEnv("LINE_CHANNEL_ID", ""),
 	}
