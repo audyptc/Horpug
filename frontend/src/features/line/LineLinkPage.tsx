@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { Building2 } from 'lucide-react'
 import { api, extractErrorMessage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
@@ -14,8 +13,6 @@ type Status = 'loading' | 'linking' | 'success' | 'error'
 // secret that authorizes the link (see tenant handler.LinkLine).
 export default function LineLinkPage() {
   const { t } = useLanguage()
-  const [searchParams] = useSearchParams()
-  const tenantId = searchParams.get('tenant_id')
   const [status, setStatus] = useState<Status>('loading')
   const [error, setError] = useState<string | null>(null)
 
@@ -23,12 +20,6 @@ export default function LineLinkPage() {
     let cancelled = false
 
     async function run() {
-      if (!tenantId) {
-        setStatus('error')
-        setError(t('lineLinkMissingTenant'))
-        return
-      }
-
       const liffId = import.meta.env.VITE_LIFF_ID as string | undefined
       if (!liffId) {
         setStatus('error')
@@ -39,6 +30,18 @@ export default function LineLinkPage() {
       try {
         const liff = (await import('@line/liff')).default
         await liff.init({ liffId })
+
+        // liff.init() restores the real URL — LINE briefly encodes the
+        // original query string (our tenant_id) into a `liff.state` param
+        // while redirecting through liff.line.me, so tenant_id must be read
+        // from the live URL after init, not from what react-router saw on
+        // the very first render.
+        const tenantId = new URLSearchParams(window.location.search).get('tenant_id')
+        if (!tenantId) {
+          setStatus('error')
+          setError(t('lineLinkMissingTenant'))
+          return
+        }
 
         if (!liff.isLoggedIn()) {
           liff.login()
@@ -70,7 +73,7 @@ export default function LineLinkPage() {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId])
+  }, [])
 
   return (
     <div className="login-page">
