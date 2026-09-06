@@ -5,6 +5,30 @@ import { useLanguage } from '@/shared/i18n/language'
 
 type Status = 'loading' | 'linking' | 'success' | 'error'
 
+function readTenantIdFromLineRedirect(): string | null {
+  const url = new URL(window.location.href)
+  const directTenantId = url.searchParams.get('tenant_id')
+  if (directTenantId) return directTenantId
+
+  const encodedState = url.searchParams.get('liff.state')
+  if (encodedState) {
+    try {
+      const decoded = decodeURIComponent(encodedState)
+      const stateParams = new URLSearchParams(decoded)
+      const stateTenantId = stateParams.get('tenant_id')
+      if (stateTenantId) return stateTenantId
+    } catch {
+      // Ignore malformed state and fall through to the generic error below.
+    }
+  }
+
+  const hashState = new URLSearchParams(url.hash.replace(/^#/, ''))
+  const hashTenantId = hashState.get('tenant_id')
+  if (hashTenantId) return hashTenantId
+
+  return null
+}
+
 // Public page a tenant opens from inside the LINE app (via their personal
 // linking link, e.g. https://liff.line.me/{LIFF_ID}?tenant_id=...). It logs
 // them into the OA's LIFF app, reads the LINE userId LINE issues for that
@@ -35,8 +59,9 @@ export default function LineLinkPage() {
         // original query string (our tenant_id) into a `liff.state` param
         // while redirecting through liff.line.me, so tenant_id must be read
         // from the live URL after init, not from what react-router saw on
-        // the very first render.
-        const tenantId = new URLSearchParams(window.location.search).get('tenant_id')
+        // the very first render. Some users also land on a redirect that keeps
+        // the state in the hash or encoded query string, so we try both.
+        const tenantId = readTenantIdFromLineRedirect()
         if (!tenantId) {
           setStatus('error')
           setError(t('lineLinkMissingTenant'))
