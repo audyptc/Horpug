@@ -233,7 +233,7 @@ func (r *Repository) UnlinkLine(ctx context.Context, id uuid.UUID) (tenantdomain
 		return tenantdomain.Tenant{}, err
 	}
 
-	if _, err := r.db.Exec(ctx, `UPDATE tenants SET line_user_id = NULL, updated_at = NOW() WHERE id = $1`, id); err != nil {
+	if _, err := r.db.Exec(ctx, `UPDATE tenants SET line_user_id = '', updated_at = NOW() WHERE id = $1`, id); err != nil {
 		return tenantdomain.Tenant{}, err
 	}
 
