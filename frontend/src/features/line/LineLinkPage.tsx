@@ -5,6 +5,8 @@ import { useLanguage } from '@/shared/i18n/language'
 
 type Status = 'loading' | 'linking' | 'success' | 'error'
 
+const PENDING_TENANT_ID_KEY = 'liff_pending_tenant_id'
+
 function readTenantIdFromLineRedirect(): string | null {
   const url = new URL(window.location.href)
   const directTenantId = url.searchParams.get('tenant_id')
@@ -61,7 +63,13 @@ export default function LineLinkPage() {
         // from the live URL after init, not from what react-router saw on
         // the very first render. Some users also land on a redirect that keeps
         // the state in the hash or encoded query string, so we try both.
-        const tenantId = readTenantIdFromLineRedirect()
+        //
+        // None of that survives a fresh login/consent redirect for accounts
+        // that aren't already logged in to this LIFF app — LINE's round trip
+        // through the login screen can drop the query entirely. So we also
+        // fall back to a copy stashed in sessionStorage right before sending
+        // the user off to log in.
+        const tenantId = readTenantIdFromLineRedirect() ?? sessionStorage.getItem(PENDING_TENANT_ID_KEY)
         if (!tenantId) {
           setStatus('error')
           setError(t('lineLinkMissingTenant'))
@@ -69,9 +77,12 @@ export default function LineLinkPage() {
         }
 
         if (!liff.isLoggedIn()) {
+          sessionStorage.setItem(PENDING_TENANT_ID_KEY, tenantId)
           liff.login()
           return
         }
+
+        sessionStorage.removeItem(PENDING_TENANT_ID_KEY)
 
         const idToken = liff.getIDToken()
         if (!idToken) {
