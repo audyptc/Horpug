@@ -59,6 +59,7 @@ type Repository interface {
 // the dormitory's LINE Official Account.
 type LinePusher interface {
 	PushMessage(ctx context.Context, lineUserID, text string) error
+	IsFriend(ctx context.Context, lineUserID string) (bool, error)
 }
 
 type Service struct {
@@ -146,6 +147,14 @@ func (s *Service) SendLine(ctx context.Context, invoiceID, requesterID uuid.UUID
 	}
 	if invoice.TenantLineUserID == "" {
 		return invoicedomain.ErrTenantLineNotLinked
+	}
+
+	isFriend, err := s.linePusher.IsFriend(ctx, invoice.TenantLineUserID)
+	if err != nil {
+		return err
+	}
+	if !isFriend {
+		return invoicedomain.ErrTenantLineUnreachable
 	}
 
 	text := fmt.Sprintf(

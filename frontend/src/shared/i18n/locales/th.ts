@@ -95,6 +95,7 @@ const th: Record<TranslationKey, string> = {
   tenantLineIdColumn: 'ไลน์ไอดี',
   tenantLineLinked: 'เชื่อมต่อ LINE OA แล้ว',
   tenantCopyLineLink: 'คัดลอกลิงก์เชื่อมต่อ LINE',
+  tenantLineLinkRequiresLineId: 'กรอกไลน์ไอดีของผู้เช่าก่อนจึงจะสร้างลิงก์เชื่อมต่อได้',
   tenantLineLinkDialogTitle: 'เชื่อมต่อบัญชี LINE',
   tenantLineLinkDialogDescription: 'ให้ {name} สแกน QR นี้ด้วยแอป LINE เพื่อเชื่อมต่อบัญชี หรือส่งลิงก์ด้านล่างให้เปิดจากในแอป LINE:',
   tenantLineLinkQrHint: 'สแกนด้วยตัวสแกน QR ในแอป LINE (หน้าแชท > ไอคอนเพิ่ม > QR code)',

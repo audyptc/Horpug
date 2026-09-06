@@ -93,6 +93,7 @@ const en = {
   tenantLineIdColumn: 'LINE ID',
   tenantLineLinked: 'Linked to LINE OA',
   tenantCopyLineLink: 'Copy LINE linking link',
+  tenantLineLinkRequiresLineId: "Fill in the tenant's LINE ID before a linking link can be created",
   tenantLineLinkDialogTitle: 'Link LINE account',
   tenantLineLinkDialogDescription: 'Have {name} scan this QR code with the LINE app to link their account, or send them the link below to open from inside the LINE app:',
   tenantLineLinkQrHint: 'Scan with the QR scanner inside the LINE app (chat tab > add icon > QR code)',

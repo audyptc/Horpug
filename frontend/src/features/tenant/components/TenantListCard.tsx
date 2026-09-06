@@ -144,8 +144,9 @@ export function TenantListCard({
                               type="button"
                               size="icon"
                               variant="outline"
-                              title={t('tenantCopyLineLink')}
-                              aria-label={t('tenantCopyLineLink')}
+                              title={tenant.line_id ? t('tenantCopyLineLink') : t('tenantLineLinkRequiresLineId')}
+                              aria-label={tenant.line_id ? t('tenantCopyLineLink') : t('tenantLineLinkRequiresLineId')}
+                              disabled={!tenant.line_id}
                               onClick={() => onCopyLineLink(tenant)}
                             >
                               <Link2 />

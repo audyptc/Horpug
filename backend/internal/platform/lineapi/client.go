@@ -20,6 +20,15 @@ import (
 
 var ErrNotConfigured = errors.New("line integration is not configured")
 
+// ErrUserUnreachable means the target has not added this OA as a friend, or
+// has blocked it — LINE excludes such users from the friend graph, so any
+// message pushed to them is silently dropped even though the Push Message
+// API itself still reports success (LINE never confirms delivery, and
+// specifically won't reveal block status through the push endpoint, to keep
+// that private from bot developers). See:
+// https://developers.line.biz/en/reference/messaging-api/#get-profile
+var ErrUserUnreachable = errors.New("line user has not added the OA as a friend or has blocked it")
+
 type Client struct {
 	channelAccessToken string
 	channelID          string
@@ -84,6 +93,40 @@ func (c *Client) VerifyIDToken(ctx context.Context, idToken string) (string, err
 	}
 
 	return parsed.Sub, nil
+}
+
+// IsFriend reports whether userID currently has this OA as a friend (i.e. a
+// push message to them would actually be delivered). It calls the Get
+// Profile endpoint, which LINE documents as returning 404 exactly when the
+// user hasn't added the bot as a friend or has since blocked it — the only
+// reliable signal LINE exposes for this, since Push Message itself always
+// reports success.
+func (c *Client) IsFriend(ctx context.Context, userID string) (bool, error) {
+	if !c.configured() {
+		return false, ErrNotConfigured
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.line.me/v2/bot/profile/"+url.PathEscape(userID), nil)
+	if err != nil {
+		return false, err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.channelAccessToken)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return true, nil
+	case http.StatusNotFound:
+		return false, nil
+	default:
+		body, _ := io.ReadAll(resp.Body)
+		return false, fmt.Errorf("line get profile failed: status %d: %s", resp.StatusCode, string(body))
+	}
 }
 
 type pushMessageRequest struct {
