@@ -234,6 +234,14 @@ func (r *Repository) GetByID(ctx context.Context, id, requesterID uuid.UUID) (ro
 	return room, nil
 }
 
+// SetStatus updates a room's status directly, with no dormitory-scope check
+// since it's driven internally by contract lifecycle transitions rather than
+// a direct user edit.
+func (r *Repository) SetStatus(ctx context.Context, id uuid.UUID, status roomdomain.RoomStatus) error {
+	_, err := r.db.Exec(ctx, `UPDATE rooms SET status = $1, updated_at = NOW() WHERE id = $2`, status, id)
+	return err
+}
+
 func (r *Repository) Create(ctx context.Context, input roomusecase.CreateInput) (roomdomain.Room, error) {
 	if input.CreatedBy != nil {
 		if err := r.ensureDormitoryAccess(ctx, input.DormitoryID, *input.CreatedBy); err != nil {

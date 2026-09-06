@@ -46,6 +46,7 @@ type Repository interface {
 	Create(ctx context.Context, input CreateInput) (roomdomain.Room, error)
 	Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (roomdomain.Room, error)
 	Delete(ctx context.Context, id, requesterID uuid.UUID) error
+	SetStatus(ctx context.Context, id uuid.UUID, status roomdomain.RoomStatus) error
 }
 
 // ActivityLogger records room create/update/delete events for the audit
@@ -94,6 +95,13 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, dormitoryID *
 	}
 
 	return rooms, total, nil
+}
+
+// SetStatus updates a room's status directly, bypassing dormitory-scope
+// checks and the audit trail — it's driven internally by contract lifecycle
+// transitions (a contract starting/ending) rather than a direct user edit.
+func (s *Service) SetStatus(ctx context.Context, id uuid.UUID, status roomdomain.RoomStatus) error {
+	return s.repo.SetStatus(ctx, id, status)
 }
 
 func (s *Service) ListActive(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID, status *roomdomain.RoomStatus, search string, limit int) ([]roomdomain.Room, error) {

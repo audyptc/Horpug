@@ -10,6 +10,7 @@ import (
 	activitylogdomain "apihorpug/internal/features/activitylog/domain"
 	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
 	contractdomain "apihorpug/internal/features/contract/domain"
+	roomdomain "apihorpug/internal/features/room/domain"
 
 	"github.com/google/uuid"
 )
@@ -59,13 +60,34 @@ type ActivityLogger interface {
 	Create(ctx context.Context, input activitylogusecase.CreateInput) (activitylogdomain.ActivityLog, error)
 }
 
+// RoomStatusUpdater keeps a room's status in step with its contract
+// lifecycle (occupied while a contract is active, available once it's
+// expired/terminated). Failures are logged but never block the contract
+// flow — rm.status is a convenience display field, not the source of truth
+// for occupancy (that's still the contracts table itself).
+type RoomStatusUpdater interface {
+	SetStatus(ctx context.Context, roomID uuid.UUID, status roomdomain.RoomStatus) error
+}
+
 type Service struct {
 	repo        Repository
 	activityLog ActivityLogger
+	roomStatus  RoomStatusUpdater
 }
 
-func New(repo Repository, activityLog ActivityLogger) *Service {
-	return &Service{repo: repo, activityLog: activityLog}
+func New(repo Repository, activityLog ActivityLogger, roomStatus RoomStatusUpdater) *Service {
+	return &Service{repo: repo, activityLog: activityLog, roomStatus: roomStatus}
+}
+
+// syncRoomStatus is best-effort: a failure to update the room's display
+// status must never fail the contract CRUD flow itself.
+func (s *Service) syncRoomStatus(ctx context.Context, roomID uuid.UUID, status roomdomain.RoomStatus) {
+	if s.roomStatus == nil {
+		return
+	}
+	if err := s.roomStatus.SetStatus(ctx, roomID, status); err != nil {
+		log.Printf("failed to sync room status (room=%s, status=%s): %v", roomID, status, err)
+	}
 }
 
 // recordActivity is best-effort: a failure to write the audit trail must
@@ -128,6 +150,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress strin
 
 	s.recordActivity(ctx, input.CreatedBy, "CREATE", contract.ID,
 		fmt.Sprintf("Created contract: %s - room %s", contract.TenantName, contract.RoomNumber), ipAddress)
+	s.syncRoomStatus(ctx, contract.RoomID, roomdomain.RoomStatusOccupied)
 	return contract, nil
 }
 
@@ -162,6 +185,13 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 
 	s.recordActivity(ctx, &requesterID, "UPDATE", contract.ID,
 		fmt.Sprintf("Updated contract: %s - room %s", contract.TenantName, contract.RoomNumber), ipAddress)
+	if input.Status != nil {
+		if *input.Status == contractdomain.ContractStatusActive {
+			s.syncRoomStatus(ctx, contract.RoomID, roomdomain.RoomStatusOccupied)
+		} else {
+			s.syncRoomStatus(ctx, contract.RoomID, roomdomain.RoomStatusAvailable)
+		}
+	}
 	return contract, nil
 }
 

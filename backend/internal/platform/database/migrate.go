@@ -469,6 +469,13 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		`UPDATE tenants SET line_user_id = '' WHERE line_user_id IS NULL`,
 		`ALTER TABLE tenants ALTER COLUMN line_user_id SET NOT NULL`,
 
+		// rooms.status used to be set manually and never followed the
+		// contracts table, so it could drift from actual occupancy (contract
+		// create/update now keeps it in sync going forward) — backfill any
+		// room that's already out of step with its current contracts.
+		`UPDATE rooms SET status = 'occupied', updated_at = NOW() WHERE status <> 'occupied' AND EXISTS (SELECT 1 FROM contracts WHERE contracts.room_id = rooms.id AND contracts.status = 'active')`,
+		`UPDATE rooms SET status = 'available', updated_at = NOW() WHERE status = 'occupied' AND NOT EXISTS (SELECT 1 FROM contracts WHERE contracts.room_id = rooms.id AND contracts.status = 'active')`,
+
 		`ALTER TABLE parking_registrations ADD COLUMN IF NOT EXISTS room_id UUID`,
 		`CREATE INDEX IF NOT EXISTS idx_parking_registrations_room_id ON parking_registrations(room_id)`,
 

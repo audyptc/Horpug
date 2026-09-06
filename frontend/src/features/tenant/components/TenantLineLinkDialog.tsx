@@ -42,9 +42,14 @@ export function TenantLineLinkDialog({ open, onOpenChange, tenant, link }: Tenan
             <QRCodeSVG value={link} size={180} />
           </div>
           <p className="text-center text-xs text-muted-foreground">{t('tenantLineLinkQrHint')}</p>
-          <p className="w-full break-all rounded-md bg-muted px-3 py-2 text-center text-xs text-muted-foreground">
+          <a
+            href={link}
+            target="_blank"
+            rel="noreferrer"
+            className="w-full break-all rounded-md bg-muted px-3 py-2 text-center text-xs text-muted-foreground underline"
+          >
             {link}
-          </p>
+          </a>
         </div>
 
         <AlertDialogFooter>
