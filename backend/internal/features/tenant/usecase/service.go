@@ -54,6 +54,7 @@ type Repository interface {
 	Update(ctx context.Context, id uuid.UUID, input UpdateInput) (tenantdomain.Tenant, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 	UpdateLineUserID(ctx context.Context, id uuid.UUID, lineUserID string) (tenantdomain.Tenant, error)
+	UnlinkLine(ctx context.Context, id uuid.UUID) (tenantdomain.Tenant, error)
 }
 
 // LineVerifier confirms a LIFF id token was issued by this app's LINE
@@ -218,6 +219,19 @@ func (s *Service) LinkLine(ctx context.Context, id uuid.UUID, idToken string) (t
 	}
 
 	return s.repo.UpdateLineUserID(ctx, id, lineUserID)
+}
+
+// UnlinkLine clears a tenant's stored LINE userId, e.g. because the wrong
+// LINE account was linked, so their linking link can be used again to link
+// the correct one.
+func (s *Service) UnlinkLine(ctx context.Context, id, requesterID uuid.UUID, ipAddress string) (tenantdomain.Tenant, error) {
+	tenant, err := s.repo.UnlinkLine(ctx, id)
+	if err != nil {
+		return tenantdomain.Tenant{}, err
+	}
+
+	s.recordActivity(ctx, &requesterID, "UPDATE", tenant.ID, fmt.Sprintf("Unlinked LINE account for tenant: %s %s", tenant.FirstName, tenant.LastName), ipAddress)
+	return tenant, nil
 }
 
 func (s *Service) CheckDeletion(ctx context.Context, id uuid.UUID) (DeletionCheck, error) {

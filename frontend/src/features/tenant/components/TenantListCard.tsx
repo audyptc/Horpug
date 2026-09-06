@@ -1,4 +1,4 @@
-import { CheckCircle2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Link2, Pencil, Trash2 } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Link2, Pencil, Trash2, Unlink } from 'lucide-react'
 import { useLanguage } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
@@ -31,6 +31,7 @@ type TenantListCardProps = {
   onEditTenant: (tenant: ApiTenant) => void
   onDeleteTenant: (tenant: ApiTenant) => void
   onCopyLineLink: (tenant: ApiTenant) => void
+  onUnlinkLine: (tenant: ApiTenant) => void
 }
 
 export function TenantListCard({
@@ -57,6 +58,7 @@ export function TenantListCard({
   onEditTenant,
   onDeleteTenant,
   onCopyLineLink,
+  onUnlinkLine,
 }: TenantListCardProps) {
   const { t } = useLanguage()
 
@@ -148,6 +150,18 @@ export function TenantListCard({
                             >
                               <Link2 />
                             </Button>
+                            {tenant.line_user_id && (
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                title={t('tenantUnlinkLine')}
+                                aria-label={t('tenantUnlinkLine')}
+                                onClick={() => onUnlinkLine(tenant)}
+                              >
+                                <Unlink />
+                              </Button>
+                            )}
                             <Button
                               type="button"
                               size="icon"

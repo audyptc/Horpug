@@ -40,6 +40,10 @@ export default function TenantPage() {
 
   const [lineLinkInfo, setLineLinkInfo] = useState<{ tenant: ApiTenant; link: string } | null>(null)
 
+  const [confirmUnlinkTenant, setConfirmUnlinkTenant] = useState<ApiTenant | null>(null)
+  const [unlinkingTenantId, setUnlinkingTenantId] = useState<string | null>(null)
+  const [unlinkError, setUnlinkError] = useState<string | null>(null)
+
   useEffect(() => {
     let cancelled = false
 
@@ -221,6 +225,24 @@ export default function TenantPage() {
     setLineLinkInfo({ tenant, link })
   }
 
+  async function handleUnlinkLine() {
+    if (!confirmUnlinkTenant) return
+    const tenant = confirmUnlinkTenant
+
+    setUnlinkingTenantId(tenant.id)
+    setUnlinkError(null)
+
+    try {
+      const { data } = await api.delete<ApiTenant>(`/tenants/${tenant.id}/line`)
+      setTenants((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
+      setConfirmUnlinkTenant(null)
+    } catch (err) {
+      setUnlinkError(extractErrorMessage(err, t('tenantUnlinkLineError')))
+    } finally {
+      setUnlinkingTenantId(null)
+    }
+  }
+
   return (
     <main className="content">
       <section className="welcome">
@@ -255,6 +277,7 @@ export default function TenantPage() {
         onEditTenant={openEditForm}
         onDeleteTenant={handleRequestDeleteTenant}
         onCopyLineLink={handleCopyLineLink}
+        onUnlinkLine={setConfirmUnlinkTenant}
       />
 
       <TenantLineLinkDialog
@@ -274,6 +297,18 @@ export default function TenantPage() {
         loading={deletingTenantId === confirmDeleteTenant?.id}
         error={deleteError}
         onConfirm={handleDeleteTenant}
+      />
+
+      <ConfirmDialog
+        open={confirmUnlinkTenant !== null}
+        onOpenChange={(open) => !open && setConfirmUnlinkTenant(null)}
+        title={t('tenantUnlinkLine')}
+        description={t('tenantUnlinkLineConfirm')}
+        confirmLabel={t('tenantUnlinkLine')}
+        cancelLabel={t('cancel')}
+        loading={unlinkingTenantId === confirmUnlinkTenant?.id}
+        error={unlinkError}
+        onConfirm={handleUnlinkLine}
       />
 
       <InformationDialog

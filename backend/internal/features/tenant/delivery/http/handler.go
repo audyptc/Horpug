@@ -351,6 +351,44 @@ func (h *Handler) LinkLine(c fiber.Ctx) error {
 	return apiresponse.Message(c, "line account linked")
 }
 
+// UnlinkLine godoc
+// @Summary Unlink a tenant's LINE account
+// @Description Clears the tenant's stored LINE userId so their personal linking link can be used again to link a (possibly different) LINE account.
+// @Tags tenants
+// @Produce json
+// @Param id path string true "Tenant ID"
+// @Success 200 {object} tenantdomain.Tenant
+// @Failure 400 {object} apierror.Error
+// @Failure 401 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /tenants/{id}/line [delete]
+func (h *Handler) UnlinkLine(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return apierror.BadRequest("invalid tenant id")
+	}
+
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	tenant, err := h.usecase.UnlinkLine(ctx, id, requesterID, c.IP())
+	if err != nil {
+		if errors.Is(err, tenantdomain.ErrTenantNotFound) {
+			return apierror.NotFound("tenant not found")
+		}
+		return apierror.Internal("failed to unlink LINE account")
+	}
+
+	return apiresponse.OK(c, tenant)
+}
+
 // CheckDeletion godoc
 // @Summary Check whether a tenant can be deleted
 // @Tags tenants

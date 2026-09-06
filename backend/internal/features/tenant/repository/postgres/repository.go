@@ -226,6 +226,20 @@ func (r *Repository) UpdateLineUserID(ctx context.Context, id uuid.UUID, lineUse
 	return r.loadTenantByID(ctx, id)
 }
 
+// UnlinkLine clears a tenant's LINE userId, e.g. because the wrong LINE
+// account was linked, so the linking link can be reused for a fresh link.
+func (r *Repository) UnlinkLine(ctx context.Context, id uuid.UUID) (tenantdomain.Tenant, error) {
+	if err := r.ensureTenantExists(ctx, id); err != nil {
+		return tenantdomain.Tenant{}, err
+	}
+
+	if _, err := r.db.Exec(ctx, `UPDATE tenants SET line_user_id = NULL, updated_at = NOW() WHERE id = $1`, id); err != nil {
+		return tenantdomain.Tenant{}, err
+	}
+
+	return r.loadTenantByID(ctx, id)
+}
+
 func (r *Repository) CountContracts(ctx context.Context, id uuid.UUID) (int64, error) {
 	var contractCount int64
 	err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM contracts WHERE tenant_id = $1`, id).Scan(&contractCount)
