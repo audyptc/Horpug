@@ -58,9 +58,20 @@ type Repository interface {
 }
 
 // LineVerifier confirms a LIFF id token was issued by this app's LINE
-// channel and returns the LINE userId it belongs to.
+// channel and returns the LINE userId it belongs to, and reports which LINE
+// Official Account the Messaging API channel belongs to.
 type LineVerifier interface {
 	VerifyIDToken(ctx context.Context, idToken string) (string, error)
+	GetBotInfo(ctx context.Context) (basicID, displayName string, err error)
+}
+
+// LineOAInfo identifies the dormitory's LINE Official Account, so tenants can
+// be pointed at it to add it as a friend — a prerequisite for receiving any
+// pushed invoice, and separate from having linked their account.
+type LineOAInfo struct {
+	BasicID      string `json:"basic_id"`
+	DisplayName  string `json:"display_name"`
+	AddFriendURL string `json:"add_friend_url"`
 }
 
 // ActivityLogger records tenant create/update/delete events for the audit
@@ -219,6 +230,21 @@ func (s *Service) LinkLine(ctx context.Context, id uuid.UUID, idToken string) (t
 	}
 
 	return s.repo.UpdateLineUserID(ctx, id, lineUserID)
+}
+
+// LineOAInfo reports the dormitory's LINE Official Account and the URL that
+// adds it as a friend.
+func (s *Service) LineOAInfo(ctx context.Context) (LineOAInfo, error) {
+	basicID, displayName, err := s.lineVerifier.GetBotInfo(ctx)
+	if err != nil {
+		return LineOAInfo{}, err
+	}
+
+	return LineOAInfo{
+		BasicID:      basicID,
+		DisplayName:  displayName,
+		AddFriendURL: "https://line.me/R/ti/p/" + basicID,
+	}, nil
 }
 
 // UnlinkLine clears a tenant's stored LINE userId, e.g. because the wrong

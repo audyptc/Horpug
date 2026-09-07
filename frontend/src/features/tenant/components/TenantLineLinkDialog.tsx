@@ -17,9 +17,16 @@ type TenantLineLinkDialogProps = {
   onOpenChange: (open: boolean) => void
   tenant: ApiTenant | null
   link: string
+  addFriendUrl: string | null
 }
 
-export function TenantLineLinkDialog({ open, onOpenChange, tenant, link }: TenantLineLinkDialogProps) {
+export function TenantLineLinkDialog({
+  open,
+  onOpenChange,
+  tenant,
+  link,
+  addFriendUrl,
+}: TenantLineLinkDialogProps) {
   const { t } = useLanguage()
 
   return (
@@ -51,6 +58,20 @@ export function TenantLineLinkDialog({ open, onOpenChange, tenant, link }: Tenan
             {link}
           </a>
         </div>
+
+        {addFriendUrl && (
+          <div className="flex flex-col gap-1 border-t border-border pt-3">
+            <p className="text-xs text-muted-foreground">{t('tenantLineAddFriendHint')}</p>
+            <a
+              href={addFriendUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="break-all text-xs text-muted-foreground underline"
+            >
+              {addFriendUrl}
+            </a>
+          </div>
+        )}
 
         <AlertDialogFooter>
           <AlertDialogCancel asChild>

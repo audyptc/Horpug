@@ -41,6 +41,7 @@ export default function LineLinkPage() {
   const { t } = useLanguage()
   const [status, setStatus] = useState<Status>('loading')
   const [error, setError] = useState<string | null>(null)
+  const [addFriendUrl, setAddFriendUrl] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -124,6 +125,20 @@ export default function LineLinkPage() {
           }
         }
 
+        if (cancelled) return
+
+        // Still not a friend: the tenant is linked but unreachable by push,
+        // so hand them a one-tap link to add the OA rather than just telling
+        // them to go find it themselves.
+        if (!isFriend) {
+          try {
+            const { data } = await api.get<{ add_friend_url: string }>('/public/line/oa')
+            if (!cancelled) setAddFriendUrl(data.add_friend_url)
+          } catch {
+            // Ignore — the message alone still tells them what to do.
+          }
+        }
+
         if (!cancelled) setStatus(isFriend ? 'success' : 'success-needs-friend')
       } catch (err) {
         if (!cancelled) {
@@ -160,7 +175,21 @@ export default function LineLinkPage() {
 
         {(status === 'loading' || status === 'linking') && <p>{t('lineLinkInProgress')}</p>}
         {status === 'success' && <p>{t('lineLinkSuccess')}</p>}
-        {status === 'success-needs-friend' && <p>{t('lineLinkSuccessNeedsFriend')}</p>}
+        {status === 'success-needs-friend' && (
+          <>
+            <p>{t('lineLinkSuccessNeedsFriend')}</p>
+            {addFriendUrl && (
+              <a
+                href={addFriendUrl}
+                className="line-add-friend-button"
+                target="_blank"
+                rel="noreferrer"
+              >
+                {t('lineLinkAddFriendAction')}
+              </a>
+            )}
+          </>
+        )}
         {status === 'error' && <p className="login-error">{error}</p>}
       </div>
     </div>

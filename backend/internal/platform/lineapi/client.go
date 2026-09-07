@@ -129,6 +129,49 @@ func (c *Client) IsFriend(ctx context.Context, userID string) (bool, error) {
 	}
 }
 
+type botInfoResponse struct {
+	BasicID     string `json:"basicId"`
+	DisplayName string `json:"displayName"`
+}
+
+// GetBotInfo returns the OA's public "@handle" (basicId) and display name for
+// the configured Messaging API channel — the handle its add-friend URL is
+// built from. See:
+// https://developers.line.biz/en/reference/messaging-api/#get-bot-info
+func (c *Client) GetBotInfo(ctx context.Context) (string, string, error) {
+	if !c.configured() {
+		return "", "", ErrNotConfigured
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.line.me/v2/bot/info", nil)
+	if err != nil {
+		return "", "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.channelAccessToken)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", "", err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", "", fmt.Errorf("line get bot info failed: status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var parsed botInfoResponse
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		return "", "", fmt.Errorf("line get bot info: invalid response: %w", err)
+	}
+
+	return parsed.BasicID, parsed.DisplayName, nil
+}
+
 type pushMessageRequest struct {
 	To       string            `json:"to"`
 	Messages []pushTextMessage `json:"messages"`

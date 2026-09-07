@@ -650,6 +650,17 @@ body {
   color: hsl(0 90% 80%);
 }
 
+.line-add-friend-button {
+  display: block;
+  padding: 0.7rem 1rem;
+  border-radius: 0.5rem;
+  background: #06c755;
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
 .login-field {
   display: flex;
   flex-direction: column;

@@ -154,6 +154,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	// their own LINE app, before they have any session with this system.
 	publicGroup := app.Group("/api/v1/public")
 	publicGroup.Post("/tenants/:id/line/link", tenantHandler.LinkLine)
+	publicGroup.Get("/line/oa", tenantHandler.LineOAInfo)
 
 	api := app.Group("/api/v1")
 	api.Use(middleware.RequireAuth(secretKey))

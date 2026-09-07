@@ -39,6 +39,7 @@ export default function TenantPage() {
   const [blockedDeletionContractCount, setBlockedDeletionContractCount] = useState<number | null>(null)
 
   const [lineLinkInfo, setLineLinkInfo] = useState<{ tenant: ApiTenant; link: string } | null>(null)
+  const [addFriendUrl, setAddFriendUrl] = useState<string | null>(null)
 
   const [confirmUnlinkTenant, setConfirmUnlinkTenant] = useState<ApiTenant | null>(null)
   const [unlinkingTenantId, setUnlinkingTenantId] = useState<string | null>(null)
@@ -223,6 +224,17 @@ export default function TenantPage() {
     }
 
     setLineLinkInfo({ tenant, link })
+
+    // The OA's add-friend link is shown alongside: linking alone doesn't make
+    // a tenant reachable by push — they must also have the OA as a friend.
+    if (addFriendUrl === null) {
+      try {
+        const { data } = await api.get<{ add_friend_url: string }>('/public/line/oa')
+        setAddFriendUrl(data.add_friend_url)
+      } catch {
+        // Ignore — the dialog just omits the add-friend link.
+      }
+    }
   }
 
   async function handleUnlinkLine() {
@@ -285,6 +297,7 @@ export default function TenantPage() {
         onOpenChange={(open) => !open && setLineLinkInfo(null)}
         tenant={lineLinkInfo?.tenant ?? null}
         link={lineLinkInfo?.link ?? ''}
+        addFriendUrl={addFriendUrl}
       />
 
       <ConfirmDialog

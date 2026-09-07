@@ -355,6 +355,26 @@ func (h *Handler) LinkLine(c fiber.Ctx) error {
 	return apiresponse.Message(c, "line account linked")
 }
 
+// LineOAInfo godoc
+// @Summary Get the dormitory's LINE Official Account details
+// @Description Public endpoint used by the LIFF linking page: returns the OA's basic ID and the URL that adds it as a friend, so a tenant who linked their account but isn't a friend yet (and so can't be pushed to) can add it in one tap. The basic ID is public information — it's on the OA's own profile and QR code.
+// @Tags tenants
+// @Produce json
+// @Success 200 {object} tenantusecase.LineOAInfo
+// @Failure 500 {object} apierror.Error
+// @Router /public/line/oa [get]
+func (h *Handler) LineOAInfo(c fiber.Ctx) error {
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	info, err := h.usecase.LineOAInfo(ctx)
+	if err != nil {
+		return apierror.Internal("failed to load LINE OA info")
+	}
+
+	return apiresponse.OK(c, info)
+}
+
 // UnlinkLine godoc
 // @Summary Unlink a tenant's LINE account
 // @Description Clears the tenant's stored LINE userId so their personal linking link can be used again to link a (possibly different) LINE account.
