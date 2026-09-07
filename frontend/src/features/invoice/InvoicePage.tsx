@@ -3,6 +3,7 @@ import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { InformationDialog } from '@/shared/components/information-dialog'
 import type { ApiContract } from '@/features/contract/types'
 import type { ApiMeter } from '@/features/meter/types'
 import type { ApiWaterMeter } from '@/features/watermeter/types'
@@ -55,6 +56,7 @@ export default function InvoicePage() {
   const [removingItemId, setRemovingItemId] = useState<string | null>(null)
 
   const [sendingLineInvoiceId, setSendingLineInvoiceId] = useState<string | null>(null)
+  const [lineSendResult, setLineSendResult] = useState<{ title: string; description: string } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -307,9 +309,17 @@ export default function InvoicePage() {
 
     try {
       await api.post(`/invoices/${invoice.id}/send-line`)
-      window.alert(t('invoiceSendLineSuccess'))
+      setLineSendResult({
+        title: t('invoiceSendLineSuccessTitle'),
+        description: t('invoiceSendLineSuccessDescription')
+          .replace('{room}', invoice.room_number ?? '-')
+          .replace('{tenant}', invoice.tenant_name ?? '-'),
+      })
     } catch (err) {
-      window.alert(extractErrorMessage(err, t('invoiceSendLineError')))
+      setLineSendResult({
+        title: t('invoiceSendLineErrorTitle'),
+        description: extractErrorMessage(err, t('invoiceSendLineError')),
+      })
     } finally {
       setSendingLineInvoiceId(null)
     }
@@ -407,6 +417,14 @@ export default function InvoicePage() {
         loading={deletingInvoiceId === confirmDeleteInvoice?.id}
         error={deleteError}
         onConfirm={handleDeleteInvoice}
+      />
+
+      <InformationDialog
+        open={lineSendResult !== null}
+        onOpenChange={(open) => !open && setLineSendResult(null)}
+        title={lineSendResult?.title ?? ''}
+        description={lineSendResult?.description ?? ''}
+        actionLabel={t('acknowledge')}
       />
 
       <InvoiceFormSheet

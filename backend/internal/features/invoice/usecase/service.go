@@ -157,14 +157,42 @@ func (s *Service) SendLine(ctx context.Context, invoiceID, requesterID uuid.UUID
 		return invoicedomain.ErrTenantLineUnreachable
 	}
 
-	text := fmt.Sprintf(
-		"ใบแจ้งหนี้ห้อง %s\nงวด %02d/%d\nยอดรวม %.2f บาท\nครบกำหนดชำระ %s",
-		invoice.RoomNumber,
-		invoice.PeriodMonth,
-		invoice.PeriodYear,
-		invoice.TotalAmount,
-		invoice.DueDate.Format("02/01/2006"),
-	)
+	return s.linePusher.PushMessage(ctx, invoice.TenantLineUserID, buildInvoiceLineMessage(invoice))
+}
 
-	return s.linePusher.PushMessage(ctx, invoice.TenantLineUserID, text)
+var thaiMonths = [...]string{
+	"", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+	"กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
+}
+
+// buildInvoiceLineMessage renders the invoice as a plain-text LINE message,
+// using line breaks, separators and emoji to approximate a receipt-style
+// layout since LINE's push text messages carry no rich formatting.
+func buildInvoiceLineMessage(invoice invoicedomain.Invoice) string {
+	const divider = "－－－－－－－－－－－－"
+
+	var b strings.Builder
+
+	b.WriteString("🧾 ใบแจ้งหนี้ค่าเช่าหอพัก\n")
+	b.WriteString(divider + "\n")
+	if invoice.DormitoryName != "" {
+		fmt.Fprintf(&b, "🏢 หอพัก: %s\n", invoice.DormitoryName)
+	}
+	if invoice.RoomNumber != "" {
+		fmt.Fprintf(&b, "🚪 ห้อง: %s\n", invoice.RoomNumber)
+	}
+	fmt.Fprintf(&b, "📅 งวด: %s %d\n", thaiMonths[invoice.PeriodMonth], invoice.PeriodYear+543)
+	b.WriteString(divider + "\n")
+
+	for _, item := range invoice.Items {
+		fmt.Fprintf(&b, "• %s: %.2f บาท\n", item.Description, item.Amount)
+	}
+
+	b.WriteString(divider + "\n")
+	fmt.Fprintf(&b, "💰 ยอดรวมทั้งสิ้น: %.2f บาท\n", invoice.TotalAmount)
+	fmt.Fprintf(&b, "⏰ ครบกำหนดชำระ: %s\n", invoice.DueDate.Format("02/01/2006"))
+	b.WriteString(divider + "\n")
+	b.WriteString("กรุณาชำระภายในกำหนดวันที่แจ้ง ขอบคุณค่ะ 🙏")
+
+	return b.String()
 }

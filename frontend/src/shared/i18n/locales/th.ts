@@ -325,6 +325,9 @@ const th: Record<TranslationKey, string> = {
   invoiceSendLineUnavailable: 'ผู้เช่ายังไม่มี LINE ID ในระบบ',
   invoiceSendLineSuccess: 'ส่งใบแจ้งหนี้ทาง LINE สำเร็จ',
   invoiceSendLineError: 'ส่งใบแจ้งหนี้ทาง LINE ไม่สำเร็จ',
+  invoiceSendLineSuccessTitle: 'ส่งสำเร็จ',
+  invoiceSendLineSuccessDescription: 'ส่งใบแจ้งหนี้ห้อง {room} ถึงคุณ {tenant} ทาง LINE เรียบร้อยแล้ว',
+  invoiceSendLineErrorTitle: 'ส่งไม่สำเร็จ',
 
   lineLinkInProgress: 'กำลังเชื่อมต่อบัญชี LINE ของคุณ...',
   lineLinkSuccess: 'เชื่อมต่อบัญชี LINE สำเร็จแล้ว คุณสามารถปิดหน้านี้ได้',

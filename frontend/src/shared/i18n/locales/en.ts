@@ -323,6 +323,9 @@ const en = {
   invoiceSendLineUnavailable: 'This tenant has no LINE ID on file',
   invoiceSendLineSuccess: 'Invoice sent via LINE',
   invoiceSendLineError: 'Failed to send invoice via LINE',
+  invoiceSendLineSuccessTitle: 'Sent successfully',
+  invoiceSendLineSuccessDescription: 'The invoice for room {room} was sent to {tenant} via LINE.',
+  invoiceSendLineErrorTitle: 'Send failed',
 
   lineLinkInProgress: 'Linking your LINE account...',
   lineLinkSuccess: 'Your LINE account is linked. You can close this page now.',
