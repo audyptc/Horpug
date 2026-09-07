@@ -220,6 +220,10 @@ func (r *Repository) UpdateLineUserID(ctx context.Context, id uuid.UUID, lineUse
 	}
 
 	if _, err := r.db.Exec(ctx, `UPDATE tenants SET line_user_id = $1, updated_at = NOW() WHERE id = $2`, lineUserID, id); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return tenantdomain.Tenant{}, tenantdomain.ErrLineAccountAlreadyLinked
+		}
 		return tenantdomain.Tenant{}, err
 	}
 

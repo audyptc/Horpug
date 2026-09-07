@@ -343,6 +343,8 @@ const th: Record<TranslationKey, string> = {
   lineLinkSuccessNeedsFriend:
     'เชื่อมต่อบัญชี LINE สำเร็จแล้ว แต่คุณยังไม่ได้เพิ่มเราเป็นเพื่อนใน LINE กรุณาเพิ่มเพื่อนบัญชี LINE OA ของหอพัก เพื่อให้สามารถรับใบแจ้งหนี้ได้ จากนั้นจึงปิดหน้านี้ได้',
   lineLinkError: 'เชื่อมต่อบัญชี LINE ไม่สำเร็จ กรุณาลองใหม่หรือติดต่อผู้ดูแลหอพัก',
+  lineLinkAlreadyLinkedError:
+    'บัญชี LINE นี้ถูกผูกกับผู้เช่ารายอื่นไปแล้ว หากนี่เป็นบัญชี LINE ของคุณเอง กรุณาติดต่อผู้ดูแลหอพักเพื่อตรวจสอบ',
   lineLinkMissingTenant: 'ลิงก์นี้ไม่ถูกต้อง (ไม่พบรหัสผู้เช่า)',
   lineLinkNotConfigured: 'ระบบยังไม่ได้ตั้งค่าการเชื่อมต่อ LINE',
   invoiceDelete: 'ลบรายการ',

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Building2 } from 'lucide-react'
-import { api, extractErrorMessage } from '@/shared/api/client'
+import { api, extractErrorCode, extractErrorMessage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
 
 type Status = 'loading' | 'linking' | 'success' | 'success-needs-friend' | 'error'
@@ -128,7 +128,12 @@ export default function LineLinkPage() {
       } catch (err) {
         if (!cancelled) {
           setStatus('error')
-          setError(extractErrorMessage(err, t('lineLinkError')))
+          const code = extractErrorCode(err)
+          setError(
+            code === 'line_account_already_linked'
+              ? t('lineLinkAlreadyLinkedError')
+              : extractErrorMessage(err, t('lineLinkError')),
+          )
         }
       }
     }

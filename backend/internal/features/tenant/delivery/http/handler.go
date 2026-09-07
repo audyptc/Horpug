@@ -322,6 +322,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} apierror.Error
 // @Failure 404 {object} apierror.Error
+// @Failure 409 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
 // @Router /public/tenants/{id}/line/link [post]
 func (h *Handler) LinkLine(c fiber.Ctx) error {
@@ -344,6 +345,9 @@ func (h *Handler) LinkLine(c fiber.Ctx) error {
 		}
 		if errors.Is(err, tenantdomain.ErrInvalidLineToken) {
 			return apierror.BadRequest("invalid or expired LINE id token")
+		}
+		if errors.Is(err, tenantdomain.ErrLineAccountAlreadyLinked) {
+			return apierror.Conflict("this LINE account is already linked to another tenant").WithSlug("line_account_already_linked")
 		}
 		return apierror.Internal("failed to link LINE account")
 	}

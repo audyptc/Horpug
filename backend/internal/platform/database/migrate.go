@@ -469,6 +469,19 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		`UPDATE tenants SET line_user_id = '' WHERE line_user_id IS NULL`,
 		`ALTER TABLE tenants ALTER COLUMN line_user_id SET NOT NULL`,
 
+		// A LINE account could previously end up linked to more than one
+		// tenant (e.g. opening several tenants' linking links from the same
+		// already-logged-in LINE session silently attaches that same
+		// identity to each one), which breaks push delivery for every tenant
+		// but whichever one "wins" the lookup. Clear every colliding
+		// line_user_id first so the unique index below can be created, and
+		// so each affected tenant is visibly unlinked and must be re-linked
+		// properly instead of silently sharing another tenant's identity.
+		`UPDATE tenants SET line_user_id = '' WHERE line_user_id <> '' AND line_user_id IN (
+			SELECT line_user_id FROM tenants WHERE line_user_id <> '' GROUP BY line_user_id HAVING COUNT(*) > 1
+		)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_tenants_line_user_id ON tenants(line_user_id) WHERE line_user_id <> ''`,
+
 		// rooms.status used to be set manually and never followed the
 		// contracts table, so it could drift from actual occupancy (contract
 		// create/update now keeps it in sync going forward) — backfill any
