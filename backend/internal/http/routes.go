@@ -215,6 +215,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Post("/tenants", requirePermission("/tenants", permissiondomain.ActionCreate), tenantHandler.Create)
 	api.Put("/tenants/:id", requirePermission("/tenants", permissiondomain.ActionUpdate), tenantHandler.Update)
 	api.Delete("/tenants/:id/line", requirePermission("/tenants", permissiondomain.ActionUpdate), tenantHandler.UnlinkLine)
+	api.Get("/tenants/:id/line/status", requirePermission("/tenants", permissiondomain.ActionRead), tenantHandler.LineStatus)
 	api.Get("/tenants/:id/deletion-check", requirePermission("/tenants", permissiondomain.ActionDelete), tenantHandler.CheckDeletion)
 	api.Delete("/tenants/:id", requirePermission("/tenants", permissiondomain.ActionDelete), tenantHandler.Delete)
 

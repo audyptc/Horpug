@@ -18,6 +18,7 @@ type TenantLineLinkDialogProps = {
   tenant: ApiTenant | null
   link: string
   addFriendUrl: string | null
+  lineStatus: { linked: boolean; is_friend: boolean } | null
 }
 
 export function TenantLineLinkDialog({
@@ -26,8 +27,19 @@ export function TenantLineLinkDialog({
   tenant,
   link,
   addFriendUrl,
+  lineStatus,
 }: TenantLineLinkDialogProps) {
   const { t } = useLanguage()
+
+  // Both conditions must hold before an invoice can be pushed, so name the
+  // one that's actually missing rather than just saying it won't work.
+  const statusKey = !lineStatus
+    ? null
+    : !lineStatus.linked
+      ? 'tenantLineStatusNotLinked'
+      : !lineStatus.is_friend
+        ? 'tenantLineStatusNotFriend'
+        : 'tenantLineStatusReady'
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -43,6 +55,18 @@ export function TenantLineLinkDialog({
               : ''}
           </AlertDialogDescription>
         </AlertDialogHeader>
+
+        {statusKey && (
+          <p
+            className={`rounded-md px-3 py-2 text-xs ${
+              statusKey === 'tenantLineStatusReady'
+                ? 'bg-emerald-50 text-emerald-700'
+                : 'bg-amber-50 text-amber-800'
+            }`}
+          >
+            {t(statusKey)}
+          </p>
+        )}
 
         <div className="flex flex-col items-center gap-3 py-2">
           <div className="rounded-lg border border-border bg-white p-3">

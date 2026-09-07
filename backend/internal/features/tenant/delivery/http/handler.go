@@ -375,6 +375,38 @@ func (h *Handler) LineOAInfo(c fiber.Ctx) error {
 	return apiresponse.OK(c, info)
 }
 
+// LineStatus godoc
+// @Summary Check whether a tenant can be sent invoices over LINE
+// @Description Reports the two independent conditions a pushed invoice needs: the tenant has linked their LINE account (so there is a userId to push to), and that account has the dormitory's OA as a friend (LINE drops messages to non-friends). Checking friendship calls LINE, so this is on-demand rather than part of the tenant list.
+// @Tags tenants
+// @Produce json
+// @Param id path string true "Tenant ID"
+// @Success 200 {object} tenantusecase.LineStatus
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /tenants/{id}/line/status [get]
+func (h *Handler) LineStatus(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return apierror.BadRequest("invalid tenant id")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	status, err := h.usecase.LineStatus(ctx, id)
+	if err != nil {
+		if errors.Is(err, tenantdomain.ErrTenantNotFound) {
+			return apierror.NotFound("tenant not found")
+		}
+		return apierror.Internal("failed to check LINE status")
+	}
+
+	return apiresponse.OK(c, status)
+}
+
 // UnlinkLine godoc
 // @Summary Unlink a tenant's LINE account
 // @Description Clears the tenant's stored LINE userId so their personal linking link can be used again to link a (possibly different) LINE account.

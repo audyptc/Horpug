@@ -57,12 +57,13 @@ type Repository interface {
 	UnlinkLine(ctx context.Context, id uuid.UUID) (tenantdomain.Tenant, error)
 }
 
-// LineVerifier confirms a LIFF id token was issued by this app's LINE
-// channel and returns the LINE userId it belongs to, and reports which LINE
-// Official Account the Messaging API channel belongs to.
-type LineVerifier interface {
+// LineClient covers the parts of LINE's platform the tenant flow needs:
+// confirming a LIFF id token (and the LINE userId behind it), identifying the
+// Official Account, and checking whether a user can actually be reached.
+type LineClient interface {
 	VerifyIDToken(ctx context.Context, idToken string) (string, error)
 	GetBotInfo(ctx context.Context) (basicID, displayName string, err error)
+	IsFriend(ctx context.Context, lineUserID string) (bool, error)
 }
 
 // LineOAInfo identifies the dormitory's LINE Official Account, so tenants can
@@ -74,6 +75,15 @@ type LineOAInfo struct {
 	AddFriendURL string `json:"add_friend_url"`
 }
 
+// LineStatus reports whether a tenant can actually be sent an invoice over
+// LINE. Both conditions are required and are independent: linking gives us a
+// userId to push to, and friendship is what LINE requires before it will
+// deliver anything to that userId.
+type LineStatus struct {
+	Linked   bool `json:"linked"`
+	IsFriend bool `json:"is_friend"`
+}
+
 // ActivityLogger records tenant create/update/delete events for the audit
 // trail. Failures to record are logged but never block the tenant flow.
 type ActivityLogger interface {
@@ -81,13 +91,13 @@ type ActivityLogger interface {
 }
 
 type Service struct {
-	repo         Repository
-	activityLog  ActivityLogger
-	lineVerifier LineVerifier
+	repo        Repository
+	activityLog ActivityLogger
+	lineClient  LineClient
 }
 
-func New(repo Repository, activityLog ActivityLogger, lineVerifier LineVerifier) *Service {
-	return &Service{repo: repo, activityLog: activityLog, lineVerifier: lineVerifier}
+func New(repo Repository, activityLog ActivityLogger, lineClient LineClient) *Service {
+	return &Service{repo: repo, activityLog: activityLog, lineClient: lineClient}
 }
 
 // recordActivity is best-effort: a failure to write the audit trail must
@@ -224,7 +234,7 @@ func (s *Service) LinkLine(ctx context.Context, id uuid.UUID, idToken string) (t
 		return tenantdomain.Tenant{}, tenantdomain.ErrInvalidLineToken
 	}
 
-	lineUserID, err := s.lineVerifier.VerifyIDToken(ctx, idToken)
+	lineUserID, err := s.lineClient.VerifyIDToken(ctx, idToken)
 	if err != nil {
 		return tenantdomain.Tenant{}, tenantdomain.ErrInvalidLineToken
 	}
@@ -235,7 +245,7 @@ func (s *Service) LinkLine(ctx context.Context, id uuid.UUID, idToken string) (t
 // LineOAInfo reports the dormitory's LINE Official Account and the URL that
 // adds it as a friend.
 func (s *Service) LineOAInfo(ctx context.Context) (LineOAInfo, error) {
-	basicID, displayName, err := s.lineVerifier.GetBotInfo(ctx)
+	basicID, displayName, err := s.lineClient.GetBotInfo(ctx)
 	if err != nil {
 		return LineOAInfo{}, err
 	}
@@ -245,6 +255,26 @@ func (s *Service) LineOAInfo(ctx context.Context) (LineOAInfo, error) {
 		DisplayName:  displayName,
 		AddFriendURL: "https://line.me/R/ti/p/" + basicID,
 	}, nil
+}
+
+// LineStatus reports whether a tenant is reachable by a pushed invoice. A
+// tenant who never linked has no userId to check, so friendship is reported
+// as false without calling LINE.
+func (s *Service) LineStatus(ctx context.Context, id uuid.UUID) (LineStatus, error) {
+	tenant, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return LineStatus{}, err
+	}
+	if tenant.LineUserID == "" {
+		return LineStatus{}, nil
+	}
+
+	isFriend, err := s.lineClient.IsFriend(ctx, tenant.LineUserID)
+	if err != nil {
+		return LineStatus{}, err
+	}
+
+	return LineStatus{Linked: true, IsFriend: isFriend}, nil
 }
 
 // UnlinkLine clears a tenant's stored LINE userId, e.g. because the wrong

@@ -342,6 +342,11 @@ const en = {
   lineLinkSuccessNeedsFriend:
     "Your LINE account is linked, but you haven't added us as a friend yet. Please add the dormitory's LINE OA as a friend so you can receive invoices, then close this page.",
   lineLinkError: 'Failed to link your LINE account. Please try again or contact the dormitory staff.',
+  tenantLineStatusNotLinked:
+    "Can't send invoices yet: this tenant hasn't linked their LINE account (send them the QR or link below).",
+  tenantLineStatusNotFriend:
+    "Can't send invoices yet: the account is linked, but the tenant hasn't added the LINE OA as a friend.",
+  tenantLineStatusReady: 'Ready to send invoices over LINE (account linked and the LINE OA added as a friend).',
   tenantLineAddFriendHint:
     "The tenant must also add the dormitory's LINE OA as a friend before they can receive invoices. Send them this link to add it:",
   lineLinkAddFriendAction: "Add the dormitory's LINE OA as a friend",

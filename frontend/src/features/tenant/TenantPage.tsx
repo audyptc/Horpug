@@ -40,6 +40,7 @@ export default function TenantPage() {
 
   const [lineLinkInfo, setLineLinkInfo] = useState<{ tenant: ApiTenant; link: string } | null>(null)
   const [addFriendUrl, setAddFriendUrl] = useState<string | null>(null)
+  const [lineStatus, setLineStatus] = useState<{ linked: boolean; is_friend: boolean } | null>(null)
 
   const [confirmUnlinkTenant, setConfirmUnlinkTenant] = useState<ApiTenant | null>(null)
   const [unlinkingTenantId, setUnlinkingTenantId] = useState<string | null>(null)
@@ -223,10 +224,21 @@ export default function TenantPage() {
       // below still shows the link so it can be copied by hand.
     }
 
+    setLineStatus(null)
     setLineLinkInfo({ tenant, link })
 
-    // The OA's add-friend link is shown alongside: linking alone doesn't make
-    // a tenant reachable by push — they must also have the OA as a friend.
+    // Linking alone doesn't make a tenant reachable by push — they must also
+    // have the OA as a friend. Show both conditions plus the add-friend link,
+    // so staff can see why an invoice would fail before they try to send it.
+    try {
+      const { data } = await api.get<{ linked: boolean; is_friend: boolean }>(
+        `/tenants/${tenant.id}/line/status`,
+      )
+      setLineStatus(data)
+    } catch {
+      // Ignore — the dialog just omits the status line.
+    }
+
     if (addFriendUrl === null) {
       try {
         const { data } = await api.get<{ add_friend_url: string }>('/public/line/oa')
@@ -298,6 +310,7 @@ export default function TenantPage() {
         tenant={lineLinkInfo?.tenant ?? null}
         link={lineLinkInfo?.link ?? ''}
         addFriendUrl={addFriendUrl}
+        lineStatus={lineStatus}
       />
 
       <ConfirmDialog
