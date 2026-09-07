@@ -482,6 +482,10 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		)`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_tenants_line_user_id ON tenants(line_user_id) WHERE line_user_id <> ''`,
 
+		// The tenant list pages over created_at DESC by default; id is the
+		// tiebreaker the query orders by, so it belongs in the index too.
+		`CREATE INDEX IF NOT EXISTS idx_tenants_created_at_id ON tenants(created_at DESC, id)`,
+
 		// rooms.status used to be set manually and never followed the
 		// contracts table, so it could drift from actual occupancy (contract
 		// create/update now keeps it in sync going forward) — backfill any

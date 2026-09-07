@@ -1,21 +1,97 @@
-import { CheckCircle2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Link2, Pencil, Trash2, Unlink } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, CheckCircle2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Link2, ListFilter, Pencil, Trash2, Unlink } from 'lucide-react'
 import { useLanguage } from '@/shared/i18n/language'
+import type { TranslationKey } from '@/shared/i18n/language'
+import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/shared/components/ui/dropdown-menu'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
 import { Button } from '@/shared/components/ui/button'
 import type { ApiTenant } from '../types'
-import { TENANT_PAGE_SIZE_OPTIONS } from '../utils'
+import {
+  TENANT_PAGE_SIZE_OPTIONS,
+  type TenantLineFilter,
+  type TenantSortDirection,
+  type TenantSortKey,
+  type TenantStatusFilter,
+} from '../utils'
+
+const SORTABLE_COLUMNS: { key: TenantSortKey; labelKey: TranslationKey }[] = [
+  { key: 'first_name', labelKey: 'tenantFirstNameColumn' },
+  { key: 'last_name', labelKey: 'tenantLastNameColumn' },
+  { key: 'phone', labelKey: 'tenantPhoneColumn' },
+  { key: 'line_id', labelKey: 'tenantLineIdColumn' },
+  { key: 'id_card', labelKey: 'tenantIdCardColumn' },
+  { key: 'email', labelKey: 'tenantEmailColumn' },
+  { key: 'is_active', labelKey: 'tenantActiveColumn' },
+]
+
+// The neutral "show everything" choice is always first, so anything else means
+// the column is narrowing the list and the trigger should say so.
+function ColumnFilterMenu<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: T
+  options: { value: T; label: string }[]
+  onChange: (value: T) => void
+}) {
+  const isFiltered = value !== options[0].value
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          title={label}
+          aria-label={label}
+          className={cn(
+            'inline-flex shrink-0 items-center rounded-sm p-0.5 transition-colors hover:text-foreground',
+            isFiltered ? 'text-primary' : 'opacity-40'
+          )}
+        >
+          <ListFilter size={13} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        {options.map((option) => (
+          <DropdownMenuItem key={option.value} onSelect={() => onChange(option.value)}>
+            <Check
+              size={13}
+              className={cn('mr-1.5 shrink-0', option.value === value ? 'opacity-100' : 'opacity-0')}
+            />
+            {option.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
 
 type TenantListCardProps = {
   isLoading: boolean
   loadError: string | null
   deleteError: string | null
-  tenants: ApiTenant[] | null
   query: string
   onQueryChange: (query: string) => void
-  filteredTenants: ApiTenant[]
-  paginatedTenants: ApiTenant[]
+  statusFilter: TenantStatusFilter
+  onStatusFilterChange: (value: TenantStatusFilter) => void
+  lineFilter: TenantLineFilter
+  onLineFilterChange: (value: TenantLineFilter) => void
+  hasFilters: boolean
+  sortKey: TenantSortKey
+  sortDirection: TenantSortDirection
+  onSort: (key: TenantSortKey) => void
+  tenants: ApiTenant[]
+  total: number
   currentPage: number
   totalPages: number
   rangeStart: number
@@ -38,11 +114,18 @@ export function TenantListCard({
   isLoading,
   loadError,
   deleteError,
-  tenants,
   query,
   onQueryChange,
-  filteredTenants,
-  paginatedTenants,
+  statusFilter,
+  onStatusFilterChange,
+  lineFilter,
+  onLineFilterChange,
+  hasFilters,
+  sortKey,
+  sortDirection,
+  onSort,
+  tenants,
+  total,
   currentPage,
   totalPages,
   rangeStart,
@@ -78,42 +161,105 @@ export function TenantListCard({
 
         {!loadError && isLoading && <p className="metric-detail">{t('loading')}</p>}
 
-        {!loadError && !isLoading && tenants && tenants.length === 0 && (
-          <p className="metric-detail">{t('tenantNoTenants')}</p>
-        )}
-
-        {!loadError && !isLoading && tenants && tenants.length > 0 && (
+        {!loadError && !isLoading && (
           <>
-            <label className="flex w-full max-w-md flex-col gap-1.5 text-sm font-medium">
-              {t('tenantSearchLabel')}
-              <input
-                type="search"
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                placeholder={t('tenantSearchPlaceholder')}
-                value={query}
-                onChange={(event) => onQueryChange(event.target.value)}
-              />
-            </label>
+            <div className="overflow-hidden rounded-md border border-border">
+              <div className="border-b border-border bg-muted/40 p-3">
+                <label className="flex w-full flex-col gap-1.5 text-sm font-medium sm:max-w-md">
+                  {t('tenantSearchLabel')}
+                  <input
+                    type="search"
+                    className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                    placeholder={t('tenantSearchPlaceholder')}
+                    value={query}
+                    onChange={(event) => onQueryChange(event.target.value)}
+                  />
+                </label>
+              </div>
 
-            {filteredTenants.length === 0 && <p className="metric-detail">{t('tenantNoMatching')}</p>}
-
-            {filteredTenants.length > 0 && (
-              <div className="table-wrap tenant-table-wrap">
+              {/* Rendered even with no matches: the column filters live in the
+                  header, so hiding it would strand the user with no way to
+                  widen the filter again. */}
+              <div className="tenant-table-wrap overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('tenantFirstNameColumn')}</TableHead>
-                      <TableHead>{t('tenantLastNameColumn')}</TableHead>
-                      <TableHead>{t('tenantPhoneColumn')}</TableHead>
-                      <TableHead>{t('tenantLineIdColumn')}</TableHead>
-                      <TableHead>{t('tenantIdCardColumn')}</TableHead>
-                      <TableHead>{t('tenantEmailColumn')}</TableHead>
-                      <TableHead>{t('tenantActiveColumn')}</TableHead>
+                      {SORTABLE_COLUMNS.map((column) => {
+                        const isSorted = sortKey === column.key
+                        return (
+                          <TableHead
+                            key={column.key}
+                            aria-sort={
+                              isSorted ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'
+                            }
+                          >
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => onSort(column.key)}
+                                title={
+                                  isSorted && sortDirection === 'asc'
+                                    ? t('tenantSortAscending')
+                                    : t('tenantSortDescending')
+                                }
+                                className="inline-flex items-center gap-1 transition-colors hover:text-foreground"
+                              >
+                                {t(column.labelKey)}
+                                {isSorted ? (
+                                  sortDirection === 'asc' ? (
+                                    <ArrowUp size={13} className="shrink-0" />
+                                  ) : (
+                                    <ArrowDown size={13} className="shrink-0" />
+                                  )
+                                ) : (
+                                  <ArrowUpDown size={13} className="shrink-0 opacity-40" />
+                                )}
+                              </button>
+
+                              {column.key === 'line_id' && (
+                                <ColumnFilterMenu
+                                  label={t('tenantFilterLineLabel')}
+                                  value={lineFilter}
+                                  onChange={onLineFilterChange}
+                                  options={[
+                                    { value: 'all', label: t('tenantFilterAll') },
+                                    { value: 'linked', label: t('tenantFilterLineLinked') },
+                                    { value: 'unlinked', label: t('tenantFilterLineUnlinked') },
+                                  ]}
+                                />
+                              )}
+
+                              {column.key === 'is_active' && (
+                                <ColumnFilterMenu
+                                  label={t('tenantFilterStatusLabel')}
+                                  value={statusFilter}
+                                  onChange={onStatusFilterChange}
+                                  options={[
+                                    { value: 'all', label: t('tenantFilterAll') },
+                                    { value: 'active', label: t('statusActive') },
+                                    { value: 'inactive', label: t('statusInactive') },
+                                  ]}
+                                />
+                              )}
+                            </div>
+                          </TableHead>
+                        )
+                      })}
                       <TableHead className="text-right">{t('tenantActionsColumn')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedTenants.map((tenant) => (
+                    {tenants.length === 0 && (
+                      <TableRow>
+                        <TableCell
+                          colSpan={SORTABLE_COLUMNS.length + 1}
+                          className="metric-detail py-6 text-center"
+                        >
+                          {hasFilters ? t('tenantNoMatching') : t('tenantNoTenants')}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {tenants.map((tenant) => (
                       <TableRow key={tenant.id}>
                         <TableCell className="font-semibold">{tenant.first_name}</TableCell>
                         <TableCell className="font-semibold">{tenant.last_name}</TableCell>
@@ -191,13 +337,13 @@ export function TenantListCard({
                   </TableBody>
                 </Table>
               </div>
-            )}
+            </div>
 
-            {filteredTenants.length > 0 && (
+            {total > 0 && (
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted-foreground">
                   {t('rolePermissionsShowingLabel')} {rangeStart}-{rangeEnd}{' '}
-                  {t('rolePermissionsOfLabel')} {filteredTenants.length} {t('rolePermissionsResultsLabel')}
+                  {t('rolePermissionsOfLabel')} {total} {t('rolePermissionsResultsLabel')}
                   {totalPages > 1 && (
                     <>
                       {' '}

@@ -44,9 +44,37 @@ type DeletionCheck struct {
 	ContractCount int64 `json:"contract_count"`
 }
 
+// ListFilter narrows and orders a tenant listing. The nil-able flags mean "no
+// preference" rather than false, so a caller can ask for inactive tenants
+// without that being confused with not filtering on status at all.
+type ListFilter struct {
+	Search     string
+	IsActive   *bool
+	LineLinked *bool
+	SortKey    string
+	SortDesc   bool
+}
+
+// SortColumns maps the sort keys the API accepts onto the columns they order
+// by. A column name can't be passed to Postgres as a bind parameter, so it is
+// interpolated into the query — every value that reaches ORDER BY must come
+// from this map and never straight from the request.
+var SortColumns = map[string]string{
+	"first_name": "first_name",
+	"last_name":  "last_name",
+	"phone":      "phone",
+	"line_id":    "line_id",
+	"id_card":    "id_card",
+	"email":      "email",
+	"is_active":  "is_active",
+	"created_at": "created_at",
+}
+
+const DefaultSortKey = "created_at"
+
 type Repository interface {
-	Count(ctx context.Context) (int64, error)
-	List(ctx context.Context, limit, offset int) ([]tenantdomain.Tenant, error)
+	Count(ctx context.Context, filter ListFilter) (int64, error)
+	List(ctx context.Context, filter ListFilter, limit, offset int) ([]tenantdomain.Tenant, error)
 	ListActive(ctx context.Context, search string, limit int) ([]tenantdomain.Tenant, error)
 	GetByID(ctx context.Context, id uuid.UUID) (tenantdomain.Tenant, error)
 	CountContracts(ctx context.Context, id uuid.UUID) (int64, error)
@@ -119,13 +147,18 @@ func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action 
 	}
 }
 
-func (s *Service) List(ctx context.Context, limit, offset int) ([]tenantdomain.Tenant, int64, error) {
-	total, err := s.repo.Count(ctx)
+func (s *Service) List(ctx context.Context, filter ListFilter, limit, offset int) ([]tenantdomain.Tenant, int64, error) {
+	filter.Search = strings.TrimSpace(filter.Search)
+	if _, ok := SortColumns[filter.SortKey]; !ok {
+		filter.SortKey = DefaultSortKey
+	}
+
+	total, err := s.repo.Count(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	tenants, err := s.repo.List(ctx, limit, offset)
+	tenants, err := s.repo.List(ctx, filter, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}

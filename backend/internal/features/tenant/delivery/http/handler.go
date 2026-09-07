@@ -56,12 +56,73 @@ type linkTenantLineRequest struct {
 
 const defaultActiveListLimit = 50
 
+// parseOptionalBool reads a tri-state query flag: absent means "don't filter
+// on this", so an unset value is distinct from an explicit false.
+func parseOptionalBool(c fiber.Ctx, name string) (*bool, error) {
+	raw := strings.TrimSpace(c.Query(name))
+	if raw == "" {
+		return nil, nil
+	}
+
+	value, err := strconv.ParseBool(raw)
+	if err != nil {
+		return nil, apierror.BadRequest(name + " must be true or false")
+	}
+	return &value, nil
+}
+
+func parseListFilter(c fiber.Ctx) (tenantusecase.ListFilter, error) {
+	isActive, err := parseOptionalBool(c, "is_active")
+	if err != nil {
+		return tenantusecase.ListFilter{}, err
+	}
+
+	lineLinked, err := parseOptionalBool(c, "line_linked")
+	if err != nil {
+		return tenantusecase.ListFilter{}, err
+	}
+
+	sortKey := tenantusecase.DefaultSortKey
+	if raw := strings.TrimSpace(c.Query("sort")); raw != "" {
+		if _, ok := tenantusecase.SortColumns[raw]; !ok {
+			return tenantusecase.ListFilter{}, apierror.BadRequest("unsupported sort field")
+		}
+		sortKey = raw
+	}
+
+	// Newest-first is the useful default for an unsorted listing, but an
+	// explicit sort field reads more naturally ascending.
+	sortDesc := sortKey == tenantusecase.DefaultSortKey
+	switch strings.TrimSpace(c.Query("order")) {
+	case "":
+	case "asc":
+		sortDesc = false
+	case "desc":
+		sortDesc = true
+	default:
+		return tenantusecase.ListFilter{}, apierror.BadRequest("order must be asc or desc")
+	}
+
+	return tenantusecase.ListFilter{
+		Search:     strings.TrimSpace(c.Query("q")),
+		IsActive:   isActive,
+		LineLinked: lineLinked,
+		SortKey:    sortKey,
+		SortDesc:   sortDesc,
+	}, nil
+}
+
 // List godoc
 // @Summary List tenants
 // @Tags tenants
 // @Produce json
 // @Param page query int false "Page number (default 1)"
 // @Param per_page query int false "Results per page (default 10, max 100)"
+// @Param q query string false "Filter by name, phone, LINE ID, id card or email"
+// @Param is_active query bool false "Filter by active status"
+// @Param line_linked query bool false "Filter by whether a LINE account is linked"
+// @Param sort query string false "Sort field: first_name, last_name, phone, line_id, id_card, email, is_active, created_at (default created_at)"
+// @Param order query string false "Sort direction: asc or desc"
 // @Success 200 {object} apiresponse.Meta
 // @Failure 400 {object} apierror.Error
 // @Failure 401 {object} apierror.Error
@@ -74,10 +135,15 @@ func (h *Handler) List(c fiber.Ctx) error {
 		return err
 	}
 
+	filter, err := parseListFilter(c)
+	if err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	tenants, total, err := h.usecase.List(ctx, perPage, offset)
+	tenants, total, err := h.usecase.List(ctx, filter, perPage, offset)
 	if err != nil {
 		return apierror.Internal("failed to list tenants")
 	}

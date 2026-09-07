@@ -23,21 +23,81 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) Count(ctx context.Context) (int64, error) {
+// listWhere builds the WHERE clause shared by List and Count. Both must apply
+// exactly the same conditions, otherwise the reported total disagrees with the
+// rows returned and the client paginates over a page count that doesn't exist.
+func listWhere(filter tenantusecase.ListFilter) (string, []any) {
+	clauses := make([]string, 0)
+	args := make([]any, 0)
+
+	if filter.Search != "" {
+		idx := len(args) + 1
+		clauses = append(clauses, fmt.Sprintf(
+			`(first_name ILIKE $%d OR last_name ILIKE $%d OR phone ILIKE $%d OR line_id ILIKE $%d OR id_card ILIKE $%d OR email ILIKE $%d)`,
+			idx, idx, idx, idx, idx, idx,
+		))
+		args = append(args, "%"+filter.Search+"%")
+	}
+
+	if filter.IsActive != nil {
+		clauses = append(clauses, fmt.Sprintf("is_active = $%d", len(args)+1))
+		args = append(args, *filter.IsActive)
+	}
+
+	// line_user_id is NOT NULL DEFAULT '', so an empty string is what "never
+	// linked" looks like.
+	if filter.LineLinked != nil {
+		if *filter.LineLinked {
+			clauses = append(clauses, `line_user_id <> ''`)
+		} else {
+			clauses = append(clauses, `line_user_id = ''`)
+		}
+	}
+
+	if len(clauses) == 0 {
+		return "", args
+	}
+
+	return " WHERE " + strings.Join(clauses, " AND "), args
+}
+
+// listOrderBy resolves the sort key through the usecase whitelist; anything
+// unrecognised falls back to the default rather than reaching SQL. id breaks
+// ties so paging over equal values can't repeat or skip a row.
+func listOrderBy(filter tenantusecase.ListFilter) string {
+	column, ok := tenantusecase.SortColumns[filter.SortKey]
+	if !ok {
+		column = tenantusecase.SortColumns[tenantusecase.DefaultSortKey]
+	}
+
+	direction := "ASC"
+	if filter.SortDesc {
+		direction = "DESC"
+	}
+
+	return fmt.Sprintf(" ORDER BY %s %s, id ASC", column, direction)
+}
+
+func (r *Repository) Count(ctx context.Context, filter tenantusecase.ListFilter) (int64, error) {
+	where, args := listWhere(filter)
+
 	var total int64
-	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM tenants`).Scan(&total); err != nil {
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM tenants`+where, args...).Scan(&total); err != nil {
 		return 0, err
 	}
 	return total, nil
 }
 
-func (r *Repository) List(ctx context.Context, limit, offset int) ([]tenantdomain.Tenant, error) {
-	rows, err := r.db.Query(ctx, `
+func (r *Repository) List(ctx context.Context, filter tenantusecase.ListFilter, limit, offset int) ([]tenantdomain.Tenant, error) {
+	where, args := listWhere(filter)
+
+	query := `
 		SELECT id, first_name, last_name, phone, line_id, line_user_id, id_card, email, emergency_contact, note, is_active, created_by, updated_by, created_at, updated_at
-		FROM tenants
-		ORDER BY created_at DESC
-		LIMIT $1 OFFSET $2
-	`, limit, offset)
+		FROM tenants` + where + listOrderBy(filter) +
+		fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)+1, len(args)+2)
+	args = append(args, limit, offset)
+
+	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

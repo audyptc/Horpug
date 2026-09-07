@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import axios from 'axios'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
-import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { InformationDialog } from '@/shared/components/information-dialog'
@@ -8,15 +8,36 @@ import { TenantListCard } from './components/TenantListCard'
 import { TenantFormSheet } from './components/TenantFormSheet'
 import { TenantLineLinkDialog } from './components/TenantLineLinkDialog'
 import type { ApiTenant, ApiTenantDeletionCheck } from './types'
-import { TENANT_PAGE_SIZE_OPTIONS } from './utils'
+import {
+  TENANT_PAGE_SIZE_OPTIONS,
+  type TenantLineFilter,
+  type TenantSortDirection,
+  type TenantSortKey,
+  type TenantStatusFilter,
+} from './utils'
+
+const SEARCH_DEBOUNCE_MS = 300
 
 export default function TenantPage() {
   const { t } = useLanguage()
 
   const [tenants, setTenants] = useState<ApiTenant[] | null>(null)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<TenantStatusFilter>('all')
+  const [lineFilter, setLineFilter] = useState<TenantLineFilter>('all')
+  const [sortKey, setSortKey] = useState<TenantSortKey>('first_name')
+  const [sortDirection, setSortDirection] = useState<TenantSortDirection>('asc')
+
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSizeState] = useState<number>(TENANT_PAGE_SIZE_OPTIONS[0])
+  // Bumped by mutations so the list refetches; the server owns the ordering
+  // and page boundaries now, so patching rows locally would misplace them.
+  const [refreshToken, setRefreshToken] = useState(0)
 
   const [formOpen, setFormOpen] = useState(false)
   const [formTenantId, setFormTenantId] = useState<string | null>(null)
@@ -47,55 +68,66 @@ export default function TenantPage() {
   const [unlinkError, setUnlinkError] = useState<string | null>(null)
 
   useEffect(() => {
-    let cancelled = false
+    const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [query])
+
+  useEffect(() => {
+    const controller = new AbortController()
 
     api
-      .get<ApiPage<ApiTenant[]>>('/tenants', { params: { per_page: 100 } })
+      .get<ApiPage<ApiTenant[]>>('/tenants', {
+        signal: controller.signal,
+        params: {
+          page,
+          per_page: pageSize,
+          q: debouncedQuery.trim() || undefined,
+          is_active: statusFilter === 'all' ? undefined : statusFilter === 'active',
+          line_linked: lineFilter === 'all' ? undefined : lineFilter === 'linked',
+          sort: sortKey,
+          order: sortDirection,
+        },
+      })
       .then(({ data }) => {
-        if (!cancelled) setTenants(data.data)
+        setTenants(data.data)
+        setTotal(data.meta.total)
+        setTotalPages(data.meta.total_pages)
+        setLoadError(null)
       })
       .catch((err) => {
-        if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
+        // A cancelled request is this effect being superseded by a newer one,
+        // not a failure — letting it through would overwrite the newer result.
+        if (axios.isCancel(err)) return
+        setLoadError(extractErrorMessage(err, t('resourceLoadError')))
       })
 
-    return () => {
-      cancelled = true
-    }
+    return () => controller.abort()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const filteredTenants = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase()
-    if (!q) return tenants ?? []
-
-    return (tenants ?? []).filter((tenant) => {
-      return (
-        tenant.first_name.toLocaleLowerCase().includes(q) ||
-        tenant.last_name.toLocaleLowerCase().includes(q) ||
-        tenant.phone.toLocaleLowerCase().includes(q) ||
-        tenant.line_id.toLocaleLowerCase().includes(q) ||
-        tenant.id_card.toLocaleLowerCase().includes(q) ||
-        tenant.email.toLocaleLowerCase().includes(q)
-      )
-    })
-  }, [query, tenants])
-
-  const {
-    page: currentPage,
-    pageSize,
-    setPageSize,
-    totalPages,
-    rangeStart,
-    rangeEnd,
-    paginatedItems: paginatedTenants,
-    resetPage,
-    firstPage,
-    prevPage,
-    nextPage,
-    lastPage,
-  } = usePagination(filteredTenants, TENANT_PAGE_SIZE_OPTIONS[0])
+  }, [page, pageSize, debouncedQuery, statusFilter, lineFilter, sortKey, sortDirection, refreshToken])
 
   const isLoading = !loadError && tenants === null
+  const hasFilters = query !== '' || statusFilter !== 'all' || lineFilter !== 'all'
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const rangeEnd = Math.min(page * pageSize, total)
+
+  function refresh() {
+    setRefreshToken((value) => value + 1)
+  }
+
+  function setPageSize(size: number) {
+    setPageSizeState(size)
+    setPage(1)
+  }
+
+  function handleSort(key: TenantSortKey) {
+    if (key === sortKey) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+    setPage(1)
+  }
 
   function openCreateForm() {
     setFormTenantId(null)
@@ -160,12 +192,11 @@ export default function TenantPage() {
 
     try {
       if (!isEdit) {
-        const { data } = await api.post<ApiTenant>('/tenants', payload)
-        setTenants((prev) => [...(prev ?? []), data])
+        await api.post<ApiTenant>('/tenants', payload)
       } else {
-        const { data } = await api.put<ApiTenant>(`/tenants/${formTenantId}`, payload)
-        setTenants((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
+        await api.put<ApiTenant>(`/tenants/${formTenantId}`, payload)
       }
+      refresh()
       setFormOpen(false)
     } catch (err) {
       const fallback = isEdit ? t('tenantUpdateError') : t('tenantCreateError')
@@ -184,7 +215,10 @@ export default function TenantPage() {
 
     try {
       await api.delete(`/tenants/${tenant.id}`)
-      setTenants((prev) => prev?.filter((item) => item.id !== tenant.id) ?? prev)
+      // Deleting the last row of the final page would otherwise strand the
+      // view on a page the server no longer has.
+      setPage((value) => (tenants?.length === 1 ? Math.max(1, value - 1) : value))
+      refresh()
       setConfirmDeleteTenant(null)
     } catch (err) {
       setDeleteError(extractErrorMessage(err, t('tenantDeleteError')))
@@ -257,8 +291,8 @@ export default function TenantPage() {
     setUnlinkError(null)
 
     try {
-      const { data } = await api.delete<ApiTenant>(`/tenants/${tenant.id}/line`)
-      setTenants((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
+      await api.delete<ApiTenant>(`/tenants/${tenant.id}/line`)
+      refresh()
       setConfirmUnlinkTenant(null)
     } catch (err) {
       setUnlinkError(extractErrorMessage(err, t('tenantUnlinkLineError')))
@@ -278,24 +312,37 @@ export default function TenantPage() {
         isLoading={isLoading}
         loadError={loadError}
         deleteError={deleteError}
-        tenants={tenants}
         query={query}
         onQueryChange={(value) => {
           setQuery(value)
-          resetPage()
+          setPage(1)
         }}
-        filteredTenants={filteredTenants}
-        paginatedTenants={paginatedTenants}
-        currentPage={currentPage}
+        statusFilter={statusFilter}
+        onStatusFilterChange={(value) => {
+          setStatusFilter(value)
+          setPage(1)
+        }}
+        lineFilter={lineFilter}
+        onLineFilterChange={(value) => {
+          setLineFilter(value)
+          setPage(1)
+        }}
+        hasFilters={hasFilters}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={handleSort}
+        tenants={tenants ?? []}
+        total={total}
+        currentPage={page}
         totalPages={totalPages}
         rangeStart={rangeStart}
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
-        onFirstPage={firstPage}
-        onPrevPage={prevPage}
-        onNextPage={nextPage}
-        onLastPage={lastPage}
+        onFirstPage={() => setPage(1)}
+        onPrevPage={() => setPage((value) => Math.max(1, value - 1))}
+        onNextPage={() => setPage((value) => Math.min(totalPages, value + 1))}
+        onLastPage={() => setPage(totalPages)}
         deletingTenantId={checkingTenantId ?? deletingTenantId}
         onCreateTenant={openCreateForm}
         onEditTenant={openEditForm}
