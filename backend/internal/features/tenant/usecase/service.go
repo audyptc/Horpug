@@ -48,11 +48,27 @@ type DeletionCheck struct {
 // preference" rather than false, so a caller can ask for inactive tenants
 // without that being confused with not filtering on status at all.
 type ListFilter struct {
-	Search     string
+	Search string
+	// Columns narrows individual columns by substring, keyed by FilterColumns.
+	// Search casts a wide OR across every text column; these are ANDed on top,
+	// so the two answer different questions and compose.
+	Columns    map[string]string
 	IsActive   *bool
 	LineLinked *bool
 	SortKey    string
 	SortDesc   bool
+}
+
+// FilterColumns whitelists the columns a caller may match a substring against.
+// Same rule as SortColumns: the column name is interpolated into SQL rather
+// than bound, so nothing outside this map may reach the query.
+var FilterColumns = map[string]string{
+	"first_name": "first_name",
+	"last_name":  "last_name",
+	"phone":      "phone",
+	"line_id":    "line_id",
+	"id_card":    "id_card",
+	"email":      "email",
 }
 
 // SortColumns maps the sort keys the API accepts onto the columns they order
@@ -152,6 +168,17 @@ func (s *Service) List(ctx context.Context, filter ListFilter, limit, offset int
 	if _, ok := SortColumns[filter.SortKey]; !ok {
 		filter.SortKey = DefaultSortKey
 	}
+
+	columns := make(map[string]string, len(filter.Columns))
+	for key, value := range filter.Columns {
+		if _, ok := FilterColumns[key]; !ok {
+			continue
+		}
+		if value = strings.TrimSpace(value); value != "" {
+			columns[key] = value
+		}
+	}
+	filter.Columns = columns
 
 	total, err := s.repo.Count(ctx, filter)
 	if err != nil {

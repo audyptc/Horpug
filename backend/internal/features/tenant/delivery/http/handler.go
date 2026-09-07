@@ -71,8 +71,37 @@ func parseOptionalBool(c fiber.Ctx, name string) (*bool, error) {
 	return &value, nil
 }
 
+// parseColumnFilters reads the per-column filters, passed as f[<column>]=value.
+// An unrecognised column is rejected rather than ignored: silently dropping it
+// would return an unfiltered list that looks like a legitimate result.
+func parseColumnFilters(c fiber.Ctx) (map[string]string, error) {
+	columns := make(map[string]string)
+
+	for key, value := range c.Queries() {
+		if !strings.HasPrefix(key, "f[") || !strings.HasSuffix(key, "]") {
+			continue
+		}
+
+		name := key[len("f[") : len(key)-len("]")]
+		if _, ok := tenantusecase.FilterColumns[name]; !ok {
+			return nil, apierror.BadRequest("unsupported filter field: " + name)
+		}
+
+		if value = strings.TrimSpace(value); value != "" {
+			columns[name] = value
+		}
+	}
+
+	return columns, nil
+}
+
 func parseListFilter(c fiber.Ctx) (tenantusecase.ListFilter, error) {
 	isActive, err := parseOptionalBool(c, "is_active")
+	if err != nil {
+		return tenantusecase.ListFilter{}, err
+	}
+
+	columns, err := parseColumnFilters(c)
 	if err != nil {
 		return tenantusecase.ListFilter{}, err
 	}
@@ -105,6 +134,7 @@ func parseListFilter(c fiber.Ctx) (tenantusecase.ListFilter, error) {
 
 	return tenantusecase.ListFilter{
 		Search:     strings.TrimSpace(c.Query("q")),
+		Columns:    columns,
 		IsActive:   isActive,
 		LineLinked: lineLinked,
 		SortKey:    sortKey,
@@ -119,6 +149,7 @@ func parseListFilter(c fiber.Ctx) (tenantusecase.ListFilter, error) {
 // @Param page query int false "Page number (default 1)"
 // @Param per_page query int false "Results per page (default 10, max 100)"
 // @Param q query string false "Filter by name, phone, LINE ID, id card or email"
+// @Param f[column] query string false "Per-column substring filter, e.g. f[phone]=081; column must be one of first_name, last_name, phone, line_id, id_card, email"
 // @Param is_active query bool false "Filter by active status"
 // @Param line_linked query bool false "Filter by whether a LINE account is linked"
 // @Param sort query string false "Sort field: first_name, last_name, phone, line_id, id_card, email, is_active, created_at (default created_at)"

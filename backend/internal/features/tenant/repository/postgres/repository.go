@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	tenantdomain "apihorpug/internal/features/tenant/domain"
@@ -37,6 +38,23 @@ func listWhere(filter tenantusecase.ListFilter) (string, []any) {
 			idx, idx, idx, idx, idx, idx,
 		))
 		args = append(args, "%"+filter.Search+"%")
+	}
+
+	// Sorted so the generated SQL is stable for a given set of filters rather
+	// than varying with Go's randomised map iteration order.
+	keys := make([]string, 0, len(filter.Columns))
+	for key := range filter.Columns {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		column, ok := tenantusecase.FilterColumns[key]
+		if !ok {
+			continue
+		}
+		clauses = append(clauses, fmt.Sprintf("%s ILIKE $%d", column, len(args)+1))
+		args = append(args, "%"+filter.Columns[key]+"%")
 	}
 
 	if filter.IsActive != nil {

@@ -1,24 +1,23 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, CheckCircle2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Link2, ListFilter, Pencil, Trash2, Unlink } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, CheckCircle2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Link2, ListFilter, Pencil, Trash2, Unlink, X } from 'lucide-react'
 import { useLanguage } from '@/shared/i18n/language'
 import type { TranslationKey } from '@/shared/i18n/language'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/shared/components/ui/dropdown-menu'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
 import { Button } from '@/shared/components/ui/button'
 import type { ApiTenant } from '../types'
 import {
   TENANT_PAGE_SIZE_OPTIONS,
+  isTextFilterKey,
+  type TenantColumnFilters,
   type TenantLineFilter,
   type TenantSortDirection,
   type TenantSortKey,
   type TenantStatusFilter,
+  type TenantTextFilterKey,
 } from '../utils'
 
 const SORTABLE_COLUMNS: { key: TenantSortKey; labelKey: TranslationKey }[] = [
@@ -31,48 +30,127 @@ const SORTABLE_COLUMNS: { key: TenantSortKey; labelKey: TranslationKey }[] = [
   { key: 'is_active', labelKey: 'tenantActiveColumn' },
 ]
 
-// The neutral "show everything" choice is always first, so anything else means
-// the column is narrowing the list and the trigger should say so.
+type ColumnFilterMenuProps<T extends string> = {
+  label: string
+  // Enumerable side: the neutral "show everything" choice is always first, so
+  // any other selection means this column is narrowing the list.
+  options?: { value: T; label: string }[]
+  optionValue?: T
+  onOptionChange?: (value: T) => void
+  // Free-text side, applied on submit rather than per keystroke.
+  textValue?: string
+  onTextChange?: (value: string) => void
+}
+
+// A Popover rather than a DropdownMenu: menus own keyboard focus and typeahead,
+// which fights any text input placed inside them.
 function ColumnFilterMenu<T extends string>({
   label,
-  value,
   options,
-  onChange,
-}: {
-  label: string
-  value: T
-  options: { value: T; label: string }[]
-  onChange: (value: T) => void
-}) {
-  const isFiltered = value !== options[0].value
+  optionValue,
+  onOptionChange,
+  textValue,
+  onTextChange,
+}: ColumnFilterMenuProps<T>) {
+  const { t } = useLanguage()
+  const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState(textValue ?? '')
+
+  const isFiltered =
+    Boolean(textValue) || (options !== undefined && optionValue !== options[0].value)
+
+  function applyText(value: string) {
+    onTextChange?.(value)
+    setOpen(false)
+  }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        // Re-seed from what's actually applied on open, so an abandoned
+        // half-typed value doesn't come back next time.
+        if (next) setDraft(textValue ?? '')
+        setOpen(next)
+      }}
+    >
+      <PopoverTrigger asChild>
         <button
           type="button"
           title={label}
           aria-label={label}
           className={cn(
-            'inline-flex shrink-0 items-center rounded-sm p-0.5 transition-colors hover:text-foreground',
+            // Roomy enough to be a real tap target on touch screens without
+            // pushing the 40px header row taller.
+            'inline-flex size-7 shrink-0 items-center justify-center rounded-sm transition-colors hover:bg-accent hover:text-foreground',
             isFiltered ? 'text-primary' : 'opacity-40'
           )}
         >
           <ListFilter size={13} />
         </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
-        {options.map((option) => (
-          <DropdownMenuItem key={option.value} onSelect={() => onChange(option.value)}>
-            <Check
-              size={13}
-              className={cn('mr-1.5 shrink-0', option.value === value ? 'opacity-100' : 'opacity-0')}
+      </PopoverTrigger>
+
+      <PopoverContent
+        align="start"
+        collisionPadding={12}
+        // The trigger can sit far right in a horizontally scrolled table, so
+        // cap the width against the viewport rather than the table.
+        className="flex w-[min(14rem,calc(100vw-1.5rem))] flex-col gap-2 p-2"
+      >
+        {options && (
+          <div className="flex flex-col">
+            {options.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  onOptionChange?.(option.value)
+                  setOpen(false)
+                }}
+                className="flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-left text-sm font-normal transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                <Check
+                  size={13}
+                  className={cn('shrink-0', option.value === optionValue ? 'opacity-100' : 'opacity-0')}
+                />
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {options && onTextChange && <div className="h-px bg-border" />}
+
+        {onTextChange && (
+          <form
+            className="flex flex-col gap-2"
+            onSubmit={(event) => {
+              event.preventDefault()
+              applyText(draft.trim())
+            }}
+          >
+            <input
+              autoFocus
+              type="search"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder={t('tenantFilterContainsPlaceholder')}
+              className="h-9 rounded-md border border-input bg-transparent px-2 text-sm font-normal"
             />
-            {option.label}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+            <div className="flex justify-end gap-1.5">
+              {textValue && (
+                <Button type="button" size="sm" variant="ghost" onClick={() => applyText('')}>
+                  {t('tenantFilterClear')}
+                </Button>
+              )}
+              <Button type="submit" size="sm">
+                {t('tenantFilterApply')}
+              </Button>
+            </div>
+          </form>
+        )}
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -86,6 +164,8 @@ type TenantListCardProps = {
   onStatusFilterChange: (value: TenantStatusFilter) => void
   lineFilter: TenantLineFilter
   onLineFilterChange: (value: TenantLineFilter) => void
+  columnFilters: TenantColumnFilters
+  onColumnFilterChange: (key: TenantTextFilterKey, value: string) => void
   hasFilters: boolean
   sortKey: TenantSortKey
   sortDirection: TenantSortDirection
@@ -120,6 +200,8 @@ export function TenantListCard({
   onStatusFilterChange,
   lineFilter,
   onLineFilterChange,
+  columnFilters,
+  onColumnFilterChange,
   hasFilters,
   sortKey,
   sortDirection,
@@ -145,6 +227,41 @@ export function TenantListCard({
 }: TenantListCardProps) {
   const { t } = useLanguage()
 
+  // The column filters live in a table that is 60rem wide and scrolls, so on a
+  // narrow screen they're off to the right and there's no way to tell what's
+  // applied. Summarising them here keeps that visible and clearable at any size.
+  const activeFilters: { id: string; label: string; onClear: () => void }[] = []
+
+  if (statusFilter !== 'all') {
+    activeFilters.push({
+      id: 'is_active',
+      label: `${t('tenantFilterStatusLabel')}: ${statusFilter === 'active' ? t('statusActive') : t('statusInactive')}`,
+      onClear: () => onStatusFilterChange('all'),
+    })
+  }
+
+  if (lineFilter !== 'all') {
+    activeFilters.push({
+      id: 'line_linked',
+      label: `${t('tenantFilterLineLabel')}: ${lineFilter === 'linked' ? t('tenantFilterLineLinked') : t('tenantFilterLineUnlinked')}`,
+      onClear: () => onLineFilterChange('all'),
+    })
+  }
+
+  for (const column of SORTABLE_COLUMNS) {
+    const key = column.key
+    if (!isTextFilterKey(key)) continue
+
+    const value = columnFilters[key]
+    if (!value) continue
+
+    activeFilters.push({
+      id: key,
+      label: `${t(column.labelKey)}: ${value}`,
+      onClear: () => onColumnFilterChange(key, ''),
+    })
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4">
@@ -164,7 +281,7 @@ export function TenantListCard({
         {!loadError && !isLoading && (
           <>
             <div className="overflow-hidden rounded-md border border-border">
-              <div className="border-b border-border bg-muted/40 p-3">
+              <div className="flex flex-col gap-3 border-b border-border bg-muted/40 p-3">
                 <label className="flex w-full flex-col gap-1.5 text-sm font-medium sm:max-w-md">
                   {t('tenantSearchLabel')}
                   <input
@@ -175,6 +292,28 @@ export function TenantListCard({
                     onChange={(event) => onQueryChange(event.target.value)}
                   />
                 </label>
+
+                {activeFilters.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {activeFilters.map((filter) => (
+                      <span
+                        key={filter.id}
+                        className="inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-background py-0.5 pl-2.5 pr-1 text-xs"
+                      >
+                        <span className="truncate">{filter.label}</span>
+                        <button
+                          type="button"
+                          onClick={filter.onClear}
+                          title={t('tenantFilterClear')}
+                          aria-label={`${t('tenantFilterClear')}: ${filter.label}`}
+                          className="inline-flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Rendered even with no matches: the column filters live in the
@@ -202,7 +341,7 @@ export function TenantListCard({
                                     ? t('tenantSortAscending')
                                     : t('tenantSortDescending')
                                 }
-                                className="inline-flex items-center gap-1 transition-colors hover:text-foreground"
+                                className="inline-flex items-center gap-1 whitespace-nowrap transition-colors hover:text-foreground"
                               >
                                 {t(column.labelKey)}
                                 {isSorted ? (
@@ -219,21 +358,31 @@ export function TenantListCard({
                               {column.key === 'line_id' && (
                                 <ColumnFilterMenu
                                   label={t('tenantFilterLineLabel')}
-                                  value={lineFilter}
-                                  onChange={onLineFilterChange}
+                                  optionValue={lineFilter}
+                                  onOptionChange={onLineFilterChange}
                                   options={[
                                     { value: 'all', label: t('tenantFilterAll') },
                                     { value: 'linked', label: t('tenantFilterLineLinked') },
                                     { value: 'unlinked', label: t('tenantFilterLineUnlinked') },
                                   ]}
+                                  textValue={columnFilters.line_id ?? ''}
+                                  onTextChange={(value) => onColumnFilterChange('line_id', value)}
+                                />
+                              )}
+
+                              {isTextFilterKey(column.key) && column.key !== 'line_id' && (
+                                <ColumnFilterMenu
+                                  label={t(column.labelKey)}
+                                  textValue={columnFilters[column.key] ?? ''}
+                                  onTextChange={(value) => onColumnFilterChange(column.key as TenantTextFilterKey, value)}
                                 />
                               )}
 
                               {column.key === 'is_active' && (
                                 <ColumnFilterMenu
                                   label={t('tenantFilterStatusLabel')}
-                                  value={statusFilter}
-                                  onChange={onStatusFilterChange}
+                                  optionValue={statusFilter}
+                                  onOptionChange={onStatusFilterChange}
                                   options={[
                                     { value: 'all', label: t('tenantFilterAll') },
                                     { value: 'active', label: t('statusActive') },
@@ -251,11 +400,13 @@ export function TenantListCard({
                   <TableBody>
                     {tenants.length === 0 && (
                       <TableRow>
-                        <TableCell
-                          colSpan={SORTABLE_COLUMNS.length + 1}
-                          className="metric-detail py-6 text-center"
-                        >
-                          {hasFilters ? t('tenantNoMatching') : t('tenantNoTenants')}
+                        {/* The table is 60rem wide and scrolls, so centring
+                            this across every column would push it off a phone
+                            screen. Pin it to the left edge instead. */}
+                        <TableCell colSpan={SORTABLE_COLUMNS.length + 1} className="p-0">
+                          <p className="metric-detail sticky left-0 px-3 py-6">
+                            {hasFilters ? t('tenantNoMatching') : t('tenantNoTenants')}
+                          </p>
                         </TableCell>
                       </TableRow>
                     )}
@@ -285,7 +436,10 @@ export function TenantListCard({
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex flex-wrap justify-end gap-2">
+                          {/* Never wrap: a squeezed actions column would stack
+                              the buttons and blow up every row's height. The
+                              table scrolls horizontally instead. */}
+                          <div className="flex flex-nowrap justify-end gap-2">
                             <Button
                               type="button"
                               size="icon"

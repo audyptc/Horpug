@@ -437,8 +437,11 @@ body {
   min-width: 68rem;
 }
 
+/* Wider than the other tables: each header carries a sort control plus a
+   filter button, and the actions column holds up to five buttons that must
+   not wrap. */
 .tenant-table-wrap table {
-  min-width: 60rem;
+  min-width: 76rem;
 }
 
 .contract-table-wrap table {

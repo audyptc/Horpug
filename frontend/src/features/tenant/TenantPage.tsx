@@ -10,10 +10,12 @@ import { TenantLineLinkDialog } from './components/TenantLineLinkDialog'
 import type { ApiTenant, ApiTenantDeletionCheck } from './types'
 import {
   TENANT_PAGE_SIZE_OPTIONS,
+  type TenantColumnFilters,
   type TenantLineFilter,
   type TenantSortDirection,
   type TenantSortKey,
   type TenantStatusFilter,
+  type TenantTextFilterKey,
 } from './utils'
 
 const SEARCH_DEBOUNCE_MS = 300
@@ -30,6 +32,8 @@ export default function TenantPage() {
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<TenantStatusFilter>('all')
   const [lineFilter, setLineFilter] = useState<TenantLineFilter>('all')
+  // Applied on submit from each column's menu, so no debounce is needed here.
+  const [columnFilters, setColumnFilters] = useState<TenantColumnFilters>({})
   const [sortKey, setSortKey] = useState<TenantSortKey>('first_name')
   const [sortDirection, setSortDirection] = useState<TenantSortDirection>('asc')
 
@@ -75,6 +79,11 @@ export default function TenantPage() {
   useEffect(() => {
     const controller = new AbortController()
 
+    const columnParams: Record<string, string> = {}
+    for (const [key, value] of Object.entries(columnFilters)) {
+      if (value) columnParams[`f[${key}]`] = value
+    }
+
     api
       .get<ApiPage<ApiTenant[]>>('/tenants', {
         signal: controller.signal,
@@ -86,6 +95,7 @@ export default function TenantPage() {
           line_linked: lineFilter === 'all' ? undefined : lineFilter === 'linked',
           sort: sortKey,
           order: sortDirection,
+          ...columnParams,
         },
       })
       .then(({ data }) => {
@@ -103,10 +113,14 @@ export default function TenantPage() {
 
     return () => controller.abort()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize, debouncedQuery, statusFilter, lineFilter, sortKey, sortDirection, refreshToken])
+  }, [page, pageSize, debouncedQuery, statusFilter, lineFilter, columnFilters, sortKey, sortDirection, refreshToken])
 
   const isLoading = !loadError && tenants === null
-  const hasFilters = query !== '' || statusFilter !== 'all' || lineFilter !== 'all'
+  const hasFilters =
+    query !== '' ||
+    statusFilter !== 'all' ||
+    lineFilter !== 'all' ||
+    Object.values(columnFilters).some(Boolean)
   const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
   const rangeEnd = Math.min(page * pageSize, total)
 
@@ -325,6 +339,11 @@ export default function TenantPage() {
         lineFilter={lineFilter}
         onLineFilterChange={(value) => {
           setLineFilter(value)
+          setPage(1)
+        }}
+        columnFilters={columnFilters}
+        onColumnFilterChange={(key: TenantTextFilterKey, value: string) => {
+          setColumnFilters((prev) => ({ ...prev, [key]: value }))
           setPage(1)
         }}
         hasFilters={hasFilters}
