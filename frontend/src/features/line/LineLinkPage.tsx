@@ -94,6 +94,21 @@ export default function LineLinkPage() {
 
         await api.post(`/public/tenants/${tenantId}/line/link`, { id_token: idToken })
 
+        // Opening this page from inside the LINE app reuses the existing
+        // login session, so the OAuth consent screen (and its "add as
+        // friend" option) never appears — without this, a tenant can finish
+        // linking without ever becoming a friend of the OA, so invoices
+        // pushed to them later silently go nowhere. requestFriendship()
+        // shows that same prompt directly inside the LIFF app instead. It
+        // only works when the LIFF app's size is "Full" and throws if not
+        // supported, so failure here shouldn't block a link that otherwise
+        // succeeded.
+        try {
+          await liff.requestFriendship()
+        } catch {
+          // Ignore — e.g. LIFF app size isn't "Full", or already a friend.
+        }
+
         if (!cancelled) setStatus('success')
       } catch (err) {
         if (!cancelled) {
