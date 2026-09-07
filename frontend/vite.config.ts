@@ -24,6 +24,14 @@ export default defineConfig(({ mode }) => {
       react(),
       babel({ presets: [reactCompilerPreset()] })
     ],
+    build: {
+      // Tenants open the LIFF linking page from whatever phone they own, and
+      // an iPhone 7 tops out at iOS 15 — one `static {}` block from a
+      // dependency is a syntax error there, which kills the whole bundle and
+      // leaves them staring at a blank page. Lower the output far enough that
+      // those phones can still parse it.
+      target: ['es2020', 'safari15'],
+    },
     server: {
       proxy: {
         '/api': { target: apiProxyTarget, changeOrigin: true },
