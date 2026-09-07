@@ -160,6 +160,18 @@ func (s *Service) SendLine(ctx context.Context, invoiceID, requesterID uuid.UUID
 	return s.linePusher.PushMessage(ctx, invoice.TenantLineUserID, buildInvoiceLineMessage(invoice))
 }
 
+// LineMessagePreview returns the same text SendLine would push, for tenants
+// who only have a personal LINE ID on file (not linked via the OA/LIFF
+// flow) — staff can copy this into a manual LINE chat instead.
+func (s *Service) LineMessagePreview(ctx context.Context, invoiceID, requesterID uuid.UUID) (string, error) {
+	invoice, err := s.repo.GetByID(ctx, invoiceID, requesterID)
+	if err != nil {
+		return "", err
+	}
+
+	return buildInvoiceLineMessage(invoice), nil
+}
+
 var thaiMonths = [...]string{
 	"", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
 	"กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",

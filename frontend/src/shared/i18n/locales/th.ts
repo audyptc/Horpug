@@ -331,6 +331,12 @@ const th: Record<TranslationKey, string> = {
   invoiceSendLineNotLinkedDescription: 'ผู้เช่ายังไม่ได้เชื่อมต่อบัญชี LINE กรุณาส่งลิงก์เชื่อมต่อ LINE ให้ผู้เช่าก่อน แล้วลองส่งใบแจ้งหนี้อีกครั้ง',
   invoiceSendLineUnreachableDescription:
     'ผู้เช่ายังไม่ได้เพิ่มบัญชี LINE OA ของหอพักเป็นเพื่อน หรือได้บล็อกบัญชีไว้ กรุณาแจ้งให้ผู้เช่าเพิ่มเพื่อน LINE OA ก่อน แล้วลองส่งใบแจ้งหนี้อีกครั้ง',
+  invoiceLineChatCopiedTitle: 'คัดลอกข้อความแล้ว',
+  invoiceLineChatCopiedDescription:
+    'ผู้เช่ารายนี้ยังไม่ได้เชื่อมต่อบัญชี LINE ผ่านระบบ จึงเปิดหน้าแชท LINE ให้แล้ว และคัดลอกข้อความใบแจ้งหนี้ไปไว้ที่คลิปบอร์ด สามารถวาง (Paste) ส่งในแชทได้เลย',
+  invoiceLineChatManualTitle: 'เปิดแชท LINE แล้ว',
+  invoiceLineChatManualDescription:
+    'ผู้เช่ารายนี้ยังไม่ได้เชื่อมต่อบัญชี LINE ผ่านระบบ จึงเปิดหน้าแชท LINE ให้แล้ว แต่คัดลอกข้อความอัตโนมัติไม่สำเร็จ กรุณาพิมพ์แจ้งรายละเอียดใบแจ้งหนี้ในแชทด้วยตนเอง',
 
   lineLinkInProgress: 'กำลังเชื่อมต่อบัญชี LINE ของคุณ...',
   lineLinkSuccess: 'เชื่อมต่อบัญชี LINE สำเร็จแล้ว คุณสามารถปิดหน้านี้ได้',

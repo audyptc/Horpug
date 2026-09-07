@@ -330,6 +330,12 @@ const en = {
     'This tenant has not linked a LINE account yet. Send them the LINE linking link first, then try sending the invoice again.',
   invoiceSendLineUnreachableDescription:
     "This tenant hasn't added the dormitory's LINE OA as a friend, or has blocked it. Ask them to add the LINE OA as a friend, then try sending the invoice again.",
+  invoiceLineChatCopiedTitle: 'Message copied',
+  invoiceLineChatCopiedDescription:
+    "This tenant hasn't linked their LINE account yet, so we opened a LINE chat with them and copied the invoice message to your clipboard — just paste it into the chat.",
+  invoiceLineChatManualTitle: 'LINE chat opened',
+  invoiceLineChatManualDescription:
+    "This tenant hasn't linked their LINE account yet, so we opened a LINE chat with them, but copying the message automatically failed. Please type the invoice details into the chat yourself.",
 
   lineLinkInProgress: 'Linking your LINE account...',
   lineLinkSuccess: 'Your LINE account is linked. You can close this page now.',

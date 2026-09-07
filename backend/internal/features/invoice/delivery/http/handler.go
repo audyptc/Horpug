@@ -462,6 +462,43 @@ func (h *Handler) SendLine(c fiber.Ctx) error {
 	return apiresponse.Message(c, "invoice sent via LINE")
 }
 
+// LineMessagePreview godoc
+// @Summary Preview the LINE message text for an invoice
+// @Description Returns the same text SendLine would push, for tenants who only have a personal LINE ID on file (not linked via the OA/LIFF flow) so staff can copy it into a manual LINE chat.
+// @Tags invoices
+// @Produce json
+// @Param id path string true "Invoice ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /invoices/{id}/line-message [get]
+func (h *Handler) LineMessagePreview(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return apierror.BadRequest("invalid invoice id")
+	}
+
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	message, err := h.usecase.LineMessagePreview(ctx, id, requesterID)
+	if err != nil {
+		if errors.Is(err, invoicedomain.ErrInvoiceNotFound) {
+			return apierror.NotFound("invoice not found")
+		}
+		return apierror.Internal("failed to build line message")
+	}
+
+	return apiresponse.OK(c, fiber.Map{"message": message})
+}
+
 // Delete godoc
 // @Summary Delete an invoice
 // @Tags invoices

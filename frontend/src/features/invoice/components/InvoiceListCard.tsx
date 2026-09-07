@@ -46,6 +46,7 @@ type InvoiceListCardProps = {
   onDeleteInvoice: (invoice: ApiInvoice) => void
   sendingLineInvoiceId: string | null
   onSendLineInvoice: (invoice: ApiInvoice) => void
+  onOpenLineChat: (invoice: ApiInvoice) => void
 }
 
 export function InvoiceListCard({
@@ -73,6 +74,7 @@ export function InvoiceListCard({
   onDeleteInvoice,
   sendingLineInvoiceId,
   onSendLineInvoice,
+  onOpenLineChat,
 }: InvoiceListCardProps) {
   const { t } = useLanguage()
 
@@ -170,11 +172,9 @@ export function InvoiceListCard({
                                   onSendLineInvoice(invoice)
                                   return
                                 }
-                                window.open(
-                                  `https://line.me/ti/p/~${encodeURIComponent(invoice.tenant_line_id ?? '')}`,
-                                  '_blank',
-                                  'noopener,noreferrer',
-                                )
+                                if (invoice.tenant_line_id) {
+                                  onOpenLineChat(invoice)
+                                }
                               }}
                             >
                               <MessageCircle />

@@ -330,6 +330,35 @@ export default function InvoicePage() {
     }
   }
 
+  // Tenants who only have a personal LINE ID (haven't gone through the
+  // OA/LIFF linking flow) can't be pushed to automatically — the LINE
+  // Messaging API only reaches linked users. So we open a manual chat with
+  // them and copy the same formatted invoice text to the clipboard, ready
+  // to paste in.
+  async function handleOpenLineChat(invoice: ApiInvoice) {
+    if (!invoice.tenant_line_id) return
+
+    window.open(
+      `https://line.me/ti/p/~${encodeURIComponent(invoice.tenant_line_id)}`,
+      '_blank',
+      'noopener,noreferrer',
+    )
+
+    try {
+      const { data } = await api.get<{ message: string }>(`/invoices/${invoice.id}/line-message`)
+      await navigator.clipboard.writeText(data.message)
+      setLineSendResult({
+        title: t('invoiceLineChatCopiedTitle'),
+        description: t('invoiceLineChatCopiedDescription'),
+      })
+    } catch {
+      setLineSendResult({
+        title: t('invoiceLineChatManualTitle'),
+        description: t('invoiceLineChatManualDescription'),
+      })
+    }
+  }
+
   function applyInvoiceUpdate(data: ApiInvoice) {
     setFormInvoiceDetail(data)
     setInvoices((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
@@ -410,6 +439,7 @@ export default function InvoicePage() {
         onDeleteInvoice={setConfirmDeleteInvoice}
         sendingLineInvoiceId={sendingLineInvoiceId}
         onSendLineInvoice={handleSendLineInvoice}
+        onOpenLineChat={handleOpenLineChat}
       />
 
       <ConfirmDialog
