@@ -451,10 +451,10 @@ func (h *Handler) SendLine(c fiber.Ctx) error {
 			return apierror.NotFound("invoice not found")
 		}
 		if errors.Is(err, invoicedomain.ErrTenantLineNotLinked) {
-			return apierror.Conflict("tenant has not linked a LINE account")
+			return apierror.Conflict("tenant has not linked a LINE account").WithSlug("tenant_line_not_linked")
 		}
 		if errors.Is(err, invoicedomain.ErrTenantLineUnreachable) {
-			return apierror.Conflict("tenant has not added the LINE OA as a friend or has blocked it")
+			return apierror.Conflict("tenant has not added the LINE OA as a friend or has blocked it").WithSlug("tenant_line_unreachable")
 		}
 		return apierror.Internal("failed to send invoice via LINE")
 	}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
+import { api, extractErrorCode, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
@@ -316,10 +316,15 @@ export default function InvoicePage() {
           .replace('{tenant}', invoice.tenant_name ?? '-'),
       })
     } catch (err) {
-      setLineSendResult({
-        title: t('invoiceSendLineErrorTitle'),
-        description: extractErrorMessage(err, t('invoiceSendLineError')),
-      })
+      const code = extractErrorCode(err)
+      const description =
+        code === 'tenant_line_not_linked'
+          ? t('invoiceSendLineNotLinkedDescription')
+          : code === 'tenant_line_unreachable'
+            ? t('invoiceSendLineUnreachableDescription')
+            : extractErrorMessage(err, t('invoiceSendLineError'))
+
+      setLineSendResult({ title: t('invoiceSendLineErrorTitle'), description })
     } finally {
       setSendingLineInvoiceId(null)
     }

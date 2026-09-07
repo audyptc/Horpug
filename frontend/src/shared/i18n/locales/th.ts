@@ -328,9 +328,14 @@ const th: Record<TranslationKey, string> = {
   invoiceSendLineSuccessTitle: 'ส่งสำเร็จ',
   invoiceSendLineSuccessDescription: 'ส่งใบแจ้งหนี้ห้อง {room} ถึงคุณ {tenant} ทาง LINE เรียบร้อยแล้ว',
   invoiceSendLineErrorTitle: 'ส่งไม่สำเร็จ',
+  invoiceSendLineNotLinkedDescription: 'ผู้เช่ายังไม่ได้เชื่อมต่อบัญชี LINE กรุณาส่งลิงก์เชื่อมต่อ LINE ให้ผู้เช่าก่อน แล้วลองส่งใบแจ้งหนี้อีกครั้ง',
+  invoiceSendLineUnreachableDescription:
+    'ผู้เช่ายังไม่ได้เพิ่มบัญชี LINE OA ของหอพักเป็นเพื่อน หรือได้บล็อกบัญชีไว้ กรุณาแจ้งให้ผู้เช่าเพิ่มเพื่อน LINE OA ก่อน แล้วลองส่งใบแจ้งหนี้อีกครั้ง',
 
   lineLinkInProgress: 'กำลังเชื่อมต่อบัญชี LINE ของคุณ...',
   lineLinkSuccess: 'เชื่อมต่อบัญชี LINE สำเร็จแล้ว คุณสามารถปิดหน้านี้ได้',
+  lineLinkSuccessNeedsFriend:
+    'เชื่อมต่อบัญชี LINE สำเร็จแล้ว แต่คุณยังไม่ได้เพิ่มเราเป็นเพื่อนใน LINE กรุณาเพิ่มเพื่อนบัญชี LINE OA ของหอพัก เพื่อให้สามารถรับใบแจ้งหนี้ได้ จากนั้นจึงปิดหน้านี้ได้',
   lineLinkError: 'เชื่อมต่อบัญชี LINE ไม่สำเร็จ กรุณาลองใหม่หรือติดต่อผู้ดูแลหอพัก',
   lineLinkMissingTenant: 'ลิงก์นี้ไม่ถูกต้อง (ไม่พบรหัสผู้เช่า)',
   lineLinkNotConfigured: 'ระบบยังไม่ได้ตั้งค่าการเชื่อมต่อ LINE',

@@ -5,6 +5,10 @@ import "github.com/gofiber/fiber/v3"
 type Error struct {
 	Code    int
 	Message string
+	// Slug is an optional machine-readable identifier for this error, used
+	// by clients to key off a specific failure case (e.g. to show a
+	// localized, actionable message) without parsing Message.
+	Slug string
 }
 
 func (e *Error) Error() string {
@@ -13,6 +17,12 @@ func (e *Error) Error() string {
 
 func New(code int, message string) *Error {
 	return &Error{Code: code, Message: message}
+}
+
+// WithSlug attaches a machine-readable slug to the error and returns it.
+func (e *Error) WithSlug(slug string) *Error {
+	e.Slug = slug
+	return e
 }
 
 func BadRequest(message string) *Error {

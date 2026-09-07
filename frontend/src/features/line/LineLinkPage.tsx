@@ -3,7 +3,7 @@ import { Building2 } from 'lucide-react'
 import { api, extractErrorMessage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
 
-type Status = 'loading' | 'linking' | 'success' | 'error'
+type Status = 'loading' | 'linking' | 'success' | 'success-needs-friend' | 'error'
 
 const PENDING_TENANT_ID_KEY = 'liff_pending_tenant_id'
 
@@ -103,13 +103,28 @@ export default function LineLinkPage() {
         // only works when the LIFF app's size is "Full" and throws if not
         // supported, so failure here shouldn't block a link that otherwise
         // succeeded.
+        let isFriend = false
         try {
-          await liff.requestFriendship()
+          isFriend = (await liff.getFriendship()).friendFlag
         } catch {
-          // Ignore — e.g. LIFF app size isn't "Full", or already a friend.
+          // Ignore — treat as unknown/not-a-friend below.
         }
 
-        if (!cancelled) setStatus('success')
+        if (!isFriend) {
+          try {
+            await liff.requestFriendship()
+          } catch {
+            // Ignore — e.g. LIFF app size isn't "Full".
+          }
+          try {
+            isFriend = (await liff.getFriendship()).friendFlag
+          } catch {
+            // Ignore — the success screen below will just ask the tenant to
+            // check/add friendship manually.
+          }
+        }
+
+        if (!cancelled) setStatus(isFriend ? 'success' : 'success-needs-friend')
       } catch (err) {
         if (!cancelled) {
           setStatus('error')
@@ -140,6 +155,7 @@ export default function LineLinkPage() {
 
         {(status === 'loading' || status === 'linking') && <p>{t('lineLinkInProgress')}</p>}
         {status === 'success' && <p>{t('lineLinkSuccess')}</p>}
+        {status === 'success-needs-friend' && <p>{t('lineLinkSuccessNeedsFriend')}</p>}
         {status === 'error' && <p className="login-error">{error}</p>}
       </div>
     </div>

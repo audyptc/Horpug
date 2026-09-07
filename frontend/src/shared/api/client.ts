@@ -91,3 +91,15 @@ export function extractErrorMessage(error: unknown, fallback: string): string {
   }
   return fallback
 }
+
+// extractErrorCode reads the optional machine-readable `code` slug the
+// backend attaches to some errors (see apierror.Error.Slug), so callers can
+// key off a specific failure case and show a localized, actionable message
+// instead of the raw (English) error text.
+export function extractErrorCode(error: unknown): string | undefined {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as { code?: string } | undefined
+    return data?.code
+  }
+  return undefined
+}

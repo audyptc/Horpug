@@ -11,7 +11,11 @@ import (
 func ErrorHandler(c fiber.Ctx, err error) error {
 	var appErr *apierror.Error
 	if errors.As(err, &appErr) {
-		return c.Status(appErr.Code).JSON(fiber.Map{"error": appErr.Message})
+		body := fiber.Map{"error": appErr.Message}
+		if appErr.Slug != "" {
+			body["code"] = appErr.Slug
+		}
+		return c.Status(appErr.Code).JSON(body)
 	}
 
 	var fiberErr *fiber.Error

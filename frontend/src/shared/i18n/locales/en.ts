@@ -326,9 +326,15 @@ const en = {
   invoiceSendLineSuccessTitle: 'Sent successfully',
   invoiceSendLineSuccessDescription: 'The invoice for room {room} was sent to {tenant} via LINE.',
   invoiceSendLineErrorTitle: 'Send failed',
+  invoiceSendLineNotLinkedDescription:
+    'This tenant has not linked a LINE account yet. Send them the LINE linking link first, then try sending the invoice again.',
+  invoiceSendLineUnreachableDescription:
+    "This tenant hasn't added the dormitory's LINE OA as a friend, or has blocked it. Ask them to add the LINE OA as a friend, then try sending the invoice again.",
 
   lineLinkInProgress: 'Linking your LINE account...',
   lineLinkSuccess: 'Your LINE account is linked. You can close this page now.',
+  lineLinkSuccessNeedsFriend:
+    "Your LINE account is linked, but you haven't added us as a friend yet. Please add the dormitory's LINE OA as a friend so you can receive invoices, then close this page.",
   lineLinkError: 'Failed to link your LINE account. Please try again or contact the dormitory staff.',
   lineLinkMissingTenant: 'This link is invalid (missing tenant reference).',
   lineLinkNotConfigured: 'LINE integration is not configured yet.',
