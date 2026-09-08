@@ -11,6 +11,9 @@ import (
 	"github.com/google/uuid"
 )
 
+// ListFilters narrows and orders an invoice listing. Search casts a wide OR
+// across tenant name, room number and dormitory name; Columns narrows
+// individual columns by substring on top of that, keyed by FilterColumns.
 type ListFilters struct {
 	ContractID  *uuid.UUID
 	RoomID      *uuid.UUID
@@ -19,7 +22,39 @@ type ListFilters struct {
 	Status      *invoicedomain.InvoiceStatus
 	PeriodYear  *int
 	PeriodMonth *int
+	Search      string
+	Columns     map[string]string
+	SortKey     string
+	SortDesc    bool
 }
+
+// FilterColumns whitelists the columns a caller may match a substring
+// against. Same rule as SortColumns: the expression is interpolated into SQL
+// rather than bound, so nothing outside this map may reach the query.
+var FilterColumns = map[string]string{
+	"tenant_name":    "(t.first_name || ' ' || t.last_name)",
+	"room_number":    "rm.room_number",
+	"dormitory_name": "d.name",
+}
+
+// SortColumns maps the sort keys the API accepts onto the expressions they
+// order by. A column name can't be passed to Postgres as a bind parameter, so
+// it is interpolated into the query — every value that reaches ORDER BY must
+// come from this map and never straight from the request. period combines
+// year and month into one comparable value so a single ASC/DESC direction
+// orders both correctly.
+var SortColumns = map[string]string{
+	"tenant_name":    "(t.first_name || ' ' || t.last_name)",
+	"room_number":    "rm.room_number",
+	"dormitory_name": "d.name",
+	"period":         "(i.period_year * 12 + i.period_month)",
+	"due_date":       "i.due_date",
+	"total_amount":   "i.total_amount",
+	"status":         "i.status",
+	"created_at":     "i.created_at",
+}
+
+const DefaultSortKey = "period"
 
 type CreateInput struct {
 	ContractID  uuid.UUID

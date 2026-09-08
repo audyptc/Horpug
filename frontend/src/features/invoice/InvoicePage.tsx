@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import axios from 'axios'
 import { api, extractErrorCode, extractErrorMessage, type ApiPage } from '@/shared/api/client'
-import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { InformationDialog } from '@/shared/components/information-dialog'
@@ -17,16 +17,37 @@ import {
   toApiDate,
   toDateInputValue,
   toPeriodInputValue,
+  type InvoiceColumnFilters,
+  type InvoiceSortDirection,
+  type InvoiceSortKey,
+  type InvoiceStatusFilter,
+  type InvoiceTextFilterKey,
 } from './utils'
+
+const SEARCH_DEBOUNCE_MS = 300
 
 export default function InvoicePage() {
   const { t } = useLanguage()
 
   const [invoices, setInvoices] = useState<ApiInvoice[] | null>(null)
   const [contracts, setContracts] = useState<ApiContract[]>([])
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<InvoiceStatusFilter>('all')
+  // Applied on submit from each column's menu, so no debounce is needed here.
+  const [columnFilters, setColumnFilters] = useState<InvoiceColumnFilters>({})
+  const [sortKey, setSortKey] = useState<InvoiceSortKey>('period')
+  const [sortDirection, setSortDirection] = useState<InvoiceSortDirection>('desc')
+
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSizeState] = useState<number>(INVOICE_PAGE_SIZE_OPTIONS[0])
+  // Bumped by mutations so the list refetches; the server owns the ordering
+  // and page boundaries now, so patching rows locally would misplace them.
+  const [refreshToken, setRefreshToken] = useState(0)
 
   const [formOpen, setFormOpen] = useState(false)
   const [formInvoiceId, setFormInvoiceId] = useState<string | null>(null)
@@ -59,16 +80,19 @@ export default function InvoicePage() {
   const [lineSendResult, setLineSendResult] = useState<{ title: string; description: string } | null>(null)
 
   useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [query])
+
+  // The contract selector in the create form isn't affected by the list's
+  // filters, so it's loaded once rather than on every refetch.
+  useEffect(() => {
     let cancelled = false
 
-    Promise.all([
-      api.get<ApiPage<ApiInvoice[]>>('/invoices', { params: { per_page: 100 } }),
-      api.get<ApiPage<ApiContract[]>>('/contracts', { params: { status: 'active', per_page: 100 } }),
-    ])
-      .then(([invoicesRes, contractsRes]) => {
-        if (cancelled) return
-        setInvoices(invoicesRes.data.data)
-        setContracts(contractsRes.data.data)
+    api
+      .get<ApiPage<ApiContract[]>>('/contracts', { params: { status: 'active', per_page: 100 } })
+      .then(({ data }) => {
+        if (!cancelled) setContracts(data.data)
       })
       .catch((err) => {
         if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
@@ -80,35 +104,67 @@ export default function InvoicePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const filteredInvoices = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase()
-    if (!q) return invoices ?? []
+  useEffect(() => {
+    const controller = new AbortController()
 
-    return (invoices ?? []).filter((invoice) => {
-      return (
-        (invoice.tenant_name ?? '').toLocaleLowerCase().includes(q) ||
-        (invoice.room_number ?? '').toLocaleLowerCase().includes(q) ||
-        (invoice.dormitory_name ?? '').toLocaleLowerCase().includes(q)
-      )
-    })
-  }, [query, invoices])
+    const columnParams: Record<string, string> = {}
+    for (const [key, value] of Object.entries(columnFilters)) {
+      if (value) columnParams[`f[${key}]`] = value
+    }
 
-  const {
-    page: currentPage,
-    pageSize,
-    setPageSize,
-    totalPages,
-    rangeStart,
-    rangeEnd,
-    paginatedItems: paginatedInvoices,
-    resetPage,
-    firstPage,
-    prevPage,
-    nextPage,
-    lastPage,
-  } = usePagination(filteredInvoices, INVOICE_PAGE_SIZE_OPTIONS[0])
+    api
+      .get<ApiPage<ApiInvoice[]>>('/invoices', {
+        signal: controller.signal,
+        params: {
+          page,
+          per_page: pageSize,
+          q: debouncedQuery.trim() || undefined,
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          sort: sortKey,
+          order: sortDirection,
+          ...columnParams,
+        },
+      })
+      .then(({ data }) => {
+        setInvoices(data.data)
+        setTotal(data.meta.total)
+        setTotalPages(data.meta.total_pages)
+        setLoadError(null)
+      })
+      .catch((err) => {
+        // A cancelled request is this effect being superseded by a newer one,
+        // not a failure — letting it through would overwrite the newer result.
+        if (axios.isCancel(err)) return
+        setLoadError(extractErrorMessage(err, t('resourceLoadError')))
+      })
+
+    return () => controller.abort()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, debouncedQuery, statusFilter, columnFilters, sortKey, sortDirection, refreshToken])
 
   const isLoading = !loadError && invoices === null
+  const hasFilters = query !== '' || statusFilter !== 'all' || Object.values(columnFilters).some(Boolean)
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const rangeEnd = Math.min(page * pageSize, total)
+
+  function refresh() {
+    setRefreshToken((value) => value + 1)
+  }
+
+  function setPageSize(size: number) {
+    setPageSizeState(size)
+    setPage(1)
+  }
+
+  function handleSort(key: InvoiceSortKey) {
+    if (key === sortKey) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+    setPage(1)
+  }
 
   const selectedFormContract = contracts.find((item) => item.id === formContractId)
   const selectedFormPeriod = parsePeriodInputValue(formPeriod)
@@ -238,14 +294,12 @@ export default function InvoicePage() {
           note: formNote.trim(),
         }
         const { data: created } = await api.post<ApiInvoice>('/invoices', payload)
-        setInvoices((prev) => [...(prev ?? []), created])
 
         let finalInvoice = created
         for (const item of formPendingItems) {
           try {
             const { data: updated } = await api.post<ApiInvoice>(`/invoices/${created.id}/items`, item)
             finalInvoice = updated
-            setInvoices((prev) => prev?.map((inv) => (inv.id === updated.id ? updated : inv)) ?? prev)
           } catch (err) {
             openEditForm(finalInvoice)
             setFormError(extractErrorMessage(err, t('invoiceItemAddError')))
@@ -253,6 +307,7 @@ export default function InvoicePage() {
           }
         }
 
+        refresh()
         setFormOpen(false)
       } catch (err) {
         setFormError(extractErrorMessage(err, t('invoiceCreateError')))
@@ -276,8 +331,8 @@ export default function InvoicePage() {
         due_date: toApiDate(formDueDate),
         note: formNote.trim(),
       }
-      const { data } = await api.put<ApiInvoice>(`/invoices/${formInvoiceId}`, payload)
-      setInvoices((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
+      await api.put<ApiInvoice>(`/invoices/${formInvoiceId}`, payload)
+      refresh()
       setFormOpen(false)
     } catch (err) {
       setFormError(extractErrorMessage(err, t('invoiceUpdateError')))
@@ -295,7 +350,10 @@ export default function InvoicePage() {
 
     try {
       await api.delete(`/invoices/${invoice.id}`)
-      setInvoices((prev) => prev?.filter((item) => item.id !== invoice.id) ?? prev)
+      // Deleting the last row of the final page would otherwise strand the
+      // view on a page the server no longer has.
+      setPage((value) => (invoices?.length === 1 ? Math.max(1, value - 1) : value))
+      refresh()
       setConfirmDeleteInvoice(null)
     } catch (err) {
       setDeleteError(extractErrorMessage(err, t('invoiceDeleteError')))
@@ -361,7 +419,7 @@ export default function InvoicePage() {
 
   function applyInvoiceUpdate(data: ApiInvoice) {
     setFormInvoiceDetail(data)
-    setInvoices((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
+    refresh()
   }
 
   async function handleAddItem(description: string, amount: number) {
@@ -415,24 +473,37 @@ export default function InvoicePage() {
         isLoading={isLoading}
         loadError={loadError}
         deleteError={deleteError}
-        invoices={invoices}
         query={query}
         onQueryChange={(value) => {
           setQuery(value)
-          resetPage()
+          setPage(1)
         }}
-        filteredInvoices={filteredInvoices}
-        paginatedInvoices={paginatedInvoices}
-        currentPage={currentPage}
+        statusFilter={statusFilter}
+        onStatusFilterChange={(value) => {
+          setStatusFilter(value)
+          setPage(1)
+        }}
+        columnFilters={columnFilters}
+        onColumnFilterChange={(key: InvoiceTextFilterKey, value: string) => {
+          setColumnFilters((prev) => ({ ...prev, [key]: value }))
+          setPage(1)
+        }}
+        hasFilters={hasFilters}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={handleSort}
+        invoices={invoices ?? []}
+        total={total}
+        currentPage={page}
         totalPages={totalPages}
         rangeStart={rangeStart}
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
-        onFirstPage={firstPage}
-        onPrevPage={prevPage}
-        onNextPage={nextPage}
-        onLastPage={lastPage}
+        onFirstPage={() => setPage(1)}
+        onPrevPage={() => setPage((value) => Math.max(1, value - 1))}
+        onNextPage={() => setPage((value) => Math.min(totalPages, value + 1))}
+        onLastPage={() => setPage(totalPages)}
         deletingInvoiceId={deletingInvoiceId}
         onCreateInvoice={openCreateForm}
         onEditInvoice={openEditForm}

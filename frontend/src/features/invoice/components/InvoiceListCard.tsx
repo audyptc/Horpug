@@ -1,11 +1,34 @@
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MessageCircle, Pencil, Trash2 } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  MessageCircle,
+  Pencil,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import { ColumnFilterMenu } from '@/shared/components/column-filter-menu'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
 import { Button } from '@/shared/components/ui/button'
 import type { ApiInvoice, InvoiceStatus } from '../types'
-import { INVOICE_PAGE_SIZE_OPTIONS, formatPeriod, toDateInputValue } from '../utils'
+import {
+  INVOICE_PAGE_SIZE_OPTIONS,
+  formatPeriod,
+  isTextFilterKey,
+  toDateInputValue,
+  type InvoiceColumnFilters,
+  type InvoiceSortDirection,
+  type InvoiceSortKey,
+  type InvoiceStatusFilter,
+  type InvoiceTextFilterKey,
+} from '../utils'
 
 const invoiceStatusLabelKeys: Record<InvoiceStatus, TranslationKey> = {
   unpaid: 'invoiceStatusUnpaid',
@@ -21,15 +44,32 @@ const invoiceStatusBadgeVariant: Record<InvoiceStatus, 'default' | 'outline' | '
   cancelled: 'outline',
 }
 
+const SORTABLE_COLUMNS: { key: InvoiceSortKey; labelKey: TranslationKey }[] = [
+  { key: 'tenant_name', labelKey: 'invoiceTenantColumn' },
+  { key: 'room_number', labelKey: 'invoiceRoomColumn' },
+  { key: 'dormitory_name', labelKey: 'invoiceDormitoryColumn' },
+  { key: 'period', labelKey: 'invoicePeriodColumn' },
+  { key: 'due_date', labelKey: 'invoiceDueDateColumn' },
+  { key: 'total_amount', labelKey: 'invoiceTotalAmountColumn' },
+  { key: 'status', labelKey: 'invoiceStatusColumn' },
+]
+
 type InvoiceListCardProps = {
   isLoading: boolean
   loadError: string | null
   deleteError: string | null
-  invoices: ApiInvoice[] | null
   query: string
   onQueryChange: (query: string) => void
-  filteredInvoices: ApiInvoice[]
-  paginatedInvoices: ApiInvoice[]
+  statusFilter: InvoiceStatusFilter
+  onStatusFilterChange: (value: InvoiceStatusFilter) => void
+  columnFilters: InvoiceColumnFilters
+  onColumnFilterChange: (key: InvoiceTextFilterKey, value: string) => void
+  hasFilters: boolean
+  sortKey: InvoiceSortKey
+  sortDirection: InvoiceSortDirection
+  onSort: (key: InvoiceSortKey) => void
+  invoices: ApiInvoice[]
+  total: number
   currentPage: number
   totalPages: number
   rangeStart: number
@@ -53,11 +93,18 @@ export function InvoiceListCard({
   isLoading,
   loadError,
   deleteError,
-  invoices,
   query,
   onQueryChange,
-  filteredInvoices,
-  paginatedInvoices,
+  statusFilter,
+  onStatusFilterChange,
+  columnFilters,
+  onColumnFilterChange,
+  hasFilters,
+  sortKey,
+  sortDirection,
+  onSort,
+  invoices,
+  total,
   currentPage,
   totalPages,
   rangeStart,
@@ -78,6 +125,33 @@ export function InvoiceListCard({
 }: InvoiceListCardProps) {
   const { t } = useLanguage()
 
+  // The column filters live in a table that scrolls, so on a narrow screen
+  // they're off to the right and there's no way to tell what's applied.
+  // Summarising them here keeps that visible and clearable at any size.
+  const activeFilters: { id: string; label: string; onClear: () => void }[] = []
+
+  if (statusFilter !== 'all') {
+    activeFilters.push({
+      id: 'status',
+      label: `${t('invoiceStatusColumn')}: ${t(invoiceStatusLabelKeys[statusFilter])}`,
+      onClear: () => onStatusFilterChange('all'),
+    })
+  }
+
+  for (const column of SORTABLE_COLUMNS) {
+    const key = column.key
+    if (!isTextFilterKey(key)) continue
+
+    const value = columnFilters[key]
+    if (!value) continue
+
+    activeFilters.push({
+      id: key,
+      label: `${t(column.labelKey)}: ${value}`,
+      onClear: () => onColumnFilterChange(key, ''),
+    })
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
@@ -94,47 +168,132 @@ export function InvoiceListCard({
 
         {!loadError && isLoading && <p className="metric-detail">{t('loading')}</p>}
 
-        {!loadError && !isLoading && invoices && invoices.length === 0 && (
-          <p className="metric-detail">{t('invoiceNoInvoices')}</p>
-        )}
-
-        {!loadError && !isLoading && invoices && invoices.length > 0 && (
+        {!loadError && !isLoading && (
           <>
-            <label className="flex w-full max-w-md flex-col gap-1.5 text-sm font-medium">
-              {t('invoiceSearchLabel')}
-              <input
-                type="search"
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                placeholder={t('invoiceSearchPlaceholder')}
-                value={query}
-                onChange={(event) => onQueryChange(event.target.value)}
-              />
-            </label>
+            <div className="overflow-hidden rounded-md border border-border">
+              <div className="flex flex-col gap-3 border-b border-border bg-muted/40 p-3">
+                <label className="flex w-full flex-col gap-1.5 text-sm font-medium sm:max-w-md">
+                  {t('invoiceSearchLabel')}
+                  <input
+                    type="search"
+                    className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                    placeholder={t('invoiceSearchPlaceholder')}
+                    value={query}
+                    onChange={(event) => onQueryChange(event.target.value)}
+                  />
+                </label>
 
-            {filteredInvoices.length === 0 && <p className="metric-detail">{t('invoiceNoMatching')}</p>}
+                {activeFilters.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {activeFilters.map((filter) => (
+                      <span
+                        key={filter.id}
+                        className="inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-background py-0.5 pl-2.5 pr-1 text-xs"
+                      >
+                        <span className="truncate">{filter.label}</span>
+                        <button
+                          type="button"
+                          onClick={filter.onClear}
+                          title={t('filterClear')}
+                          aria-label={`${t('filterClear')}: ${filter.label}`}
+                          className="inline-flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-            {filteredInvoices.length > 0 && (
-              <div className="table-wrap invoice-table-wrap">
+              {/* Rendered even with no matches: the column filters live in the
+                  header, so hiding it would strand the user with no way to
+                  widen the filter again. */}
+              <div className="invoice-table-wrap overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('invoiceTenantColumn')}</TableHead>
-                      <TableHead>{t('invoiceRoomColumn')}</TableHead>
-                      <TableHead>{t('invoicePeriodColumn')}</TableHead>
-                      <TableHead>{t('invoiceDueDateColumn')}</TableHead>
-                      <TableHead>{t('invoiceTotalAmountColumn')}</TableHead>
-                      <TableHead>{t('invoiceStatusColumn')}</TableHead>
+                      {SORTABLE_COLUMNS.map((column) => {
+                        const isSorted = sortKey === column.key
+                        return (
+                          <TableHead
+                            key={column.key}
+                            aria-sort={
+                              isSorted ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'
+                            }
+                          >
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => onSort(column.key)}
+                                title={
+                                  isSorted && sortDirection === 'asc'
+                                    ? t('sortAscending')
+                                    : t('sortDescending')
+                                }
+                                className="inline-flex items-center gap-1 whitespace-nowrap transition-colors hover:text-foreground"
+                              >
+                                {t(column.labelKey)}
+                                {isSorted ? (
+                                  sortDirection === 'asc' ? (
+                                    <ArrowUp size={13} className="shrink-0" />
+                                  ) : (
+                                    <ArrowDown size={13} className="shrink-0" />
+                                  )
+                                ) : (
+                                  <ArrowUpDown size={13} className="shrink-0 opacity-40" />
+                                )}
+                              </button>
+
+                              {isTextFilterKey(column.key) && (
+                                <ColumnFilterMenu
+                                  label={t(column.labelKey)}
+                                  textValue={columnFilters[column.key] ?? ''}
+                                  onTextChange={(value) =>
+                                    onColumnFilterChange(column.key as InvoiceTextFilterKey, value)
+                                  }
+                                />
+                              )}
+
+                              {column.key === 'status' && (
+                                <ColumnFilterMenu
+                                  label={t('invoiceStatusColumn')}
+                                  optionValue={statusFilter}
+                                  onOptionChange={onStatusFilterChange}
+                                  options={[
+                                    { value: 'all', label: t('filterAll') },
+                                    { value: 'unpaid', label: t('invoiceStatusUnpaid') },
+                                    { value: 'paid', label: t('invoiceStatusPaid') },
+                                    { value: 'overdue', label: t('invoiceStatusOverdue') },
+                                    { value: 'cancelled', label: t('invoiceStatusCancelled') },
+                                  ]}
+                                />
+                              )}
+                            </div>
+                          </TableHead>
+                        )
+                      })}
                       <TableHead className="text-right">{t('invoiceActionsColumn')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedInvoices.map((invoice) => (
+                    {invoices.length === 0 && (
+                      <TableRow>
+                        {/* The table scrolls, so centring this across every
+                            column would push it off a phone screen. Pin it to
+                            the left edge instead. */}
+                        <TableCell colSpan={SORTABLE_COLUMNS.length + 1} className="p-0">
+                          <p className="metric-detail sticky left-0 px-3 py-6">
+                            {hasFilters ? t('invoiceNoMatching') : t('invoiceNoInvoices')}
+                          </p>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {invoices.map((invoice) => (
                       <TableRow key={invoice.id}>
                         <TableCell className="font-semibold">{invoice.tenant_name || '—'}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {invoice.room_number || '—'}
-                          {invoice.dormitory_name ? ` (${invoice.dormitory_name})` : ''}
-                        </TableCell>
+                        <TableCell className="text-muted-foreground">{invoice.room_number || '—'}</TableCell>
+                        <TableCell className="text-muted-foreground">{invoice.dormitory_name || '—'}</TableCell>
                         <TableCell className="text-muted-foreground">
                           {formatPeriod(invoice.period_year, invoice.period_month)}
                         </TableCell>
@@ -150,7 +309,10 @@ export function InvoiceListCard({
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex flex-wrap justify-end gap-2">
+                          {/* Never wrap: a squeezed actions column would stack
+                              the buttons and blow up every row's height. The
+                              table scrolls horizontally instead. */}
+                          <div className="flex flex-nowrap justify-end gap-2">
                             <Button
                               type="button"
                               size="icon"
@@ -207,13 +369,13 @@ export function InvoiceListCard({
                   </TableBody>
                 </Table>
               </div>
-            )}
+            </div>
 
-            {filteredInvoices.length > 0 && (
+            {total > 0 && (
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted-foreground">
                   {t('rolePermissionsShowingLabel')} {rangeStart}-{rangeEnd}{' '}
-                  {t('rolePermissionsOfLabel')} {filteredInvoices.length} {t('rolePermissionsResultsLabel')}
+                  {t('rolePermissionsOfLabel')} {total} {t('rolePermissionsResultsLabel')}
                   {totalPages > 1 && (
                     <>
                       {' '}

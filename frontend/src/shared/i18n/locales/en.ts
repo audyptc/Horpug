@@ -324,6 +324,7 @@ const en = {
   menuInvoicesDescription: 'Create and track tenant invoices for rent, water and electricity.',
   invoiceTenantColumn: 'Tenant',
   invoiceRoomColumn: 'Room',
+  invoiceDormitoryColumn: 'Dormitory',
   invoicePeriodColumn: 'Billing Period',
   invoiceDueDateColumn: 'Due Date',
   invoiceTotalAmountColumn: 'Total Amount',

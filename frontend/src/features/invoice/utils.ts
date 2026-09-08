@@ -4,6 +4,31 @@ export const INVOICE_PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const
 
 export const INVOICE_STATUSES: InvoiceStatus[] = ['unpaid', 'paid', 'overdue', 'cancelled']
 
+// Mirrors the sort fields the invoices endpoint whitelists; anything else is
+// rejected there with a 400.
+export type InvoiceSortKey =
+  | 'tenant_name'
+  | 'room_number'
+  | 'dormitory_name'
+  | 'period'
+  | 'due_date'
+  | 'total_amount'
+  | 'status'
+
+export type InvoiceSortDirection = 'asc' | 'desc'
+export type InvoiceStatusFilter = 'all' | InvoiceStatus
+
+// Mirrors the columns the endpoint accepts as f[<column>]=value; anything else
+// is rejected there with a 400.
+export const INVOICE_TEXT_FILTER_KEYS = ['tenant_name', 'room_number', 'dormitory_name'] as const
+
+export type InvoiceTextFilterKey = (typeof INVOICE_TEXT_FILTER_KEYS)[number]
+export type InvoiceColumnFilters = Partial<Record<InvoiceTextFilterKey, string>>
+
+export function isTextFilterKey(key: string): key is InvoiceTextFilterKey {
+  return (INVOICE_TEXT_FILTER_KEYS as readonly string[]).includes(key)
+}
+
 export function toDateInputValue(value?: string): string {
   return value ? value.slice(0, 10) : ''
 }

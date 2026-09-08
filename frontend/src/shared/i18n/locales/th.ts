@@ -326,6 +326,7 @@ const th: Record<TranslationKey, string> = {
   menuInvoicesDescription: 'สร้างและติดตามใบแจ้งหนี้ค่าเช่า ค่าน้ำ ค่าไฟของผู้เช่า',
   invoiceTenantColumn: 'ผู้เช่า',
   invoiceRoomColumn: 'ห้องพัก',
+  invoiceDormitoryColumn: 'หอพัก',
   invoicePeriodColumn: 'งวดบิล',
   invoiceDueDateColumn: 'วันครบกำหนดชำระ',
   invoiceTotalAmountColumn: 'ยอดรวม',

@@ -456,8 +456,10 @@ body {
   min-width: 44rem;
 }
 
+/* Wider than before: each header now carries a sort control plus a filter
+   button, on top of a dormitory column split out of the room column. */
 .invoice-table-wrap table {
-  min-width: 52rem;
+  min-width: 72rem;
 }
 
 .parcel-table-wrap table {
