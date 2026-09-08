@@ -1,22 +1,45 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import axios from 'axios'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
-import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { InformationDialog } from '@/shared/components/information-dialog'
 import { DormitoryListCard } from './components/DormitoryListCard'
 import { DormitoryFormSheet } from './components/DormitoryFormSheet'
 import type { ApiDormitory, ApiDormitoryDeletionCheck, ApiUser } from './types'
-import { DORMITORY_PAGE_SIZE_OPTIONS } from './utils'
+import {
+  DORMITORY_PAGE_SIZE_OPTIONS,
+  type DormitoryColumnFilters,
+  type DormitorySortDirection,
+  type DormitorySortKey,
+  type DormitoryStatusFilter,
+  type DormitoryTextFilterKey,
+} from './utils'
+
+const SEARCH_DEBOUNCE_MS = 300
 
 export default function DormitoryPage() {
   const { t } = useLanguage()
 
   const [dormitories, setDormitories] = useState<ApiDormitory[] | null>(null)
   const [users, setUsers] = useState<ApiUser[]>([])
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<DormitoryStatusFilter>('all')
+  // Applied on submit from each column's menu, so no debounce is needed here.
+  const [columnFilters, setColumnFilters] = useState<DormitoryColumnFilters>({})
+  const [sortKey, setSortKey] = useState<DormitorySortKey>('name')
+  const [sortDirection, setSortDirection] = useState<DormitorySortDirection>('asc')
+
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSizeState] = useState<number>(DORMITORY_PAGE_SIZE_OPTIONS[0])
+  // Bumped by mutations so the list refetches; the server owns the ordering
+  // and page boundaries now, so patching rows locally would misplace them.
+  const [refreshToken, setRefreshToken] = useState(0)
 
   const [formOpen, setFormOpen] = useState(false)
   const [formDormitoryId, setFormDormitoryId] = useState<string | null>(null)
@@ -36,16 +59,19 @@ export default function DormitoryPage() {
   const [blockedDeletionRoomCount, setBlockedDeletionRoomCount] = useState<number | null>(null)
 
   useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [query])
+
+  // The manager selector in the form isn't affected by the list's filters, so
+  // it's loaded once rather than on every refetch.
+  useEffect(() => {
     let cancelled = false
 
-    Promise.all([
-      api.get<ApiPage<ApiDormitory[]>>('/dormitories', { params: { per_page: 100 } }),
-      api.get<ApiPage<ApiUser[]>>('/users', { params: { per_page: 100 } }),
-    ])
-      .then(([dormitoriesRes, usersRes]) => {
-        if (cancelled) return
-        setDormitories(dormitoriesRes.data.data)
-        setUsers(usersRes.data.data.filter((user) => user.is_active))
+    api
+      .get<ApiPage<ApiUser[]>>('/users', { params: { per_page: 100 } })
+      .then(({ data }) => {
+        if (!cancelled) setUsers(data.data.filter((user) => user.is_active))
       })
       .catch((err) => {
         if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
@@ -57,35 +83,68 @@ export default function DormitoryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const filteredDormitories = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase()
-    if (!q) return dormitories ?? []
+  useEffect(() => {
+    const controller = new AbortController()
 
-    return (dormitories ?? []).filter((dormitory) => {
-      return (
-        dormitory.name.toLocaleLowerCase().includes(q) ||
-        dormitory.address.toLocaleLowerCase().includes(q) ||
-        dormitory.phone.toLocaleLowerCase().includes(q)
-      )
-    })
-  }, [query, dormitories])
+    const columnParams: Record<string, string> = {}
+    for (const [key, value] of Object.entries(columnFilters)) {
+      if (value) columnParams[`f[${key}]`] = value
+    }
 
-  const {
-    page: currentPage,
-    pageSize,
-    setPageSize,
-    totalPages,
-    rangeStart,
-    rangeEnd,
-    paginatedItems: paginatedDormitories,
-    resetPage,
-    firstPage,
-    prevPage,
-    nextPage,
-    lastPage,
-  } = usePagination(filteredDormitories, DORMITORY_PAGE_SIZE_OPTIONS[0])
+    api
+      .get<ApiPage<ApiDormitory[]>>('/dormitories', {
+        signal: controller.signal,
+        params: {
+          page,
+          per_page: pageSize,
+          q: debouncedQuery.trim() || undefined,
+          is_active: statusFilter === 'all' ? undefined : statusFilter === 'active',
+          sort: sortKey,
+          order: sortDirection,
+          ...columnParams,
+        },
+      })
+      .then(({ data }) => {
+        setDormitories(data.data)
+        setTotal(data.meta.total)
+        setTotalPages(data.meta.total_pages)
+        setLoadError(null)
+      })
+      .catch((err) => {
+        // A cancelled request is this effect being superseded by a newer one,
+        // not a failure — letting it through would overwrite the newer result.
+        if (axios.isCancel(err)) return
+        setLoadError(extractErrorMessage(err, t('resourceLoadError')))
+      })
+
+    return () => controller.abort()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, debouncedQuery, statusFilter, columnFilters, sortKey, sortDirection, refreshToken])
 
   const isLoading = !loadError && dormitories === null
+  const hasFilters =
+    query !== '' || statusFilter !== 'all' || Object.values(columnFilters).some(Boolean)
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const rangeEnd = Math.min(page * pageSize, total)
+
+  function refresh() {
+    setRefreshToken((value) => value + 1)
+  }
+
+  function setPageSize(size: number) {
+    setPageSizeState(size)
+    setPage(1)
+  }
+
+  function handleSort(key: DormitorySortKey) {
+    if (key === sortKey) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+    setPage(1)
+  }
 
   function openCreateForm() {
     setFormDormitoryId(null)
@@ -134,12 +193,11 @@ export default function DormitoryPage() {
 
     try {
       if (formDormitoryId === null) {
-        const { data } = await api.post<ApiDormitory>('/dormitories', payload)
-        setDormitories((prev) => [...(prev ?? []), data])
+        await api.post<ApiDormitory>('/dormitories', payload)
       } else {
-        const { data } = await api.put<ApiDormitory>(`/dormitories/${formDormitoryId}`, payload)
-        setDormitories((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
+        await api.put<ApiDormitory>(`/dormitories/${formDormitoryId}`, payload)
       }
+      refresh()
       setFormOpen(false)
     } catch (err) {
       const fallback = formDormitoryId === null ? t('dormitoryCreateError') : t('dormitoryUpdateError')
@@ -158,7 +216,10 @@ export default function DormitoryPage() {
 
     try {
       await api.delete(`/dormitories/${dormitory.id}`)
-      setDormitories((prev) => prev?.filter((item) => item.id !== dormitory.id) ?? prev)
+      // Deleting the last row of the final page would otherwise strand the
+      // view on a page the server no longer has.
+      setPage((value) => (dormitories?.length === 1 ? Math.max(1, value - 1) : value))
+      refresh()
       setConfirmDeleteDormitory(null)
     } catch (err) {
       const message = extractErrorMessage(err, t('dormitoryDeleteError'))
@@ -201,24 +262,37 @@ export default function DormitoryPage() {
         isLoading={isLoading}
         loadError={loadError}
         deleteError={deleteError}
-        dormitories={dormitories}
         query={query}
         onQueryChange={(value) => {
           setQuery(value)
-          resetPage()
+          setPage(1)
         }}
-        filteredDormitories={filteredDormitories}
-        paginatedDormitories={paginatedDormitories}
-        currentPage={currentPage}
+        statusFilter={statusFilter}
+        onStatusFilterChange={(value) => {
+          setStatusFilter(value)
+          setPage(1)
+        }}
+        columnFilters={columnFilters}
+        onColumnFilterChange={(key: DormitoryTextFilterKey, value: string) => {
+          setColumnFilters((prev) => ({ ...prev, [key]: value }))
+          setPage(1)
+        }}
+        hasFilters={hasFilters}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={handleSort}
+        dormitories={dormitories ?? []}
+        total={total}
+        currentPage={page}
         totalPages={totalPages}
         rangeStart={rangeStart}
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
-        onFirstPage={firstPage}
-        onPrevPage={prevPage}
-        onNextPage={nextPage}
-        onLastPage={lastPage}
+        onFirstPage={() => setPage(1)}
+        onPrevPage={() => setPage((value) => Math.max(1, value - 1))}
+        onNextPage={() => setPage((value) => Math.min(totalPages, value + 1))}
+        onLastPage={() => setPage(totalPages)}
         deletingDormitoryId={checkingDormitoryId ?? deletingDormitoryId}
         onCreateDormitory={openCreateForm}
         onEditDormitory={openEditForm}

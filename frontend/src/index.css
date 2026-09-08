@@ -492,8 +492,10 @@ body {
   min-width: 60rem;
 }
 
+/* Wider than before: each sortable header now carries a sort control plus a
+   filter button, on top of the non-sortable managers column. */
 .dormitory-table-wrap table {
-  min-width: 52rem;
+  min-width: 60rem;
 }
 
 .roomtype-table-wrap table {

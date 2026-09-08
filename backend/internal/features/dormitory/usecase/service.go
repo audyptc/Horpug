@@ -38,9 +38,46 @@ type DeletionCheck struct {
 	RoomCount int64 `json:"room_count"`
 }
 
+// ListFilters narrows and orders a dormitory listing. IsActive is nil-able so
+// asking for inactive dormitories stays distinct from not filtering on status
+// at all.
+type ListFilters struct {
+	Search string
+	// Columns narrows individual columns by substring, keyed by FilterColumns.
+	// Search casts a wide OR across every text column; these are ANDed on top,
+	// so the two answer different questions and compose.
+	Columns  map[string]string
+	IsActive *bool
+	SortKey  string
+	SortDesc bool
+}
+
+// FilterColumns whitelists the columns a caller may match a substring
+// against. Same rule as SortColumns: the column name is interpolated into SQL
+// rather than bound, so nothing outside this map may reach the query.
+var FilterColumns = map[string]string{
+	"name":    "d.name",
+	"address": "d.address",
+	"phone":   "d.phone",
+}
+
+// SortColumns maps the sort keys the API accepts onto the columns they order
+// by. A column name can't be passed to Postgres as a bind parameter, so it is
+// interpolated into the query — every value that reaches ORDER BY must come
+// from this map and never straight from the request.
+var SortColumns = map[string]string{
+	"name":       "d.name",
+	"address":    "d.address",
+	"phone":      "d.phone",
+	"is_active":  "d.is_active",
+	"created_at": "d.created_at",
+}
+
+const DefaultSortKey = "name"
+
 type Repository interface {
-	Count(ctx context.Context, requesterID uuid.UUID) (int64, error)
-	List(ctx context.Context, requesterID uuid.UUID, limit, offset int) ([]dormdomain.Dormitory, error)
+	Count(ctx context.Context, requesterID uuid.UUID, filters ListFilters) (int64, error)
+	List(ctx context.Context, requesterID uuid.UUID, filters ListFilters, limit, offset int) ([]dormdomain.Dormitory, error)
 	ListActive(ctx context.Context, requesterID uuid.UUID, search string, limit int) ([]dormdomain.Dormitory, error)
 	GetByID(ctx context.Context, id, requesterID uuid.UUID) (dormdomain.Dormitory, error)
 	CountRooms(ctx context.Context, id uuid.UUID) (int64, error)
@@ -83,13 +120,13 @@ func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action 
 	}
 }
 
-func (s *Service) List(ctx context.Context, requesterID uuid.UUID, limit, offset int) ([]dormdomain.Dormitory, int64, error) {
-	total, err := s.repo.Count(ctx, requesterID)
+func (s *Service) List(ctx context.Context, requesterID uuid.UUID, filters ListFilters, limit, offset int) ([]dormdomain.Dormitory, int64, error) {
+	total, err := s.repo.Count(ctx, requesterID, filters)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	dormitories, err := s.repo.List(ctx, requesterID, limit, offset)
+	dormitories, err := s.repo.List(ctx, requesterID, filters, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
