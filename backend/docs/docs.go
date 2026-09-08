@@ -627,6 +627,30 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Filter by tenant name, room number or dormitory name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[room_number]=101; column must be one of tenant_name, room_number, dormitory_name",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: tenant_name, room_number, dormitory_name, start_date, end_date, rent_price, deposit, status, created_at (default created_at)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Page number (default 1)",
                         "name": "page",
@@ -885,6 +909,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
                         }
@@ -2214,6 +2244,257 @@ const docTemplate = `{
                 }
             }
         },
+        "/invoices/{id}/items": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Adds an ad-hoc \"other\" charge to the invoice and updates its total. Not allowed once the invoice is paid or cancelled.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Add a manual line item to an invoice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Item payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_invoice_delivery_http.addInvoiceItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.Invoice"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/invoices/{id}/items/{itemId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes an \"other\" charge from the invoice and updates its total. System-generated rent/electricity/water items can't be removed this way, and neither can any item once the invoice is paid or cancelled.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Remove a manually added line item from an invoice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Invoice item ID",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.Invoice"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/invoices/{id}/line-message": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the same text SendLine would push, for tenants who only have a personal LINE ID on file (not linked via the OA/LIFF flow) so staff can copy it into a manual LINE chat.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Preview the LINE message text for an invoice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/invoices/{id}/send-line": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Pushes a text summary of the invoice to the tenant's linked LINE account through the dormitory's LINE Official Account. Requires the tenant to have completed the LIFF linking flow first.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Send an invoice to the tenant via LINE",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/menus": {
             "get": {
                 "security": [
@@ -3526,6 +3807,100 @@ const docTemplate = `{
                 }
             }
         },
+        "/public/line/oa": {
+            "get": {
+                "description": "Public endpoint used by the LIFF linking page: returns the OA's basic ID and the URL that adds it as a friend, so a tenant who linked their account but isn't a friend yet (and so can't be pushed to) can add it in one tap. The basic ID is public information — it's on the OA's own profile and QR code.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tenants"
+                ],
+                "summary": "Get the dormitory's LINE Official Account details",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_tenant_usecase.LineOAInfo"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/public/tenants/{id}/line/link": {
+            "post": {
+                "description": "Public endpoint called from the LIFF linking page: verifies the id token the tenant's LINE app produced after login and stores the resulting LINE userId on the tenant, so invoices can be pushed to them. Not authenticated, since the tenant has no login of their own — the tenant ID in the URL acts as the shared secret (only someone holding the tenant's personal linking link can call this).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tenants"
+                ],
+                "summary": "Link a tenant's LINE account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tenant ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "LIFF id token payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_tenant_delivery_http.linkTenantLineRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/repair-requests": {
             "get": {
                 "security": [
@@ -4791,6 +5166,12 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Filter by status (available, occupied, maintenance)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Max results (default 50, max 100)",
                         "name": "limit",
@@ -5080,6 +5461,42 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Results per page (default 10, max 100)",
                         "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by name, phone, LINE ID, id card or email",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[phone]=081; column must be one of first_name, last_name, phone, line_id, id_card, email",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by active status",
+                        "name": "is_active",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by whether a LINE account is linked",
+                        "name": "line_linked",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: first_name, last_name, phone, line_id, id_card, email, is_active, created_at (default created_at)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
                         "in": "query"
                     }
                 ],
@@ -5439,6 +5856,116 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{id}/line": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Clears the tenant's stored LINE userId so their personal linking link can be used again to link a (possibly different) LINE account.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tenants"
+                ],
+                "summary": "Unlink a tenant's LINE account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tenant ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_tenant_domain.Tenant"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/{id}/line/status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Reports the two independent conditions a pushed invoice needs: the tenant has linked their LINE account (so there is a userId to push to), and that account has the dormitory's OA as a friend (LINE drops messages to non-friends). Checking friendship calls LINE, so this is on-demand rather than part of the tenant list.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tenants"
+                ],
+                "summary": "Check whether a tenant can be sent invoices over LINE",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tenant ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_tenant_usecase.LineStatus"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
                         }
@@ -6584,6 +7111,12 @@ const docTemplate = `{
                 "tenant_id": {
                     "type": "string"
                 },
+                "tenant_line_id": {
+                    "type": "string"
+                },
+                "tenant_line_user_id": {
+                    "type": "string"
+                },
                 "tenant_name": {
                     "type": "string"
                 },
@@ -6717,6 +7250,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "string"
+                },
+                "is_billed": {
+                    "type": "boolean"
                 },
                 "note": {
                     "type": "string"
@@ -7194,6 +7730,9 @@ const docTemplate = `{
                 "room_type_name": {
                     "type": "string"
                 },
+                "room_type_price": {
+                    "type": "number"
+                },
                 "status": {
                     "$ref": "#/definitions/apihorpug_internal_features_room_domain.RoomStatus"
                 },
@@ -7311,6 +7850,9 @@ const docTemplate = `{
                 "line_id": {
                     "type": "string"
                 },
+                "line_user_id": {
+                    "type": "string"
+                },
                 "note": {
                     "type": "string"
                 },
@@ -7333,6 +7875,31 @@ const docTemplate = `{
                 },
                 "contract_count": {
                     "type": "integer"
+                }
+            }
+        },
+        "apihorpug_internal_features_tenant_usecase.LineOAInfo": {
+            "type": "object",
+            "properties": {
+                "add_friend_url": {
+                    "type": "string"
+                },
+                "basic_id": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_tenant_usecase.LineStatus": {
+            "type": "object",
+            "properties": {
+                "is_friend": {
+                    "type": "boolean"
+                },
+                "linked": {
+                    "type": "boolean"
                 }
             }
         },
@@ -7446,6 +8013,9 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "is_billed": {
+                    "type": "boolean"
+                },
                 "note": {
                     "type": "string"
                 },
@@ -7485,6 +8055,10 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "message": {
+                    "type": "string"
+                },
+                "slug": {
+                    "description": "Slug is an optional machine-readable identifier for this error, used\nby clients to key off a specific failure case (e.g. to show a\nlocalized, actionable message) without parsing Message.",
                     "type": "string"
                 }
             }
@@ -7633,6 +8207,9 @@ const docTemplate = `{
                 "rent_price": {
                     "type": "number"
                 },
+                "start_date": {
+                    "type": "string"
+                },
                 "status": {
                     "$ref": "#/definitions/apihorpug_internal_features_contract_domain.ContractStatus"
                 }
@@ -7778,6 +8355,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "expense_date": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_invoice_delivery_http.addInvoiceItemRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "description": {
                     "type": "string"
                 }
             }
@@ -8228,6 +8816,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_tenant_delivery_http.linkTenantLineRequest": {
+            "type": "object",
+            "properties": {
+                "id_token": {
                     "type": "string"
                 }
             }

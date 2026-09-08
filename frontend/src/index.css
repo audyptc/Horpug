@@ -444,8 +444,10 @@ body {
   min-width: 76rem;
 }
 
+/* Wider than most tables: each header carries a sort control plus a filter
+   button, on top of a dormitory column of its own. */
 .contract-table-wrap table {
-  min-width: 60rem;
+  min-width: 76rem;
 }
 
 .announcement-table-wrap table {

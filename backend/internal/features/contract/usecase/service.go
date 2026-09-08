@@ -15,12 +15,49 @@ import (
 	"github.com/google/uuid"
 )
 
+// ListFilters narrows and orders a contract listing. The nil-able fields mean
+// "no preference" rather than a zero value, so asking for terminated contracts
+// stays distinct from not filtering on status at all.
 type ListFilters struct {
 	TenantID    *uuid.UUID
 	RoomID      *uuid.UUID
 	DormitoryID *uuid.UUID
 	Status      *contractdomain.ContractStatus
+	Search      string
+	// Columns narrows individual columns by substring, keyed by FilterColumns.
+	// Search casts a wide OR across every text column; these are ANDed on top,
+	// so the two answer different questions and compose.
+	Columns  map[string]string
+	SortKey  string
+	SortDesc bool
 }
+
+// FilterColumns whitelists the columns a caller may match a substring against.
+// Same rule as SortColumns: the expression is interpolated into SQL rather
+// than bound, so nothing outside this map may reach the query.
+var FilterColumns = map[string]string{
+	"tenant_name":    "(t.first_name || ' ' || t.last_name)",
+	"room_number":    "rm.room_number",
+	"dormitory_name": "d.name",
+}
+
+// SortColumns maps the sort keys the API accepts onto the expressions they
+// order by. A column name can't be passed to Postgres as a bind parameter, so
+// it is interpolated into the query — every value that reaches ORDER BY must
+// come from this map and never straight from the request.
+var SortColumns = map[string]string{
+	"tenant_name":    "(t.first_name || ' ' || t.last_name)",
+	"room_number":    "rm.room_number",
+	"dormitory_name": "d.name",
+	"start_date":     "c.start_date",
+	"end_date":       "c.end_date",
+	"rent_price":     "c.rent_price",
+	"deposit":        "c.deposit",
+	"status":         "c.status",
+	"created_at":     "c.created_at",
+}
+
+const DefaultSortKey = "created_at"
 
 type CreateInput struct {
 	TenantID     uuid.UUID

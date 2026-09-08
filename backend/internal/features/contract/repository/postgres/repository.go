@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	contractdomain "apihorpug/internal/features/contract/domain"
@@ -69,8 +70,53 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 		*args = append(*args, *filters.Status)
 		*argIdx++
 	}
+	if filters.Search != "" {
+		conditions = append(conditions, fmt.Sprintf(
+			`((t.first_name || ' ' || t.last_name) ILIKE $%d OR rm.room_number ILIKE $%d OR d.name ILIKE $%d)`,
+			*argIdx, *argIdx, *argIdx,
+		))
+		*args = append(*args, "%"+filters.Search+"%")
+		*argIdx++
+	}
+
+	// Sorted so the generated SQL is stable for a given set of filters rather
+	// than varying with Go's randomised map iteration order.
+	keys := make([]string, 0, len(filters.Columns))
+	for key := range filters.Columns {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		column, ok := contractusecase.FilterColumns[key]
+		if !ok {
+			continue
+		}
+		conditions = append(conditions, fmt.Sprintf("%s ILIKE $%d", column, *argIdx))
+		*args = append(*args, "%"+filters.Columns[key]+"%")
+		*argIdx++
+	}
 
 	return conditions
+}
+
+// listOrderBy resolves the sort key through the usecase whitelist; anything
+// unrecognised falls back to the default rather than reaching SQL. id breaks
+// ties so paging over equal values can't repeat or skip a row.
+func listOrderBy(filters contractusecase.ListFilters) string {
+	column, ok := contractusecase.SortColumns[filters.SortKey]
+	if !ok {
+		column = contractusecase.SortColumns[contractusecase.DefaultSortKey]
+	}
+
+	direction := "ASC"
+	if filters.SortDesc {
+		direction = "DESC"
+	}
+
+	// end_date is nullable; without this an open-ended contract would sort to
+	// opposite ends of the list depending only on the direction.
+	return fmt.Sprintf(" ORDER BY %s %s NULLS LAST, c.id ASC", column, direction)
 }
 
 func (r *Repository) Count(ctx context.Context, requesterID uuid.UUID, filters contractusecase.ListFilters) (int64, error) {
@@ -109,7 +155,7 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, filters co
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
-	query += fmt.Sprintf(` ORDER BY c.created_at DESC LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
+	query += listOrderBy(filters) + fmt.Sprintf(` LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.Query(ctx, query, args...)

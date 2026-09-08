@@ -1,22 +1,47 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import axios from 'axios'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
-import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiTenant } from '@/features/tenant/types'
 import { ContractListCard } from './components/ContractListCard'
 import { ContractFormSheet } from './components/ContractFormSheet'
 import type { ApiContract, ContractStatus } from './types'
-import { CONTRACT_PAGE_SIZE_OPTIONS, toApiDate, toDateInputValue } from './utils'
+import {
+  CONTRACT_PAGE_SIZE_OPTIONS,
+  toApiDate,
+  toDateInputValue,
+  type ContractColumnFilters,
+  type ContractSortDirection,
+  type ContractSortKey,
+  type ContractStatusFilter,
+  type ContractTextFilterKey,
+} from './utils'
+
+const SEARCH_DEBOUNCE_MS = 300
 
 export default function ContractPage() {
   const { t } = useLanguage()
 
   const [contracts, setContracts] = useState<ApiContract[] | null>(null)
   const [tenants, setTenants] = useState<ApiTenant[]>([])
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<ContractStatusFilter>('all')
+  // Applied on submit from each column's menu, so no debounce is needed here.
+  const [columnFilters, setColumnFilters] = useState<ContractColumnFilters>({})
+  const [sortKey, setSortKey] = useState<ContractSortKey>('tenant_name')
+  const [sortDirection, setSortDirection] = useState<ContractSortDirection>('asc')
+
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSizeState] = useState<number>(CONTRACT_PAGE_SIZE_OPTIONS[0])
+  // Bumped by mutations so the list refetches; the server owns the ordering
+  // and page boundaries now, so patching rows locally would misplace them.
+  const [refreshToken, setRefreshToken] = useState(0)
 
   const [formOpen, setFormOpen] = useState(false)
   const [formContractId, setFormContractId] = useState<string | null>(null)
@@ -39,16 +64,19 @@ export default function ContractPage() {
   const [confirmDeleteContract, setConfirmDeleteContract] = useState<ApiContract | null>(null)
 
   useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [query])
+
+  // The tenant selector in the form isn't affected by the list's filters, so
+  // it's loaded once rather than on every refetch.
+  useEffect(() => {
     let cancelled = false
 
-    Promise.all([
-      api.get<ApiPage<ApiContract[]>>('/contracts', { params: { per_page: 100 } }),
-      api.get<ApiTenant[]>('/tenants/active', { params: { limit: 100 } }),
-    ])
-      .then(([contractsRes, tenantsRes]) => {
-        if (cancelled) return
-        setContracts(contractsRes.data.data)
-        setTenants(tenantsRes.data)
+    api
+      .get<ApiTenant[]>('/tenants/active', { params: { limit: 100 } })
+      .then(({ data }) => {
+        if (!cancelled) setTenants(data)
       })
       .catch((err) => {
         if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
@@ -60,35 +88,67 @@ export default function ContractPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const filteredContracts = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase()
-    if (!q) return contracts ?? []
+  useEffect(() => {
+    const controller = new AbortController()
 
-    return (contracts ?? []).filter((contract) => {
-      return (
-        (contract.tenant_name ?? '').toLocaleLowerCase().includes(q) ||
-        (contract.room_number ?? '').toLocaleLowerCase().includes(q) ||
-        (contract.dormitory_name ?? '').toLocaleLowerCase().includes(q)
-      )
-    })
-  }, [query, contracts])
+    const columnParams: Record<string, string> = {}
+    for (const [key, value] of Object.entries(columnFilters)) {
+      if (value) columnParams[`f[${key}]`] = value
+    }
 
-  const {
-    page: currentPage,
-    pageSize,
-    setPageSize,
-    totalPages,
-    rangeStart,
-    rangeEnd,
-    paginatedItems: paginatedContracts,
-    resetPage,
-    firstPage,
-    prevPage,
-    nextPage,
-    lastPage,
-  } = usePagination(filteredContracts, CONTRACT_PAGE_SIZE_OPTIONS[0])
+    api
+      .get<ApiPage<ApiContract[]>>('/contracts', {
+        signal: controller.signal,
+        params: {
+          page,
+          per_page: pageSize,
+          q: debouncedQuery.trim() || undefined,
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          sort: sortKey,
+          order: sortDirection,
+          ...columnParams,
+        },
+      })
+      .then(({ data }) => {
+        setContracts(data.data)
+        setTotal(data.meta.total)
+        setTotalPages(data.meta.total_pages)
+        setLoadError(null)
+      })
+      .catch((err) => {
+        // A cancelled request is this effect being superseded by a newer one,
+        // not a failure — letting it through would overwrite the newer result.
+        if (axios.isCancel(err)) return
+        setLoadError(extractErrorMessage(err, t('resourceLoadError')))
+      })
+
+    return () => controller.abort()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, debouncedQuery, statusFilter, columnFilters, sortKey, sortDirection, refreshToken])
 
   const isLoading = !loadError && contracts === null
+  const hasFilters = query !== '' || statusFilter !== 'all' || Object.values(columnFilters).some(Boolean)
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const rangeEnd = Math.min(page * pageSize, total)
+
+  function refresh() {
+    setRefreshToken((value) => value + 1)
+  }
+
+  function setPageSize(size: number) {
+    setPageSizeState(size)
+    setPage(1)
+  }
+
+  function handleSort(key: ContractSortKey) {
+    if (key === sortKey) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+    setPage(1)
+  }
 
   function openCreateForm() {
     setFormContractId(null)
@@ -176,8 +236,7 @@ export default function ContractPage() {
           num_occupants: numOccupants,
           note: formNote.trim(),
         }
-        const { data } = await api.post<ApiContract>('/contracts', payload)
-        setContracts((prev) => [...(prev ?? []), data])
+        await api.post<ApiContract>('/contracts', payload)
       } else {
         const payload = {
           start_date: toApiDate(formStartDate),
@@ -188,9 +247,9 @@ export default function ContractPage() {
           status: formStatus,
           note: formNote.trim(),
         }
-        const { data } = await api.put<ApiContract>(`/contracts/${formContractId}`, payload)
-        setContracts((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
+        await api.put<ApiContract>(`/contracts/${formContractId}`, payload)
       }
+      refresh()
       setFormOpen(false)
     } catch (err) {
       const fallback = isEdit ? t('contractUpdateError') : t('contractCreateError')
@@ -209,7 +268,10 @@ export default function ContractPage() {
 
     try {
       await api.delete(`/contracts/${contract.id}`)
-      setContracts((prev) => prev?.filter((item) => item.id !== contract.id) ?? prev)
+      // Deleting the last row of the final page would otherwise strand the
+      // view on a page the server no longer has.
+      setPage((value) => (contracts?.length === 1 ? Math.max(1, value - 1) : value))
+      refresh()
       setConfirmDeleteContract(null)
     } catch (err) {
       setDeleteError(extractErrorMessage(err, t('contractDeleteError')))
@@ -229,24 +291,37 @@ export default function ContractPage() {
         isLoading={isLoading}
         loadError={loadError}
         deleteError={deleteError}
-        contracts={contracts}
         query={query}
         onQueryChange={(value) => {
           setQuery(value)
-          resetPage()
+          setPage(1)
         }}
-        filteredContracts={filteredContracts}
-        paginatedContracts={paginatedContracts}
-        currentPage={currentPage}
+        statusFilter={statusFilter}
+        onStatusFilterChange={(value) => {
+          setStatusFilter(value)
+          setPage(1)
+        }}
+        columnFilters={columnFilters}
+        onColumnFilterChange={(key: ContractTextFilterKey, value: string) => {
+          setColumnFilters((prev) => ({ ...prev, [key]: value }))
+          setPage(1)
+        }}
+        hasFilters={hasFilters}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={handleSort}
+        contracts={contracts ?? []}
+        total={total}
+        currentPage={page}
         totalPages={totalPages}
         rangeStart={rangeStart}
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
-        onFirstPage={firstPage}
-        onPrevPage={prevPage}
-        onNextPage={nextPage}
-        onLastPage={lastPage}
+        onFirstPage={() => setPage(1)}
+        onPrevPage={() => setPage((value) => Math.max(1, value - 1))}
+        onNextPage={() => setPage((value) => Math.min(totalPages, value + 1))}
+        onLastPage={() => setPage(totalPages)}
         deletingContractId={deletingContractId}
         onCreateContract={openCreateForm}
         onEditContract={openEditForm}
