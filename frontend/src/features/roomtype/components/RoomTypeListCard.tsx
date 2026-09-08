@@ -1,21 +1,65 @@
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2 } from 'lucide-react'
-import { useLanguage } from '@/shared/i18n/language'
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Pencil,
+  Trash2,
+  X,
+} from 'lucide-react'
+import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import { ColumnFilterMenu } from '@/shared/components/column-filter-menu'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
 import { Button } from '@/shared/components/ui/button'
 import type { ApiRoomType } from '../types'
-import { ROOM_TYPE_PAGE_SIZE_OPTIONS } from '../utils'
+import {
+  ROOM_TYPE_PAGE_SIZE_OPTIONS,
+  isTextFilterKey,
+  type RoomTypeColumnFilters,
+  type RoomTypeSortDirection,
+  type RoomTypeSortKey,
+  type RoomTypeStatusFilter,
+  type RoomTypeTextFilterKey,
+} from '../utils'
+
+const TEXT_COLUMNS: { key: RoomTypeSortKey; labelKey: TranslationKey }[] = [
+  { key: 'name', labelKey: 'roomTypeNameColumn' },
+  { key: 'dormitory', labelKey: 'roomTypeDormitoryColumn' },
+]
+
+const PRICE_COLUMN: { key: RoomTypeSortKey; labelKey: TranslationKey } = {
+  key: 'price',
+  labelKey: 'roomTypePriceColumn',
+}
+
+const STATUS_COLUMN: { key: RoomTypeSortKey; labelKey: TranslationKey } = {
+  key: 'is_active',
+  labelKey: 'roomTypeStatusColumn',
+}
+
+const TOTAL_COLUMN_COUNT = TEXT_COLUMNS.length + 3 // + price + status + actions
 
 type RoomTypeListCardProps = {
   isLoading: boolean
   loadError: string | null
   deleteError: string | null
-  roomTypes: ApiRoomType[] | null
   query: string
   onQueryChange: (query: string) => void
-  filteredRoomTypes: ApiRoomType[]
-  paginatedRoomTypes: ApiRoomType[]
+  statusFilter: RoomTypeStatusFilter
+  onStatusFilterChange: (value: RoomTypeStatusFilter) => void
+  columnFilters: RoomTypeColumnFilters
+  onColumnFilterChange: (key: RoomTypeTextFilterKey, value: string) => void
+  hasFilters: boolean
+  sortKey: RoomTypeSortKey
+  sortDirection: RoomTypeSortDirection
+  onSort: (key: RoomTypeSortKey) => void
+  roomTypes: ApiRoomType[]
+  total: number
   currentPage: number
   totalPages: number
   rangeStart: number
@@ -36,11 +80,18 @@ export function RoomTypeListCard({
   isLoading,
   loadError,
   deleteError,
-  roomTypes,
   query,
   onQueryChange,
-  filteredRoomTypes,
-  paginatedRoomTypes,
+  statusFilter,
+  onStatusFilterChange,
+  columnFilters,
+  onColumnFilterChange,
+  hasFilters,
+  sortKey,
+  sortDirection,
+  onSort,
+  roomTypes,
+  total,
   currentPage,
   totalPages,
   rangeStart,
@@ -58,6 +109,84 @@ export function RoomTypeListCard({
 }: RoomTypeListCardProps) {
   const { t } = useLanguage()
 
+  // The column filters live in a table that scrolls, so on a narrow screen
+  // they're off to the right and there's no way to tell what's applied.
+  // Summarising them here keeps that visible and clearable at any size.
+  const activeFilters: { id: string; label: string; onClear: () => void }[] = []
+
+  if (statusFilter !== 'all') {
+    activeFilters.push({
+      id: 'is_active',
+      label: `${t('roomTypeStatusColumn')}: ${statusFilter === 'active' ? t('statusActive') : t('statusInactive')}`,
+      onClear: () => onStatusFilterChange('all'),
+    })
+  }
+
+  for (const column of TEXT_COLUMNS) {
+    const key = column.key
+    if (!isTextFilterKey(key)) continue
+
+    const value = columnFilters[key]
+    if (!value) continue
+
+    activeFilters.push({
+      id: key,
+      label: `${t(column.labelKey)}: ${value}`,
+      onClear: () => onColumnFilterChange(key, ''),
+    })
+  }
+
+  function renderSortableHead(column: { key: RoomTypeSortKey; labelKey: TranslationKey }) {
+    const isSorted = sortKey === column.key
+    return (
+      <TableHead
+        key={column.key}
+        aria-sort={isSorted ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+      >
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onSort(column.key)}
+            title={isSorted && sortDirection === 'asc' ? t('sortAscending') : t('sortDescending')}
+            className="inline-flex items-center gap-1 whitespace-nowrap transition-colors hover:text-foreground"
+          >
+            {t(column.labelKey)}
+            {isSorted ? (
+              sortDirection === 'asc' ? (
+                <ArrowUp size={13} className="shrink-0" />
+              ) : (
+                <ArrowDown size={13} className="shrink-0" />
+              )
+            ) : (
+              <ArrowUpDown size={13} className="shrink-0 opacity-40" />
+            )}
+          </button>
+
+          {isTextFilterKey(column.key) && (
+            <ColumnFilterMenu
+              label={t(column.labelKey)}
+              textValue={columnFilters[column.key] ?? ''}
+              onTextChange={(value) => onColumnFilterChange(column.key as RoomTypeTextFilterKey, value)}
+            />
+          )}
+
+          {column.key === 'is_active' && (
+            <ColumnFilterMenu
+              label={t('roomTypeStatusColumn')}
+              optionValue={statusFilter}
+              onOptionChange={onStatusFilterChange}
+              options={[
+                { value: 'all', label: t('filterAll') },
+                { value: 'active', label: t('statusActive') },
+                { value: 'inactive', label: t('statusInactive') },
+              ]}
+            />
+          )}
+        </div>
+      </TableHead>
+    )
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
@@ -74,41 +203,71 @@ export function RoomTypeListCard({
 
         {!loadError && isLoading && <p className="metric-detail">{t('loading')}</p>}
 
-        {!loadError && !isLoading && roomTypes && roomTypes.length === 0 && (
-          <p className="metric-detail">{t('roomTypeNoRoomTypes')}</p>
-        )}
-
-        {!loadError && !isLoading && roomTypes && roomTypes.length > 0 && (
+        {!loadError && !isLoading && (
           <>
-            <label className="flex w-full max-w-md flex-col gap-1.5 text-sm font-medium">
-              {t('roomTypeSearchLabel')}
-              <input
-                type="search"
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                placeholder={t('roomTypeSearchPlaceholder')}
-                value={query}
-                onChange={(event) => onQueryChange(event.target.value)}
-              />
-            </label>
+            <div className="overflow-hidden rounded-md border border-border">
+              <div className="flex flex-col gap-3 border-b border-border bg-muted/40 p-3">
+                <label className="flex w-full flex-col gap-1.5 text-sm font-medium sm:max-w-md">
+                  {t('roomTypeSearchLabel')}
+                  <input
+                    type="search"
+                    className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                    placeholder={t('roomTypeSearchPlaceholder')}
+                    value={query}
+                    onChange={(event) => onQueryChange(event.target.value)}
+                  />
+                </label>
 
-            {filteredRoomTypes.length === 0 && (
-              <p className="metric-detail">{t('roomTypeNoMatching')}</p>
-            )}
+                {activeFilters.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {activeFilters.map((filter) => (
+                      <span
+                        key={filter.id}
+                        className="inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-background py-0.5 pl-2.5 pr-1 text-xs"
+                      >
+                        <span className="truncate">{filter.label}</span>
+                        <button
+                          type="button"
+                          onClick={filter.onClear}
+                          title={t('filterClear')}
+                          aria-label={`${t('filterClear')}: ${filter.label}`}
+                          className="inline-flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-            {filteredRoomTypes.length > 0 && (
-              <div className="table-wrap roomtype-table-wrap">
+              {/* Rendered even with no matches: the column filters live in the
+                  header, so hiding it would strand the user with no way to
+                  widen the filter again. */}
+              <div className="roomtype-table-wrap overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('roomTypeNameColumn')}</TableHead>
-                      <TableHead>{t('roomTypeDormitoryColumn')}</TableHead>
-                      <TableHead>{t('roomTypePriceColumn')}</TableHead>
-                      <TableHead>{t('roomTypeStatusColumn')}</TableHead>
+                      {TEXT_COLUMNS.map((column) => renderSortableHead(column))}
+                      {renderSortableHead(PRICE_COLUMN)}
+                      {renderSortableHead(STATUS_COLUMN)}
                       <TableHead className="text-right">{t('roomTypeActionsColumn')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedRoomTypes.map((roomType) => (
+                    {roomTypes.length === 0 && (
+                      <TableRow>
+                        {/* The table scrolls, so centring this across every
+                            column would push it off a phone screen. Pin it to
+                            the left edge instead. */}
+                        <TableCell colSpan={TOTAL_COLUMN_COUNT} className="p-0">
+                          <p className="metric-detail sticky left-0 px-3 py-6">
+                            {hasFilters ? t('roomTypeNoMatching') : t('roomTypeNoRoomTypes')}
+                          </p>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {roomTypes.map((roomType) => (
                       <TableRow key={roomType.id}>
                         <TableCell className="font-semibold">{roomType.name}</TableCell>
                         <TableCell className="text-muted-foreground">
@@ -152,13 +311,13 @@ export function RoomTypeListCard({
                   </TableBody>
                 </Table>
               </div>
-            )}
+            </div>
 
-            {filteredRoomTypes.length > 0 && (
+            {total > 0 && (
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted-foreground">
                   {t('rolePermissionsShowingLabel')} {rangeStart}-{rangeEnd}{' '}
-                  {t('rolePermissionsOfLabel')} {filteredRoomTypes.length} {t('rolePermissionsResultsLabel')}
+                  {t('rolePermissionsOfLabel')} {total} {t('rolePermissionsResultsLabel')}
                   {totalPages > 1 && (
                     <>
                       {' '}
