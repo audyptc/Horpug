@@ -44,9 +44,14 @@ function SheetContent({
       <DialogPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          'fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out',
-          side === 'right' && 'inset-y-0 right-0 h-full w-3/4 border-l border-border sm:max-w-lg',
-          side === 'left' && 'inset-y-0 left-0 h-full w-3/4 border-r border-border sm:max-w-lg',
+          // p-4 on phones: at 375px the old p-6 spent a quarter of the sheet
+          // on gutters, leaving labelled fields too narrow to read.
+          'fixed z-50 flex flex-col gap-4 bg-background p-4 shadow-lg transition ease-in-out sm:p-6',
+          // Full-bleed on phones. w-3/4 of an iPhone 13 mini is 281px, which a
+          // labelled form field cannot live in; the 3/4 inset only earns its
+          // keep once there is a viewport worth insetting from.
+          side === 'right' && 'inset-y-0 right-0 h-full w-full border-l border-border sm:w-3/4 sm:max-w-lg',
+          side === 'left' && 'inset-y-0 left-0 h-full w-full border-r border-border sm:w-3/4 sm:max-w-lg',
           side === 'top' && 'inset-x-0 top-0 border-b border-border',
           side === 'bottom' && 'inset-x-0 bottom-0 border-t border-border',
           className
@@ -67,7 +72,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="sheet-header"
-      className={cn('flex flex-col space-y-1.5 text-center sm:text-left', className)}
+      className={cn('flex flex-col space-y-1.5 pr-8 text-center sm:text-left', className)}
       {...props}
     />
   )
@@ -77,7 +82,7 @@ function SheetFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="sheet-footer"
-      className={cn('mt-auto flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2', className)}
+      className={cn('mt-auto flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)}
       {...props}
     />
   )

@@ -513,7 +513,7 @@ body {
 }
 
 .mobile-sheet-nav {
-  margin-top: 1rem;
+  margin-top: 0.25rem;
 }
 
 @media (max-width: 980px) {
@@ -534,11 +534,11 @@ body {
   }
 
   .topbar-actions {
-    width: 100%;
+    margin-left: auto;
   }
 
   .topbar-actions > button {
-    flex: 1;
+    flex: 0 0 auto;
   }
 
   .desktop-only,
@@ -552,7 +552,7 @@ body {
 
   .lang-btn,
   .user-trigger {
-    flex: 1;
+    flex: 0 0 auto;
   }
 
   .admin-grid {
@@ -566,6 +566,28 @@ body {
 
   .metric-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Phones. Matches Tailwind's `sm` breakpoint (40rem) so these rules and the
+   `sm:` utilities in the components flip at the same width. Smallest target
+   is an iPhone 13 mini at 375px. */
+@media (max-width: 640px) {
+  .content {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .topbar {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .welcome h1 {
+    font-size: 1.25rem;
+  }
+
+  .login-card {
+    padding: 1.5rem;
   }
 }
 

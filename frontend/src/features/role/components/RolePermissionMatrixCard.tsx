@@ -55,12 +55,12 @@ export function RolePermissionMatrixCard({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4">
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div>
           <Button type="button" variant="ghost" size="sm" className="-ml-3 mb-2" onClick={onBack}>
             {t('rolePermissionsBackToRoles')}
           </Button>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex flex-wrap items-center gap-2">
             {selectedRole.name}
             <Badge variant={selectedRole.is_active ? 'default' : 'outline'}>
               {selectedRole.is_active ? t('statusActive') : t('statusInactive')}

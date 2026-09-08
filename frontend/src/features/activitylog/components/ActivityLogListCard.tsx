@@ -126,21 +126,21 @@ export function ActivityLogListCard({
                 />
               </label>
 
-              <div className="flex flex-col gap-1.5 text-sm font-medium">
+              <div className="flex min-w-0 flex-col gap-1.5 text-sm font-medium">
                 {t('activityLogDateRangeLabel')}
-                <div className="flex items-center gap-1.5">
+                <div className="flex min-w-0 items-center gap-1.5">
                   <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                     <PopoverTrigger asChild>
                       <Button
                         type="button"
                         variant="outline"
                         className={cn(
-                          'h-10 justify-start gap-2 px-3 text-sm font-normal',
+                          'h-10 min-w-0 shrink justify-start gap-2 px-3 text-sm font-normal',
                           !(selectedRange.from || selectedRange.to) && 'text-muted-foreground'
                         )}
                       >
                         <CalendarIcon className="size-4 shrink-0" />
-                        {dateRangeLabel}
+                        <span className="truncate">{dateRangeLabel}</span>
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
