@@ -44,9 +44,44 @@ type DeletionCheck struct {
 	IsProtected bool  `json:"is_protected"`
 }
 
+// ListFilters narrows and orders a role listing. IsActive is nil-able so
+// asking for inactive roles stays distinct from not filtering on status at
+// all.
+type ListFilters struct {
+	Search string
+	// Columns narrows individual columns by substring, keyed by FilterColumns.
+	// Search casts a wide OR across name and description; these are ANDed on
+	// top, so the two answer different questions and compose.
+	Columns  map[string]string
+	IsActive *bool
+	SortKey  string
+	SortDesc bool
+}
+
+// FilterColumns whitelists the columns a caller may match a substring
+// against. Same rule as SortColumns: the column name is interpolated into SQL
+// rather than bound, so nothing outside this map may reach the query.
+var FilterColumns = map[string]string{
+	"name":        "name",
+	"description": "description",
+}
+
+// SortColumns maps the sort keys the API accepts onto the columns they order
+// by. A column name can't be passed to Postgres as a bind parameter, so it is
+// interpolated into the query — every value that reaches ORDER BY must come
+// from this map and never straight from the request.
+var SortColumns = map[string]string{
+	"name":        "name",
+	"description": "description",
+	"is_active":   "is_active",
+	"created_at":  "created_at",
+}
+
+const DefaultSortKey = "name"
+
 type Repository interface {
-	Count(ctx context.Context) (int64, error)
-	List(ctx context.Context, limit, offset int) ([]roledomain.Role, error)
+	Count(ctx context.Context, filters ListFilters) (int64, error)
+	List(ctx context.Context, filters ListFilters, limit, offset int) ([]roledomain.Role, error)
 	ListActive(ctx context.Context, search string, limit int) ([]roledomain.Role, error)
 	GetByID(ctx context.Context, id uuid.UUID) (roledomain.Role, error)
 	CountUsers(ctx context.Context, id uuid.UUID) (int64, error)
@@ -89,13 +124,13 @@ func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action 
 	}
 }
 
-func (s *Service) List(ctx context.Context, limit, offset int) ([]roledomain.Role, int64, error) {
-	total, err := s.repo.Count(ctx)
+func (s *Service) List(ctx context.Context, filters ListFilters, limit, offset int) ([]roledomain.Role, int64, error) {
+	total, err := s.repo.Count(ctx, filters)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	roles, err := s.repo.List(ctx, limit, offset)
+	roles, err := s.repo.List(ctx, filters, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}

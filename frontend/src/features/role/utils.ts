@@ -6,6 +6,24 @@ export const ACTION_ORDER = ['create', 'read', 'update', 'delete']
 
 export const ROLE_PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const
 
+// Mirrors the sort fields the roles endpoint whitelists; anything else is
+// rejected there with a 400.
+export type RoleSortKey = 'name' | 'description' | 'is_active'
+
+export type RoleSortDirection = 'asc' | 'desc'
+export type RoleStatusFilter = 'all' | 'active' | 'inactive'
+
+// Mirrors the columns the endpoint accepts as f[<column>]=value; anything else
+// is rejected there with a 400.
+export const ROLE_TEXT_FILTER_KEYS = ['name', 'description'] as const
+
+export type RoleTextFilterKey = (typeof ROLE_TEXT_FILTER_KEYS)[number]
+export type RoleColumnFilters = Partial<Record<RoleTextFilterKey, string>>
+
+export function isTextFilterKey(key: string): key is RoleTextFilterKey {
+  return (ROLE_TEXT_FILTER_KEYS as readonly string[]).includes(key)
+}
+
 export const actionLabelKeys: Record<string, TranslationKey> = {
   create: 'permissionActionCreate',
   read: 'permissionActionRead',

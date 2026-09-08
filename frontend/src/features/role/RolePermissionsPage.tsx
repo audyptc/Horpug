@@ -1,29 +1,59 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import axios from 'axios'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
-import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { InformationDialog } from '@/shared/components/information-dialog'
 import type { ApiMenu } from '@/features/menu/menus'
 import type { ApiPermission, ApiRole, ApiRoleDeletionCheck } from './types'
-import { ACTION_ORDER, ROLE_PAGE_SIZE_OPTIONS, areMatricesEqual, buildRoleMatrix, menuLabel } from './utils'
+import {
+  ACTION_ORDER,
+  ROLE_PAGE_SIZE_OPTIONS,
+  areMatricesEqual,
+  buildRoleMatrix,
+  menuLabel,
+  type RoleColumnFilters,
+  type RoleSortDirection,
+  type RoleSortKey,
+  type RoleStatusFilter,
+  type RoleTextFilterKey,
+} from './utils'
 import { RoleListCard } from './components/RoleListCard'
 import { RolePermissionMatrixCard } from './components/RolePermissionMatrixCard'
 import { RoleFormSheet } from './components/RoleFormSheet'
 
 type View = 'list' | 'permissions'
 
+const SEARCH_DEBOUNCE_MS = 300
+
 export default function RolePermissionsPage() {
   const { t } = useLanguage()
 
   const [roles, setRoles] = useState<ApiRole[] | null>(null)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [menus, setMenus] = useState<ApiMenu[] | null>(null)
   const [permissions, setPermissions] = useState<ApiPermission[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
 
-  const [view, setView] = useState<View>('list')
   const [roleQuery, setRoleQuery] = useState('')
-  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
+  const [debouncedRoleQuery, setDebouncedRoleQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<RoleStatusFilter>('all')
+  // Applied on submit from each column's menu, so no debounce is needed here.
+  const [columnFilters, setColumnFilters] = useState<RoleColumnFilters>({})
+  const [sortKey, setSortKey] = useState<RoleSortKey>('name')
+  const [sortDirection, setSortDirection] = useState<RoleSortDirection>('asc')
+
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSizeState] = useState<number>(ROLE_PAGE_SIZE_OPTIONS[0])
+  // Bumped by mutations so the list refetches; the server owns the ordering
+  // and page boundaries now, so patching rows locally would misplace them.
+  const [refreshToken, setRefreshToken] = useState(0)
+
+  const [view, setView] = useState<View>('list')
+  // Held directly rather than looked up by id from `roles`, since `roles` now
+  // only holds the current page — the selected role may not be on it.
+  const [selectedRole, setSelectedRole] = useState<ApiRole | null>(null)
   const [matrix, setMatrix] = useState<Record<string, Set<string>>>({})
   const [menuQuery, setMenuQuery] = useState('')
 
@@ -46,16 +76,21 @@ export default function RolePermissionsPage() {
   const [blockedRoleDeletion, setBlockedRoleDeletion] = useState<ApiRoleDeletionCheck | null>(null)
 
   useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedRoleQuery(roleQuery), SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [roleQuery])
+
+  // The permission matrix's menus and permissions aren't affected by the
+  // role list's filters, so they're loaded once rather than on every refetch.
+  useEffect(() => {
     let cancelled = false
 
     Promise.all([
-      api.get<ApiPage<ApiRole[]>>('/roles', { params: { per_page: 100 } }),
       api.get<ApiPage<ApiMenu[]>>('/menus', { params: { per_page: 100 } }),
       api.get<ApiPage<ApiPermission[]>>('/permissions', { params: { per_page: 100 } }),
     ])
-      .then(([rolesRes, menusRes, permissionsRes]) => {
+      .then(([menusRes, permissionsRes]) => {
         if (cancelled) return
-        setRoles(rolesRes.data.data)
         setMenus(menusRes.data.data)
         setPermissions(permissionsRes.data.data)
       })
@@ -69,10 +104,43 @@ export default function RolePermissionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const selectedRole = useMemo(
-    () => roles?.find((role) => role.id === selectedRoleId) ?? null,
-    [roles, selectedRoleId]
-  )
+  useEffect(() => {
+    const controller = new AbortController()
+
+    const columnParams: Record<string, string> = {}
+    for (const [key, value] of Object.entries(columnFilters)) {
+      if (value) columnParams[`f[${key}]`] = value
+    }
+
+    api
+      .get<ApiPage<ApiRole[]>>('/roles', {
+        signal: controller.signal,
+        params: {
+          page,
+          per_page: pageSize,
+          q: debouncedRoleQuery.trim() || undefined,
+          is_active: statusFilter === 'all' ? undefined : statusFilter === 'active',
+          sort: sortKey,
+          order: sortDirection,
+          ...columnParams,
+        },
+      })
+      .then(({ data }) => {
+        setRoles(data.data)
+        setTotal(data.meta.total)
+        setTotalPages(data.meta.total_pages)
+        setLoadError(null)
+      })
+      .catch((err) => {
+        // A cancelled request is this effect being superseded by a newer one,
+        // not a failure — letting it through would overwrite the newer result.
+        if (axios.isCancel(err)) return
+        setLoadError(extractErrorMessage(err, t('resourceLoadError')))
+      })
+
+    return () => controller.abort()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, debouncedRoleQuery, statusFilter, columnFilters, sortKey, sortDirection, refreshToken])
 
   const baselineMatrix = useMemo(() => buildRoleMatrix(selectedRole), [selectedRole])
 
@@ -111,32 +179,30 @@ export default function RolePermissionsPage() {
     [baselineMatrix, matrix]
   )
 
-  const filteredRoles = useMemo(() => {
-    const query = roleQuery.trim().toLocaleLowerCase()
-    if (!query) return roles ?? []
+  const isLoading = !loadError && (roles === null || menus === null || permissions === null)
+  const hasFilters =
+    roleQuery !== '' || statusFilter !== 'all' || Object.values(columnFilters).some(Boolean)
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const rangeEnd = Math.min(page * pageSize, total)
 
-    return (roles ?? []).filter((role) => {
-      return (
-        role.name.toLocaleLowerCase().includes(query) ||
-        role.description.toLocaleLowerCase().includes(query)
-      )
-    })
-  }, [roleQuery, roles])
+  function refresh() {
+    setRefreshToken((value) => value + 1)
+  }
 
-  const {
-    page: currentRolePage,
-    pageSize: rolePageSize,
-    setPageSize: setRolePageSize,
-    totalPages: totalRolePages,
-    rangeStart: rolesRangeStart,
-    rangeEnd: rolesRangeEnd,
-    paginatedItems: paginatedRoles,
-    resetPage: resetRolePage,
-    firstPage: firstRolePage,
-    prevPage: prevRolePage,
-    nextPage: nextRolePage,
-    lastPage: lastRolePage,
-  } = usePagination(filteredRoles, ROLE_PAGE_SIZE_OPTIONS[0])
+  function setPageSize(size: number) {
+    setPageSizeState(size)
+    setPage(1)
+  }
+
+  function handleSort(key: RoleSortKey) {
+    if (key === sortKey) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+    setPage(1)
+  }
 
   function toggleCell(menuId: string, permissionId: string) {
     setMatrix((prev) => {
@@ -175,7 +241,7 @@ export default function RolePermissionsPage() {
   }
 
   async function handleSave() {
-    if (!selectedRoleId || !hasUnsavedChanges) return
+    if (!selectedRole || !hasUnsavedChanges) return
 
     setSaving(true)
     setSaveError(null)
@@ -186,8 +252,8 @@ export default function RolePermissionsPage() {
       .map(([menu_id, permissionIds]) => ({ menu_id, permission_ids: Array.from(permissionIds) }))
 
     try {
-      const { data } = await api.put<ApiRole>(`/roles/${selectedRoleId}`, { menu_permissions })
-      setRoles((prev) => prev?.map((role) => (role.id === data.id ? data : role)) ?? prev)
+      await api.put<ApiRole>(`/roles/${selectedRole.id}`, { menu_permissions })
+      refresh()
       setSaveSuccess(true)
       setView('list')
     } catch (err) {
@@ -198,7 +264,7 @@ export default function RolePermissionsPage() {
   }
 
   function openPermissions(role: ApiRole) {
-    setSelectedRoleId(role.id)
+    setSelectedRole(role)
     setMatrix(buildRoleMatrix(role))
     setSaveError(null)
     setSaveSuccess(false)
@@ -245,7 +311,6 @@ export default function RolePermissionsPage() {
           is_active: formIsActive,
         })
         savedRole = data
-        setRoles((prev) => [...(prev ?? []), data])
       } else {
         const { data } = await api.put<ApiRole>(`/roles/${formRoleId}`, {
           name,
@@ -253,8 +318,8 @@ export default function RolePermissionsPage() {
           is_active: formIsActive,
         })
         savedRole = data
-        setRoles((prev) => prev?.map((role) => (role.id === data.id ? data : role)) ?? prev)
       }
+      refresh()
       setFormOpen(false)
       openPermissions(savedRole)
     } catch (err) {
@@ -292,10 +357,13 @@ export default function RolePermissionsPage() {
 
     try {
       await api.delete(`/roles/${role.id}`)
-      setRoles((prev) => prev?.filter((item) => item.id !== role.id) ?? prev)
-      if (selectedRoleId === role.id) {
+      // Deleting the last row of the final page would otherwise strand the
+      // view on a page the server no longer has.
+      setPage((value) => (roles?.length === 1 ? Math.max(1, value - 1) : value))
+      refresh()
+      if (selectedRole?.id === role.id) {
         setView('list')
-        setSelectedRoleId(null)
+        setSelectedRole(null)
       }
       setConfirmDeleteRole(null)
     } catch (err) {
@@ -304,8 +372,6 @@ export default function RolePermissionsPage() {
       setDeletingRoleId(null)
     }
   }
-
-  const isLoading = !loadError && (roles === null || menus === null || permissions === null)
 
   return (
     <main className="content">
@@ -319,24 +385,37 @@ export default function RolePermissionsPage() {
           isLoading={isLoading}
           loadError={loadError}
           deleteError={deleteError}
-          roles={roles}
           roleQuery={roleQuery}
           onRoleQueryChange={(query) => {
             setRoleQuery(query)
-            resetRolePage()
+            setPage(1)
           }}
-          filteredRoles={filteredRoles}
-          paginatedRoles={paginatedRoles}
-          currentRolePage={currentRolePage}
-          totalRolePages={totalRolePages}
-          rolesRangeStart={rolesRangeStart}
-          rolesRangeEnd={rolesRangeEnd}
-          rolePageSize={rolePageSize}
-          onRolePageSizeChange={setRolePageSize}
-          onFirstPage={firstRolePage}
-          onPrevPage={prevRolePage}
-          onNextPage={nextRolePage}
-          onLastPage={lastRolePage}
+          statusFilter={statusFilter}
+          onStatusFilterChange={(value) => {
+            setStatusFilter(value)
+            setPage(1)
+          }}
+          columnFilters={columnFilters}
+          onColumnFilterChange={(key: RoleTextFilterKey, value: string) => {
+            setColumnFilters((prev) => ({ ...prev, [key]: value }))
+            setPage(1)
+          }}
+          hasFilters={hasFilters}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+          onSort={handleSort}
+          roles={roles ?? []}
+          total={total}
+          currentRolePage={page}
+          totalRolePages={totalPages}
+          rolesRangeStart={rangeStart}
+          rolesRangeEnd={rangeEnd}
+          rolePageSize={pageSize}
+          onRolePageSizeChange={setPageSize}
+          onFirstPage={() => setPage(1)}
+          onPrevPage={() => setPage((value) => Math.max(1, value - 1))}
+          onNextPage={() => setPage((value) => Math.min(totalPages, value + 1))}
+          onLastPage={() => setPage(totalPages)}
           deletingRoleId={checkingRoleId ?? deletingRoleId}
           onCreateRole={openCreateForm}
           onManageRole={openPermissions}
