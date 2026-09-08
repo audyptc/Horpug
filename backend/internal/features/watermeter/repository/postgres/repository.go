@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -27,7 +28,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 const selectMeterColumns = `
 	wm.id, wm.room_id, rm.room_number, rm.dormitory_id, d.name, wm.billing_method,
 	wm.reading_date, wm.previous_unit, wm.current_unit, wm.unit_used, wm.price_per_unit, wm.flat_amount, wm.total_amount,
-	EXISTS (SELECT 1 FROM invoice_items ii WHERE ii.reference_id = wm.id AND ii.item_type = 'water') AS is_billed,
+	` + metusecase.IsBilledExpr + ` AS is_billed,
 	wm.note, wm.created_by, wm.updated_by, wm.created_at, wm.updated_at
 `
 
@@ -59,8 +60,62 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 		*args = append(*args, *filters.DormitoryID)
 		*argIdx++
 	}
+	if filters.BillingMethod != nil {
+		conditions = append(conditions, fmt.Sprintf(`wm.billing_method = $%d`, *argIdx))
+		*args = append(*args, *filters.BillingMethod)
+		*argIdx++
+	}
+	if filters.IsBilled != nil {
+		if *filters.IsBilled {
+			conditions = append(conditions, metusecase.IsBilledExpr)
+		} else {
+			conditions = append(conditions, "NOT "+metusecase.IsBilledExpr)
+		}
+	}
+	if filters.Search != "" {
+		conditions = append(conditions, fmt.Sprintf(
+			`(rm.room_number ILIKE $%d OR d.name ILIKE $%d)`, *argIdx, *argIdx,
+		))
+		*args = append(*args, "%"+filters.Search+"%")
+		*argIdx++
+	}
+
+	// Sorted so the generated SQL is stable for a given set of filters rather
+	// than varying with Go's randomised map iteration order.
+	keys := make([]string, 0, len(filters.Columns))
+	for key := range filters.Columns {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		column, ok := metusecase.FilterColumns[key]
+		if !ok {
+			continue
+		}
+		conditions = append(conditions, fmt.Sprintf("%s ILIKE $%d", column, *argIdx))
+		*args = append(*args, "%"+filters.Columns[key]+"%")
+		*argIdx++
+	}
 
 	return conditions
+}
+
+// listOrderBy resolves the sort key through the usecase whitelist; anything
+// unrecognised falls back to the default rather than reaching SQL. id breaks
+// ties so paging over equal values can't repeat or skip a row.
+func listOrderBy(filters metusecase.ListFilters) string {
+	column, ok := metusecase.SortColumns[filters.SortKey]
+	if !ok {
+		column = metusecase.SortColumns[metusecase.DefaultSortKey]
+	}
+
+	direction := "ASC"
+	if filters.SortDesc {
+		direction = "DESC"
+	}
+
+	return fmt.Sprintf(" ORDER BY %s %s, wm.id ASC", column, direction)
 }
 
 func (r *Repository) Count(ctx context.Context, requesterID uuid.UUID, filters metusecase.ListFilters) (int64, error) {
@@ -99,7 +154,7 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, filters me
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
-	query += fmt.Sprintf(` ORDER BY wm.reading_date DESC, rm.room_number ASC LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
+	query += listOrderBy(filters) + fmt.Sprintf(` LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.Query(ctx, query, args...)

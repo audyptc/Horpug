@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import axios from 'axios'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
-import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { InformationDialog } from '@/shared/components/information-dialog'
@@ -8,16 +8,44 @@ import type { ApiRoom } from '@/features/room/types'
 import { WaterMeterListCard } from './components/WaterMeterListCard'
 import { WaterMeterFormSheet } from './components/WaterMeterFormSheet'
 import type { ApiWaterMeter, BillingMethod } from './types'
-import { WATER_METER_PAGE_SIZE_OPTIONS, toApiDate, toDateInputValue } from './utils'
+import {
+  WATER_METER_PAGE_SIZE_OPTIONS,
+  toApiDate,
+  toDateInputValue,
+  type WaterMeterBilledFilter,
+  type WaterMeterBillingMethodFilter,
+  type WaterMeterColumnFilters,
+  type WaterMeterSortDirection,
+  type WaterMeterSortKey,
+  type WaterMeterTextFilterKey,
+} from './utils'
+
+const SEARCH_DEBOUNCE_MS = 300
 
 export default function WaterMeterPage() {
   const { t } = useLanguage()
 
   const [meters, setMeters] = useState<ApiWaterMeter[] | null>(null)
   const [rooms, setRooms] = useState<ApiRoom[]>([])
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [billingMethodFilter, setBillingMethodFilter] = useState<WaterMeterBillingMethodFilter>('all')
+  const [billedFilter, setBilledFilter] = useState<WaterMeterBilledFilter>('all')
+  // Applied on submit from each column's menu, so no debounce is needed here.
+  const [columnFilters, setColumnFilters] = useState<WaterMeterColumnFilters>({})
+  // The list reads as a running log, so it opens on the newest readings.
+  const [sortKey, setSortKey] = useState<WaterMeterSortKey>('reading_date')
+  const [sortDirection, setSortDirection] = useState<WaterMeterSortDirection>('desc')
+
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSizeState] = useState<number>(WATER_METER_PAGE_SIZE_OPTIONS[0])
+  // Bumped by mutations so the list refetches; the server owns the ordering
+  // and page boundaries now, so patching rows locally would misplace them.
+  const [refreshToken, setRefreshToken] = useState(0)
 
   const [formOpen, setFormOpen] = useState(false)
   const [formMeterId, setFormMeterId] = useState<string | null>(null)
@@ -39,16 +67,19 @@ export default function WaterMeterPage() {
   const [deleteBlocked, setDeleteBlocked] = useState(false)
 
   useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [query])
+
+  // The room selector in the form isn't affected by the list's filters, so
+  // it's loaded once rather than on every refetch.
+  useEffect(() => {
     let cancelled = false
 
-    Promise.all([
-      api.get<ApiPage<ApiWaterMeter[]>>('/water-meters', { params: { per_page: 100 } }),
-      api.get<ApiRoom[]>('/rooms/active', { params: { limit: 100 } }),
-    ])
-      .then(([metersRes, roomsRes]) => {
-        if (cancelled) return
-        setMeters(metersRes.data.data)
-        setRooms(roomsRes.data)
+    api
+      .get<ApiRoom[]>('/rooms/active', { params: { limit: 100 } })
+      .then(({ data }) => {
+        if (!cancelled) setRooms(data)
       })
       .catch((err) => {
         if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
@@ -60,34 +91,82 @@ export default function WaterMeterPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const filteredMeters = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase()
-    if (!q) return meters ?? []
+  useEffect(() => {
+    const controller = new AbortController()
 
-    return (meters ?? []).filter((meter) => {
-      return (
-        (meter.room_number ?? '').toLocaleLowerCase().includes(q) ||
-        (meter.dormitory_name ?? '').toLocaleLowerCase().includes(q)
-      )
-    })
-  }, [query, meters])
+    const columnParams: Record<string, string> = {}
+    for (const [key, value] of Object.entries(columnFilters)) {
+      if (value) columnParams[`f[${key}]`] = value
+    }
 
-  const {
-    page: currentPage,
+    api
+      .get<ApiPage<ApiWaterMeter[]>>('/water-meters', {
+        signal: controller.signal,
+        params: {
+          page,
+          per_page: pageSize,
+          q: debouncedQuery.trim() || undefined,
+          billing_method: billingMethodFilter === 'all' ? undefined : billingMethodFilter,
+          is_billed: billedFilter === 'all' ? undefined : billedFilter === 'billed',
+          sort: sortKey,
+          order: sortDirection,
+          ...columnParams,
+        },
+      })
+      .then(({ data }) => {
+        setMeters(data.data)
+        setTotal(data.meta.total)
+        setTotalPages(data.meta.total_pages)
+        setLoadError(null)
+      })
+      .catch((err) => {
+        // A cancelled request is this effect being superseded by a newer one,
+        // not a failure — letting it through would overwrite the newer result.
+        if (axios.isCancel(err)) return
+        setLoadError(extractErrorMessage(err, t('resourceLoadError')))
+      })
+
+    return () => controller.abort()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    page,
     pageSize,
-    setPageSize,
-    totalPages,
-    rangeStart,
-    rangeEnd,
-    paginatedItems: paginatedMeters,
-    resetPage,
-    firstPage,
-    prevPage,
-    nextPage,
-    lastPage,
-  } = usePagination(filteredMeters, WATER_METER_PAGE_SIZE_OPTIONS[0])
+    debouncedQuery,
+    billingMethodFilter,
+    billedFilter,
+    columnFilters,
+    sortKey,
+    sortDirection,
+    refreshToken,
+  ])
 
   const isLoading = !loadError && meters === null
+  const hasFilters =
+    query !== '' ||
+    billingMethodFilter !== 'all' ||
+    billedFilter !== 'all' ||
+    Object.values(columnFilters).some(Boolean)
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const rangeEnd = Math.min(page * pageSize, total)
+
+  function refresh() {
+    setRefreshToken((value) => value + 1)
+  }
+
+  function setPageSize(size: number) {
+    setPageSizeState(size)
+    setPage(1)
+  }
+
+  function handleSort(key: WaterMeterSortKey) {
+    if (key === sortKey) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+    setPage(1)
+  }
 
   function openCreateForm() {
     setFormMeterId(null)
@@ -175,8 +254,7 @@ export default function WaterMeterPage() {
           flat_amount: formBillingMethod === 'flat' ? flatAmount : null,
           note: formNote.trim(),
         }
-        const { data } = await api.post<ApiWaterMeter>('/water-meters', payload)
-        setMeters((prev) => [...(prev ?? []), data])
+        await api.post<ApiWaterMeter>('/water-meters', payload)
       } else {
         const payload = {
           billing_method: formBillingMethod,
@@ -187,9 +265,9 @@ export default function WaterMeterPage() {
           flat_amount: formBillingMethod === 'flat' ? flatAmount : null,
           note: formNote.trim(),
         }
-        const { data } = await api.put<ApiWaterMeter>(`/water-meters/${formMeterId}`, payload)
-        setMeters((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
+        await api.put<ApiWaterMeter>(`/water-meters/${formMeterId}`, payload)
       }
+      refresh()
       setFormOpen(false)
     } catch (err) {
       const fallback = isEdit ? t('waterMeterUpdateError') : t('waterMeterCreateError')
@@ -216,7 +294,10 @@ export default function WaterMeterPage() {
 
     try {
       await api.delete(`/water-meters/${meter.id}`)
-      setMeters((prev) => prev?.filter((item) => item.id !== meter.id) ?? prev)
+      // Deleting the last row of the final page would otherwise strand the
+      // view on a page the server no longer has.
+      setPage((value) => (meters?.length === 1 ? Math.max(1, value - 1) : value))
+      refresh()
       setConfirmDeleteMeter(null)
     } catch (err) {
       setDeleteError(extractErrorMessage(err, t('waterMeterDeleteError')))
@@ -236,24 +317,42 @@ export default function WaterMeterPage() {
         isLoading={isLoading}
         loadError={loadError}
         deleteError={deleteError}
-        meters={meters}
         query={query}
         onQueryChange={(value) => {
           setQuery(value)
-          resetPage()
+          setPage(1)
         }}
-        filteredMeters={filteredMeters}
-        paginatedMeters={paginatedMeters}
-        currentPage={currentPage}
+        billingMethodFilter={billingMethodFilter}
+        onBillingMethodFilterChange={(value) => {
+          setBillingMethodFilter(value)
+          setPage(1)
+        }}
+        billedFilter={billedFilter}
+        onBilledFilterChange={(value) => {
+          setBilledFilter(value)
+          setPage(1)
+        }}
+        columnFilters={columnFilters}
+        onColumnFilterChange={(key: WaterMeterTextFilterKey, value: string) => {
+          setColumnFilters((prev) => ({ ...prev, [key]: value }))
+          setPage(1)
+        }}
+        hasFilters={hasFilters}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={handleSort}
+        meters={meters ?? []}
+        total={total}
+        currentPage={page}
         totalPages={totalPages}
         rangeStart={rangeStart}
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
-        onFirstPage={firstPage}
-        onPrevPage={prevPage}
-        onNextPage={nextPage}
-        onLastPage={lastPage}
+        onFirstPage={() => setPage(1)}
+        onPrevPage={() => setPage((value) => Math.max(1, value - 1))}
+        onNextPage={() => setPage((value) => Math.min(totalPages, value + 1))}
+        onLastPage={() => setPage(totalPages)}
         deletingMeterId={deletingMeterId}
         onCreateMeter={openCreateForm}
         onEditMeter={openEditForm}

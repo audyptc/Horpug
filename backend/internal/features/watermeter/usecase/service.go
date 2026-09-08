@@ -14,10 +14,57 @@ import (
 	"github.com/google/uuid"
 )
 
+// ListFilters narrows and orders a meter listing. The nil-able fields mean "no
+// preference" rather than a zero value, so asking for unbilled readings stays
+// distinct from not filtering on billing at all.
 type ListFilters struct {
-	RoomID      *uuid.UUID
-	DormitoryID *uuid.UUID
+	RoomID        *uuid.UUID
+	DormitoryID   *uuid.UUID
+	BillingMethod *metdomain.BillingMethod
+	IsBilled      *bool
+	Search        string
+	// Columns narrows individual columns by substring, keyed by FilterColumns.
+	// Search casts a wide OR across every text column; these are ANDed on top,
+	// so the two answer different questions and compose.
+	Columns  map[string]string
+	SortKey  string
+	SortDesc bool
 }
+
+// FilterColumns whitelists the columns a caller may match a substring against.
+// Same rule as SortColumns: the expression is interpolated into SQL rather
+// than bound, so nothing outside this map may reach the query.
+var FilterColumns = map[string]string{
+	"room_number":    "rm.room_number",
+	"dormitory_name": "d.name",
+}
+
+// IsBilledExpr reports whether a reading has already been charged on an
+// invoice. It's derived rather than stored, so filtering and sorting on it
+// have to repeat the subquery the listing selects.
+const IsBilledExpr = `EXISTS (SELECT 1 FROM invoice_items ii WHERE ii.reference_id = wm.id AND ii.item_type = 'water')`
+
+// SortColumns maps the sort keys the API accepts onto the expressions they
+// order by. A column name can't be passed to Postgres as a bind parameter, so
+// it is interpolated into the query — every value that reaches ORDER BY must
+// come from this map and never straight from the request.
+var SortColumns = map[string]string{
+	"room_number":    "rm.room_number",
+	"dormitory_name": "d.name",
+	"reading_date":   "wm.reading_date",
+	"billing_method": "wm.billing_method",
+	"previous_unit":  "wm.previous_unit",
+	"current_unit":   "wm.current_unit",
+	"unit_used":      "wm.unit_used",
+	"price_per_unit": "wm.price_per_unit",
+	"total_amount":   "wm.total_amount",
+	"is_billed":      IsBilledExpr,
+	"created_at":     "wm.created_at",
+}
+
+// Newest reading first is the useful default here: a meter listing is read as
+// a running log, not as an alphabetical register.
+const DefaultSortKey = "reading_date"
 
 type CreateInput struct {
 	RoomID        uuid.UUID

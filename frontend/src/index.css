@@ -433,8 +433,10 @@ body {
   overflow-y: hidden;
 }
 
+/* Widest of the tables: ten columns, each header carrying a sort control,
+   plus filter menus on room, dormitory, billing method and billing status. */
 .meter-table-wrap table {
-  min-width: 68rem;
+  min-width: 88rem;
 }
 
 /* Wider than the other tables: each header carries a sort control plus a
@@ -466,8 +468,10 @@ body {
   min-width: 52rem;
 }
 
+/* As wide as the electricity meter table it mirrors: ten columns, each
+   header carrying a sort control, plus four filter menus. */
 .watermeter-table-wrap table {
-  min-width: 68rem;
+  min-width: 88rem;
 }
 
 .repairrequest-table-wrap table {
