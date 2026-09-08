@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	roledomain "apihorpug/internal/features/role/domain"
@@ -24,16 +25,88 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) Count(ctx context.Context) (int64, error) {
+// buildScope builds the WHERE conditions shared by Count and List. Both must
+// apply exactly the same conditions, otherwise the reported total disagrees
+// with the rows returned and the client paginates over a page count that
+// doesn't exist.
+func (r *Repository) buildScope(filters userusecase.ListFilters, argIdx *int, args *[]any) []string {
+	conditions := make([]string, 0)
+
+	if filters.IsActive != nil {
+		conditions = append(conditions, fmt.Sprintf(`u.is_active = $%d`, *argIdx))
+		*args = append(*args, *filters.IsActive)
+		*argIdx++
+	}
+	if filters.Search != "" {
+		conditions = append(conditions, fmt.Sprintf(
+			`(u.username ILIKE $%d OR u.email ILIKE $%d OR r.name ILIKE $%d)`,
+			*argIdx, *argIdx, *argIdx,
+		))
+		*args = append(*args, "%"+filters.Search+"%")
+		*argIdx++
+	}
+
+	// Sorted so the generated SQL is stable for a given set of filters rather
+	// than varying with Go's randomised map iteration order.
+	keys := make([]string, 0, len(filters.Columns))
+	for key := range filters.Columns {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		column, ok := userusecase.FilterColumns[key]
+		if !ok {
+			continue
+		}
+		conditions = append(conditions, fmt.Sprintf("%s ILIKE $%d", column, *argIdx))
+		*args = append(*args, "%"+filters.Columns[key]+"%")
+		*argIdx++
+	}
+
+	return conditions
+}
+
+// listOrderBy resolves the sort key through the usecase whitelist; anything
+// unrecognised falls back to the default rather than reaching SQL. u.id
+// breaks ties so paging over equal values can't repeat or skip a row.
+func listOrderBy(filters userusecase.ListFilters) string {
+	column, ok := userusecase.SortColumns[filters.SortKey]
+	if !ok {
+		column = userusecase.SortColumns[userusecase.DefaultSortKey]
+	}
+
+	direction := "ASC"
+	if filters.SortDesc {
+		direction = "DESC"
+	}
+
+	return fmt.Sprintf(" ORDER BY %s %s, u.id ASC", column, direction)
+}
+
+func (r *Repository) Count(ctx context.Context, filters userusecase.ListFilters) (int64, error) {
+	argIdx := 1
+	args := make([]any, 0)
+	conditions := r.buildScope(filters, &argIdx, &args)
+
+	query := `SELECT COUNT(*) FROM users u JOIN roles r ON r.id = u.role_id`
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
 	var total int64
-	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&total); err != nil {
+	if err := r.db.QueryRow(ctx, query, args...).Scan(&total); err != nil {
 		return 0, err
 	}
 	return total, nil
 }
 
-func (r *Repository) List(ctx context.Context, limit, offset int) ([]userdomain.User, error) {
-	rows, err := r.db.Query(ctx, `
+func (r *Repository) List(ctx context.Context, filters userusecase.ListFilters, limit, offset int) ([]userdomain.User, error) {
+	argIdx := 1
+	args := make([]any, 0)
+	conditions := r.buildScope(filters, &argIdx, &args)
+
+	query := `
 		SELECT
 			u.id,
 			u.username,
@@ -54,9 +127,14 @@ func (r *Repository) List(ctx context.Context, limit, offset int) ([]userdomain.
 			r.updated_at
 		FROM users u
 		JOIN roles r ON r.id = u.role_id
-		ORDER BY u.created_at DESC
-		LIMIT $1 OFFSET $2
-	`, limit, offset)
+	`
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+	query += listOrderBy(filters) + fmt.Sprintf(` LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
+	args = append(args, limit, offset)
+
+	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

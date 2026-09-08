@@ -1,22 +1,45 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import axios from 'axios'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
-import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { InformationDialog } from '@/shared/components/information-dialog'
 import { UserListCard } from './components/UserListCard'
 import { UserFormSheet } from './components/UserFormSheet'
 import type { ApiUser, ApiUserDeletionCheck, ApiUserRole } from './types'
-import { USER_PAGE_SIZE_OPTIONS } from './utils'
+import {
+  USER_PAGE_SIZE_OPTIONS,
+  type UserColumnFilters,
+  type UserSortDirection,
+  type UserSortKey,
+  type UserStatusFilter,
+  type UserTextFilterKey,
+} from './utils'
+
+const SEARCH_DEBOUNCE_MS = 300
 
 export default function UserPage() {
   const { t } = useLanguage()
 
   const [users, setUsers] = useState<ApiUser[] | null>(null)
   const [roles, setRoles] = useState<ApiUserRole[]>([])
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<UserStatusFilter>('all')
+  // Applied on submit from each column's menu, so no debounce is needed here.
+  const [columnFilters, setColumnFilters] = useState<UserColumnFilters>({})
+  const [sortKey, setSortKey] = useState<UserSortKey>('username')
+  const [sortDirection, setSortDirection] = useState<UserSortDirection>('asc')
+
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSizeState] = useState<number>(USER_PAGE_SIZE_OPTIONS[0])
+  // Bumped by mutations so the list refetches; the server owns the ordering
+  // and page boundaries now, so patching rows locally would misplace them.
+  const [refreshToken, setRefreshToken] = useState(0)
 
   const [formOpen, setFormOpen] = useState(false)
   const [formUserId, setFormUserId] = useState<string | null>(null)
@@ -38,16 +61,19 @@ export default function UserPage() {
   const [toggleError, setToggleError] = useState<string | null>(null)
 
   useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [query])
+
+  // The role selector in the form isn't affected by the list's filters, so
+  // it's loaded once rather than on every refetch.
+  useEffect(() => {
     let cancelled = false
 
-    Promise.all([
-      api.get<ApiPage<ApiUser[]>>('/users', { params: { per_page: 100 } }),
-      api.get<ApiPage<ApiUserRole[]>>('/roles', { params: { per_page: 100 } }),
-    ])
-      .then(([usersRes, rolesRes]) => {
-        if (cancelled) return
-        setUsers(usersRes.data.data)
-        setRoles(rolesRes.data.data)
+    api
+      .get<ApiPage<ApiUserRole[]>>('/roles', { params: { per_page: 100 } })
+      .then(({ data }) => {
+        if (!cancelled) setRoles(data.data)
       })
       .catch((err) => {
         if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
@@ -59,35 +85,68 @@ export default function UserPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const filteredUsers = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase()
-    if (!q) return users ?? []
+  useEffect(() => {
+    const controller = new AbortController()
 
-    return (users ?? []).filter((user) => {
-      return (
-        user.username.toLocaleLowerCase().includes(q) ||
-        user.email.toLocaleLowerCase().includes(q) ||
-        (user.role?.name ?? '').toLocaleLowerCase().includes(q)
-      )
-    })
-  }, [query, users])
+    const columnParams: Record<string, string> = {}
+    for (const [key, value] of Object.entries(columnFilters)) {
+      if (value) columnParams[`f[${key}]`] = value
+    }
 
-  const {
-    page: currentPage,
-    pageSize,
-    setPageSize,
-    totalPages,
-    rangeStart,
-    rangeEnd,
-    paginatedItems: paginatedUsers,
-    resetPage,
-    firstPage,
-    prevPage,
-    nextPage,
-    lastPage,
-  } = usePagination(filteredUsers, USER_PAGE_SIZE_OPTIONS[0])
+    api
+      .get<ApiPage<ApiUser[]>>('/users', {
+        signal: controller.signal,
+        params: {
+          page,
+          per_page: pageSize,
+          q: debouncedQuery.trim() || undefined,
+          is_active: statusFilter === 'all' ? undefined : statusFilter === 'active',
+          sort: sortKey,
+          order: sortDirection,
+          ...columnParams,
+        },
+      })
+      .then(({ data }) => {
+        setUsers(data.data)
+        setTotal(data.meta.total)
+        setTotalPages(data.meta.total_pages)
+        setLoadError(null)
+      })
+      .catch((err) => {
+        // A cancelled request is this effect being superseded by a newer one,
+        // not a failure — letting it through would overwrite the newer result.
+        if (axios.isCancel(err)) return
+        setLoadError(extractErrorMessage(err, t('resourceLoadError')))
+      })
+
+    return () => controller.abort()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, debouncedQuery, statusFilter, columnFilters, sortKey, sortDirection, refreshToken])
 
   const isLoading = !loadError && users === null
+  const hasFilters =
+    query !== '' || statusFilter !== 'all' || Object.values(columnFilters).some(Boolean)
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const rangeEnd = Math.min(page * pageSize, total)
+
+  function refresh() {
+    setRefreshToken((value) => value + 1)
+  }
+
+  function setPageSize(size: number) {
+    setPageSizeState(size)
+    setPage(1)
+  }
+
+  function handleSort(key: UserSortKey) {
+    if (key === sortKey) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+    setPage(1)
+  }
 
   function openCreateForm() {
     setFormUserId(null)
@@ -136,14 +195,13 @@ export default function UserPage() {
 
     try {
       if (!isEdit) {
-        const { data } = await api.post<ApiUser>('/users', {
+        await api.post<ApiUser>('/users', {
           username,
           email,
           password: formPassword,
           role_id: formRoleId,
           is_active: formIsActive,
         })
-        setUsers((prev) => [...(prev ?? []), data])
       } else {
         const payload: Record<string, unknown> = {
           username,
@@ -154,9 +212,9 @@ export default function UserPage() {
         if (formPassword.trim()) {
           payload.password = formPassword
         }
-        const { data } = await api.put<ApiUser>(`/users/${formUserId}`, payload)
-        setUsers((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
+        await api.put<ApiUser>(`/users/${formUserId}`, payload)
       }
+      refresh()
       setFormOpen(false)
     } catch (err) {
       const fallback = isEdit ? t('userUpdateError') : t('userCreateError')
@@ -189,10 +247,10 @@ export default function UserPage() {
     setToggleError(null)
 
     try {
-      const { data } = await api.put<ApiUser>(`/users/${user.id}`, {
+      await api.put<ApiUser>(`/users/${user.id}`, {
         is_active: !user.is_active,
       })
-      setUsers((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
+      refresh()
     } catch (err) {
       setToggleError(extractErrorMessage(err, t('userToggleActiveError')))
     } finally {
@@ -209,7 +267,10 @@ export default function UserPage() {
 
     try {
       await api.delete(`/users/${user.id}`)
-      setUsers((prev) => prev?.filter((item) => item.id !== user.id) ?? prev)
+      // Deleting the last row of the final page would otherwise strand the
+      // view on a page the server no longer has.
+      setPage((value) => (users?.length === 1 ? Math.max(1, value - 1) : value))
+      refresh()
       setConfirmDeleteUser(null)
     } catch (err) {
       setDeleteError(extractErrorMessage(err, t('userDeleteError')))
@@ -230,24 +291,37 @@ export default function UserPage() {
         loadError={loadError}
         deleteError={deleteError}
         toggleError={toggleError}
-        users={users}
         query={query}
         onQueryChange={(value) => {
           setQuery(value)
-          resetPage()
+          setPage(1)
         }}
-        filteredUsers={filteredUsers}
-        paginatedUsers={paginatedUsers}
-        currentPage={currentPage}
+        statusFilter={statusFilter}
+        onStatusFilterChange={(value) => {
+          setStatusFilter(value)
+          setPage(1)
+        }}
+        columnFilters={columnFilters}
+        onColumnFilterChange={(key: UserTextFilterKey, value: string) => {
+          setColumnFilters((prev) => ({ ...prev, [key]: value }))
+          setPage(1)
+        }}
+        hasFilters={hasFilters}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={handleSort}
+        users={users ?? []}
+        total={total}
+        currentPage={page}
         totalPages={totalPages}
         rangeStart={rangeStart}
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
-        onFirstPage={firstPage}
-        onPrevPage={prevPage}
-        onNextPage={nextPage}
-        onLastPage={lastPage}
+        onFirstPage={() => setPage(1)}
+        onPrevPage={() => setPage((value) => Math.max(1, value - 1))}
+        onNextPage={() => setPage((value) => Math.min(totalPages, value + 1))}
+        onLastPage={() => setPage(totalPages)}
         deletingUserId={checkingUserId ?? deletingUserId}
         togglingUserId={togglingUserId}
         onCreateUser={openCreateForm}

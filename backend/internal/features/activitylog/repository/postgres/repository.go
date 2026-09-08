@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	activitylogdomain "apihorpug/internal/features/activitylog/domain"
@@ -48,44 +49,86 @@ func scanActivityLog(row pgx.Row, log *activitylogdomain.ActivityLog) error {
 	)
 }
 
-func buildListConditions(filter activitylogusecase.ListFilter) ([]string, []any, int) {
+// buildListConditions builds the WHERE conditions shared by Count and List.
+// Both must apply exactly the same conditions, otherwise the reported total
+// disagrees with the rows returned and the client paginates over a page
+// count that doesn't exist.
+func buildListConditions(filter activitylogusecase.ListFilter, argIdx *int, args *[]any) []string {
 	conditions := make([]string, 0)
-	args := make([]any, 0)
-	argIdx := 1
 
 	if filter.UserID != nil {
-		conditions = append(conditions, fmt.Sprintf("al.user_id = $%d", argIdx))
-		args = append(args, *filter.UserID)
-		argIdx++
-	}
-	if filter.EntityType != "" {
-		conditions = append(conditions, fmt.Sprintf("al.entity_type = $%d", argIdx))
-		args = append(args, filter.EntityType)
-		argIdx++
+		conditions = append(conditions, fmt.Sprintf("al.user_id = $%d", *argIdx))
+		*args = append(*args, *filter.UserID)
+		*argIdx++
 	}
 	if filter.EntityID != nil {
-		conditions = append(conditions, fmt.Sprintf("al.entity_id = $%d", argIdx))
-		args = append(args, *filter.EntityID)
-		argIdx++
+		conditions = append(conditions, fmt.Sprintf("al.entity_id = $%d", *argIdx))
+		*args = append(*args, *filter.EntityID)
+		*argIdx++
 	}
 	if filter.DateFrom != nil {
-		conditions = append(conditions, fmt.Sprintf("al.created_at >= $%d", argIdx))
-		args = append(args, *filter.DateFrom)
-		argIdx++
+		conditions = append(conditions, fmt.Sprintf("al.created_at >= $%d", *argIdx))
+		*args = append(*args, *filter.DateFrom)
+		*argIdx++
 	}
 	if filter.DateTo != nil {
-		conditions = append(conditions, fmt.Sprintf("al.created_at < $%d", argIdx))
-		args = append(args, *filter.DateTo)
-		argIdx++
+		conditions = append(conditions, fmt.Sprintf("al.created_at < $%d", *argIdx))
+		*args = append(*args, *filter.DateTo)
+		*argIdx++
+	}
+	if filter.Search != "" {
+		conditions = append(conditions, fmt.Sprintf(
+			`(COALESCE(u.username, '') ILIKE $%d OR al.action ILIKE $%d OR al.entity_type ILIKE $%d OR al.description ILIKE $%d OR al.ip_address ILIKE $%d)`,
+			*argIdx, *argIdx, *argIdx, *argIdx, *argIdx,
+		))
+		*args = append(*args, "%"+filter.Search+"%")
+		*argIdx++
 	}
 
-	return conditions, args, argIdx
+	// Sorted so the generated SQL is stable for a given set of filters rather
+	// than varying with Go's randomised map iteration order.
+	keys := make([]string, 0, len(filter.Columns))
+	for key := range filter.Columns {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		column, ok := activitylogusecase.FilterColumns[key]
+		if !ok {
+			continue
+		}
+		conditions = append(conditions, fmt.Sprintf("%s ILIKE $%d", column, *argIdx))
+		*args = append(*args, "%"+filter.Columns[key]+"%")
+		*argIdx++
+	}
+
+	return conditions
+}
+
+// listOrderBy resolves the sort key through the usecase whitelist; anything
+// unrecognised falls back to the default rather than reaching SQL. al.id
+// breaks ties so paging over equal values can't repeat or skip a row.
+func listOrderBy(filter activitylogusecase.ListFilter) string {
+	column, ok := activitylogusecase.SortColumns[filter.SortKey]
+	if !ok {
+		column = activitylogusecase.SortColumns[activitylogusecase.DefaultSortKey]
+	}
+
+	direction := "ASC"
+	if filter.SortDesc {
+		direction = "DESC"
+	}
+
+	return fmt.Sprintf(" ORDER BY %s %s, al.id ASC", column, direction)
 }
 
 func (r *Repository) Count(ctx context.Context, filter activitylogusecase.ListFilter) (int64, error) {
-	conditions, args, _ := buildListConditions(filter)
+	argIdx := 1
+	args := make([]any, 0)
+	conditions := buildListConditions(filter, &argIdx, &args)
 
-	query := `SELECT COUNT(*) FROM activity_logs al`
+	query := `SELECT COUNT(*) FROM activity_logs al LEFT JOIN users u ON u.id = al.user_id`
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
@@ -98,7 +141,9 @@ func (r *Repository) Count(ctx context.Context, filter activitylogusecase.ListFi
 }
 
 func (r *Repository) List(ctx context.Context, filter activitylogusecase.ListFilter) ([]activitylogdomain.ActivityLog, error) {
-	conditions, args, argIdx := buildListConditions(filter)
+	argIdx := 1
+	args := make([]any, 0)
+	conditions := buildListConditions(filter, &argIdx, &args)
 
 	query := fmt.Sprintf(`
 		SELECT %s
@@ -108,7 +153,7 @@ func (r *Repository) List(ctx context.Context, filter activitylogusecase.ListFil
 	if len(conditions) > 0 {
 		query += "WHERE " + strings.Join(conditions, " AND ") + " "
 	}
-	query += fmt.Sprintf("ORDER BY al.created_at DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+	query += listOrderBy(filter) + fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
 	args = append(args, filter.Limit, filter.Offset)
 
 	rows, err := r.db.Query(ctx, query, args...)

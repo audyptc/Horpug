@@ -955,11 +955,12 @@ const th: Record<TranslationKey, string> = {
   activityLogEntityTypeColumn: 'ประเภทข้อมูล',
   activityLogDescriptionColumn: 'รายละเอียด',
   activityLogIpColumn: 'IP Address',
-  activityLogEntityTypeLabel: 'กรองตามประเภทข้อมูล',
-  activityLogEntityTypePlaceholder: 'เช่น user, dormitory, role',
+  activityLogSearchLabel: 'ค้นหาบันทึกกิจกรรม',
+  activityLogSearchPlaceholder: 'ค้นหาตามผู้ใช้งาน การกระทำ ประเภทข้อมูล รายละเอียด หรือ IP',
   activityLogDateRangeLabel: 'ช่วงวันที่',
   activityLogDateClear: 'ล้างวันที่',
   activityLogNoLogs: 'ไม่พบบันทึกกิจกรรม',
+  activityLogNoMatching: 'ไม่พบบันทึกกิจกรรมที่ตรงกับการค้นหา',
   activityLogSystemUser: 'ระบบ',
 }
 

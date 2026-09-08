@@ -19,15 +19,49 @@ type CreateInput struct {
 	IPAddress   string
 }
 
+// ListFilter narrows and orders an activity log listing.
 type ListFilter struct {
-	UserID     *uuid.UUID
-	EntityType string
-	EntityID   *uuid.UUID
-	DateFrom   *time.Time
-	DateTo     *time.Time
-	Limit      int
-	Offset     int
+	Search string
+	// Columns narrows individual columns by substring, keyed by FilterColumns.
+	// Search casts a wide OR across user, action, entity type, description and
+	// IP; these are ANDed on top, so the two answer different questions and
+	// compose.
+	Columns  map[string]string
+	UserID   *uuid.UUID
+	EntityID *uuid.UUID
+	DateFrom *time.Time
+	DateTo   *time.Time
+	SortKey  string
+	SortDesc bool
+	Limit    int
+	Offset   int
 }
+
+// FilterColumns whitelists the columns a caller may match a substring
+// against. Same rule as SortColumns: the column name is interpolated into SQL
+// rather than bound, so nothing outside this map may reach the query.
+var FilterColumns = map[string]string{
+	"username":    "COALESCE(u.username, '')",
+	"action":      "al.action",
+	"entity_type": "al.entity_type",
+	"description": "al.description",
+	"ip_address":  "al.ip_address",
+}
+
+// SortColumns maps the sort keys the API accepts onto the columns they order
+// by. A column name can't be passed to Postgres as a bind parameter, so it is
+// interpolated into the query — every value that reaches ORDER BY must come
+// from this map and never straight from the request.
+var SortColumns = map[string]string{
+	"created_at":  "al.created_at",
+	"username":    "COALESCE(u.username, '')",
+	"action":      "al.action",
+	"entity_type": "al.entity_type",
+	"description": "al.description",
+	"ip_address":  "al.ip_address",
+}
+
+const DefaultSortKey = "created_at"
 
 type Repository interface {
 	Count(ctx context.Context, filter ListFilter) (int64, error)

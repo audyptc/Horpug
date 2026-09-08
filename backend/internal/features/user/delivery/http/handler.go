@@ -44,10 +44,95 @@ func NewHandler(usecase *userusecase.Service) *Handler {
 
 const defaultActiveListLimit = 50
 
+// parseOptionalBool reads a tri-state query flag: absent means "don't filter
+// on this", so an unset value is distinct from an explicit false.
+func parseOptionalBool(c fiber.Ctx, name string) (*bool, error) {
+	raw := strings.TrimSpace(c.Query(name))
+	if raw == "" {
+		return nil, nil
+	}
+
+	value, err := strconv.ParseBool(raw)
+	if err != nil {
+		return nil, apierror.BadRequest(name + " must be true or false")
+	}
+	return &value, nil
+}
+
+// parseColumnFilters reads the per-column filters, passed as f[<column>]=value.
+// An unrecognised column is rejected rather than ignored: silently dropping it
+// would return an unfiltered list that looks like a legitimate result.
+func parseColumnFilters(c fiber.Ctx) (map[string]string, error) {
+	columns := make(map[string]string)
+
+	for key, value := range c.Queries() {
+		if !strings.HasPrefix(key, "f[") || !strings.HasSuffix(key, "]") {
+			continue
+		}
+
+		name := key[len("f[") : len(key)-len("]")]
+		if _, ok := userusecase.FilterColumns[name]; !ok {
+			return nil, apierror.BadRequest("unsupported filter field: " + name)
+		}
+
+		if value = strings.TrimSpace(value); value != "" {
+			columns[name] = value
+		}
+	}
+
+	return columns, nil
+}
+
+func parseListFilters(c fiber.Ctx) (userusecase.ListFilters, error) {
+	isActive, err := parseOptionalBool(c, "is_active")
+	if err != nil {
+		return userusecase.ListFilters{}, err
+	}
+
+	columns, err := parseColumnFilters(c)
+	if err != nil {
+		return userusecase.ListFilters{}, err
+	}
+
+	sortKey := userusecase.DefaultSortKey
+	if raw := strings.TrimSpace(c.Query("sort")); raw != "" {
+		if _, ok := userusecase.SortColumns[raw]; !ok {
+			return userusecase.ListFilters{}, apierror.BadRequest("unsupported sort field")
+		}
+		sortKey = raw
+	}
+
+	// Usernames read most naturally sorted ascending, so unlike lists
+	// defaulting to a newest-first field, no key flips the default direction.
+	sortDesc := false
+	switch strings.TrimSpace(c.Query("order")) {
+	case "":
+	case "asc":
+		sortDesc = false
+	case "desc":
+		sortDesc = true
+	default:
+		return userusecase.ListFilters{}, apierror.BadRequest("order must be asc or desc")
+	}
+
+	return userusecase.ListFilters{
+		Search:   strings.TrimSpace(c.Query("q")),
+		Columns:  columns,
+		IsActive: isActive,
+		SortKey:  sortKey,
+		SortDesc: sortDesc,
+	}, nil
+}
+
 // List godoc
 // @Summary List users
 // @Tags users
 // @Produce json
+// @Param q query string false "Filter by username, email or role"
+// @Param f[column] query string false "Per-column substring filter, e.g. f[username]=admin; column must be one of username, email, role"
+// @Param is_active query bool false "Filter by active status"
+// @Param sort query string false "Sort field: username, email, role, is_active, created_at (default username)"
+// @Param order query string false "Sort direction: asc or desc"
 // @Param page query int false "Page number (default 1)"
 // @Param per_page query int false "Results per page (default 10, max 100)"
 // @Success 200 {object} apiresponse.Meta
@@ -56,6 +141,11 @@ const defaultActiveListLimit = 50
 // @Security BearerAuth
 // @Router /users [get]
 func (h *Handler) List(c fiber.Ctx) error {
+	filters, err := parseListFilters(c)
+	if err != nil {
+		return err
+	}
+
 	page, perPage, offset, err := httputil.ParsePaginationQuery(c)
 	if err != nil {
 		return err
@@ -64,7 +154,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	users, total, err := h.usecase.List(ctx, perPage, offset)
+	users, total, err := h.usecase.List(ctx, filters, perPage, offset)
 	if err != nil {
 		return apierror.Internal("failed to list users")
 	}

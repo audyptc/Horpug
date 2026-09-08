@@ -44,15 +44,42 @@ func parseDateQuery(c fiber.Ctx, name string) (*time.Time, error) {
 	return &value, nil
 }
 
+// parseColumnFilters reads the per-column filters, passed as f[<column>]=value.
+// An unrecognised column is rejected rather than ignored: silently dropping it
+// would return an unfiltered list that looks like a legitimate result.
+func parseColumnFilters(c fiber.Ctx) (map[string]string, error) {
+	columns := make(map[string]string)
+
+	for key, value := range c.Queries() {
+		if !strings.HasPrefix(key, "f[") || !strings.HasSuffix(key, "]") {
+			continue
+		}
+
+		name := key[len("f[") : len(key)-len("]")]
+		if _, ok := activitylogusecase.FilterColumns[name]; !ok {
+			return nil, apierror.BadRequest("unsupported filter field: " + name)
+		}
+
+		if value = strings.TrimSpace(value); value != "" {
+			columns[name] = value
+		}
+	}
+
+	return columns, nil
+}
+
 // List godoc
 // @Summary List activity logs
 // @Tags activity-logs
 // @Produce json
+// @Param q query string false "Filter by user, action, entity type, description or IP"
+// @Param f[column] query string false "Per-column substring filter, e.g. f[action]=create; column must be one of username, action, entity_type, description, ip_address"
 // @Param user_id query string false "Filter by user ID"
-// @Param entity_type query string false "Filter by entity type"
 // @Param entity_id query string false "Filter by entity ID"
 // @Param date_from query string false "Filter by date, inclusive (YYYY-MM-DD)"
 // @Param date_to query string false "Filter by date, inclusive (YYYY-MM-DD)"
+// @Param sort query string false "Sort field: created_at, username, action, entity_type, description, ip_address (default created_at)"
+// @Param order query string false "Sort direction: asc or desc"
 // @Param page query int false "Page number (default 1)"
 // @Param per_page query int false "Results per page (default 10, max 100)"
 // @Success 200 {object} apiresponse.Meta
@@ -62,7 +89,7 @@ func parseDateQuery(c fiber.Ctx, name string) (*time.Time, error) {
 // @Router /activity-logs [get]
 func (h *Handler) List(c fiber.Ctx) error {
 	filter := activitylogusecase.ListFilter{
-		EntityType: strings.TrimSpace(c.Query("entity_type")),
+		Search: strings.TrimSpace(c.Query("q")),
 	}
 
 	if raw := c.Query("user_id"); raw != "" {
@@ -79,6 +106,31 @@ func (h *Handler) List(c fiber.Ctx) error {
 			return apierror.BadRequest("invalid entity_id")
 		}
 		filter.EntityID = &entityID
+	}
+
+	columns, err := parseColumnFilters(c)
+	if err != nil {
+		return err
+	}
+	filter.Columns = columns
+
+	sortKey := activitylogusecase.DefaultSortKey
+	if raw := strings.TrimSpace(c.Query("sort")); raw != "" {
+		if _, ok := activitylogusecase.SortColumns[raw]; !ok {
+			return apierror.BadRequest("unsupported sort field")
+		}
+		sortKey = raw
+	}
+	filter.SortKey = sortKey
+
+	switch strings.TrimSpace(c.Query("order")) {
+	case "":
+	case "asc":
+		filter.SortDesc = false
+	case "desc":
+		filter.SortDesc = true
+	default:
+		return apierror.BadRequest("order must be asc or desc")
 	}
 
 	dateFrom, err := parseDateQuery(c, "date_from")

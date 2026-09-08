@@ -955,11 +955,12 @@ const en = {
   activityLogEntityTypeColumn: 'Entity Type',
   activityLogDescriptionColumn: 'Description',
   activityLogIpColumn: 'IP Address',
-  activityLogEntityTypeLabel: 'Filter by entity type',
-  activityLogEntityTypePlaceholder: 'e.g. user, dormitory, role',
+  activityLogSearchLabel: 'Search activity logs',
+  activityLogSearchPlaceholder: 'Search by user, action, entity type, description or IP',
   activityLogDateRangeLabel: 'Date range',
   activityLogDateClear: 'Clear dates',
   activityLogNoLogs: 'No activity logs found.',
+  activityLogNoMatching: 'No activity logs match your search.',
   activityLogSystemUser: 'System',
 } as const
 
