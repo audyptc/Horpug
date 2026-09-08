@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	roomdomain "apihorpug/internal/features/room/domain"
@@ -23,31 +24,99 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) Count(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID) (int64, error) {
-	full, roleID, err := r.dormitoryScope(ctx, requesterID)
-	if err != nil {
-		return 0, err
-	}
-
-	query := `SELECT COUNT(*) FROM rooms rm`
+// buildScope builds the WHERE conditions shared by Count and List. Both must
+// apply exactly the same conditions, otherwise the reported total disagrees
+// with the rows returned and the client paginates over a page count that
+// doesn't exist.
+func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filters roomusecase.ListFilters, argIdx *int, args *[]any) []string {
 	conditions := make([]string, 0)
-	args := make([]any, 0)
-	argIdx := 1
 
 	if !full {
 		conditions = append(conditions, fmt.Sprintf(`rm.dormitory_id IN (
 			SELECT dormitory_id FROM user_dormitories WHERE user_id = $%d
 			UNION
 			SELECT dormitory_id FROM role_dormitories WHERE role_id = $%d
-		)`, argIdx, argIdx+1))
-		args = append(args, requesterID, roleID)
-		argIdx += 2
+		)`, *argIdx, *argIdx+1))
+		*args = append(*args, requesterID, roleID)
+		*argIdx += 2
 	}
-	if dormitoryID != nil {
-		conditions = append(conditions, fmt.Sprintf(`rm.dormitory_id = $%d`, argIdx))
-		args = append(args, *dormitoryID)
-		argIdx++
+	if filters.DormitoryID != nil {
+		conditions = append(conditions, fmt.Sprintf(`rm.dormitory_id = $%d`, *argIdx))
+		*args = append(*args, *filters.DormitoryID)
+		*argIdx++
 	}
+	if filters.Status != nil {
+		conditions = append(conditions, fmt.Sprintf(`rm.status = $%d`, *argIdx))
+		*args = append(*args, *filters.Status)
+		*argIdx++
+	}
+	if filters.IsActive != nil {
+		conditions = append(conditions, fmt.Sprintf(`rm.is_active = $%d`, *argIdx))
+		*args = append(*args, *filters.IsActive)
+		*argIdx++
+	}
+	if filters.Search != "" {
+		conditions = append(conditions, fmt.Sprintf(
+			`(rm.room_number ILIKE $%d OR d.name ILIKE $%d OR rt.name ILIKE $%d)`,
+			*argIdx, *argIdx, *argIdx,
+		))
+		*args = append(*args, "%"+filters.Search+"%")
+		*argIdx++
+	}
+
+	// Sorted so the generated SQL is stable for a given set of filters rather
+	// than varying with Go's randomised map iteration order.
+	keys := make([]string, 0, len(filters.Columns))
+	for key := range filters.Columns {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		column, ok := roomusecase.FilterColumns[key]
+		if !ok {
+			continue
+		}
+		conditions = append(conditions, fmt.Sprintf("%s ILIKE $%d", column, *argIdx))
+		*args = append(*args, "%"+filters.Columns[key]+"%")
+		*argIdx++
+	}
+
+	return conditions
+}
+
+// listOrderBy resolves the sort key through the usecase whitelist; anything
+// unrecognised falls back to the default rather than reaching SQL. rm.id
+// breaks ties so paging over equal values can't repeat or skip a row.
+func listOrderBy(filters roomusecase.ListFilters) string {
+	column, ok := roomusecase.SortColumns[filters.SortKey]
+	if !ok {
+		column = roomusecase.SortColumns[roomusecase.DefaultSortKey]
+	}
+
+	direction := "ASC"
+	if filters.SortDesc {
+		direction = "DESC"
+	}
+
+	return fmt.Sprintf(" ORDER BY %s %s, rm.id ASC", column, direction)
+}
+
+func (r *Repository) Count(ctx context.Context, requesterID uuid.UUID, filters roomusecase.ListFilters) (int64, error) {
+	full, roleID, err := r.dormitoryScope(ctx, requesterID)
+	if err != nil {
+		return 0, err
+	}
+
+	argIdx := 1
+	args := make([]any, 0)
+	conditions := r.buildScope(full, roleID, requesterID, filters, &argIdx, &args)
+
+	query := `
+		SELECT COUNT(*) FROM rooms rm
+		JOIN dormitories d ON d.id = rm.dormitory_id
+		JOIN room_types rt ON rt.id = rm.room_type_id
+	`
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
@@ -59,11 +128,15 @@ func (r *Repository) Count(ctx context.Context, requesterID uuid.UUID, dormitory
 	return total, nil
 }
 
-func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID, limit, offset int) ([]roomdomain.Room, error) {
+func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, filters roomusecase.ListFilters, limit, offset int) ([]roomdomain.Room, error) {
 	full, roleID, err := r.dormitoryScope(ctx, requesterID)
 	if err != nil {
 		return nil, err
 	}
+
+	argIdx := 1
+	args := make([]any, 0)
+	conditions := r.buildScope(full, roleID, requesterID, filters, &argIdx, &args)
 
 	query := `
 		SELECT rm.id, rm.dormitory_id, d.name, rm.room_type_id, rt.name, rt.price, rm.room_number, rm.floor, rm.status, rm.is_active, rm.created_by, rm.updated_by, rm.created_at, rm.updated_at
@@ -71,28 +144,10 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, dormitoryI
 		JOIN dormitories d ON d.id = rm.dormitory_id
 		JOIN room_types rt ON rt.id = rm.room_type_id
 	`
-	conditions := make([]string, 0)
-	args := make([]any, 0)
-	argIdx := 1
-
-	if !full {
-		conditions = append(conditions, fmt.Sprintf(`rm.dormitory_id IN (
-			SELECT dormitory_id FROM user_dormitories WHERE user_id = $%d
-			UNION
-			SELECT dormitory_id FROM role_dormitories WHERE role_id = $%d
-		)`, argIdx, argIdx+1))
-		args = append(args, requesterID, roleID)
-		argIdx += 2
-	}
-	if dormitoryID != nil {
-		conditions = append(conditions, fmt.Sprintf(`rm.dormitory_id = $%d`, argIdx))
-		args = append(args, *dormitoryID)
-		argIdx++
-	}
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
-	query += fmt.Sprintf(` ORDER BY d.name ASC, rm.room_number ASC LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
+	query += listOrderBy(filters) + fmt.Sprintf(` LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.Query(ctx, query, args...)
