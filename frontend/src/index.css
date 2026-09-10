@@ -464,8 +464,10 @@ body {
   min-width: 72rem;
 }
 
+/* Wider than before: every header now carries a sort control plus a filter
+   button (a select on status, text on the rest). */
 .parcel-table-wrap table {
-  min-width: 52rem;
+  min-width: 68rem;
 }
 
 /* Wider than before: every header now carries a sort control plus a filter
@@ -490,8 +492,10 @@ body {
   min-width: 52rem;
 }
 
+/* Wider than before: every header now carries a sort control plus a filter
+   button (a select on vehicle type, text on the rest). */
 .parking-table-wrap table {
-  min-width: 44rem;
+  min-width: 60rem;
 }
 
 /* Wider than before: most headers now carry a sort control plus a filter

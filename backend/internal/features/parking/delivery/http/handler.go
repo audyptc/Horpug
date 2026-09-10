@@ -52,6 +52,30 @@ func parseUUIDQuery(c fiber.Ctx, name string) (*uuid.UUID, error) {
 	return &id, nil
 }
 
+// parseColumnFilters reads the per-column filters, passed as f[<column>]=value.
+// An unrecognised column is rejected rather than ignored: silently dropping it
+// would return an unfiltered list that looks like a legitimate result.
+func parseColumnFilters(c fiber.Ctx) (map[string]string, error) {
+	columns := make(map[string]string)
+
+	for key, value := range c.Queries() {
+		if !strings.HasPrefix(key, "f[") || !strings.HasSuffix(key, "]") {
+			continue
+		}
+
+		name := key[len("f[") : len(key)-len("]")]
+		if _, ok := parkingusecase.FilterColumns[name]; !ok {
+			return nil, apierror.BadRequest("unsupported filter field: " + name)
+		}
+
+		if value = strings.TrimSpace(value); value != "" {
+			columns[name] = value
+		}
+	}
+
+	return columns, nil
+}
+
 func parseListFilters(c fiber.Ctx) (parkingusecase.ListFilters, error) {
 	tenantID, err := parseUUIDQuery(c, "tenant_id")
 	if err != nil {
@@ -65,6 +89,10 @@ func parseListFilters(c fiber.Ctx) (parkingusecase.ListFilters, error) {
 	if err != nil {
 		return parkingusecase.ListFilters{}, err
 	}
+	columns, err := parseColumnFilters(c)
+	if err != nil {
+		return parkingusecase.ListFilters{}, err
+	}
 
 	var vehicleType *parkingdomain.VehicleType
 	if raw := strings.TrimSpace(c.Query("vehicle_type")); raw != "" {
@@ -75,11 +103,36 @@ func parseListFilters(c fiber.Ctx) (parkingusecase.ListFilters, error) {
 		vehicleType = &vt
 	}
 
+	sortKey := parkingusecase.DefaultSortKey
+	if raw := strings.TrimSpace(c.Query("sort")); raw != "" {
+		if _, ok := parkingusecase.SortColumns[raw]; !ok {
+			return parkingusecase.ListFilters{}, apierror.BadRequest("unsupported sort field")
+		}
+		sortKey = raw
+	}
+
+	// Newest-first is the useful default for an unsorted listing, but an
+	// explicit sort field reads more naturally ascending.
+	sortDesc := sortKey == parkingusecase.DefaultSortKey
+	switch strings.TrimSpace(c.Query("order")) {
+	case "":
+	case "asc":
+		sortDesc = false
+	case "desc":
+		sortDesc = true
+	default:
+		return parkingusecase.ListFilters{}, apierror.BadRequest("order must be asc or desc")
+	}
+
 	return parkingusecase.ListFilters{
 		TenantID:    tenantID,
 		RoomID:      roomID,
 		DormitoryID: dormitoryID,
 		VehicleType: vehicleType,
+		Search:      strings.TrimSpace(c.Query("q")),
+		Columns:     columns,
+		SortKey:     sortKey,
+		SortDesc:    sortDesc,
 	}, nil
 }
 
@@ -92,6 +145,10 @@ func parseListFilters(c fiber.Ctx) (parkingusecase.ListFilters, error) {
 // @Param room_id query string false "Filter by room ID"
 // @Param dormitory_id query string false "Filter by dormitory ID"
 // @Param vehicle_type query string false "Filter by vehicle type (car, motorcycle, other)"
+// @Param q query string false "Filter by tenant name, room number, dormitory name, license plate or parking spot"
+// @Param f[column] query string false "Per-column substring filter, e.g. f[license_plate]=1กก; column must be one of tenant_name, room_number, license_plate, parking_spot"
+// @Param sort query string false "Sort field: tenant_name, room_number, vehicle_type, license_plate, parking_spot, created_at (default created_at)"
+// @Param order query string false "Sort direction: asc or desc"
 // @Param page query int false "Page number (default 1)"
 // @Param per_page query int false "Results per page (default 10, max 100)"
 // @Success 200 {object} apiresponse.Meta

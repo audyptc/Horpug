@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	parceldomain "apihorpug/internal/features/parcel/domain"
@@ -71,7 +72,74 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 		*argIdx++
 	}
 
+	if filters.Search != "" {
+		conditions = append(conditions, fmt.Sprintf(
+			`((t.first_name || ' ' || t.last_name) ILIKE $%d OR rm.room_number ILIKE $%d OR d.name ILIKE $%d OR p.courier ILIKE $%d OR p.tracking_number ILIKE $%d)`,
+			*argIdx, *argIdx, *argIdx, *argIdx, *argIdx,
+		))
+		*args = append(*args, "%"+filters.Search+"%")
+		*argIdx++
+	}
+
+	// Sorted so the generated SQL is stable for a given set of filters rather
+	// than varying with Go's randomised map iteration order.
+	keys := make([]string, 0, len(filters.Columns))
+	for key := range filters.Columns {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		value := filters.Columns[key]
+		var clause string
+		switch key {
+		case "tenant_name":
+			clause = fmt.Sprintf(`(t.first_name || ' ' || t.last_name) ILIKE $%d`, *argIdx)
+		case "room_number":
+			clause = fmt.Sprintf(`rm.room_number ILIKE $%d`, *argIdx)
+		case "courier":
+			clause = fmt.Sprintf(`p.courier ILIKE $%d`, *argIdx)
+		case "tracking_number":
+			clause = fmt.Sprintf(`p.tracking_number ILIKE $%d`, *argIdx)
+		default:
+			continue
+		}
+		conditions = append(conditions, clause)
+		*args = append(*args, "%"+value+"%")
+		*argIdx++
+	}
+
 	return conditions
+}
+
+// listOrderBy resolves the sort key through the usecase whitelist; anything
+// unrecognised falls back to the default rather than reaching SQL. p.id
+// breaks ties so paging over equal values can't repeat or skip a row.
+func listOrderBy(filters parcelusecase.ListFilters) string {
+	sortKey := filters.SortKey
+	if _, ok := parcelusecase.SortColumns[sortKey]; !ok {
+		sortKey = parcelusecase.DefaultSortKey
+	}
+
+	direction := "ASC"
+	if filters.SortDesc {
+		direction = "DESC"
+	}
+
+	switch sortKey {
+	case "tenant_name":
+		return fmt.Sprintf(" ORDER BY t.first_name %s, t.last_name %s, p.id ASC", direction, direction)
+	case "room_number":
+		return fmt.Sprintf(" ORDER BY rm.room_number %s, p.id ASC", direction)
+	case "courier":
+		return fmt.Sprintf(" ORDER BY p.courier %s, p.id ASC", direction)
+	case "tracking_number":
+		return fmt.Sprintf(" ORDER BY p.tracking_number %s, p.id ASC", direction)
+	case "status":
+		return fmt.Sprintf(" ORDER BY p.status %s, p.id ASC", direction)
+	default: // received_date
+		return fmt.Sprintf(" ORDER BY p.received_date %s, p.id ASC", direction)
+	}
 }
 
 func (r *Repository) Count(ctx context.Context, requesterID uuid.UUID, filters parcelusecase.ListFilters) (int64, error) {
@@ -110,7 +178,7 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, filters pa
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
-	query += fmt.Sprintf(` ORDER BY p.received_date DESC, p.created_at DESC LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
+	query += listOrderBy(filters) + fmt.Sprintf(` LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.Query(ctx, query, args...)
