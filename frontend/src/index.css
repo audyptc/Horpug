@@ -480,8 +480,10 @@ body {
   min-width: 88rem;
 }
 
+/* Wider than before: every header now carries a sort control plus a filter
+   button (selects on category and status, text on the rest). */
 .repairrequest-table-wrap table {
-  min-width: 60rem;
+  min-width: 76rem;
 }
 
 .document-table-wrap table {

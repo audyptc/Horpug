@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import axios from 'axios'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
-import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiRoom } from '@/features/room/types'
@@ -8,17 +8,44 @@ import type { ApiTenant } from '@/features/tenant/types'
 import { RepairRequestListCard } from './components/RepairRequestListCard'
 import { RepairRequestFormSheet } from './components/RepairRequestFormSheet'
 import type { ApiRepairRequest, RepairCategory, RepairStatus } from './types'
-import { REPAIR_REQUEST_PAGE_SIZE_OPTIONS, toApiDate, toDateInputValue } from './utils'
+import {
+  REPAIR_REQUEST_PAGE_SIZE_OPTIONS,
+  toApiDate,
+  toDateInputValue,
+  type RepairCategoryFilter,
+  type RepairColumnFilters,
+  type RepairSortDirection,
+  type RepairSortKey,
+  type RepairStatusFilter,
+  type RepairTextFilterKey,
+} from './utils'
+
+const SEARCH_DEBOUNCE_MS = 300
 
 export default function RepairRequestPage() {
   const { t } = useLanguage()
 
   const [repairRequests, setRepairRequests] = useState<ApiRepairRequest[] | null>(null)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [rooms, setRooms] = useState<ApiRoom[]>([])
   const [tenants, setTenants] = useState<ApiTenant[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState<RepairCategoryFilter>('all')
+  const [statusFilter, setStatusFilter] = useState<RepairStatusFilter>('all')
+  // Applied on submit from each column's menu, so no debounce is needed here.
+  const [columnFilters, setColumnFilters] = useState<RepairColumnFilters>({})
+  const [sortKey, setSortKey] = useState<RepairSortKey>('reported_date')
+  const [sortDirection, setSortDirection] = useState<RepairSortDirection>('desc')
+
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSizeState] = useState<number>(REPAIR_REQUEST_PAGE_SIZE_OPTIONS[0])
+  // Bumped by mutations so the list refetches; the server owns the ordering
+  // and page boundaries now, so patching rows locally would misplace them.
+  const [refreshToken, setRefreshToken] = useState(0)
 
   const [formOpen, setFormOpen] = useState(false)
   const [formRepairRequestId, setFormRepairRequestId] = useState<string | null>(null)
@@ -37,59 +64,94 @@ export default function RepairRequestPage() {
   const [confirmDeleteRepairRequest, setConfirmDeleteRepairRequest] = useState<ApiRepairRequest | null>(null)
 
   useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [query])
+
+  useEffect(() => {
     let cancelled = false
 
     Promise.all([
-      api.get<ApiPage<ApiRepairRequest[]>>('/repair-requests', { params: { per_page: 100 } }),
       api.get<ApiRoom[]>('/rooms/active', { params: { limit: 100 } }),
       api.get<ApiTenant[]>('/tenants/active', { params: { limit: 100 } }),
     ])
-      .then(([repairRequestsRes, roomsRes, tenantsRes]) => {
+      .then(([roomsRes, tenantsRes]) => {
         if (cancelled) return
-        setRepairRequests(repairRequestsRes.data.data)
         setRooms(roomsRes.data)
         setTenants(tenantsRes.data)
       })
-      .catch((err) => {
-        if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
+      .catch(() => {
+        // Ignore — the create form just shows no room/tenant choices.
       })
 
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const filteredRepairRequests = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase()
-    if (!q) return repairRequests ?? []
+  useEffect(() => {
+    const controller = new AbortController()
 
-    return (repairRequests ?? []).filter((repairRequest) => {
-      return (
-        (repairRequest.room_number ?? '').toLocaleLowerCase().includes(q) ||
-        (repairRequest.dormitory_name ?? '').toLocaleLowerCase().includes(q) ||
-        (repairRequest.tenant_name ?? '').toLocaleLowerCase().includes(q) ||
-        repairRequest.description.toLocaleLowerCase().includes(q)
-      )
-    })
-  }, [query, repairRequests])
+    const columnParams: Record<string, string> = {}
+    for (const [key, value] of Object.entries(columnFilters)) {
+      if (value) columnParams[`f[${key}]`] = value
+    }
 
-  const {
-    page: currentPage,
-    pageSize,
-    setPageSize,
-    totalPages,
-    rangeStart,
-    rangeEnd,
-    paginatedItems: paginatedRepairRequests,
-    resetPage,
-    firstPage,
-    prevPage,
-    nextPage,
-    lastPage,
-  } = usePagination(filteredRepairRequests, REPAIR_REQUEST_PAGE_SIZE_OPTIONS[0])
+    api
+      .get<ApiPage<ApiRepairRequest[]>>('/repair-requests', {
+        signal: controller.signal,
+        params: {
+          page,
+          per_page: pageSize,
+          q: debouncedQuery.trim() || undefined,
+          category: categoryFilter === 'all' ? undefined : categoryFilter,
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          sort: sortKey,
+          order: sortDirection,
+          ...columnParams,
+        },
+      })
+      .then(({ data }) => {
+        setRepairRequests(data.data)
+        setTotal(data.meta.total)
+        setTotalPages(data.meta.total_pages)
+        setLoadError(null)
+      })
+      .catch((err) => {
+        // A cancelled request is this effect being superseded by a newer one,
+        // not a failure — letting it through would overwrite the newer result.
+        if (axios.isCancel(err)) return
+        setLoadError(extractErrorMessage(err, t('resourceLoadError')))
+      })
+
+    return () => controller.abort()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, debouncedQuery, categoryFilter, statusFilter, columnFilters, sortKey, sortDirection, refreshToken])
 
   const isLoading = !loadError && repairRequests === null
+  const hasFilters =
+    query !== '' || categoryFilter !== 'all' || statusFilter !== 'all' || Object.values(columnFilters).some(Boolean)
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const rangeEnd = Math.min(page * pageSize, total)
+
+  function refresh() {
+    setRefreshToken((value) => value + 1)
+  }
+
+  function setPageSize(size: number) {
+    setPageSizeState(size)
+    setPage(1)
+  }
+
+  function handleSort(key: RepairSortKey) {
+    if (key === sortKey) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+    setPage(1)
+  }
 
   function openCreateForm() {
     setFormRepairRequestId(null)
@@ -150,8 +212,7 @@ export default function RepairRequestPage() {
           status: formStatus,
           reported_date: toApiDate(formReportedDate),
         }
-        const { data } = await api.post<ApiRepairRequest>('/repair-requests', payload)
-        setRepairRequests((prev) => [data, ...(prev ?? [])])
+        await api.post<ApiRepairRequest>('/repair-requests', payload)
       } else {
         const payload = {
           tenant_id: formTenantId || null,
@@ -160,9 +221,9 @@ export default function RepairRequestPage() {
           status: formStatus,
           reported_date: toApiDate(formReportedDate),
         }
-        const { data } = await api.put<ApiRepairRequest>(`/repair-requests/${formRepairRequestId}`, payload)
-        setRepairRequests((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
+        await api.put<ApiRepairRequest>(`/repair-requests/${formRepairRequestId}`, payload)
       }
+      refresh()
       setFormOpen(false)
     } catch (err) {
       const fallback = isEdit ? t('repairUpdateError') : t('repairCreateError')
@@ -181,7 +242,10 @@ export default function RepairRequestPage() {
 
     try {
       await api.delete(`/repair-requests/${repairRequest.id}`)
-      setRepairRequests((prev) => prev?.filter((item) => item.id !== repairRequest.id) ?? prev)
+      // Deleting the last row of the final page would otherwise strand the
+      // view on a page the server no longer has.
+      setPage((value) => (repairRequests?.length === 1 ? Math.max(1, value - 1) : value))
+      refresh()
       setConfirmDeleteRepairRequest(null)
     } catch (err) {
       setDeleteError(extractErrorMessage(err, t('repairDeleteError')))
@@ -201,24 +265,42 @@ export default function RepairRequestPage() {
         isLoading={isLoading}
         loadError={loadError}
         deleteError={deleteError}
-        repairRequests={repairRequests}
         query={query}
         onQueryChange={(value) => {
           setQuery(value)
-          resetPage()
+          setPage(1)
         }}
-        filteredRepairRequests={filteredRepairRequests}
-        paginatedRepairRequests={paginatedRepairRequests}
-        currentPage={currentPage}
+        categoryFilter={categoryFilter}
+        onCategoryFilterChange={(value) => {
+          setCategoryFilter(value)
+          setPage(1)
+        }}
+        statusFilter={statusFilter}
+        onStatusFilterChange={(value) => {
+          setStatusFilter(value)
+          setPage(1)
+        }}
+        columnFilters={columnFilters}
+        onColumnFilterChange={(key: RepairTextFilterKey, value: string) => {
+          setColumnFilters((prev) => ({ ...prev, [key]: value }))
+          setPage(1)
+        }}
+        hasFilters={hasFilters}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={handleSort}
+        repairRequests={repairRequests ?? []}
+        total={total}
+        currentPage={page}
         totalPages={totalPages}
         rangeStart={rangeStart}
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
-        onFirstPage={firstPage}
-        onPrevPage={prevPage}
-        onNextPage={nextPage}
-        onLastPage={lastPage}
+        onFirstPage={() => setPage(1)}
+        onPrevPage={() => setPage((value) => Math.max(1, value - 1))}
+        onNextPage={() => setPage((value) => Math.min(totalPages, value + 1))}
+        onLastPage={() => setPage(totalPages)}
         deletingRepairRequestId={deletingRepairRequestId}
         onCreateRepairRequest={openCreateForm}
         onEditRepairRequest={openEditForm}

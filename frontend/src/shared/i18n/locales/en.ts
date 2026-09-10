@@ -580,6 +580,8 @@ const en = {
   repairStatusColumn: 'Status',
   repairReportedDateColumn: 'Reported date',
   repairActionsColumn: 'Actions',
+  repairFilterCategoryLabel: 'Category',
+  repairFilterStatusLabel: 'Status',
   repairFormRoomLabel: 'Room',
   repairFormRoomPlaceholder: 'Select a room',
   repairFormNoRooms: 'No active rooms available.',

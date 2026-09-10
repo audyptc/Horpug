@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	repairrequestdomain "apihorpug/internal/features/repairrequest/domain"
@@ -74,7 +75,74 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 		*argIdx++
 	}
 
+	if filters.Search != "" {
+		conditions = append(conditions, fmt.Sprintf(
+			`(rm.room_number ILIKE $%d OR d.name ILIKE $%d OR (t.first_name || ' ' || t.last_name) ILIKE $%d OR rr.description ILIKE $%d)`,
+			*argIdx, *argIdx, *argIdx, *argIdx,
+		))
+		*args = append(*args, "%"+filters.Search+"%")
+		*argIdx++
+	}
+
+	// Sorted so the generated SQL is stable for a given set of filters rather
+	// than varying with Go's randomised map iteration order.
+	keys := make([]string, 0, len(filters.Columns))
+	for key := range filters.Columns {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		value := filters.Columns[key]
+		var clause string
+		switch key {
+		case "room_number":
+			clause = fmt.Sprintf(`rm.room_number ILIKE $%d`, *argIdx)
+		case "dormitory_name":
+			clause = fmt.Sprintf(`d.name ILIKE $%d`, *argIdx)
+		case "tenant_name":
+			clause = fmt.Sprintf(`(t.first_name || ' ' || t.last_name) ILIKE $%d`, *argIdx)
+		case "description":
+			clause = fmt.Sprintf(`rr.description ILIKE $%d`, *argIdx)
+		default:
+			continue
+		}
+		conditions = append(conditions, clause)
+		*args = append(*args, "%"+value+"%")
+		*argIdx++
+	}
+
 	return conditions
+}
+
+// listOrderBy resolves the sort key through the usecase whitelist; anything
+// unrecognised falls back to the default rather than reaching SQL. rr.id
+// breaks ties so paging over equal values can't repeat or skip a row.
+func listOrderBy(filters repairrequestusecase.ListFilters) string {
+	sortKey := filters.SortKey
+	if _, ok := repairrequestusecase.SortColumns[sortKey]; !ok {
+		sortKey = repairrequestusecase.DefaultSortKey
+	}
+
+	direction := "ASC"
+	if filters.SortDesc {
+		direction = "DESC"
+	}
+
+	switch sortKey {
+	case "room_number":
+		return fmt.Sprintf(" ORDER BY rm.room_number %s, rr.id ASC", direction)
+	case "tenant_name":
+		return fmt.Sprintf(" ORDER BY t.first_name %s, t.last_name %s, rr.id ASC", direction, direction)
+	case "category":
+		return fmt.Sprintf(" ORDER BY rr.category %s, rr.id ASC", direction)
+	case "status":
+		return fmt.Sprintf(" ORDER BY rr.status %s, rr.id ASC", direction)
+	case "description":
+		return fmt.Sprintf(" ORDER BY rr.description %s, rr.id ASC", direction)
+	default: // reported_date
+		return fmt.Sprintf(" ORDER BY rr.reported_date %s, rr.id ASC", direction)
+	}
 }
 
 func (r *Repository) Count(ctx context.Context, requesterID uuid.UUID, filters repairrequestusecase.ListFilters) (int64, error) {
@@ -113,7 +181,7 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, filters re
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
-	query += fmt.Sprintf(` ORDER BY rr.reported_date DESC, rr.created_at DESC LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
+	query += listOrderBy(filters) + fmt.Sprintf(` LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.Query(ctx, query, args...)

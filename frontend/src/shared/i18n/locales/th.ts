@@ -580,6 +580,8 @@ const th: Record<TranslationKey, string> = {
   repairStatusColumn: 'สถานะ',
   repairReportedDateColumn: 'วันที่แจ้ง',
   repairActionsColumn: 'การจัดการ',
+  repairFilterCategoryLabel: 'หมวดหมู่',
+  repairFilterStatusLabel: 'สถานะ',
   repairFormRoomLabel: 'ห้อง',
   repairFormRoomPlaceholder: 'เลือกห้อง',
   repairFormNoRooms: 'ไม่มีห้องที่ใช้งานอยู่',
