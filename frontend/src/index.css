@@ -452,8 +452,10 @@ body {
   min-width: 76rem;
 }
 
+/* Wider than before: every header now carries a sort control plus a filter
+   button (a select on status, text on the rest). */
 .announcement-table-wrap table {
-  min-width: 44rem;
+  min-width: 52rem;
 }
 
 /* Wider than before: each header now carries a sort control plus a filter

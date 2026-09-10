@@ -527,6 +527,7 @@ const en = {
   announcementStatusColumn: 'Status',
   announcementDateColumn: 'Published date',
   announcementActionsColumn: 'Actions',
+  announcementFilterStatusLabel: 'Status',
   announcementSearchLabel: 'Search announcements',
   announcementSearchPlaceholder: 'Search by dormitory, title or content',
   announcementNoMatching: 'No announcements match your search.',

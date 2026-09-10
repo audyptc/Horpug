@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	announcementdomain "apihorpug/internal/features/announcement/domain"
@@ -66,7 +67,63 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 		*argIdx++
 	}
 
+	if filters.Search != "" {
+		conditions = append(conditions, fmt.Sprintf(`(d.name ILIKE $%d OR a.title ILIKE $%d OR a.content ILIKE $%d)`, *argIdx, *argIdx, *argIdx))
+		*args = append(*args, "%"+filters.Search+"%")
+		*argIdx++
+	}
+
+	// Sorted so the generated SQL is stable for a given set of filters rather
+	// than varying with Go's randomised map iteration order.
+	keys := make([]string, 0, len(filters.Columns))
+	for key := range filters.Columns {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		value := filters.Columns[key]
+		var clause string
+		switch key {
+		case "dormitory_name":
+			clause = fmt.Sprintf(`d.name ILIKE $%d`, *argIdx)
+		case "title":
+			clause = fmt.Sprintf(`a.title ILIKE $%d`, *argIdx)
+		default:
+			continue
+		}
+		conditions = append(conditions, clause)
+		*args = append(*args, "%"+value+"%")
+		*argIdx++
+	}
+
 	return conditions
+}
+
+// listOrderBy resolves the sort key through the usecase whitelist; anything
+// unrecognised falls back to the default rather than reaching SQL. a.id
+// breaks ties so paging over equal values can't repeat or skip a row.
+func listOrderBy(filters announcementusecase.ListFilters) string {
+	sortKey := filters.SortKey
+	if _, ok := announcementusecase.SortColumns[sortKey]; !ok {
+		sortKey = announcementusecase.DefaultSortKey
+	}
+
+	direction := "ASC"
+	if filters.SortDesc {
+		direction = "DESC"
+	}
+
+	switch sortKey {
+	case "dormitory_name":
+		return fmt.Sprintf(" ORDER BY d.name %s, a.id ASC", direction)
+	case "title":
+		return fmt.Sprintf(" ORDER BY a.title %s, a.id ASC", direction)
+	case "is_published":
+		return fmt.Sprintf(" ORDER BY a.is_published %s, a.id ASC", direction)
+	default: // published_date
+		return fmt.Sprintf(" ORDER BY a.published_date %s, a.id ASC", direction)
+	}
 }
 
 func (r *Repository) Count(ctx context.Context, requesterID uuid.UUID, filters announcementusecase.ListFilters) (int64, error) {
@@ -105,7 +162,7 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, filters an
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
-	query += fmt.Sprintf(` ORDER BY a.published_date DESC, a.created_at DESC LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
+	query += listOrderBy(filters) + fmt.Sprintf(` LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.Query(ctx, query, args...)

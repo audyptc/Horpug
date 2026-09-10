@@ -77,6 +77,30 @@ func parseBoolQuery(c fiber.Ctx, name string) (*bool, error) {
 	return &value, nil
 }
 
+// parseColumnFilters reads the per-column filters, passed as f[<column>]=value.
+// An unrecognised column is rejected rather than ignored: silently dropping it
+// would return an unfiltered list that looks like a legitimate result.
+func parseColumnFilters(c fiber.Ctx) (map[string]string, error) {
+	columns := make(map[string]string)
+
+	for key, value := range c.Queries() {
+		if !strings.HasPrefix(key, "f[") || !strings.HasSuffix(key, "]") {
+			continue
+		}
+
+		name := key[len("f[") : len(key)-len("]")]
+		if _, ok := announcementusecase.FilterColumns[name]; !ok {
+			return nil, apierror.BadRequest("unsupported filter field: " + name)
+		}
+
+		if value = strings.TrimSpace(value); value != "" {
+			columns[name] = value
+		}
+	}
+
+	return columns, nil
+}
+
 func parseListFilters(c fiber.Ctx) (announcementusecase.ListFilters, error) {
 	dormitoryID, err := parseUUIDQuery(c, "dormitory_id")
 	if err != nil {
@@ -94,12 +118,41 @@ func parseListFilters(c fiber.Ctx) (announcementusecase.ListFilters, error) {
 	if err != nil {
 		return announcementusecase.ListFilters{}, err
 	}
+	columns, err := parseColumnFilters(c)
+	if err != nil {
+		return announcementusecase.ListFilters{}, err
+	}
+
+	sortKey := announcementusecase.DefaultSortKey
+	if raw := strings.TrimSpace(c.Query("sort")); raw != "" {
+		if _, ok := announcementusecase.SortColumns[raw]; !ok {
+			return announcementusecase.ListFilters{}, apierror.BadRequest("unsupported sort field")
+		}
+		sortKey = raw
+	}
+
+	// Newest-first is the useful default for an unsorted listing, but an
+	// explicit sort field reads more naturally ascending.
+	sortDesc := sortKey == announcementusecase.DefaultSortKey
+	switch strings.TrimSpace(c.Query("order")) {
+	case "":
+	case "asc":
+		sortDesc = false
+	case "desc":
+		sortDesc = true
+	default:
+		return announcementusecase.ListFilters{}, apierror.BadRequest("order must be asc or desc")
+	}
 
 	return announcementusecase.ListFilters{
 		DormitoryID: dormitoryID,
 		IsPublished: isPublished,
 		DateFrom:    dateFrom,
 		DateTo:      dateTo,
+		Search:      strings.TrimSpace(c.Query("q")),
+		Columns:     columns,
+		SortKey:     sortKey,
+		SortDesc:    sortDesc,
 	}, nil
 }
 
@@ -112,6 +165,10 @@ func parseListFilters(c fiber.Ctx) (announcementusecase.ListFilters, error) {
 // @Param is_published query bool false "Filter by published status"
 // @Param date_from query string false "Filter by published date, inclusive (YYYY-MM-DD)"
 // @Param date_to query string false "Filter by published date, inclusive (YYYY-MM-DD)"
+// @Param q query string false "Filter by dormitory name, title or content"
+// @Param f[column] query string false "Per-column substring filter, e.g. f[title]=maintenance; column must be one of dormitory_name, title"
+// @Param sort query string false "Sort field: dormitory_name, title, is_published, published_date (default published_date)"
+// @Param order query string false "Sort direction: asc or desc"
 // @Param page query int false "Page number (default 1)"
 // @Param per_page query int false "Results per page (default 10, max 100)"
 // @Success 200 {object} apiresponse.Meta

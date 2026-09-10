@@ -527,6 +527,7 @@ const th: Record<TranslationKey, string> = {
   announcementStatusColumn: 'สถานะ',
   announcementDateColumn: 'วันที่ประกาศ',
   announcementActionsColumn: 'การจัดการ',
+  announcementFilterStatusLabel: 'สถานะ',
   announcementSearchLabel: 'ค้นหาประกาศ',
   announcementSearchPlaceholder: 'ค้นหาด้วยหอพัก หัวข้อ หรือเนื้อหา',
   announcementNoMatching: 'ไม่พบรายการที่ตรงกับการค้นหา',

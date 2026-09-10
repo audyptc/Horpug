@@ -1,22 +1,47 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import axios from 'axios'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
-import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiDormitory } from '@/features/dormitory/types'
 import { AnnouncementListCard } from './components/AnnouncementListCard'
 import { AnnouncementFormSheet } from './components/AnnouncementFormSheet'
 import type { ApiAnnouncement } from './types'
-import { ANNOUNCEMENT_PAGE_SIZE_OPTIONS, toApiDate, toDateInputValue } from './utils'
+import {
+  ANNOUNCEMENT_PAGE_SIZE_OPTIONS,
+  toApiDate,
+  toDateInputValue,
+  type AnnouncementColumnFilters,
+  type AnnouncementSortDirection,
+  type AnnouncementSortKey,
+  type AnnouncementStatusFilter,
+  type AnnouncementTextFilterKey,
+} from './utils'
+
+const SEARCH_DEBOUNCE_MS = 300
 
 export default function AnnouncementPage() {
   const { t } = useLanguage()
 
   const [announcements, setAnnouncements] = useState<ApiAnnouncement[] | null>(null)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [dormitories, setDormitories] = useState<ApiDormitory[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<AnnouncementStatusFilter>('all')
+  // Applied on submit from each column's menu, so no debounce is needed here.
+  const [columnFilters, setColumnFilters] = useState<AnnouncementColumnFilters>({})
+  const [sortKey, setSortKey] = useState<AnnouncementSortKey>('published_date')
+  const [sortDirection, setSortDirection] = useState<AnnouncementSortDirection>('desc')
+
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSizeState] = useState<number>(ANNOUNCEMENT_PAGE_SIZE_OPTIONS[0])
+  // Bumped by mutations so the list refetches; the server owns the ordering
+  // and page boundaries now, so patching rows locally would misplace them.
+  const [refreshToken, setRefreshToken] = useState(0)
 
   const [formOpen, setFormOpen] = useState(false)
   const [formAnnouncementId, setFormAnnouncementId] = useState<string | null>(null)
@@ -33,56 +58,89 @@ export default function AnnouncementPage() {
   const [confirmDeleteAnnouncement, setConfirmDeleteAnnouncement] = useState<ApiAnnouncement | null>(null)
 
   useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [query])
+
+  useEffect(() => {
     let cancelled = false
 
-    Promise.all([
-      api.get<ApiPage<ApiAnnouncement[]>>('/announcements', { params: { per_page: 100 } }),
-      api.get<ApiDormitory[]>('/dormitories/active', { params: { limit: 100 } }),
-    ])
-      .then(([announcementsRes, dormitoriesRes]) => {
+    api
+      .get<ApiDormitory[]>('/dormitories/active', { params: { limit: 100 } })
+      .then(({ data }) => {
         if (cancelled) return
-        setAnnouncements(announcementsRes.data.data)
-        setDormitories(dormitoriesRes.data)
+        setDormitories(data)
       })
-      .catch((err) => {
-        if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
+      .catch(() => {
+        // Ignore — the create form just shows no dormitory choices.
       })
 
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const filteredAnnouncements = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase()
-    if (!q) return announcements ?? []
+  useEffect(() => {
+    const controller = new AbortController()
 
-    return (announcements ?? []).filter((announcement) => {
-      return (
-        (announcement.dormitory_name ?? '').toLocaleLowerCase().includes(q) ||
-        announcement.title.toLocaleLowerCase().includes(q) ||
-        announcement.content.toLocaleLowerCase().includes(q)
-      )
-    })
-  }, [query, announcements])
+    const columnParams: Record<string, string> = {}
+    for (const [key, value] of Object.entries(columnFilters)) {
+      if (value) columnParams[`f[${key}]`] = value
+    }
 
-  const {
-    page: currentPage,
-    pageSize,
-    setPageSize,
-    totalPages,
-    rangeStart,
-    rangeEnd,
-    paginatedItems: paginatedAnnouncements,
-    resetPage,
-    firstPage,
-    prevPage,
-    nextPage,
-    lastPage,
-  } = usePagination(filteredAnnouncements, ANNOUNCEMENT_PAGE_SIZE_OPTIONS[0])
+    api
+      .get<ApiPage<ApiAnnouncement[]>>('/announcements', {
+        signal: controller.signal,
+        params: {
+          page,
+          per_page: pageSize,
+          q: debouncedQuery.trim() || undefined,
+          is_published: statusFilter === 'all' ? undefined : statusFilter === 'published',
+          sort: sortKey,
+          order: sortDirection,
+          ...columnParams,
+        },
+      })
+      .then(({ data }) => {
+        setAnnouncements(data.data)
+        setTotal(data.meta.total)
+        setTotalPages(data.meta.total_pages)
+        setLoadError(null)
+      })
+      .catch((err) => {
+        // A cancelled request is this effect being superseded by a newer one,
+        // not a failure — letting it through would overwrite the newer result.
+        if (axios.isCancel(err)) return
+        setLoadError(extractErrorMessage(err, t('resourceLoadError')))
+      })
+
+    return () => controller.abort()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, debouncedQuery, statusFilter, columnFilters, sortKey, sortDirection, refreshToken])
 
   const isLoading = !loadError && announcements === null
+  const hasFilters = query !== '' || statusFilter !== 'all' || Object.values(columnFilters).some(Boolean)
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const rangeEnd = Math.min(page * pageSize, total)
+
+  function refresh() {
+    setRefreshToken((value) => value + 1)
+  }
+
+  function setPageSize(size: number) {
+    setPageSizeState(size)
+    setPage(1)
+  }
+
+  function handleSort(key: AnnouncementSortKey) {
+    if (key === sortKey) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+    setPage(1)
+  }
 
   function openCreateForm() {
     setFormAnnouncementId(null)
@@ -132,8 +190,7 @@ export default function AnnouncementPage() {
           is_published: formIsPublished,
           published_date: formPublishedDate ? toApiDate(formPublishedDate) : undefined,
         }
-        const { data } = await api.post<ApiAnnouncement>('/announcements', payload)
-        setAnnouncements((prev) => [data, ...(prev ?? [])])
+        await api.post<ApiAnnouncement>('/announcements', payload)
       } else {
         const payload = {
           title: formTitle.trim(),
@@ -141,9 +198,9 @@ export default function AnnouncementPage() {
           is_published: formIsPublished,
           published_date: formPublishedDate ? toApiDate(formPublishedDate) : undefined,
         }
-        const { data } = await api.put<ApiAnnouncement>(`/announcements/${formAnnouncementId}`, payload)
-        setAnnouncements((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
+        await api.put<ApiAnnouncement>(`/announcements/${formAnnouncementId}`, payload)
       }
+      refresh()
       setFormOpen(false)
     } catch (err) {
       const fallback = isEdit ? t('announcementUpdateError') : t('announcementCreateError')
@@ -162,7 +219,10 @@ export default function AnnouncementPage() {
 
     try {
       await api.delete(`/announcements/${announcement.id}`)
-      setAnnouncements((prev) => prev?.filter((item) => item.id !== announcement.id) ?? prev)
+      // Deleting the last row of the final page would otherwise strand the
+      // view on a page the server no longer has.
+      setPage((value) => (announcements?.length === 1 ? Math.max(1, value - 1) : value))
+      refresh()
       setConfirmDeleteAnnouncement(null)
     } catch (err) {
       setDeleteError(extractErrorMessage(err, t('announcementDeleteError')))
@@ -182,24 +242,37 @@ export default function AnnouncementPage() {
         isLoading={isLoading}
         loadError={loadError}
         deleteError={deleteError}
-        announcements={announcements}
         query={query}
         onQueryChange={(value) => {
           setQuery(value)
-          resetPage()
+          setPage(1)
         }}
-        filteredAnnouncements={filteredAnnouncements}
-        paginatedAnnouncements={paginatedAnnouncements}
-        currentPage={currentPage}
+        statusFilter={statusFilter}
+        onStatusFilterChange={(value) => {
+          setStatusFilter(value)
+          setPage(1)
+        }}
+        columnFilters={columnFilters}
+        onColumnFilterChange={(key: AnnouncementTextFilterKey, value: string) => {
+          setColumnFilters((prev) => ({ ...prev, [key]: value }))
+          setPage(1)
+        }}
+        hasFilters={hasFilters}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={handleSort}
+        announcements={announcements ?? []}
+        total={total}
+        currentPage={page}
         totalPages={totalPages}
         rangeStart={rangeStart}
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
-        onFirstPage={firstPage}
-        onPrevPage={prevPage}
-        onNextPage={nextPage}
-        onLastPage={lastPage}
+        onFirstPage={() => setPage(1)}
+        onPrevPage={() => setPage((value) => Math.max(1, value - 1))}
+        onNextPage={() => setPage((value) => Math.min(totalPages, value + 1))}
+        onLastPage={() => setPage(totalPages)}
         deletingAnnouncementId={deletingAnnouncementId}
         onCreateAnnouncement={openCreateForm}
         onEditAnnouncement={openEditForm}
