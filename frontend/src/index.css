@@ -466,8 +466,10 @@ body {
   min-width: 52rem;
 }
 
+/* Wider than before: every header now carries a sort control plus a filter
+   button (a select on category, text on the rest). */
 .expense-table-wrap table {
-  min-width: 52rem;
+  min-width: 64rem;
 }
 
 /* As wide as the electricity meter table it mirrors: ten columns, each

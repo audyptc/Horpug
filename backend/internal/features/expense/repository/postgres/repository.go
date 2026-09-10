@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	expensedomain "apihorpug/internal/features/expense/domain"
@@ -66,7 +67,65 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 		*argIdx++
 	}
 
+	if filters.Search != "" {
+		conditions = append(conditions, fmt.Sprintf(`(d.name ILIKE $%d OR e.description ILIKE $%d)`, *argIdx, *argIdx))
+		*args = append(*args, "%"+filters.Search+"%")
+		*argIdx++
+	}
+
+	// Sorted so the generated SQL is stable for a given set of filters rather
+	// than varying with Go's randomised map iteration order.
+	keys := make([]string, 0, len(filters.Columns))
+	for key := range filters.Columns {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		value := filters.Columns[key]
+		var clause string
+		switch key {
+		case "dormitory_name":
+			clause = fmt.Sprintf(`d.name ILIKE $%d`, *argIdx)
+		case "description":
+			clause = fmt.Sprintf(`e.description ILIKE $%d`, *argIdx)
+		default:
+			continue
+		}
+		conditions = append(conditions, clause)
+		*args = append(*args, "%"+value+"%")
+		*argIdx++
+	}
+
 	return conditions
+}
+
+// listOrderBy resolves the sort key through the usecase whitelist; anything
+// unrecognised falls back to the default rather than reaching SQL. e.id
+// breaks ties so paging over equal values can't repeat or skip a row.
+func listOrderBy(filters expenseusecase.ListFilters) string {
+	sortKey := filters.SortKey
+	if _, ok := expenseusecase.SortColumns[sortKey]; !ok {
+		sortKey = expenseusecase.DefaultSortKey
+	}
+
+	direction := "ASC"
+	if filters.SortDesc {
+		direction = "DESC"
+	}
+
+	switch sortKey {
+	case "dormitory_name":
+		return fmt.Sprintf(" ORDER BY d.name %s, e.id ASC", direction)
+	case "category":
+		return fmt.Sprintf(" ORDER BY e.category %s, e.id ASC", direction)
+	case "amount":
+		return fmt.Sprintf(" ORDER BY e.amount %s, e.id ASC", direction)
+	case "description":
+		return fmt.Sprintf(" ORDER BY e.description %s, e.id ASC", direction)
+	default: // expense_date
+		return fmt.Sprintf(" ORDER BY e.expense_date %s, e.id ASC", direction)
+	}
 }
 
 func (r *Repository) Count(ctx context.Context, requesterID uuid.UUID, filters expenseusecase.ListFilters) (int64, error) {
@@ -105,7 +164,7 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, filters ex
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
-	query += fmt.Sprintf(` ORDER BY e.expense_date DESC, e.created_at DESC LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
+	query += listOrderBy(filters) + fmt.Sprintf(` LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.Query(ctx, query, args...)

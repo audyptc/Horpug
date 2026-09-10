@@ -485,6 +485,7 @@ const en = {
   expenseAmountColumn: 'Amount',
   expenseDescriptionColumn: 'Description',
   expenseActionsColumn: 'Actions',
+  expenseFilterCategoryLabel: 'Category',
   expenseSearchLabel: 'Search expenses',
   expenseSearchPlaceholder: 'Search by dormitory or description',
   expenseNoMatching: 'No expenses match your search.',

@@ -1,22 +1,47 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import axios from 'axios'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
-import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiDormitory } from '@/features/dormitory/types'
 import { ExpenseListCard } from './components/ExpenseListCard'
 import { ExpenseFormSheet } from './components/ExpenseFormSheet'
 import type { ApiExpense, ExpenseCategory } from './types'
-import { EXPENSE_PAGE_SIZE_OPTIONS, toApiDate, toDateInputValue } from './utils'
+import {
+  EXPENSE_PAGE_SIZE_OPTIONS,
+  toApiDate,
+  toDateInputValue,
+  type ExpenseCategoryFilter,
+  type ExpenseColumnFilters,
+  type ExpenseSortDirection,
+  type ExpenseSortKey,
+  type ExpenseTextFilterKey,
+} from './utils'
+
+const SEARCH_DEBOUNCE_MS = 300
 
 export default function ExpensePage() {
   const { t } = useLanguage()
 
   const [expenses, setExpenses] = useState<ApiExpense[] | null>(null)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [dormitories, setDormitories] = useState<ApiDormitory[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState<ExpenseCategoryFilter>('all')
+  // Applied on submit from each column's menu, so no debounce is needed here.
+  const [columnFilters, setColumnFilters] = useState<ExpenseColumnFilters>({})
+  const [sortKey, setSortKey] = useState<ExpenseSortKey>('expense_date')
+  const [sortDirection, setSortDirection] = useState<ExpenseSortDirection>('desc')
+
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSizeState] = useState<number>(EXPENSE_PAGE_SIZE_OPTIONS[0])
+  // Bumped by mutations so the list refetches; the server owns the ordering
+  // and page boundaries now, so patching rows locally would misplace them.
+  const [refreshToken, setRefreshToken] = useState(0)
 
   const [formOpen, setFormOpen] = useState(false)
   const [formExpenseId, setFormExpenseId] = useState<string | null>(null)
@@ -33,55 +58,89 @@ export default function ExpensePage() {
   const [confirmDeleteExpense, setConfirmDeleteExpense] = useState<ApiExpense | null>(null)
 
   useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [query])
+
+  useEffect(() => {
     let cancelled = false
 
-    Promise.all([
-      api.get<ApiPage<ApiExpense[]>>('/expenses', { params: { per_page: 100 } }),
-      api.get<ApiDormitory[]>('/dormitories/active', { params: { limit: 100 } }),
-    ])
-      .then(([expensesRes, dormitoriesRes]) => {
+    api
+      .get<ApiDormitory[]>('/dormitories/active', { params: { limit: 100 } })
+      .then(({ data }) => {
         if (cancelled) return
-        setExpenses(expensesRes.data.data)
-        setDormitories(dormitoriesRes.data)
+        setDormitories(data)
       })
-      .catch((err) => {
-        if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
+      .catch(() => {
+        // Ignore — the create form just shows no dormitory choices.
       })
 
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const filteredExpenses = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase()
-    if (!q) return expenses ?? []
+  useEffect(() => {
+    const controller = new AbortController()
 
-    return (expenses ?? []).filter((expense) => {
-      return (
-        (expense.dormitory_name ?? '').toLocaleLowerCase().includes(q) ||
-        expense.description.toLocaleLowerCase().includes(q)
-      )
-    })
-  }, [query, expenses])
+    const columnParams: Record<string, string> = {}
+    for (const [key, value] of Object.entries(columnFilters)) {
+      if (value) columnParams[`f[${key}]`] = value
+    }
 
-  const {
-    page: currentPage,
-    pageSize,
-    setPageSize,
-    totalPages,
-    rangeStart,
-    rangeEnd,
-    paginatedItems: paginatedExpenses,
-    resetPage,
-    firstPage,
-    prevPage,
-    nextPage,
-    lastPage,
-  } = usePagination(filteredExpenses, EXPENSE_PAGE_SIZE_OPTIONS[0])
+    api
+      .get<ApiPage<ApiExpense[]>>('/expenses', {
+        signal: controller.signal,
+        params: {
+          page,
+          per_page: pageSize,
+          q: debouncedQuery.trim() || undefined,
+          category: categoryFilter === 'all' ? undefined : categoryFilter,
+          sort: sortKey,
+          order: sortDirection,
+          ...columnParams,
+        },
+      })
+      .then(({ data }) => {
+        setExpenses(data.data)
+        setTotal(data.meta.total)
+        setTotalPages(data.meta.total_pages)
+        setLoadError(null)
+      })
+      .catch((err) => {
+        // A cancelled request is this effect being superseded by a newer one,
+        // not a failure — letting it through would overwrite the newer result.
+        if (axios.isCancel(err)) return
+        setLoadError(extractErrorMessage(err, t('resourceLoadError')))
+      })
+
+    return () => controller.abort()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, debouncedQuery, categoryFilter, columnFilters, sortKey, sortDirection, refreshToken])
 
   const isLoading = !loadError && expenses === null
+  const hasFilters = query !== '' || categoryFilter !== 'all' || Object.values(columnFilters).some(Boolean)
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const rangeEnd = Math.min(page * pageSize, total)
+
+  function refresh() {
+    setRefreshToken((value) => value + 1)
+  }
+
+  function setPageSize(size: number) {
+    setPageSizeState(size)
+    setPage(1)
+  }
+
+  function handleSort(key: ExpenseSortKey) {
+    if (key === sortKey) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+    setPage(1)
+  }
 
   function openCreateForm() {
     setFormExpenseId(null)
@@ -134,8 +193,7 @@ export default function ExpensePage() {
           amount,
           description: formDescription.trim(),
         }
-        const { data } = await api.post<ApiExpense>('/expenses', payload)
-        setExpenses((prev) => [data, ...(prev ?? [])])
+        await api.post<ApiExpense>('/expenses', payload)
       } else {
         const payload = {
           category: formCategory,
@@ -143,9 +201,9 @@ export default function ExpensePage() {
           amount,
           description: formDescription.trim(),
         }
-        const { data } = await api.put<ApiExpense>(`/expenses/${formExpenseId}`, payload)
-        setExpenses((prev) => prev?.map((item) => (item.id === data.id ? data : item)) ?? prev)
+        await api.put<ApiExpense>(`/expenses/${formExpenseId}`, payload)
       }
+      refresh()
       setFormOpen(false)
     } catch (err) {
       const fallback = formExpenseId === null ? t('expenseCreateError') : t('expenseUpdateError')
@@ -164,7 +222,10 @@ export default function ExpensePage() {
 
     try {
       await api.delete(`/expenses/${expense.id}`)
-      setExpenses((prev) => prev?.filter((item) => item.id !== expense.id) ?? prev)
+      // Deleting the last row of the final page would otherwise strand the
+      // view on a page the server no longer has.
+      setPage((value) => (expenses?.length === 1 ? Math.max(1, value - 1) : value))
+      refresh()
       setConfirmDeleteExpense(null)
     } catch (err) {
       setDeleteError(extractErrorMessage(err, t('expenseDeleteError')))
@@ -184,24 +245,37 @@ export default function ExpensePage() {
         isLoading={isLoading}
         loadError={loadError}
         deleteError={deleteError}
-        expenses={expenses}
         query={query}
         onQueryChange={(value) => {
           setQuery(value)
-          resetPage()
+          setPage(1)
         }}
-        filteredExpenses={filteredExpenses}
-        paginatedExpenses={paginatedExpenses}
-        currentPage={currentPage}
+        categoryFilter={categoryFilter}
+        onCategoryFilterChange={(value) => {
+          setCategoryFilter(value)
+          setPage(1)
+        }}
+        columnFilters={columnFilters}
+        onColumnFilterChange={(key: ExpenseTextFilterKey, value: string) => {
+          setColumnFilters((prev) => ({ ...prev, [key]: value }))
+          setPage(1)
+        }}
+        hasFilters={hasFilters}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={handleSort}
+        expenses={expenses ?? []}
+        total={total}
+        currentPage={page}
         totalPages={totalPages}
         rangeStart={rangeStart}
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
-        onFirstPage={firstPage}
-        onPrevPage={prevPage}
-        onNextPage={nextPage}
-        onLastPage={lastPage}
+        onFirstPage={() => setPage(1)}
+        onPrevPage={() => setPage((value) => Math.max(1, value - 1))}
+        onNextPage={() => setPage((value) => Math.min(totalPages, value + 1))}
+        onLastPage={() => setPage(totalPages)}
         deletingExpenseId={deletingExpenseId}
         onCreateExpense={openCreateForm}
         onEditExpense={openEditForm}

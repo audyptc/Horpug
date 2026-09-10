@@ -485,6 +485,7 @@ const th: Record<TranslationKey, string> = {
   expenseAmountColumn: 'จำนวนเงิน',
   expenseDescriptionColumn: 'รายละเอียด',
   expenseActionsColumn: 'การจัดการ',
+  expenseFilterCategoryLabel: 'หมวดหมู่',
   expenseSearchLabel: 'ค้นหาค่าใช้จ่าย',
   expenseSearchPlaceholder: 'ค้นหาด้วยหอพักหรือรายละเอียด',
   expenseNoMatching: 'ไม่พบรายการที่ตรงกับการค้นหา',

@@ -15,7 +15,36 @@ type ListFilters struct {
 	Category    *expensedomain.ExpenseCategory
 	DateFrom    *time.Time
 	DateTo      *time.Time
+
+	Search string
+	// Columns narrows individual columns by substring, keyed by FilterColumns.
+	// Search casts a wide OR across dormitory and description; these are ANDed
+	// on top, so the two answer different questions and compose.
+	Columns  map[string]string
+	SortKey  string
+	SortDesc bool
 }
+
+// FilterColumns whitelists the columns a caller may match a substring against,
+// passed as f[<column>]=value. The repository resolves each key to the actual
+// SQL it needs — this map exists purely so an unrecognised column is rejected
+// rather than silently ignored.
+var FilterColumns = map[string]string{
+	"dormitory_name": "dormitory_name",
+	"description":    "description",
+}
+
+// SortColumns whitelists the sort keys the API accepts. As with FilterColumns,
+// the repository resolves each key to its actual ORDER BY expression.
+var SortColumns = map[string]string{
+	"dormitory_name": "dormitory_name",
+	"category":       "category",
+	"expense_date":   "expense_date",
+	"amount":         "amount",
+	"description":    "description",
+}
+
+const DefaultSortKey = "expense_date"
 
 type CreateInput struct {
 	DormitoryID uuid.UUID
@@ -52,6 +81,22 @@ func New(repo Repository) *Service {
 }
 
 func (s *Service) List(ctx context.Context, requesterID uuid.UUID, filters ListFilters, limit, offset int) ([]expensedomain.Expense, int64, error) {
+	filters.Search = strings.TrimSpace(filters.Search)
+	if _, ok := SortColumns[filters.SortKey]; !ok {
+		filters.SortKey = DefaultSortKey
+	}
+
+	columns := make(map[string]string, len(filters.Columns))
+	for key, value := range filters.Columns {
+		if _, ok := FilterColumns[key]; !ok {
+			continue
+		}
+		if value = strings.TrimSpace(value); value != "" {
+			columns[key] = value
+		}
+	}
+	filters.Columns = columns
+
 	total, err := s.repo.Count(ctx, requesterID, filters)
 	if err != nil {
 		return nil, 0, err
