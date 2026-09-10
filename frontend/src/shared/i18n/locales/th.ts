@@ -720,6 +720,7 @@ const th: Record<TranslationKey, string> = {
   documentRoomColumn: 'ห้อง',
   documentUploadedDateColumn: 'วันที่อัปโหลด',
   documentActionsColumn: 'การจัดการ',
+  documentFilterCategoryLabel: 'หมวดหมู่',
   documentFileLink: 'เปิดไฟล์',
   documentFormDormitoryLabel: 'หอพัก',
   documentFormDormitoryPlaceholder: 'เลือกหอพัก',

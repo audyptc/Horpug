@@ -720,6 +720,7 @@ const en = {
   documentRoomColumn: 'Room',
   documentUploadedDateColumn: 'Uploaded',
   documentActionsColumn: 'Actions',
+  documentFilterCategoryLabel: 'Category',
   documentFileLink: 'Open file',
   documentFormDormitoryLabel: 'Dormitory',
   documentFormDormitoryPlaceholder: 'Select a dormitory',

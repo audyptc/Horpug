@@ -488,8 +488,10 @@ body {
   min-width: 76rem;
 }
 
+/* Wider than before: every header now carries a sort control plus a filter
+   button (a select on category, text on the rest). */
 .document-table-wrap table {
-  min-width: 52rem;
+  min-width: 76rem;
 }
 
 /* Wider than before: every header now carries a sort control plus a filter
