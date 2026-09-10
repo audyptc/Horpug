@@ -62,6 +62,43 @@ func parseDateQuery(c fiber.Ctx, name string) (*time.Time, error) {
 	return &value, nil
 }
 
+// parseColumnFilters reads the per-column filters, passed as f[<column>]=value.
+// An unrecognised column is rejected rather than ignored: silently dropping it
+// would return an unfiltered list that looks like a legitimate result.
+func parseColumnFilters(c fiber.Ctx) (map[string]string, error) {
+	columns := make(map[string]string)
+
+	for key, value := range c.Queries() {
+		if !strings.HasPrefix(key, "f[") || !strings.HasSuffix(key, "]") {
+			continue
+		}
+
+		name := key[len("f[") : len(key)-len("]")]
+		if _, ok := paymentusecase.FilterColumns[name]; !ok {
+			return nil, apierror.BadRequest("unsupported filter field: " + name)
+		}
+
+		if value = strings.TrimSpace(value); value != "" {
+			columns[name] = value
+		}
+	}
+
+	return columns, nil
+}
+
+func parseOptionalPaymentMethod(c fiber.Ctx, name string) (*paymentdomain.PaymentMethod, error) {
+	raw := strings.TrimSpace(c.Query(name))
+	if raw == "" {
+		return nil, nil
+	}
+
+	method := paymentdomain.PaymentMethod(raw)
+	if !method.Valid() {
+		return nil, apierror.BadRequest(name + " must be a valid payment method")
+	}
+	return &method, nil
+}
+
 func parseListFilters(c fiber.Ctx) (paymentusecase.ListFilters, error) {
 	invoiceID, err := parseUUIDQuery(c, "invoice_id")
 	if err != nil {
@@ -91,15 +128,49 @@ func parseListFilters(c fiber.Ctx) (paymentusecase.ListFilters, error) {
 	if err != nil {
 		return paymentusecase.ListFilters{}, err
 	}
+	columns, err := parseColumnFilters(c)
+	if err != nil {
+		return paymentusecase.ListFilters{}, err
+	}
+	paymentMethod, err := parseOptionalPaymentMethod(c, "payment_method")
+	if err != nil {
+		return paymentusecase.ListFilters{}, err
+	}
+
+	sortKey := paymentusecase.DefaultSortKey
+	if raw := strings.TrimSpace(c.Query("sort")); raw != "" {
+		if _, ok := paymentusecase.SortColumns[raw]; !ok {
+			return paymentusecase.ListFilters{}, apierror.BadRequest("unsupported sort field")
+		}
+		sortKey = raw
+	}
+
+	// Newest-first is the useful default for an unsorted listing, but an
+	// explicit sort field reads more naturally ascending.
+	sortDesc := sortKey == paymentusecase.DefaultSortKey
+	switch strings.TrimSpace(c.Query("order")) {
+	case "":
+	case "asc":
+		sortDesc = false
+	case "desc":
+		sortDesc = true
+	default:
+		return paymentusecase.ListFilters{}, apierror.BadRequest("order must be asc or desc")
+	}
 
 	return paymentusecase.ListFilters{
-		InvoiceID:   invoiceID,
-		ContractID:  contractID,
-		RoomID:      roomID,
-		DormitoryID: dormitoryID,
-		TenantID:    tenantID,
-		DateFrom:    dateFrom,
-		DateTo:      dateTo,
+		InvoiceID:     invoiceID,
+		ContractID:    contractID,
+		RoomID:        roomID,
+		DormitoryID:   dormitoryID,
+		TenantID:      tenantID,
+		DateFrom:      dateFrom,
+		DateTo:        dateTo,
+		Search:        strings.TrimSpace(c.Query("q")),
+		Columns:       columns,
+		PaymentMethod: paymentMethod,
+		SortKey:       sortKey,
+		SortDesc:      sortDesc,
 	}, nil
 }
 
@@ -115,6 +186,11 @@ func parseListFilters(c fiber.Ctx) (paymentusecase.ListFilters, error) {
 // @Param tenant_id query string false "Filter by tenant ID"
 // @Param date_from query string false "Filter by payment date, inclusive (YYYY-MM-DD)"
 // @Param date_to query string false "Filter by payment date, inclusive (YYYY-MM-DD)"
+// @Param q query string false "Filter by tenant name, room number, dormitory name or reference no."
+// @Param f[column] query string false "Per-column substring filter, e.g. f[room_number]=101; column must be one of tenant_name, room_number, dormitory_name, reference_no"
+// @Param payment_method query string false "Filter by payment method: cash, transfer, credit_card, other"
+// @Param sort query string false "Sort field: tenant_name, room_number, amount, payment_date (default payment_date)"
+// @Param order query string false "Sort direction: asc or desc"
 // @Param page query int false "Page number (default 1)"
 // @Param per_page query int false "Results per page (default 10, max 100)"
 // @Success 200 {object} apiresponse.Meta

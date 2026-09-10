@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import axios from 'axios'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
-import { usePagination } from '@/shared/hooks/use-pagination'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiInvoice } from '@/features/invoice/types'
@@ -12,17 +12,38 @@ import {
   createPaymentItemRow,
   toApiDate,
   toDateInputValue,
+  type PaymentColumnFilters,
   type PaymentItemFormRow,
+  type PaymentMethodFilter,
+  type PaymentSortDirection,
+  type PaymentSortKey,
+  type PaymentTextFilterKey,
 } from './utils'
+
+const SEARCH_DEBOUNCE_MS = 300
 
 export default function PaymentPage() {
   const { t } = useLanguage()
 
   const [payments, setPayments] = useState<ApiPayment[] | null>(null)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [invoices, setInvoices] = useState<ApiInvoice[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [methodFilter, setMethodFilter] = useState<PaymentMethodFilter>('all')
+  // Applied on submit from each column's menu, so no debounce is needed here.
+  const [columnFilters, setColumnFilters] = useState<PaymentColumnFilters>({})
+  const [sortKey, setSortKey] = useState<PaymentSortKey>('payment_date')
+  const [sortDirection, setSortDirection] = useState<PaymentSortDirection>('desc')
+
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSizeState] = useState<number>(PAYMENT_PAGE_SIZE_OPTIONS[0])
+  // Bumped by mutations so the list refetches; the server owns the ordering
+  // and page boundaries now, so patching rows locally would misplace them.
+  const [refreshToken, setRefreshToken] = useState(0)
 
   const [formOpen, setFormOpen] = useState(false)
   const [formInvoiceId, setFormInvoiceId] = useState('')
@@ -37,57 +58,89 @@ export default function PaymentPage() {
   const [confirmDeletePayment, setConfirmDeletePayment] = useState<ApiPayment | null>(null)
 
   useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [query])
+
+  useEffect(() => {
     let cancelled = false
 
-    Promise.all([
-      api.get<ApiPage<ApiPayment[]>>('/payments', { params: { per_page: 100 } }),
-      api.get<ApiPage<ApiInvoice[]>>('/invoices', { params: { per_page: 100 } }),
-    ])
-      .then(([paymentsRes, invoicesRes]) => {
+    api
+      .get<ApiPage<ApiInvoice[]>>('/invoices', { params: { per_page: 100 } })
+      .then(({ data }) => {
         if (cancelled) return
-        setPayments(paymentsRes.data.data)
-        setInvoices(invoicesRes.data.data.filter((invoice) => invoice.status !== 'cancelled'))
+        setInvoices(data.data.filter((invoice) => invoice.status !== 'cancelled'))
       })
-      .catch((err) => {
-        if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
+      .catch(() => {
+        // Ignore — the create form just shows no invoice choices.
       })
 
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const filteredPayments = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase()
-    if (!q) return payments ?? []
+  useEffect(() => {
+    const controller = new AbortController()
 
-    return (payments ?? []).filter((payment) => {
-      return (
-        (payment.tenant_name ?? '').toLocaleLowerCase().includes(q) ||
-        (payment.room_number ?? '').toLocaleLowerCase().includes(q) ||
-        (payment.dormitory_name ?? '').toLocaleLowerCase().includes(q) ||
-        payment.items.some((item) => item.reference_no.toLocaleLowerCase().includes(q))
-      )
-    })
-  }, [query, payments])
+    const columnParams: Record<string, string> = {}
+    for (const [key, value] of Object.entries(columnFilters)) {
+      if (value) columnParams[`f[${key}]`] = value
+    }
 
-  const {
-    page: currentPage,
-    pageSize,
-    setPageSize,
-    totalPages,
-    rangeStart,
-    rangeEnd,
-    paginatedItems: paginatedPayments,
-    resetPage,
-    firstPage,
-    prevPage,
-    nextPage,
-    lastPage,
-  } = usePagination(filteredPayments, PAYMENT_PAGE_SIZE_OPTIONS[0])
+    api
+      .get<ApiPage<ApiPayment[]>>('/payments', {
+        signal: controller.signal,
+        params: {
+          page,
+          per_page: pageSize,
+          q: debouncedQuery.trim() || undefined,
+          payment_method: methodFilter === 'all' ? undefined : methodFilter,
+          sort: sortKey,
+          order: sortDirection,
+          ...columnParams,
+        },
+      })
+      .then(({ data }) => {
+        setPayments(data.data)
+        setTotal(data.meta.total)
+        setTotalPages(data.meta.total_pages)
+        setLoadError(null)
+      })
+      .catch((err) => {
+        // A cancelled request is this effect being superseded by a newer one,
+        // not a failure — letting it through would overwrite the newer result.
+        if (axios.isCancel(err)) return
+        setLoadError(extractErrorMessage(err, t('resourceLoadError')))
+      })
+
+    return () => controller.abort()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, debouncedQuery, methodFilter, columnFilters, sortKey, sortDirection, refreshToken])
 
   const isLoading = !loadError && payments === null
+  const hasFilters = query !== '' || methodFilter !== 'all' || Object.values(columnFilters).some(Boolean)
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const rangeEnd = Math.min(page * pageSize, total)
+
+  function refresh() {
+    setRefreshToken((value) => value + 1)
+  }
+
+  function setPageSize(size: number) {
+    setPageSizeState(size)
+    setPage(1)
+  }
+
+  function handleSort(key: PaymentSortKey) {
+    if (key === sortKey) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+    setPage(1)
+  }
 
   function openCreateForm() {
     setFormInvoiceId('')
@@ -147,8 +200,8 @@ export default function PaymentPage() {
           reference_no: item.referenceNo.trim(),
         })),
       }
-      const { data } = await api.post<ApiPayment>('/payments', payload)
-      setPayments((prev) => [data, ...(prev ?? [])])
+      await api.post<ApiPayment>('/payments', payload)
+      refresh()
       setFormOpen(false)
     } catch (err) {
       setFormError(extractErrorMessage(err, t('paymentCreateError')))
@@ -166,7 +219,10 @@ export default function PaymentPage() {
 
     try {
       await api.delete(`/payments/${payment.id}`)
-      setPayments((prev) => prev?.filter((item) => item.id !== payment.id) ?? prev)
+      // Deleting the last row of the final page would otherwise strand the
+      // view on a page the server no longer has.
+      setPage((value) => (payments?.length === 1 ? Math.max(1, value - 1) : value))
+      refresh()
       setConfirmDeletePayment(null)
     } catch (err) {
       setDeleteError(extractErrorMessage(err, t('paymentDeleteError')))
@@ -186,24 +242,37 @@ export default function PaymentPage() {
         isLoading={isLoading}
         loadError={loadError}
         deleteError={deleteError}
-        payments={payments}
         query={query}
         onQueryChange={(value) => {
           setQuery(value)
-          resetPage()
+          setPage(1)
         }}
-        filteredPayments={filteredPayments}
-        paginatedPayments={paginatedPayments}
-        currentPage={currentPage}
+        methodFilter={methodFilter}
+        onMethodFilterChange={(value) => {
+          setMethodFilter(value)
+          setPage(1)
+        }}
+        columnFilters={columnFilters}
+        onColumnFilterChange={(key: PaymentTextFilterKey, value: string) => {
+          setColumnFilters((prev) => ({ ...prev, [key]: value }))
+          setPage(1)
+        }}
+        hasFilters={hasFilters}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={handleSort}
+        payments={payments ?? []}
+        total={total}
+        currentPage={page}
         totalPages={totalPages}
         rangeStart={rangeStart}
         rangeEnd={rangeEnd}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
-        onFirstPage={firstPage}
-        onPrevPage={prevPage}
-        onNextPage={nextPage}
-        onLastPage={lastPage}
+        onFirstPage={() => setPage(1)}
+        onPrevPage={() => setPage((value) => Math.max(1, value - 1))}
+        onNextPage={() => setPage((value) => Math.min(totalPages, value + 1))}
+        onLastPage={() => setPage(totalPages)}
         deletingPaymentId={deletingPaymentId}
         onCreatePayment={openCreateForm}
         onDeletePayment={setConfirmDeletePayment}

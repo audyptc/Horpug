@@ -439,6 +439,7 @@ const en = {
   paymentDateColumn: 'Payment Date',
   paymentReferenceColumn: 'Reference No.',
   paymentActionsColumn: 'Actions',
+  paymentFilterMethodLabel: 'Payment method',
   paymentSearchLabel: 'Search payments',
   paymentSearchPlaceholder: 'Search by tenant name, room number or reference no.',
   paymentNoMatching: 'No payments match your search.',

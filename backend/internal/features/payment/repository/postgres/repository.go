@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	paymentdomain "apihorpug/internal/features/payment/domain"
@@ -102,7 +103,76 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 		*argIdx++
 	}
 
+	if filters.Search != "" {
+		conditions = append(conditions, fmt.Sprintf(
+			`((t.first_name || ' ' || t.last_name) ILIKE $%d OR rm.room_number ILIKE $%d OR d.name ILIKE $%d OR EXISTS (SELECT 1 FROM payment_items pi WHERE pi.payment_id = p.id AND pi.reference_no ILIKE $%d))`,
+			*argIdx, *argIdx, *argIdx, *argIdx,
+		))
+		*args = append(*args, "%"+filters.Search+"%")
+		*argIdx++
+	}
+
+	// Sorted so the generated SQL is stable for a given set of filters rather
+	// than varying with Go's randomised map iteration order.
+	keys := make([]string, 0, len(filters.Columns))
+	for key := range filters.Columns {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		value := filters.Columns[key]
+		var clause string
+		switch key {
+		case "tenant_name":
+			clause = fmt.Sprintf(`(t.first_name || ' ' || t.last_name) ILIKE $%d`, *argIdx)
+		case "room_number":
+			clause = fmt.Sprintf(`rm.room_number ILIKE $%d`, *argIdx)
+		case "dormitory_name":
+			clause = fmt.Sprintf(`d.name ILIKE $%d`, *argIdx)
+		case "reference_no":
+			clause = fmt.Sprintf(`EXISTS (SELECT 1 FROM payment_items pi WHERE pi.payment_id = p.id AND pi.reference_no ILIKE $%d)`, *argIdx)
+		default:
+			continue
+		}
+		conditions = append(conditions, clause)
+		*args = append(*args, "%"+value+"%")
+		*argIdx++
+	}
+
+	if filters.PaymentMethod != nil {
+		conditions = append(conditions, fmt.Sprintf(`EXISTS (SELECT 1 FROM payment_items pi WHERE pi.payment_id = p.id AND pi.payment_method = $%d)`, *argIdx))
+		*args = append(*args, *filters.PaymentMethod)
+		*argIdx++
+	}
+
 	return conditions
+}
+
+// listOrderBy resolves the sort key through the usecase whitelist; anything
+// unrecognised falls back to the default rather than reaching SQL. p.id
+// breaks ties so paging over equal values can't repeat or skip a row.
+func listOrderBy(filters paymentusecase.ListFilters) string {
+	sortKey := filters.SortKey
+	if _, ok := paymentusecase.SortColumns[sortKey]; !ok {
+		sortKey = paymentusecase.DefaultSortKey
+	}
+
+	direction := "ASC"
+	if filters.SortDesc {
+		direction = "DESC"
+	}
+
+	switch sortKey {
+	case "tenant_name":
+		return fmt.Sprintf(" ORDER BY t.first_name %s, t.last_name %s, p.id ASC", direction, direction)
+	case "room_number":
+		return fmt.Sprintf(" ORDER BY rm.room_number %s, p.id ASC", direction)
+	case "amount":
+		return fmt.Sprintf(" ORDER BY p.total_amount %s, p.id ASC", direction)
+	default: // payment_date
+		return fmt.Sprintf(" ORDER BY p.payment_date %s, p.id ASC", direction)
+	}
 }
 
 func (r *Repository) Count(ctx context.Context, requesterID uuid.UUID, filters paymentusecase.ListFilters) (int64, error) {
@@ -141,7 +211,7 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, filters pa
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
-	query += fmt.Sprintf(` ORDER BY p.payment_date DESC, p.created_at DESC LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
+	query += listOrderBy(filters) + fmt.Sprintf(` LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.Query(ctx, query, args...)

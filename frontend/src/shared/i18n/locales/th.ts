@@ -439,6 +439,7 @@ const th: Record<TranslationKey, string> = {
   paymentDateColumn: 'วันที่ชำระ',
   paymentReferenceColumn: 'เลขอ้างอิง',
   paymentActionsColumn: 'การจัดการ',
+  paymentFilterMethodLabel: 'วิธีชำระเงิน',
   paymentSearchLabel: 'ค้นหาการชำระเงิน',
   paymentSearchPlaceholder: 'ค้นหาด้วยชื่อผู้เช่า หมายเลขห้อง หรือเลขอ้างอิง',
   paymentNoMatching: 'ไม่พบรายการที่ตรงกับการค้นหา',

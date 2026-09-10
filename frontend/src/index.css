@@ -488,8 +488,10 @@ body {
   min-width: 44rem;
 }
 
+/* Wider than before: most headers now carry a sort control plus a filter
+   button, on top of the non-sortable method and reference columns. */
 .payment-table-wrap table {
-  min-width: 60rem;
+  min-width: 72rem;
 }
 
 /* Wider than before: each sortable header now carries a sort control plus a
