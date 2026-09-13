@@ -37,9 +37,9 @@ const invoiceStatusLabelKeys: Record<InvoiceStatus, TranslationKey> = {
   cancelled: 'invoiceStatusCancelled',
 }
 
-const invoiceStatusBadgeVariant: Record<InvoiceStatus, 'default' | 'outline' | 'destructive' | 'secondary'> = {
-  unpaid: 'secondary',
-  paid: 'default',
+const invoiceStatusBadgeVariant: Record<InvoiceStatus, 'outline' | 'success' | 'warning' | 'destructive'> = {
+  unpaid: 'warning',
+  paid: 'success',
   overdue: 'destructive',
   cancelled: 'outline',
 }

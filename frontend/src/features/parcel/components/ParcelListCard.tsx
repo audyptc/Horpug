@@ -24,9 +24,9 @@ const parcelStatusLabelKeys: Record<ParcelStatus, TranslationKey> = {
   returned: 'parcelStatusReturned',
 }
 
-const parcelStatusBadgeVariant: Record<ParcelStatus, 'default' | 'outline' | 'destructive' | 'secondary'> = {
-  pending: 'outline',
-  picked_up: 'default',
+const parcelStatusBadgeVariant: Record<ParcelStatus, 'warning' | 'success' | 'destructive'> = {
+  pending: 'warning',
+  picked_up: 'success',
   returned: 'destructive',
 }
 

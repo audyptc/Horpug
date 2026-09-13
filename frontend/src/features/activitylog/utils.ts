@@ -31,10 +31,10 @@ export function isTextFilterKey(key: string): key is ActivityLogTextFilterKey {
 
 export function activityLogActionVariant(
   action: string
-): 'default' | 'secondary' | 'destructive' | 'outline' {
+): 'default' | 'success' | 'warning' | 'destructive' | 'outline' {
   const normalized = action.trim().toLowerCase()
   if (normalized.includes('delete')) return 'destructive'
-  if (normalized.includes('update') || normalized.includes('edit')) return 'secondary'
-  if (normalized.includes('create') || normalized.includes('login')) return 'default'
+  if (normalized.includes('update') || normalized.includes('edit')) return 'warning'
+  if (normalized.includes('create') || normalized.includes('login')) return 'success'
   return 'outline'
 }

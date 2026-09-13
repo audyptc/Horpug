@@ -35,10 +35,10 @@ const repairStatusLabelKeys: Record<RepairStatus, TranslationKey> = {
   cancelled: 'repairStatusCancelled',
 }
 
-const repairStatusBadgeVariant: Record<RepairStatus, 'default' | 'outline' | 'destructive' | 'secondary'> = {
-  pending: 'outline',
-  in_progress: 'secondary',
-  completed: 'default',
+const repairStatusBadgeVariant: Record<RepairStatus, 'default' | 'warning' | 'success' | 'destructive'> = {
+  pending: 'warning',
+  in_progress: 'default',
+  completed: 'success',
   cancelled: 'destructive',
 }
 

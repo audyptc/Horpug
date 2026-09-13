@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { BedDouble, FileText, ReceiptText, Wrench } from 'lucide-react'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
@@ -105,24 +106,32 @@ export function DashboardPage() {
       title: t('dashboardTotalRooms'),
       value: roomStats.total.toLocaleString(),
       detail: `${roomStats.available.toLocaleString()} ${t('roomStatusAvailable')} · ${roomStats.occupied.toLocaleString()} ${t('roomStatusOccupied')} · ${roomStats.maintenance.toLocaleString()} ${t('roomStatusMaintenance')}`,
+      icon: BedDouble,
+      iconClass: 'bg-primary/10 text-primary',
     },
     {
       key: 'contracts',
       title: t('dashboardActiveContracts'),
       value: contractStats.active.toLocaleString(),
       detail: `${contractStats.total.toLocaleString()} ${t('dashboardContractsTotalLabel')}`,
+      icon: FileText,
+      iconClass: 'bg-success/10 text-success',
     },
     {
       key: 'invoices',
       title: t('dashboardUnpaidInvoices'),
       value: invoiceStats.count.toLocaleString(),
       detail: `${invoiceStats.amount.toLocaleString()} ${t('dashboardBahtUnit')}`,
+      icon: ReceiptText,
+      iconClass: 'bg-warning/10 text-warning',
     },
     {
       key: 'repairs',
       title: t('dashboardPendingRepairs'),
       value: repairStats.pending.toLocaleString(),
       detail: `${repairStats.inProgress.toLocaleString()} ${t('repairStatusInProgress')}`,
+      icon: Wrench,
+      iconClass: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
     },
   ]
 
@@ -135,16 +144,35 @@ export function DashboardPage() {
 
       {loadError && <p className="resource-error">{loadError}</p>}
 
-      {!loadError && isLoading && <p className="metric-detail">{t('loading')}</p>}
+      {!loadError && isLoading && (
+        <section className="metric-grid">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Card key={index}>
+              <CardHeader>
+                <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+                <div className="mt-2 h-7 w-16 animate-pulse rounded bg-muted" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-3 w-full animate-pulse rounded bg-muted" />
+              </CardContent>
+            </Card>
+          ))}
+        </section>
+      )}
 
       {!loadError && !isLoading && (
         <>
           <section className="metric-grid">
             {metrics.map((metric) => (
-              <Card key={metric.key}>
-                <CardHeader>
-                  <CardDescription>{metric.title}</CardDescription>
-                  <CardTitle>{metric.value}</CardTitle>
+              <Card key={metric.key} className="transition-shadow hover:shadow-md">
+                <CardHeader className="flex-row items-start justify-between space-y-0">
+                  <div>
+                    <CardDescription>{metric.title}</CardDescription>
+                    <CardTitle>{metric.value}</CardTitle>
+                  </div>
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${metric.iconClass}`}>
+                    <metric.icon size={20} strokeWidth={2} />
+                  </span>
                 </CardHeader>
                 <CardContent>
                   <p className="metric-detail">{metric.detail}</p>

@@ -23,9 +23,9 @@ const contractStatusLabelKeys: Record<ContractStatus, TranslationKey> = {
   terminated: 'contractStatusTerminated',
 }
 
-const contractStatusBadgeVariant: Record<ContractStatus, 'default' | 'outline' | 'destructive'> = {
-  active: 'default',
-  expired: 'outline',
+const contractStatusBadgeVariant: Record<ContractStatus, 'success' | 'warning' | 'destructive'> = {
+  active: 'success',
+  expired: 'warning',
   terminated: 'destructive',
 }
 

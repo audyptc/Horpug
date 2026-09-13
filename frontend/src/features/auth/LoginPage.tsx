@@ -46,7 +46,7 @@ export default function LoginPage() {
       <form className="login-card" onSubmit={handleSubmit}>
         <div className="login-brand">
           <span className="brand-mark" aria-hidden="true">
-            <Building2 size={22} strokeWidth={2.4} />
+            <Building2 size={26} strokeWidth={2.4} />
           </span>
           <div>
             <p className="brand-title">Horpug</p>

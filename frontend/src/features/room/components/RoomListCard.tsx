@@ -35,10 +35,10 @@ const roomStatusLabelKeys: Record<RoomStatus, TranslationKey> = {
   maintenance: 'roomStatusMaintenance',
 }
 
-const roomStatusBadgeVariant: Record<RoomStatus, 'default' | 'outline' | 'destructive'> = {
-  available: 'default',
-  occupied: 'outline',
-  maintenance: 'destructive',
+const roomStatusBadgeVariant: Record<RoomStatus, 'default' | 'outline' | 'success' | 'warning'> = {
+  available: 'success',
+  occupied: 'default',
+  maintenance: 'warning',
 }
 
 const TEXT_COLUMNS: { key: RoomSortKey; labelKey: TranslationKey }[] = [
