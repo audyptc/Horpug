@@ -60,7 +60,7 @@ services:
     # the matching keys added to backend/.env) - kept equal to
     # DB_USERNAME/DB_PASSWORD/DB_NAME, which the Go app itself reads.
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     networks:
       - backend_net
     healthcheck:
