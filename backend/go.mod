@@ -1,6 +1,6 @@
 module apihorpug
 
-go 1.26
+go 1.27
 
 require (
 	github.com/gofiber/fiber/v3 v3.4.0

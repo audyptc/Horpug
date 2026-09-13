@@ -53,7 +53,7 @@ services:
           memory: 128M
 
   postgres:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     env_file:
       - ./backend/.env
     # postgres only reads POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB (see
