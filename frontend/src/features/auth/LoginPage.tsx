@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate, type Location } from 'react-router-dom'
-import { Building2 } from 'lucide-react'
+import { ArrowRight, Building2, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useLanguage } from '@/shared/i18n/language'
@@ -43,47 +43,90 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-      <form className="login-card" onSubmit={handleSubmit}>
-        <div className="login-brand">
-          <span className="brand-mark" aria-hidden="true">
-            <Building2 size={26} strokeWidth={2.4} />
-          </span>
-          <div>
-            <p className="brand-title">Horpug</p>
-            <p className="brand-subtitle">{t('brandSubtitle')}</p>
+      <div className="login-shell">
+        <section className="login-hero" aria-label={t('brandSubtitle')}>
+          <p className="login-hero-kicker">
+            <Sparkles size={14} aria-hidden="true" />
+            Horpug Admin
+          </p>
+          <h2>จัดการทุกงานของหอพักในที่เดียว</h2>
+          <p>
+            เข้าถึงข้อมูลห้อง ผู้เช่า ใบแจ้งหนี้ และงานซ่อมได้จากแดชบอร์ดเดียว พร้อมโครงสร้างที่อ่านง่ายและ
+            ดูเป็นมืออาชีพมากขึ้น
+          </p>
+
+          <div className="login-highlights">
+            <div className="login-highlight">
+              <span className="login-highlight-icon" aria-hidden="true">
+                <ShieldCheck size={16} />
+              </span>
+              <div>
+                <strong>ปลอดภัยและพร้อมใช้งาน</strong>
+                <span>ล็อกอินครั้งเดียวแล้วจัดการข้อมูลต่อได้ทันที</span>
+              </div>
+            </div>
+            <div className="login-highlight">
+              <span className="login-highlight-icon" aria-hidden="true">
+                <CheckCircle2 size={16} />
+              </span>
+              <div>
+                <strong>ภาพรวมชัดเจน</strong>
+                <span>สรุปห้อง ผู้เช่า และงานค้างในหน้าเดียว</span>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <h1>{t('loginTitle')}</h1>
-        <p className="login-subtitle">{t('loginSubtitle')}</p>
+          <div className="login-hero-footer" aria-hidden="true">
+            <span className="login-hero-pill">Rooms</span>
+            <span className="login-hero-pill">Billing</span>
+            <span className="login-hero-pill">Repairs</span>
+            <span className="login-hero-pill">Reports</span>
+          </div>
+        </section>
 
-        {error && <p className="login-error">{error}</p>}
+        <form className="login-card login-card--form" onSubmit={handleSubmit}>
+          <div className="login-brand">
+            <span className="brand-mark" aria-hidden="true">
+              <Building2 size={26} strokeWidth={2.4} />
+            </span>
+            <div>
+              <p className="brand-title">Horpug</p>
+              <p className="brand-subtitle">{t('brandSubtitle')}</p>
+            </div>
+          </div>
 
-        <label className="login-field">
-          <span>{t('username')}</span>
-          <input
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            autoComplete="username"
-            required
-          />
-        </label>
+          <h1>{t('loginTitle')}</h1>
+          <p className="login-subtitle">{t('loginSubtitle')}</p>
 
-        <label className="login-field">
-          <span>{t('password')}</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            autoComplete="current-password"
-            required
-          />
-        </label>
+          {error && <p className="login-error">{error}</p>}
 
-        <Button type="submit" disabled={isSubmitting} className="login-submit">
-          {isSubmitting ? t('signingIn') : t('signIn')}
-        </Button>
-      </form>
+          <label className="login-field">
+            <span>{t('username')}</span>
+            <input
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              autoComplete="username"
+              required
+            />
+          </label>
+
+          <label className="login-field">
+            <span>{t('password')}</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
+              required
+            />
+          </label>
+
+          <Button type="submit" disabled={isSubmitting} className="login-submit">
+            <span>{isSubmitting ? t('signingIn') : t('signIn')}</span>
+            <ArrowRight size={16} aria-hidden="true" />
+          </Button>
+        </form>
+      </div>
     </div>
   )
 }
