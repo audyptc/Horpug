@@ -156,15 +156,16 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, filters do
 		); err != nil {
 			return nil, err
 		}
-
-		managers, err := r.fetchManagers(ctx, dormitory.ID)
-		if err != nil {
-			return nil, err
-		}
-		dormitory.Managers = managers
 		dormitories = append(dormitories, dormitory)
 	}
 	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	// Release the connection before the follow-up query rather than holding it
+	// until the function returns.
+	rows.Close()
+
+	if err := r.attachManagers(ctx, dormitories); err != nil {
 		return nil, err
 	}
 
@@ -422,41 +423,57 @@ func (r *Repository) loadDormitoryByID(ctx context.Context, id uuid.UUID) (dormd
 		return dormdomain.Dormitory{}, err
 	}
 
-	managers, err := r.fetchManagers(ctx, dormitory.ID)
-	if err != nil {
+	dormitories := []dormdomain.Dormitory{dormitory}
+	if err := r.attachManagers(ctx, dormitories); err != nil {
 		return dormdomain.Dormitory{}, err
 	}
-	dormitory.Managers = managers
 
-	return dormitory, nil
+	return dormitories[0], nil
 }
 
-func (r *Repository) fetchManagers(ctx context.Context, dormitoryID uuid.UUID) ([]dormdomain.DormitoryManager, error) {
+// attachManagers fills Managers on every dormitory with a single query,
+// however many dormitories there are. Dormitories without managers get an
+// empty (non-nil) slice so they serialise as [] rather than null.
+func (r *Repository) attachManagers(ctx context.Context, dormitories []dormdomain.Dormitory) error {
+	if len(dormitories) == 0 {
+		return nil
+	}
+
+	ids := make([]uuid.UUID, len(dormitories))
+	byDormitory := make(map[uuid.UUID][]dormdomain.DormitoryManager, len(dormitories))
+	for i, dormitory := range dormitories {
+		ids[i] = dormitory.ID
+		byDormitory[dormitory.ID] = make([]dormdomain.DormitoryManager, 0)
+	}
+
 	rows, err := r.db.Query(ctx, `
-		SELECT u.id, u.username, u.email, ud.created_at
+		SELECT ud.dormitory_id, u.id, u.username, u.email, ud.created_at
 		FROM user_dormitories ud
 		JOIN users u ON u.id = ud.user_id
-		WHERE ud.dormitory_id = $1
+		WHERE ud.dormitory_id = ANY($1)
 		ORDER BY u.username ASC
-	`, dormitoryID)
+	`, ids)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer rows.Close()
 
-	managers := make([]dormdomain.DormitoryManager, 0)
 	for rows.Next() {
+		var dormitoryID uuid.UUID
 		var manager dormdomain.DormitoryManager
-		if err := rows.Scan(&manager.UserID, &manager.Username, &manager.Email, &manager.CreatedAt); err != nil {
-			return nil, err
+		if err := rows.Scan(&dormitoryID, &manager.UserID, &manager.Username, &manager.Email, &manager.CreatedAt); err != nil {
+			return err
 		}
-		managers = append(managers, manager)
+		byDormitory[dormitoryID] = append(byDormitory[dormitoryID], manager)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return err
 	}
 
-	return managers, nil
+	for i := range dormitories {
+		dormitories[i].Managers = byDormitory[dormitories[i].ID]
+	}
+	return nil
 }
 
 func (r *Repository) replaceManagers(ctx context.Context, tx pgx.Tx, dormitoryID uuid.UUID, userIDs []uuid.UUID) error {

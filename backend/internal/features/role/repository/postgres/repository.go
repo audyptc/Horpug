@@ -127,22 +127,16 @@ func (r *Repository) List(ctx context.Context, filters roleusecase.ListFilters, 
 		if err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.IsActive, &role.FullDormitoryAccess, &role.IsProtected, &role.CreatedBy, &role.UpdatedBy, &role.CreatedAt, &role.UpdatedAt); err != nil {
 			return nil, err
 		}
-
-		menuPermissions, err := r.fetchRoleMenuPermissions(ctx, role.ID)
-		if err != nil {
-			return nil, err
-		}
-		role.MenuPermissions = menuPermissions
-
-		dormitories, err := r.fetchRoleDormitories(ctx, role.ID)
-		if err != nil {
-			return nil, err
-		}
-		role.Dormitories = dormitories
-
 		roles = append(roles, role)
 	}
 	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	// Release the connection before the follow-up queries rather than holding
+	// it until the function returns.
+	rows.Close()
+
+	if err := r.attachRoleRelations(ctx, roles); err != nil {
 		return nil, err
 	}
 
@@ -358,22 +352,52 @@ func (r *Repository) loadRoleByID(ctx context.Context, roleID uuid.UUID) (roledo
 		return roledomain.Role{}, err
 	}
 
-	menuPermissions, err := r.fetchRoleMenuPermissions(ctx, role.ID)
-	if err != nil {
+	roles := []roledomain.Role{role}
+	if err := r.attachRoleRelations(ctx, roles); err != nil {
 		return roledomain.Role{}, err
 	}
-	role.MenuPermissions = menuPermissions
 
-	dormitories, err := r.fetchRoleDormitories(ctx, role.ID)
-	if err != nil {
-		return roledomain.Role{}, err
-	}
-	role.Dormitories = dormitories
-
-	return role, nil
+	return roles[0], nil
 }
 
-func (r *Repository) fetchRoleMenuPermissions(ctx context.Context, roleID uuid.UUID) ([]roledomain.RoleMenuPermission, error) {
+// attachRoleRelations fills MenuPermissions and Dormitories on every role with
+// two queries in total, however many roles there are.
+func (r *Repository) attachRoleRelations(ctx context.Context, roles []roledomain.Role) error {
+	if len(roles) == 0 {
+		return nil
+	}
+
+	ids := make([]uuid.UUID, len(roles))
+	for i, role := range roles {
+		ids[i] = role.ID
+	}
+
+	menuPermissions, err := r.fetchRoleMenuPermissions(ctx, ids)
+	if err != nil {
+		return err
+	}
+	dormitories, err := r.fetchRoleDormitories(ctx, ids)
+	if err != nil {
+		return err
+	}
+
+	for i := range roles {
+		roles[i].MenuPermissions = menuPermissions[roles[i].ID]
+		roles[i].Dormitories = dormitories[roles[i].ID]
+	}
+	return nil
+}
+
+// fetchRoleMenuPermissions loads the menu permissions for every given role in a
+// single query, keyed by role ID. Every requested role gets an entry (empty
+// when it has none) so callers serialise [] rather than null, as they did when
+// this ran once per role.
+func (r *Repository) fetchRoleMenuPermissions(ctx context.Context, roleIDs []uuid.UUID) (map[uuid.UUID][]roledomain.RoleMenuPermission, error) {
+	byRole := make(map[uuid.UUID][]roledomain.RoleMenuPermission, len(roleIDs))
+	for _, roleID := range roleIDs {
+		byRole[roleID] = make([]roledomain.RoleMenuPermission, 0)
+	}
+
 	rows, err := r.db.Query(ctx, `
 		SELECT
 			rmp.role_id,
@@ -395,15 +419,14 @@ func (r *Repository) fetchRoleMenuPermissions(ctx context.Context, roleID uuid.U
 		FROM role_menu_permissions rmp
 		JOIN menus m ON m.id = rmp.menu_id
 		JOIN permissions p ON p.id = rmp.permission_id
-		WHERE rmp.role_id = $1
+		WHERE rmp.role_id = ANY($1)
 		ORDER BY m.path ASC, p.name ASC
-	`, roleID)
+	`, roleIDs)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	items := make([]roledomain.RoleMenuPermission, 0)
 	for rows.Next() {
 		var item roledomain.RoleMenuPermission
 		if err := rows.Scan(
@@ -426,13 +449,13 @@ func (r *Repository) fetchRoleMenuPermissions(ctx context.Context, roleID uuid.U
 		); err != nil {
 			return nil, err
 		}
-		items = append(items, item)
+		byRole[item.RoleID] = append(byRole[item.RoleID], item)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	return items, nil
+	return byRole, nil
 }
 
 func (r *Repository) replaceRoleMenuPermissions(ctx context.Context, tx pgx.Tx, roleID uuid.UUID, menuPermissions []roleusecase.MenuPermissionInput) error {
@@ -490,32 +513,40 @@ func (r *Repository) replaceRoleMenuPermissions(ctx context.Context, tx pgx.Tx, 
 	return nil
 }
 
-func (r *Repository) fetchRoleDormitories(ctx context.Context, roleID uuid.UUID) ([]roledomain.RoleDormitory, error) {
+// fetchRoleDormitories loads the dormitory grants for every given role in a
+// single query, keyed by role ID, with an empty (non-nil) slice for roles that
+// have none.
+func (r *Repository) fetchRoleDormitories(ctx context.Context, roleIDs []uuid.UUID) (map[uuid.UUID][]roledomain.RoleDormitory, error) {
+	byRole := make(map[uuid.UUID][]roledomain.RoleDormitory, len(roleIDs))
+	for _, roleID := range roleIDs {
+		byRole[roleID] = make([]roledomain.RoleDormitory, 0)
+	}
+
 	rows, err := r.db.Query(ctx, `
-		SELECT d.id, d.name
+		SELECT rd.role_id, d.id, d.name
 		FROM role_dormitories rd
 		JOIN dormitories d ON d.id = rd.dormitory_id
-		WHERE rd.role_id = $1
+		WHERE rd.role_id = ANY($1)
 		ORDER BY d.name ASC
-	`, roleID)
+	`, roleIDs)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	dormitories := make([]roledomain.RoleDormitory, 0)
 	for rows.Next() {
+		var roleID uuid.UUID
 		var dormitory roledomain.RoleDormitory
-		if err := rows.Scan(&dormitory.ID, &dormitory.Name); err != nil {
+		if err := rows.Scan(&roleID, &dormitory.ID, &dormitory.Name); err != nil {
 			return nil, err
 		}
-		dormitories = append(dormitories, dormitory)
+		byRole[roleID] = append(byRole[roleID], dormitory)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	return dormitories, nil
+	return byRole, nil
 }
 
 func (r *Repository) replaceRoleDormitories(ctx context.Context, tx pgx.Tx, roleID uuid.UUID, dormitoryIDs []uuid.UUID) error {
