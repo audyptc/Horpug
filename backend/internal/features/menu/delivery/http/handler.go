@@ -8,6 +8,7 @@ import (
 	"apihorpug/internal/http/apierror"
 	"apihorpug/internal/http/apiresponse"
 	"apihorpug/internal/http/httputil"
+	"apihorpug/internal/http/middleware"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -46,4 +47,31 @@ func (h *Handler) List(c fiber.Ctx) error {
 	}
 
 	return apiresponse.Paginated(c, menus, page, perPage, total)
+}
+
+// ListMine godoc
+// @Summary List menus the current user's role can read
+// @Tags menus
+// @Produce json
+// @Success 200 {object} apiresponse.Meta
+// @Failure 401 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /menus/mine [get]
+func (h *Handler) ListMine(c fiber.Ctx) error {
+	roleID, ok := middleware.RoleID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	defer cancel()
+
+	menus, err := h.usecase.ListForRole(ctx, roleID)
+	if err != nil {
+		return apierror.Internal("failed to list menus")
+	}
+
+	total := int64(len(menus))
+	return apiresponse.Paginated(c, menus, 1, len(menus), total)
 }

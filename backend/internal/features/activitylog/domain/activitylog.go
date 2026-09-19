@@ -13,6 +13,10 @@ type ActivityLog struct {
 	Action      string     `json:"action" gorm:"size:50;not null"`
 	EntityType  string     `json:"entity_type" gorm:"size:80;not null"`
 	EntityID    *uuid.UUID `json:"entity_id,omitempty" gorm:"type:uuid"`
+	// DormitoryID is the dormitory the event belongs to. It is nil for events
+	// that aren't tied to one (users, roles, tenants, auth), which only roles
+	// with full dormitory access can see.
+	DormitoryID *uuid.UUID `json:"dormitory_id,omitempty" gorm:"type:uuid"`
 	Description string     `json:"description" gorm:"size:255"`
 	IPAddress   string     `json:"ip_address" gorm:"size:45"`
 	CreatedAt   time.Time  `json:"created_at"`

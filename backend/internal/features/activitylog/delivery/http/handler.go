@@ -11,6 +11,7 @@ import (
 	"apihorpug/internal/http/apierror"
 	"apihorpug/internal/http/apiresponse"
 	"apihorpug/internal/http/httputil"
+	"apihorpug/internal/http/middleware"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -88,7 +89,12 @@ func parseColumnFilters(c fiber.Ctx) (map[string]string, error) {
 // @Security BearerAuth
 // @Router /activity-logs [get]
 func (h *Handler) List(c fiber.Ctx) error {
-	filter := activitylogusecase.ListFilter{
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
+	filter :=activitylogusecase.ListFilter{
 		Search: strings.TrimSpace(c.Query("q")),
 	}
 
@@ -160,7 +166,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	logs, total, err := h.usecase.List(ctx, filter)
+	logs, total, err := h.usecase.List(ctx, requesterID, filter)
 	if err != nil {
 		return apierror.Internal("failed to list activity logs")
 	}
@@ -180,6 +186,11 @@ func (h *Handler) List(c fiber.Ctx) error {
 // @Security BearerAuth
 // @Router /activity-logs/{id} [get]
 func (h *Handler) Get(c fiber.Ctx) error {
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return apierror.BadRequest("invalid activity log id")
@@ -188,7 +199,7 @@ func (h *Handler) Get(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	log, err := h.usecase.GetByID(ctx, id)
+	log, err := h.usecase.GetByID(ctx, id, requesterID)
 	if err != nil {
 		if errors.Is(err, activitylogdomain.ErrActivityLogNotFound) {
 			return apierror.NotFound("activity log not found")

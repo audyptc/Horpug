@@ -100,15 +100,20 @@ func New(repo Repository, activityLog ActivityLogger) *Service {
 
 // recordActivity is best-effort: a failure to write the audit trail must
 // never fail the room type CRUD flow itself.
-func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, entityID uuid.UUID, description, ipAddress string) {
+func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, entityID, dormitoryID uuid.UUID, description, ipAddress string) {
 	if s.activityLog == nil {
 		return
+	}
+	var dormitoryRef *uuid.UUID
+	if dormitoryID != uuid.Nil {
+		dormitoryRef = &dormitoryID
 	}
 	_, err := s.activityLog.Create(ctx, activitylogusecase.CreateInput{
 		UserID:      userID,
 		Action:      action,
 		EntityType:  "roomtype",
 		EntityID:    &entityID,
+		DormitoryID: dormitoryRef,
 		Description: description,
 		IPAddress:   ipAddress,
 	})
@@ -154,7 +159,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress strin
 		return roomtypedomain.RoomType{}, err
 	}
 
-	s.recordActivity(ctx, input.CreatedBy, "CREATE", roomType.ID, fmt.Sprintf("Created room type: %s", roomType.Name), ipAddress)
+	s.recordActivity(ctx, input.CreatedBy, "CREATE", roomType.ID, roomType.DormitoryID, fmt.Sprintf("Created room type: %s", roomType.Name), ipAddress)
 	return roomType, nil
 }
 
@@ -179,7 +184,7 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 		return roomtypedomain.RoomType{}, err
 	}
 
-	s.recordActivity(ctx, &requesterID, "UPDATE", roomType.ID, fmt.Sprintf("Updated room type: %s", roomType.Name), ipAddress)
+	s.recordActivity(ctx, &requesterID, "UPDATE", roomType.ID, roomType.DormitoryID, fmt.Sprintf("Updated room type: %s", roomType.Name), ipAddress)
 	return roomType, nil
 }
 
@@ -190,7 +195,7 @@ func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddre
 		return err
 	}
 
-	s.recordActivity(ctx, &requesterID, "DELETE", id, fmt.Sprintf("Deleted room type: %s", roomType.Name), ipAddress)
+	s.recordActivity(ctx, &requesterID, "DELETE", id, roomType.DormitoryID, fmt.Sprintf("Deleted room type: %s", roomType.Name), ipAddress)
 	return nil
 }
 

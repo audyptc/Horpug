@@ -15,6 +15,7 @@ type CreateInput struct {
 	Action      string
 	EntityType  string
 	EntityID    *uuid.UUID
+	DormitoryID *uuid.UUID
 	Description string
 	IPAddress   string
 }
@@ -64,9 +65,9 @@ var SortColumns = map[string]string{
 const DefaultSortKey = "created_at"
 
 type Repository interface {
-	Count(ctx context.Context, filter ListFilter) (int64, error)
-	List(ctx context.Context, filter ListFilter) ([]activitylogdomain.ActivityLog, error)
-	GetByID(ctx context.Context, id uuid.UUID) (activitylogdomain.ActivityLog, error)
+	Count(ctx context.Context, requesterID uuid.UUID, filter ListFilter) (int64, error)
+	List(ctx context.Context, requesterID uuid.UUID, filter ListFilter) ([]activitylogdomain.ActivityLog, error)
+	GetByID(ctx context.Context, id, requesterID uuid.UUID) (activitylogdomain.ActivityLog, error)
 	Create(ctx context.Context, input CreateInput) (activitylogdomain.ActivityLog, error)
 }
 
@@ -78,7 +79,9 @@ func New(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) List(ctx context.Context, filter ListFilter) ([]activitylogdomain.ActivityLog, int64, error) {
+// List returns every log for roles with full dormitory access, otherwise only
+// logs tied to dormitories the requester manages.
+func (s *Service) List(ctx context.Context, requesterID uuid.UUID, filter ListFilter) ([]activitylogdomain.ActivityLog, int64, error) {
 	if filter.Limit <= 0 || filter.Limit > 200 {
 		filter.Limit = 50
 	}
@@ -86,12 +89,12 @@ func (s *Service) List(ctx context.Context, filter ListFilter) ([]activitylogdom
 		filter.Offset = 0
 	}
 
-	total, err := s.repo.Count(ctx, filter)
+	total, err := s.repo.Count(ctx, requesterID, filter)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	logs, err := s.repo.List(ctx, filter)
+	logs, err := s.repo.List(ctx, requesterID, filter)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -99,8 +102,8 @@ func (s *Service) List(ctx context.Context, filter ListFilter) ([]activitylogdom
 	return logs, total, nil
 }
 
-func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (activitylogdomain.ActivityLog, error) {
-	return s.repo.GetByID(ctx, id)
+func (s *Service) GetByID(ctx context.Context, id, requesterID uuid.UUID) (activitylogdomain.ActivityLog, error) {
+	return s.repo.GetByID(ctx, id, requesterID)
 }
 
 func (s *Service) Create(ctx context.Context, input CreateInput) (activitylogdomain.ActivityLog, error) {

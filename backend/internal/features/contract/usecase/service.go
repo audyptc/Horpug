@@ -129,15 +129,20 @@ func (s *Service) syncRoomStatus(ctx context.Context, roomID uuid.UUID, status r
 
 // recordActivity is best-effort: a failure to write the audit trail must
 // never fail the contract CRUD flow itself.
-func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, entityID uuid.UUID, description, ipAddress string) {
+func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, entityID, dormitoryID uuid.UUID, description, ipAddress string) {
 	if s.activityLog == nil {
 		return
+	}
+	var dormitoryRef *uuid.UUID
+	if dormitoryID != uuid.Nil {
+		dormitoryRef = &dormitoryID
 	}
 	_, err := s.activityLog.Create(ctx, activitylogusecase.CreateInput{
 		UserID:      userID,
 		Action:      action,
 		EntityType:  "contract",
 		EntityID:    &entityID,
+		DormitoryID: dormitoryRef,
 		Description: description,
 		IPAddress:   ipAddress,
 	})
@@ -185,7 +190,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress strin
 		return contractdomain.Contract{}, err
 	}
 
-	s.recordActivity(ctx, input.CreatedBy, "CREATE", contract.ID,
+	s.recordActivity(ctx, input.CreatedBy, "CREATE", contract.ID, contract.DormitoryID,
 		fmt.Sprintf("Created contract: %s - room %s", contract.TenantName, contract.RoomNumber), ipAddress)
 	s.syncRoomStatus(ctx, contract.RoomID, roomdomain.RoomStatusOccupied)
 	return contract, nil
@@ -220,7 +225,7 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 		return contractdomain.Contract{}, err
 	}
 
-	s.recordActivity(ctx, &requesterID, "UPDATE", contract.ID,
+	s.recordActivity(ctx, &requesterID, "UPDATE", contract.ID, contract.DormitoryID,
 		fmt.Sprintf("Updated contract: %s - room %s", contract.TenantName, contract.RoomNumber), ipAddress)
 	if input.Status != nil {
 		if *input.Status == contractdomain.ContractStatusActive {
@@ -245,7 +250,7 @@ func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddre
 		return err
 	}
 
-	s.recordActivity(ctx, &requesterID, "DELETE", id,
+	s.recordActivity(ctx, &requesterID, "DELETE", id, contract.DormitoryID,
 		fmt.Sprintf("Deleted contract: %s - room %s", contract.TenantName, contract.RoomNumber), ipAddress)
 	return nil
 }

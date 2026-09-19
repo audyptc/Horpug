@@ -212,6 +212,12 @@ export default function RolePermissionsPage() {
         set.delete(permissionId)
       } else {
         set.add(permissionId)
+        // Create/update/delete are meaningless without read access to the
+        // menu, so checking any of them implies read.
+        const readPermission = (permissions ?? []).find((permission) => permission.name === 'read')
+        if (readPermission) {
+          set.add(readPermission.id)
+        }
       }
       next[menuId] = set
       return next

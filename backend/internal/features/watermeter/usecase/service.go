@@ -116,15 +116,20 @@ func New(repo Repository, activityLog ActivityLogger) *Service {
 
 // recordActivity is best-effort: a failure to write the audit trail must
 // never fail the meter CRUD flow itself.
-func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, entityID uuid.UUID, description, ipAddress string) {
+func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, entityID, dormitoryID uuid.UUID, description, ipAddress string) {
 	if s.activityLog == nil {
 		return
+	}
+	var dormitoryRef *uuid.UUID
+	if dormitoryID != uuid.Nil {
+		dormitoryRef = &dormitoryID
 	}
 	_, err := s.activityLog.Create(ctx, activitylogusecase.CreateInput{
 		UserID:      userID,
 		Action:      action,
 		EntityType:  "water_meter",
 		EntityID:    &entityID,
+		DormitoryID: dormitoryRef,
 		Description: description,
 		IPAddress:   ipAddress,
 	})
@@ -189,7 +194,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress strin
 		return metdomain.Meter{}, err
 	}
 
-	s.recordActivity(ctx, input.CreatedBy, "CREATE", meter.ID, "Created "+meterActivityDescription(meter), ipAddress)
+	s.recordActivity(ctx, input.CreatedBy, "CREATE", meter.ID, meter.DormitoryID, "Created "+meterActivityDescription(meter), ipAddress)
 	return meter, nil
 }
 
@@ -228,7 +233,7 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 		return metdomain.Meter{}, err
 	}
 
-	s.recordActivity(ctx, &requesterID, "UPDATE", meter.ID, "Updated "+meterActivityDescription(meter), ipAddress)
+	s.recordActivity(ctx, &requesterID, "UPDATE", meter.ID, meter.DormitoryID, "Updated "+meterActivityDescription(meter), ipAddress)
 	return meter, nil
 }
 
@@ -242,6 +247,6 @@ func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddre
 		return err
 	}
 
-	s.recordActivity(ctx, &requesterID, "DELETE", id, "Deleted "+meterActivityDescription(meter), ipAddress)
+	s.recordActivity(ctx, &requesterID, "DELETE", id, meter.DormitoryID, "Deleted "+meterActivityDescription(meter), ipAddress)
 	return nil
 }

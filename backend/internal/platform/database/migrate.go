@@ -594,6 +594,42 @@ func AutoMigrate(db *pgxpool.Pool) error {
 	if _, err := db.Exec(ctx, `CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id)`); err != nil {
 		return err
 	}
+	if _, err := db.Exec(ctx, `ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS dormitory_id UUID`); err != nil {
+		return err
+	}
+	if _, err := db.Exec(ctx, `CREATE INDEX IF NOT EXISTS idx_activity_logs_dormitory_id ON activity_logs(dormitory_id)`); err != nil {
+		return err
+	}
+
+	// Best-effort backfill of logs written before dormitory_id existed. It
+	// resolves the dormitory through the entity the log points at, so logs for
+	// entities that have since been deleted stay NULL and are visible only to
+	// roles with full dormitory access.
+	activityLogBackfills := []string{
+		`UPDATE activity_logs al SET dormitory_id = d.id
+			FROM dormitories d
+			WHERE al.dormitory_id IS NULL AND al.entity_type = 'dormitory' AND al.entity_id = d.id`,
+		`UPDATE activity_logs al SET dormitory_id = rm.dormitory_id
+			FROM rooms rm
+			WHERE al.dormitory_id IS NULL AND al.entity_type = 'room' AND al.entity_id = rm.id`,
+		`UPDATE activity_logs al SET dormitory_id = rt.dormitory_id
+			FROM room_types rt
+			WHERE al.dormitory_id IS NULL AND al.entity_type = 'roomtype' AND al.entity_id = rt.id`,
+		`UPDATE activity_logs al SET dormitory_id = rm.dormitory_id
+			FROM contracts c JOIN rooms rm ON rm.id = c.room_id
+			WHERE al.dormitory_id IS NULL AND al.entity_type = 'contract' AND al.entity_id = c.id`,
+		`UPDATE activity_logs al SET dormitory_id = rm.dormitory_id
+			FROM electricity_meters m JOIN rooms rm ON rm.id = m.room_id
+			WHERE al.dormitory_id IS NULL AND al.entity_type = 'meter' AND al.entity_id = m.id`,
+		`UPDATE activity_logs al SET dormitory_id = rm.dormitory_id
+			FROM water_meters m JOIN rooms rm ON rm.id = m.room_id
+			WHERE al.dormitory_id IS NULL AND al.entity_type = 'water_meter' AND al.entity_id = m.id`,
+	}
+	for _, statement := range activityLogBackfills {
+		if _, err := db.Exec(ctx, statement); err != nil {
+			return err
+		}
+	}
 	if _, err := db.Exec(ctx, `CREATE INDEX IF NOT EXISTS idx_activity_logs_entity ON activity_logs(entity_type, entity_id)`); err != nil {
 		return err
 	}

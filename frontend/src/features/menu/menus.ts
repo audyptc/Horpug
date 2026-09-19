@@ -172,7 +172,7 @@ export function useMenus() {
     let cancelled = false
 
     api
-      .get<ApiPage<ApiMenu[]>>('/menus', { params: { per_page: 100 } })
+      .get<ApiPage<ApiMenu[]>>('/menus/mine')
       .then(({ data }) => {
         if (!cancelled) {
           setMenuState({

@@ -112,6 +112,7 @@ func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action 
 		Action:      action,
 		EntityType:  "dormitory",
 		EntityID:    &entityID,
+		DormitoryID: &entityID,
 		Description: description,
 		IPAddress:   ipAddress,
 	})
