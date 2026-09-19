@@ -102,6 +102,11 @@ func (r *Repository) buildListConditions(ctx context.Context, requesterID uuid.U
 		*args = append(*args, *filter.UserID)
 		*argIdx++
 	}
+	if filter.DormitoryID != nil {
+		conditions = append(conditions, fmt.Sprintf("al.dormitory_id = $%d", *argIdx))
+		*args = append(*args, *filter.DormitoryID)
+		*argIdx++
+	}
 	if filter.EntityID != nil {
 		conditions = append(conditions, fmt.Sprintf("al.entity_id = $%d", *argIdx))
 		*args = append(*args, *filter.EntityID)

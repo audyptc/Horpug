@@ -20,7 +20,35 @@ import {
 } from '@/shared/components/ui/table'
 import type { ApiDashboardSummary } from './types'
 import type { ApiActivityLog } from '@/features/activitylog/types'
+import { DormitorySearchSelect } from '@/features/dormitory/components/DormitorySearchSelect'
+import type { ApiDormitory } from '@/features/dormitory/types'
 import { activityLogActionVariant } from '@/features/activitylog/utils'
+
+type SelectedDormitory = { id: string; name: string }
+
+// A per-browser convenience only: it is re-checked against the server on every
+// visit, so a dormitory the user has since lost access to is dropped rather
+// than trusted.
+const DORMITORY_STORAGE_KEY = 'dashboard.dormitory'
+
+function readStoredDormitory(): SelectedDormitory | null {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(DORMITORY_STORAGE_KEY) ?? 'null')
+    return typeof parsed?.id === 'string' && typeof parsed?.name === 'string' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+function storeDormitory(dormitory: SelectedDormitory | null) {
+  try {
+    if (dormitory) localStorage.setItem(DORMITORY_STORAGE_KEY, JSON.stringify(dormitory))
+    else localStorage.removeItem(DORMITORY_STORAGE_KEY)
+  } catch {
+    // Storage can be unavailable (private mode, blocked site data); the
+    // selection just won't be remembered.
+  }
+}
 
 type Metric = {
   key: string
@@ -34,29 +62,86 @@ type Metric = {
 export function DashboardPage() {
   const { t, language } = useLanguage()
 
-  const [summary, setSummary] = useState<ApiDashboardSummary | null>(null)
-  // Null both while loading and when the role can't read activity logs; the
-  // card is only drawn once it holds a list.
-  const [recentActivity, setRecentActivity] = useState<ApiActivityLog[] | null>(null)
+  // The dormitory the figures are narrowed to; null means every dormitory the
+  // user can access. Not applied until `ready`, once the remembered choice has
+  // been checked.
+  const [dormitory, setDormitory] = useState<SelectedDormitory | null>(null)
+  const [ready, setReady] = useState(false)
+  // Whether there is anything to choose between: with one dormitory (or none)
+  // the selector would only be noise.
+  const [canChoose, setCanChoose] = useState(false)
+  // The response is stored with the dormitory it was fetched for, so switching
+  // shows the loading state without having to reset anything from the effect.
+  const [loaded, setLoaded] = useState<{
+    key: string
+    summary: ApiDashboardSummary
+    // Null when the role can't read activity logs; the card is only drawn once
+    // it holds a list.
+    recentActivity: ApiActivityLog[] | null
+  } | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
 
+    async function init() {
+      let choices = 0
+      try {
+        const { data } = await api.get<ApiDormitory[]>('/dormitories/active', { params: { limit: 2 } })
+        choices = data.length
+      } catch {
+        // No access to the dormitory list (or it failed): no selector.
+      }
+
+      const stored = choices > 1 ? readStoredDormitory() : null
+      let verified: SelectedDormitory | null = null
+      if (stored) {
+        try {
+          // Scoped to the user's access, so this fails for a dormitory they
+          // no longer have.
+          await api.get(`/dormitories/${stored.id}`)
+          verified = stored
+        } catch {
+          // Fall through to the default and forget the stale choice.
+        }
+      }
+      if (!verified) storeDormitory(null)
+
+      if (cancelled) return
+      setCanChoose(choices > 1)
+      setDormitory(verified)
+      setReady(true)
+    }
+
+    void init()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const dormitoryKey = dormitory?.id ?? ''
+
+  useEffect(() => {
+    if (!ready) return
+
+    let cancelled = false
+    const dormitoryParams = dormitory ? { dormitory_id: dormitory.id } : {}
+
     Promise.all([
       // Counted by the server, so the figures stay right past any page size.
-      api.get<ApiDashboardSummary>('/dashboard/summary'),
+      api.get<ApiDashboardSummary>('/dashboard/summary', { params: dormitoryParams }),
       // Needs its own menu permission, so a refusal hides this card rather
       // than failing the whole dashboard.
       api
-        .get<ApiPage<ApiActivityLog[]>>('/activity-logs', { params: { per_page: 5 } })
+        .get<ApiPage<ApiActivityLog[]>>('/activity-logs', { params: { per_page: 5, ...dormitoryParams } })
         .then((res) => res.data.data)
         .catch(() => null),
     ])
       .then(([summaryRes, activity]) => {
         if (cancelled) return
-        setSummary(summaryRes.data)
-        setRecentActivity(activity)
+        setLoaded({ key: dormitoryKey, summary: summaryRes.data, recentActivity: activity })
+        setLoadError(null)
       })
       .catch((err) => {
         if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
@@ -66,9 +151,16 @@ export function DashboardPage() {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [ready, dormitoryKey])
 
-  const isLoading = !loadError && summary === null
+  function selectDormitory(next: SelectedDormitory | null) {
+    setDormitory(next)
+    storeDormitory(next)
+  }
+
+  const summary = loaded?.summary ?? null
+  const recentActivity = loaded?.recentActivity ?? null
+  const isLoading = !loadError && (!ready || loaded?.key !== dormitoryKey)
 
   // A section the role can't read comes back null and simply gets no card.
   const metrics: Metric[] = []
@@ -120,6 +212,21 @@ export function DashboardPage() {
         <h1>{t('dashboard')}</h1>
         <p>{t('dashboardOverview')}</p>
       </section>
+
+      {canChoose && (
+        <div className="flex max-w-sm flex-col gap-1.5 text-sm font-medium">
+          {t('dashboardDormitoryLabel')}
+          <DormitorySearchSelect
+            selectedLabel={dormitory?.name ?? ''}
+            onSelectDormitory={(selected) => selectDormitory({ id: selected.id, name: selected.name })}
+            clearLabel={t('dashboardAllDormitories')}
+            onClear={() => selectDormitory(null)}
+            placeholder={t('dashboardAllDormitories')}
+            searchPlaceholder={t('dashboardDormitorySearchPlaceholder')}
+            noResultsLabel={t('dashboardDormitoryNoResults')}
+          />
+        </div>
+      )}
 
       {loadError && <p className="resource-error">{loadError}</p>}
 

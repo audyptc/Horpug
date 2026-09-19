@@ -30,12 +30,15 @@ type ListFilter struct {
 	Columns  map[string]string
 	UserID   *uuid.UUID
 	EntityID *uuid.UUID
-	DateFrom *time.Time
-	DateTo   *time.Time
-	SortKey  string
-	SortDesc bool
-	Limit    int
-	Offset   int
+	// DormitoryID narrows to one dormitory. It is ANDed with the requester's
+	// own dormitory scope, so it can only narrow what they may already see.
+	DormitoryID *uuid.UUID
+	DateFrom    *time.Time
+	DateTo      *time.Time
+	SortKey     string
+	SortDesc    bool
+	Limit       int
+	Offset      int
 }
 
 // FilterColumns whitelists the columns a caller may match a substring

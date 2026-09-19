@@ -9,7 +9,7 @@ import (
 )
 
 type Repository interface {
-	GetSummary(ctx context.Context, requesterID uuid.UUID) (dashboarddomain.Summary, error)
+	GetSummary(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID) (dashboarddomain.Summary, error)
 }
 
 type Service struct {
@@ -20,6 +20,8 @@ func New(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) GetSummary(ctx context.Context, requesterID uuid.UUID) (dashboarddomain.Summary, error) {
-	return s.repo.GetSummary(ctx, requesterID)
+// GetSummary counts over the dormitories the requester may access, or over one
+// of them when dormitoryID is set.
+func (s *Service) GetSummary(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID) (dashboarddomain.Summary, error) {
+	return s.repo.GetSummary(ctx, requesterID, dormitoryID)
 }

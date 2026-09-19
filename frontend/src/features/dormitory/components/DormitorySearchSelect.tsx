@@ -12,6 +12,9 @@ type DormitorySearchSelectProps = {
   placeholder: string
   searchPlaceholder: string
   noResultsLabel: string
+  // When both are set, a row at the top lets the caller clear the selection.
+  clearLabel?: string
+  onClear?: () => void
   disabled?: boolean
 }
 
@@ -23,6 +26,8 @@ export function DormitorySearchSelect({
   placeholder,
   searchPlaceholder,
   noResultsLabel,
+  clearLabel,
+  onClear,
   disabled,
 }: DormitorySearchSelectProps) {
   return (
@@ -41,6 +46,8 @@ export function DormitorySearchSelect({
       placeholder={placeholder}
       searchPlaceholder={searchPlaceholder}
       emptyText={noResultsLabel}
+      clearLabel={clearLabel}
+      onClear={onClear}
       disabled={disabled}
     />
   )

@@ -77,6 +77,7 @@ func parseColumnFilters(c fiber.Ctx) (map[string]string, error) {
 // @Param f[column] query string false "Per-column substring filter, e.g. f[action]=create; column must be one of username, action, entity_type, description, ip_address"
 // @Param user_id query string false "Filter by user ID"
 // @Param entity_id query string false "Filter by entity ID"
+// @Param dormitory_id query string false "Narrow to one dormitory (combined with the caller's own access, never widening it)"
 // @Param date_from query string false "Filter by date, inclusive (YYYY-MM-DD)"
 // @Param date_to query string false "Filter by date, inclusive (YYYY-MM-DD)"
 // @Param sort query string false "Sort field: created_at, username, action, entity_type, description, ip_address (default created_at)"
@@ -104,6 +105,14 @@ func (h *Handler) List(c fiber.Ctx) error {
 			return apierror.BadRequest("invalid user_id")
 		}
 		filter.UserID = &userID
+	}
+
+	if raw := c.Query("dormitory_id"); raw != "" {
+		dormitoryID, err := uuid.Parse(raw)
+		if err != nil {
+			return apierror.BadRequest("invalid dormitory_id")
+		}
+		filter.DormitoryID = &dormitoryID
 	}
 
 	if raw := c.Query("entity_id"); raw != "" {

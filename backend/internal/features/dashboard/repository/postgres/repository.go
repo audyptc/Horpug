@@ -29,16 +29,19 @@ const (
 
 // scopeCondition restricts a query on a row aliased rm (rooms) to the
 // dormitories the requester manages. $1 is the requester, $2 their role and
-// $3 whether the role is exempt from dormitory scoping.
-const scopeCondition = `($3 OR rm.dormitory_id IN (
+// $3 whether the role is exempt from dormitory scoping. $4 optionally narrows
+// to a single dormitory (NULL means all of them); it is ANDed with the access
+// check, so it can only ever narrow what the requester may already see and a
+// dormitory outside their scope simply counts as zero.
+const scopeCondition = `(($3 OR rm.dormitory_id IN (
 	SELECT dormitory_id FROM user_dormitories WHERE user_id = $1
 	UNION
 	SELECT dormitory_id FROM role_dormitories WHERE role_id = $2
-))`
+)) AND ($4::uuid IS NULL OR rm.dormitory_id = $4::uuid))`
 
 // GetSummary counts in the database rather than over a fetched page, so the
 // figures stay correct however many rows exist.
-func (r *Repository) GetSummary(ctx context.Context, requesterID uuid.UUID) (dashboarddomain.Summary, error) {
+func (r *Repository) GetSummary(ctx context.Context, requesterID uuid.UUID, dormitoryID *uuid.UUID) (dashboarddomain.Summary, error) {
 	var summary dashboarddomain.Summary
 
 	var full bool
@@ -67,7 +70,7 @@ func (r *Repository) GetSummary(ctx context.Context, requesterID uuid.UUID) (das
 				COUNT(*) FILTER (WHERE rm.status = 'maintenance')
 			FROM rooms rm
 			WHERE %s
-		`, scopeCondition), requesterID, roleID, full).Scan(&stats.Total, &stats.Available, &stats.Occupied, &stats.Maintenance); err != nil {
+		`, scopeCondition), requesterID, roleID, full, dormitoryID).Scan(&stats.Total, &stats.Available, &stats.Occupied, &stats.Maintenance); err != nil {
 			return summary, err
 		}
 		summary.Rooms = &stats
@@ -82,7 +85,7 @@ func (r *Repository) GetSummary(ctx context.Context, requesterID uuid.UUID) (das
 			FROM contracts c
 			JOIN rooms rm ON rm.id = c.room_id
 			WHERE %s
-		`, scopeCondition), requesterID, roleID, full).Scan(&stats.Total, &stats.Active); err != nil {
+		`, scopeCondition), requesterID, roleID, full, dormitoryID).Scan(&stats.Total, &stats.Active); err != nil {
 			return summary, err
 		}
 		summary.Contracts = &stats
@@ -98,7 +101,7 @@ func (r *Repository) GetSummary(ctx context.Context, requesterID uuid.UUID) (das
 			JOIN contracts c ON c.id = i.contract_id
 			JOIN rooms rm ON rm.id = c.room_id
 			WHERE %s
-		`, scopeCondition), requesterID, roleID, full).Scan(&stats.OutstandingCount, &stats.OutstandingAmount); err != nil {
+		`, scopeCondition), requesterID, roleID, full, dormitoryID).Scan(&stats.OutstandingCount, &stats.OutstandingAmount); err != nil {
 			return summary, err
 		}
 		summary.Invoices = &stats
@@ -113,7 +116,7 @@ func (r *Repository) GetSummary(ctx context.Context, requesterID uuid.UUID) (das
 			FROM repair_requests rr
 			JOIN rooms rm ON rm.id = rr.room_id
 			WHERE %s
-		`, scopeCondition), requesterID, roleID, full).Scan(&stats.Pending, &stats.InProgress); err != nil {
+		`, scopeCondition), requesterID, roleID, full, dormitoryID).Scan(&stats.Pending, &stats.InProgress); err != nil {
 			return summary, err
 		}
 		summary.Repairs = &stats
