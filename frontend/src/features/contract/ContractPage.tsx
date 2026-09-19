@@ -24,7 +24,6 @@ export default function ContractPage() {
   const { t } = useLanguage()
 
   const [contracts, setContracts] = useState<ApiContract[] | null>(null)
-  const [tenants, setTenants] = useState<ApiTenant[]>([])
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -67,26 +66,6 @@ export default function ContractPage() {
     const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
     return () => window.clearTimeout(timer)
   }, [query])
-
-  // The tenant selector in the form isn't affected by the list's filters, so
-  // it's loaded once rather than on every refetch.
-  useEffect(() => {
-    let cancelled = false
-
-    api
-      .get<ApiTenant[]>('/tenants/active', { params: { limit: 100 } })
-      .then(({ data }) => {
-        if (!cancelled) setTenants(data)
-      })
-      .catch((err) => {
-        if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
-      })
-
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -344,10 +323,11 @@ export default function ContractPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         isEdit={formContractId !== null}
-        tenantId={formTenantId}
-        onTenantIdChange={setFormTenantId}
-        tenants={tenants}
         tenantDisplayName={formTenantDisplayName}
+        onSelectTenant={(tenant: ApiTenant) => {
+          setFormTenantId(tenant.id)
+          setFormTenantDisplayName(`${tenant.first_name} ${tenant.last_name}`)
+        }}
         onSelectRoom={(room) => {
           setFormRoomId(room.id)
           setFormRoomDisplayLabel([room.room_number, room.dormitory_name].filter(Boolean).join(' - '))

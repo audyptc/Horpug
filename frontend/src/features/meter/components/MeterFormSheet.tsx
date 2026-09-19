@@ -4,7 +4,6 @@ import { useLanguage } from '@/shared/i18n/language'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/components/ui/button'
 import { Calendar } from '@/shared/components/ui/calendar'
-import { Combobox } from '@/shared/components/ui/combobox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover'
 import { Switch } from '@/shared/components/ui/switch'
 import {
@@ -16,6 +15,7 @@ import {
   SheetTitle,
 } from '@/shared/components/ui/sheet'
 import type { ApiRoom } from '@/features/room/types'
+import { RoomSearchSelect } from '@/features/room/components/RoomSearchSelect'
 import type { BillingMethod } from '../types'
 
 function parseDateInput(value: string): Date | undefined {
@@ -94,10 +94,8 @@ type MeterFormSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   isEdit: boolean
-  roomId: string
-  onRoomIdChange: (roomId: string) => void
-  rooms: ApiRoom[]
   roomDisplayLabel: string
+  onSelectRoom: (room: ApiRoom) => void
   billingMethod: BillingMethod
   onBillingMethodChange: (method: BillingMethod) => void
   readingDate: string
@@ -121,10 +119,8 @@ export function MeterFormSheet({
   open,
   onOpenChange,
   isEdit,
-  roomId,
-  onRoomIdChange,
-  rooms,
   roomDisplayLabel,
+  onSelectRoom,
   billingMethod,
   onBillingMethodChange,
   readingDate,
@@ -165,21 +161,13 @@ export function MeterFormSheet({
             ) : (
               <label className="flex flex-col gap-1.5 text-sm font-medium">
                 {t('meterFormRoomLabel')}
-                {rooms.length === 0 ? (
-                  <p className="text-xs font-normal text-muted-foreground">{t('meterFormNoRooms')}</p>
-                ) : (
-                  <Combobox
-                    options={rooms.map((room) => ({
-                      value: room.id,
-                      label: `${room.room_number} ${room.dormitory_name ? `(${room.dormitory_name})` : ''}`,
-                    }))}
-                    value={roomId}
-                    onChange={onRoomIdChange}
-                    placeholder={t('meterFormRoomPlaceholder')}
-                    searchPlaceholder={t('meterFormRoomSearchPlaceholder')}
-                    emptyText={t('meterFormRoomNoResults')}
-                  />
-                )}
+                <RoomSearchSelect
+                  selectedLabel={roomDisplayLabel}
+                  onSelectRoom={onSelectRoom}
+                  placeholder={t('meterFormRoomPlaceholder')}
+                  searchPlaceholder={t('meterFormRoomSearchPlaceholder')}
+                  noResultsLabel={t('meterFormRoomNoResults')}
+                />
               </label>
             )}
 

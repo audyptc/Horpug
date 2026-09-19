@@ -5,6 +5,7 @@ import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { InformationDialog } from '@/shared/components/information-dialog'
 import type { ApiRoom } from '@/features/room/types'
+import { formatRoomLabel } from '@/features/room/utils'
 import { MeterListCard } from './components/MeterListCard'
 import { MeterFormSheet } from './components/MeterFormSheet'
 import type { ApiMeter, BillingMethod } from './types'
@@ -26,7 +27,6 @@ export default function MeterPage() {
   const { t } = useLanguage()
 
   const [meters, setMeters] = useState<ApiMeter[] | null>(null)
-  const [rooms, setRooms] = useState<ApiRoom[]>([])
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -70,26 +70,6 @@ export default function MeterPage() {
     const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
     return () => window.clearTimeout(timer)
   }, [query])
-
-  // The room selector in the form isn't affected by the list's filters, so
-  // it's loaded once rather than on every refetch.
-  useEffect(() => {
-    let cancelled = false
-
-    api
-      .get<ApiRoom[]>('/rooms/active', { params: { limit: 100 } })
-      .then(({ data }) => {
-        if (!cancelled) setRooms(data)
-      })
-      .catch((err) => {
-        if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
-      })
-
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -186,7 +166,7 @@ export default function MeterPage() {
   function openEditForm(meter: ApiMeter) {
     setFormMeterId(meter.id)
     setFormRoomId(meter.room_id)
-    setFormRoomDisplayLabel([meter.room_number, meter.dormitory_name].filter(Boolean).join(' - '))
+    setFormRoomDisplayLabel(formatRoomLabel(meter))
     setFormBillingMethod(meter.billing_method)
     setFormReadingDate(toDateInputValue(meter.reading_date))
     setFormPreviousUnit(String(meter.previous_unit))
@@ -383,10 +363,11 @@ export default function MeterPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         isEdit={formMeterId !== null}
-        roomId={formRoomId}
-        onRoomIdChange={setFormRoomId}
-        rooms={rooms}
         roomDisplayLabel={formRoomDisplayLabel}
+        onSelectRoom={(room: ApiRoom) => {
+          setFormRoomId(room.id)
+          setFormRoomDisplayLabel(formatRoomLabel(room))
+        }}
         billingMethod={formBillingMethod}
         onBillingMethodChange={setFormBillingMethod}
         readingDate={formReadingDate}

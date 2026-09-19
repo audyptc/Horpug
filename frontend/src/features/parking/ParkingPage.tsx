@@ -5,6 +5,7 @@ import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiTenant } from '@/features/tenant/types'
 import type { ApiRoom } from '@/features/room/types'
+import { formatRoomLabel } from '@/features/room/utils'
 import { ParkingListCard } from './components/ParkingListCard'
 import { ParkingFormSheet } from './components/ParkingFormSheet'
 import type { ApiParking, VehicleType } from './types'
@@ -25,8 +26,6 @@ export default function ParkingPage() {
   const [parkings, setParkings] = useState<ApiParking[] | null>(null)
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
-  const [tenants, setTenants] = useState<ApiTenant[]>([])
-  const [rooms, setRooms] = useState<ApiRoom[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
@@ -48,6 +47,7 @@ export default function ParkingPage() {
   const [formTenantId, setFormTenantId] = useState('')
   const [formTenantDisplayName, setFormTenantDisplayName] = useState('')
   const [formRoomId, setFormRoomId] = useState('')
+  const [formRoomDisplayLabel, setFormRoomDisplayLabel] = useState('')
   const [formVehicleType, setFormVehicleType] = useState<VehicleType>('motorcycle')
   const [formLicensePlate, setFormLicensePlate] = useState('')
   const [formParkingSpot, setFormParkingSpot] = useState('')
@@ -62,27 +62,6 @@ export default function ParkingPage() {
     const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
     return () => window.clearTimeout(timer)
   }, [query])
-
-  useEffect(() => {
-    let cancelled = false
-
-    Promise.all([
-      api.get<ApiTenant[]>('/tenants/active', { params: { limit: 100 } }),
-      api.get<ApiRoom[]>('/rooms/active', { params: { limit: 100 } }),
-    ])
-      .then(([tenantsRes, roomsRes]) => {
-        if (cancelled) return
-        setTenants(tenantsRes.data)
-        setRooms(roomsRes.data)
-      })
-      .catch(() => {
-        // Ignore — the create form just shows no tenant/room choices.
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -151,6 +130,7 @@ export default function ParkingPage() {
     setFormTenantId('')
     setFormTenantDisplayName('')
     setFormRoomId('')
+    setFormRoomDisplayLabel('')
     setFormVehicleType('motorcycle')
     setFormLicensePlate('')
     setFormParkingSpot('')
@@ -163,6 +143,7 @@ export default function ParkingPage() {
     setFormTenantId(parking.tenant_id)
     setFormTenantDisplayName(parking.tenant_name ?? '')
     setFormRoomId(parking.room_id ?? '')
+    setFormRoomDisplayLabel(formatRoomLabel(parking))
     setFormVehicleType(parking.vehicle_type)
     setFormLicensePlate(parking.license_plate)
     setFormParkingSpot(parking.parking_spot)
@@ -301,13 +282,20 @@ export default function ParkingPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         isEdit={formParkingId !== null}
-        tenantId={formTenantId}
-        onTenantIdChange={setFormTenantId}
-        tenants={tenants}
         tenantDisplayName={formTenantDisplayName}
-        roomId={formRoomId}
-        onRoomIdChange={setFormRoomId}
-        rooms={rooms}
+        onSelectTenant={(tenant: ApiTenant) => {
+          setFormTenantId(tenant.id)
+          setFormTenantDisplayName(`${tenant.first_name} ${tenant.last_name}`)
+        }}
+        roomDisplayLabel={formRoomDisplayLabel}
+        onSelectRoom={(room: ApiRoom) => {
+          setFormRoomId(room.id)
+          setFormRoomDisplayLabel(formatRoomLabel(room))
+        }}
+        onClearRoom={() => {
+          setFormRoomId('')
+          setFormRoomDisplayLabel('')
+        }}
         vehicleType={formVehicleType}
         onVehicleTypeChange={setFormVehicleType}
         licensePlate={formLicensePlate}

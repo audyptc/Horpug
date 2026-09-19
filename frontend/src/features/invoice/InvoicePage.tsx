@@ -30,7 +30,6 @@ export default function InvoicePage() {
   const { t } = useLanguage()
 
   const [invoices, setInvoices] = useState<ApiInvoice[] | null>(null)
-  const [contracts, setContracts] = useState<ApiContract[]>([])
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -54,6 +53,10 @@ export default function InvoicePage() {
   const [formInvoiceDetail, setFormInvoiceDetail] = useState<ApiInvoice | null>(null)
   const [formDetailLoading, setFormDetailLoading] = useState(false)
   const [formContractId, setFormContractId] = useState('')
+  // Held whole rather than looked up by id from a preloaded list: the picker
+  // searches the server, so the chosen contract needn't be in any loaded page,
+  // and the utility preview needs its room.
+  const [formContract, setFormContract] = useState<ApiContract | null>(null)
   const [formPeriod, setFormPeriod] = useState('')
   const [formIssueDate, setFormIssueDate] = useState('')
   const [formDueDate, setFormDueDate] = useState('')
@@ -83,26 +86,6 @@ export default function InvoicePage() {
     const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
     return () => window.clearTimeout(timer)
   }, [query])
-
-  // The contract selector in the create form isn't affected by the list's
-  // filters, so it's loaded once rather than on every refetch.
-  useEffect(() => {
-    let cancelled = false
-
-    api
-      .get<ApiPage<ApiContract[]>>('/contracts', { params: { status: 'active', per_page: 100 } })
-      .then(({ data }) => {
-        if (!cancelled) setContracts(data.data)
-      })
-      .catch((err) => {
-        if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
-      })
-
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -166,7 +149,7 @@ export default function InvoicePage() {
     setPage(1)
   }
 
-  const selectedFormContract = contracts.find((item) => item.id === formContractId)
+  const selectedFormContract = formContract ?? undefined
   const selectedFormPeriod = parsePeriodInputValue(formPeriod)
   const utilityPreviewKey =
     selectedFormContract && selectedFormPeriod
@@ -218,6 +201,7 @@ export default function InvoicePage() {
     setFormInvoiceDetail(null)
     setFormDetailLoading(false)
     setFormContractId('')
+    setFormContract(null)
     setFormPeriod('')
     setFormIssueDate('')
     setFormDueDate('')
@@ -537,9 +521,11 @@ export default function InvoicePage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         isEdit={formInvoiceId !== null}
-        contracts={contracts}
-        contractId={formContractId}
-        onContractIdChange={setFormContractId}
+        selectedContract={formContract}
+        onSelectContract={(contract: ApiContract) => {
+          setFormContractId(contract.id)
+          setFormContract(contract)
+        }}
         period={formPeriod}
         onPeriodChange={setFormPeriod}
         electricityAmount={utilityPreview?.electricity ?? null}

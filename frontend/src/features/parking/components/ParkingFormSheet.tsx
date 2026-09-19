@@ -10,7 +10,9 @@ import {
   SheetTitle,
 } from '@/shared/components/ui/sheet'
 import type { ApiTenant } from '@/features/tenant/types'
+import { TenantSearchSelect } from '@/features/tenant/components/TenantSearchSelect'
 import type { ApiRoom } from '@/features/room/types'
+import { RoomSearchSelect } from '@/features/room/components/RoomSearchSelect'
 import type { VehicleType } from '../types'
 import { VEHICLE_TYPES } from '../utils'
 
@@ -24,13 +26,11 @@ type ParkingFormSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   isEdit: boolean
-  tenantId: string
-  onTenantIdChange: (tenantId: string) => void
-  tenants: ApiTenant[]
   tenantDisplayName: string
-  roomId: string
-  onRoomIdChange: (roomId: string) => void
-  rooms: ApiRoom[]
+  onSelectTenant: (tenant: ApiTenant) => void
+  roomDisplayLabel: string
+  onSelectRoom: (room: ApiRoom) => void
+  onClearRoom: () => void
   vehicleType: VehicleType
   onVehicleTypeChange: (vehicleType: VehicleType) => void
   licensePlate: string
@@ -46,13 +46,11 @@ export function ParkingFormSheet({
   open,
   onOpenChange,
   isEdit,
-  tenantId,
-  onTenantIdChange,
-  tenants,
   tenantDisplayName,
-  roomId,
-  onRoomIdChange,
-  rooms,
+  onSelectTenant,
+  roomDisplayLabel,
+  onSelectRoom,
+  onClearRoom,
   vehicleType,
   onVehicleTypeChange,
   licensePlate,
@@ -85,43 +83,27 @@ export function ParkingFormSheet({
             ) : (
               <label className="flex flex-col gap-1.5 text-sm font-medium">
                 {t('parkingFormTenantLabel')}
-                {tenants.length === 0 ? (
-                  <p className="text-xs font-normal text-muted-foreground">{t('parkingFormNoTenants')}</p>
-                ) : (
-                  <select
-                    className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                    value={tenantId}
-                    onChange={(event) => onTenantIdChange(event.target.value)}
-                  >
-                    <option value="">{t('parkingFormTenantPlaceholder')}</option>
-                    {tenants.map((tenant) => (
-                      <option key={tenant.id} value={tenant.id}>
-                        {tenant.first_name} {tenant.last_name}
-                      </option>
-                    ))}
-                  </select>
-                )}
+                <TenantSearchSelect
+                  selectedLabel={tenantDisplayName}
+                  onSelectTenant={onSelectTenant}
+                  placeholder={t('parkingFormTenantPlaceholder')}
+                  searchPlaceholder={t('pickerSearchTenantPlaceholder')}
+                  noResultsLabel={t('pickerNoTenants')}
+                />
               </label>
             )}
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('parkingFormRoomLabel')}
-              {rooms.length === 0 ? (
-                <p className="text-xs font-normal text-muted-foreground">{t('parkingFormNoRooms')}</p>
-              ) : (
-                <select
-                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                  value={roomId}
-                  onChange={(event) => onRoomIdChange(event.target.value)}
-                >
-                  <option value="">{t('parkingFormRoomPlaceholder')}</option>
-                  {rooms.map((room) => (
-                    <option key={room.id} value={room.id}>
-                      {room.room_number} {room.dormitory_name ? `(${room.dormitory_name})` : ''}
-                    </option>
-                  ))}
-                </select>
-              )}
+              <RoomSearchSelect
+                selectedLabel={roomDisplayLabel}
+                onSelectRoom={onSelectRoom}
+                clearLabel={t('parkingFormRoomPlaceholder')}
+                onClear={onClearRoom}
+                placeholder={t('parkingFormRoomPlaceholder')}
+                searchPlaceholder={t('pickerSearchRoomPlaceholder')}
+                noResultsLabel={t('pickerNoRooms')}
+              />
               <span className="text-xs font-normal text-muted-foreground">{t('parkingFormRoomHint')}</span>
             </label>
 

@@ -68,3 +68,17 @@ export function sumMeterAmountForPeriod(
   if (matches.length === 0) return null
   return matches.reduce((sum, reading) => sum + reading.total_amount, 0)
 }
+
+// Label for an invoice in a picker: tenant, room, billing period and amount —
+// enough to tell apart invoices that share a tenant or a room.
+export function formatInvoiceLabel(invoice: {
+  tenant_name?: string
+  room_number?: string
+  dormitory_name?: string
+  period_year: number
+  period_month: number
+  total_amount: number
+}): string {
+  const room = `${invoice.room_number ?? ''}${invoice.dormitory_name ? ` (${invoice.dormitory_name})` : ''}`
+  return `${invoice.tenant_name ?? ''} · ${room} · ${formatPeriod(invoice.period_year, invoice.period_month)} · ${invoice.total_amount.toLocaleString()}`
+}

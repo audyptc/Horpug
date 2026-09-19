@@ -15,6 +15,7 @@ import {
   SheetTitle,
 } from '@/shared/components/ui/sheet'
 import type { ApiTenant } from '@/features/tenant/types'
+import { TenantSearchSelect } from '@/features/tenant/components/TenantSearchSelect'
 import type { ApiRoom } from '@/features/room/types'
 import { RoomSearchSelect } from '@/features/room/components/RoomSearchSelect'
 import type { ContractStatus } from '../types'
@@ -102,10 +103,8 @@ type ContractFormSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   isEdit: boolean
-  tenantId: string
-  onTenantIdChange: (tenantId: string) => void
-  tenants: ApiTenant[]
   tenantDisplayName: string
+  onSelectTenant: (tenant: ApiTenant) => void
   onSelectRoom: (room: ApiRoom) => void
   roomDisplayLabel: string
   startDate: string
@@ -131,10 +130,8 @@ export function ContractFormSheet({
   open,
   onOpenChange,
   isEdit,
-  tenantId,
-  onTenantIdChange,
-  tenants,
   tenantDisplayName,
+  onSelectTenant,
   onSelectRoom,
   roomDisplayLabel,
   startDate,
@@ -192,21 +189,13 @@ export function ContractFormSheet({
               <>
                 <label className="flex flex-col gap-1.5 text-sm font-medium">
                   {t('contractFormTenantLabel')}
-                  {tenants.length === 0 ? (
-                    <p className="text-xs font-normal text-muted-foreground">{t('contractFormNoTenants')}</p>
-                  ) : (
-                    <Combobox
-                      options={tenants.map((tenant) => ({
-                        value: tenant.id,
-                        label: `${tenant.first_name} ${tenant.last_name}`,
-                      }))}
-                      value={tenantId}
-                      onChange={onTenantIdChange}
-                      placeholder={t('contractFormTenantPlaceholder')}
-                      searchPlaceholder={t('contractFormTenantSearchPlaceholder')}
-                      emptyText={t('contractFormTenantNoResults')}
-                    />
-                  )}
+                  <TenantSearchSelect
+                    selectedLabel={tenantDisplayName}
+                    onSelectTenant={onSelectTenant}
+                    placeholder={t('contractFormTenantPlaceholder')}
+                    searchPlaceholder={t('contractFormTenantSearchPlaceholder')}
+                    noResultsLabel={t('contractFormTenantNoResults')}
+                  />
                 </label>
 
                 <label className="flex flex-col gap-1.5 text-sm font-medium">

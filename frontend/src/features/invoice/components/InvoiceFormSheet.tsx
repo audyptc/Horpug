@@ -4,7 +4,6 @@ import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/components/ui/button'
 import { Calendar } from '@/shared/components/ui/calendar'
-import { Combobox } from '@/shared/components/ui/combobox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover'
 import {
   Sheet,
@@ -15,6 +14,8 @@ import {
   SheetTitle,
 } from '@/shared/components/ui/sheet'
 import type { ApiContract } from '@/features/contract/types'
+import { ContractSearchSelect } from '@/features/contract/components/ContractSearchSelect'
+import { formatContractLabel } from '@/features/contract/utils'
 import type { ApiInvoice, InvoiceStatus } from '../types'
 import { INVOICE_STATUSES, formatPeriod, parsePeriodInputValue, toPeriodInputValue } from '../utils'
 
@@ -230,9 +231,8 @@ type InvoiceFormSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   isEdit: boolean
-  contracts: ApiContract[]
-  contractId: string
-  onContractIdChange: (contractId: string) => void
+  selectedContract: ApiContract | null
+  onSelectContract: (contract: ApiContract) => void
   period: string
   onPeriodChange: (value: string) => void
   electricityAmount: number | null
@@ -265,9 +265,8 @@ export function InvoiceFormSheet({
   open,
   onOpenChange,
   isEdit,
-  contracts,
-  contractId,
-  onContractIdChange,
+  selectedContract,
+  onSelectContract,
   period,
   onPeriodChange,
   electricityAmount,
@@ -296,7 +295,6 @@ export function InvoiceFormSheet({
   onRemovePendingItem,
 }: InvoiceFormSheetProps) {
   const { t, language } = useLanguage()
-  const selectedContract = contracts.find((contract) => contract.id === contractId)
   const selectedPeriod = parsePeriodInputValue(period)
   const estimatedTotal = selectedContract
     ? selectedContract.rent_price + (electricityAmount ?? 0) + (waterAmount ?? 0)
@@ -500,23 +498,13 @@ export function InvoiceFormSheet({
                 <FormSection title={t('invoiceFormSectionBilling')}>
                   <label className="flex flex-col gap-1.5 text-sm font-medium">
                     {t('invoiceFormContractLabel')}
-                    {contracts.length === 0 ? (
-                      <p className="text-xs font-normal text-muted-foreground">{t('invoiceFormNoContracts')}</p>
-                    ) : (
-                      <Combobox
-                        options={contracts.map((contract) => ({
-                          value: contract.id,
-                          label: `${contract.tenant_name} · ${contract.room_number}${
-                            contract.dormitory_name ? ` (${contract.dormitory_name})` : ''
-                          }`,
-                        }))}
-                        value={contractId}
-                        onChange={onContractIdChange}
-                        placeholder={t('invoiceFormContractPlaceholder')}
-                        searchPlaceholder={t('invoiceFormContractSearchPlaceholder')}
-                        emptyText={t('invoiceFormContractNoResults')}
-                      />
-                    )}
+                    <ContractSearchSelect
+                      selectedLabel={selectedContract ? formatContractLabel(selectedContract) : ''}
+                      onSelectContract={onSelectContract}
+                      placeholder={t('invoiceFormContractPlaceholder')}
+                      searchPlaceholder={t('invoiceFormContractSearchPlaceholder')}
+                      noResultsLabel={t('invoiceFormContractNoResults')}
+                    />
                   </label>
 
                   <label className="flex flex-col gap-1.5 text-sm font-medium">

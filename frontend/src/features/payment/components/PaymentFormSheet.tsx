@@ -11,7 +11,7 @@ import {
   SheetTitle,
 } from '@/shared/components/ui/sheet'
 import type { ApiInvoice } from '@/features/invoice/types'
-import { formatPeriod } from '@/features/invoice/utils'
+import { InvoiceSearchSelect } from '@/features/invoice/components/InvoiceSearchSelect'
 import type { PaymentMethod } from '../types'
 import { PAYMENT_METHODS, type PaymentItemFormRow } from '../utils'
 
@@ -25,9 +25,8 @@ const paymentMethodLabelKeys: Record<PaymentMethod, TranslationKey> = {
 type PaymentFormSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  invoices: ApiInvoice[]
-  invoiceId: string
-  onInvoiceIdChange: (invoiceId: string) => void
+  invoiceLabel: string
+  onSelectInvoice: (invoice: ApiInvoice) => void
   paymentDate: string
   onPaymentDateChange: (value: string) => void
   items: PaymentItemFormRow[]
@@ -44,9 +43,8 @@ type PaymentFormSheetProps = {
 export function PaymentFormSheet({
   open,
   onOpenChange,
-  invoices,
-  invoiceId,
-  onInvoiceIdChange,
+  invoiceLabel,
+  onSelectInvoice,
   paymentDate,
   onPaymentDateChange,
   items,
@@ -78,25 +76,13 @@ export function PaymentFormSheet({
           <div className="flex flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden pr-1">
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('paymentFormInvoiceLabel')}
-              {invoices.length === 0 ? (
-                <p className="text-xs font-normal text-muted-foreground">{t('paymentFormNoInvoices')}</p>
-              ) : (
-                <select
-                  className="h-10 w-full min-w-0 rounded-md border border-input bg-transparent px-3 text-sm"
-                  value={invoiceId}
-                  onChange={(event) => onInvoiceIdChange(event.target.value)}
-                >
-                  <option value="">{t('paymentFormInvoicePlaceholder')}</option>
-                  {invoices.map((invoice) => (
-                    <option key={invoice.id} value={invoice.id}>
-                      {invoice.tenant_name} · {invoice.room_number}
-                      {invoice.dormitory_name ? ` (${invoice.dormitory_name})` : ''} ·{' '}
-                      {formatPeriod(invoice.period_year, invoice.period_month)} ·{' '}
-                      {invoice.total_amount.toLocaleString()}
-                    </option>
-                  ))}
-                </select>
-              )}
+              <InvoiceSearchSelect
+                selectedLabel={invoiceLabel}
+                onSelectInvoice={onSelectInvoice}
+                placeholder={t('paymentFormInvoicePlaceholder')}
+                searchPlaceholder={t('pickerSearchInvoicePlaceholder')}
+                noResultsLabel={t('pickerNoInvoices')}
+              />
             </label>
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">

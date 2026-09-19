@@ -22,3 +22,9 @@ export type RoomColumnFilters = Partial<Record<RoomTextFilterKey, string>>
 export function isTextFilterKey(key: string): key is RoomTextFilterKey {
   return (ROOM_TEXT_FILTER_KEYS as readonly string[]).includes(key)
 }
+
+// Label for a picked room in a form. The room number alone is ambiguous across
+// dormitories, so the dormitory name is appended when the record carries one.
+export function formatRoomLabel(room: { room_number?: string; dormitory_name?: string }): string {
+  return [room.room_number, room.dormitory_name].filter(Boolean).join(' - ')
+}

@@ -10,7 +10,9 @@ import {
   SheetTitle,
 } from '@/shared/components/ui/sheet'
 import type { ApiTenant } from '@/features/tenant/types'
+import { TenantSearchSelect } from '@/features/tenant/components/TenantSearchSelect'
 import type { ApiRoom } from '@/features/room/types'
+import { RoomSearchSelect } from '@/features/room/components/RoomSearchSelect'
 import type { ParcelStatus } from '../types'
 import { PARCEL_STATUSES } from '../utils'
 
@@ -24,13 +26,11 @@ type ParcelFormSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   isEdit: boolean
-  tenantId: string
-  onTenantIdChange: (tenantId: string) => void
-  tenants: ApiTenant[]
   tenantDisplayName: string
-  roomId: string
-  onRoomIdChange: (roomId: string) => void
-  rooms: ApiRoom[]
+  onSelectTenant: (tenant: ApiTenant) => void
+  roomDisplayLabel: string
+  onSelectRoom: (room: ApiRoom) => void
+  onClearRoom: () => void
   courier: string
   onCourierChange: (value: string) => void
   trackingNumber: string
@@ -50,13 +50,11 @@ export function ParcelFormSheet({
   open,
   onOpenChange,
   isEdit,
-  tenantId,
-  onTenantIdChange,
-  tenants,
   tenantDisplayName,
-  roomId,
-  onRoomIdChange,
-  rooms,
+  onSelectTenant,
+  roomDisplayLabel,
+  onSelectRoom,
+  onClearRoom,
   courier,
   onCourierChange,
   trackingNumber,
@@ -93,43 +91,27 @@ export function ParcelFormSheet({
             ) : (
               <label className="flex flex-col gap-1.5 text-sm font-medium">
                 {t('parcelFormTenantLabel')}
-                {tenants.length === 0 ? (
-                  <p className="text-xs font-normal text-muted-foreground">{t('parcelFormNoTenants')}</p>
-                ) : (
-                  <select
-                    className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                    value={tenantId}
-                    onChange={(event) => onTenantIdChange(event.target.value)}
-                  >
-                    <option value="">{t('parcelFormTenantPlaceholder')}</option>
-                    {tenants.map((tenant) => (
-                      <option key={tenant.id} value={tenant.id}>
-                        {tenant.first_name} {tenant.last_name}
-                      </option>
-                    ))}
-                  </select>
-                )}
+                <TenantSearchSelect
+                  selectedLabel={tenantDisplayName}
+                  onSelectTenant={onSelectTenant}
+                  placeholder={t('parcelFormTenantPlaceholder')}
+                  searchPlaceholder={t('pickerSearchTenantPlaceholder')}
+                  noResultsLabel={t('pickerNoTenants')}
+                />
               </label>
             )}
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('parcelFormRoomLabel')}
-              {rooms.length === 0 ? (
-                <p className="text-xs font-normal text-muted-foreground">{t('parcelFormNoRooms')}</p>
-              ) : (
-                <select
-                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                  value={roomId}
-                  onChange={(event) => onRoomIdChange(event.target.value)}
-                >
-                  <option value="">{t('parcelFormRoomPlaceholder')}</option>
-                  {rooms.map((room) => (
-                    <option key={room.id} value={room.id}>
-                      {room.room_number} {room.dormitory_name ? `(${room.dormitory_name})` : ''}
-                    </option>
-                  ))}
-                </select>
-              )}
+              <RoomSearchSelect
+                selectedLabel={roomDisplayLabel}
+                onSelectRoom={onSelectRoom}
+                clearLabel={t('parcelFormRoomPlaceholder')}
+                onClear={onClearRoom}
+                placeholder={t('parcelFormRoomPlaceholder')}
+                searchPlaceholder={t('pickerSearchRoomPlaceholder')}
+                noResultsLabel={t('pickerNoRooms')}
+              />
               <span className="text-xs font-normal text-muted-foreground">{t('parcelFormRoomHint')}</span>
             </label>
 

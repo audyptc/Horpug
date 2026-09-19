@@ -4,6 +4,7 @@ import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiInvoice } from '@/features/invoice/types'
+import { formatInvoiceLabel } from '@/features/invoice/utils'
 import { PaymentListCard } from './components/PaymentListCard'
 import { PaymentFormSheet } from './components/PaymentFormSheet'
 import type { ApiPayment } from './types'
@@ -28,7 +29,6 @@ export default function PaymentPage() {
   const [payments, setPayments] = useState<ApiPayment[] | null>(null)
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
-  const [invoices, setInvoices] = useState<ApiInvoice[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
@@ -47,6 +47,7 @@ export default function PaymentPage() {
 
   const [formOpen, setFormOpen] = useState(false)
   const [formInvoiceId, setFormInvoiceId] = useState('')
+  const [formInvoiceLabel, setFormInvoiceLabel] = useState('')
   const [formPaymentDate, setFormPaymentDate] = useState('')
   const [formItems, setFormItems] = useState<PaymentItemFormRow[]>([])
   const [formNote, setFormNote] = useState('')
@@ -61,24 +62,6 @@ export default function PaymentPage() {
     const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
     return () => window.clearTimeout(timer)
   }, [query])
-
-  useEffect(() => {
-    let cancelled = false
-
-    api
-      .get<ApiPage<ApiInvoice[]>>('/invoices', { params: { per_page: 100 } })
-      .then(({ data }) => {
-        if (cancelled) return
-        setInvoices(data.data.filter((invoice) => invoice.status !== 'cancelled'))
-      })
-      .catch(() => {
-        // Ignore — the create form just shows no invoice choices.
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -144,6 +127,7 @@ export default function PaymentPage() {
 
   function openCreateForm() {
     setFormInvoiceId('')
+    setFormInvoiceLabel('')
     setFormPaymentDate(toDateInputValue(new Date().toISOString()))
     setFormItems([createPaymentItemRow()])
     setFormNote('')
@@ -293,9 +277,11 @@ export default function PaymentPage() {
       <PaymentFormSheet
         open={formOpen}
         onOpenChange={setFormOpen}
-        invoices={invoices}
-        invoiceId={formInvoiceId}
-        onInvoiceIdChange={setFormInvoiceId}
+        invoiceLabel={formInvoiceLabel}
+        onSelectInvoice={(invoice: ApiInvoice) => {
+          setFormInvoiceId(invoice.id)
+          setFormInvoiceLabel(formatInvoiceLabel(invoice))
+        }}
         paymentDate={formPaymentDate}
         onPaymentDateChange={setFormPaymentDate}
         items={formItems}

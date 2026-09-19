@@ -10,7 +10,9 @@ import {
   SheetTitle,
 } from '@/shared/components/ui/sheet'
 import type { ApiRoom } from '@/features/room/types'
+import { RoomSearchSelect } from '@/features/room/components/RoomSearchSelect'
 import type { ApiTenant } from '@/features/tenant/types'
+import { TenantSearchSelect } from '@/features/tenant/components/TenantSearchSelect'
 import type { RepairCategory, RepairStatus } from '../types'
 import { REPAIR_CATEGORIES, REPAIR_STATUSES } from '../utils'
 
@@ -33,13 +35,11 @@ type RepairRequestFormSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   isEdit: boolean
-  roomId: string
-  onRoomIdChange: (roomId: string) => void
-  rooms: ApiRoom[]
   roomDisplayLabel: string
-  tenantId: string
-  onTenantIdChange: (tenantId: string) => void
-  tenants: ApiTenant[]
+  onSelectRoom: (room: ApiRoom) => void
+  tenantDisplayName: string
+  onSelectTenant: (tenant: ApiTenant) => void
+  onClearTenant: () => void
   category: RepairCategory
   onCategoryChange: (category: RepairCategory) => void
   description: string
@@ -57,13 +57,11 @@ export function RepairRequestFormSheet({
   open,
   onOpenChange,
   isEdit,
-  roomId,
-  onRoomIdChange,
-  rooms,
   roomDisplayLabel,
-  tenantId,
-  onTenantIdChange,
-  tenants,
+  onSelectRoom,
+  tenantDisplayName,
+  onSelectTenant,
+  onClearTenant,
   category,
   onCategoryChange,
   description,
@@ -98,39 +96,27 @@ export function RepairRequestFormSheet({
             ) : (
               <label className="flex flex-col gap-1.5 text-sm font-medium">
                 {t('repairFormRoomLabel')}
-                {rooms.length === 0 ? (
-                  <p className="text-xs font-normal text-muted-foreground">{t('repairFormNoRooms')}</p>
-                ) : (
-                  <select
-                    className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                    value={roomId}
-                    onChange={(event) => onRoomIdChange(event.target.value)}
-                  >
-                    <option value="">{t('repairFormRoomPlaceholder')}</option>
-                    {rooms.map((room) => (
-                      <option key={room.id} value={room.id}>
-                        {room.room_number} {room.dormitory_name ? `(${room.dormitory_name})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                )}
+                <RoomSearchSelect
+                  selectedLabel={roomDisplayLabel}
+                  onSelectRoom={onSelectRoom}
+                  placeholder={t('repairFormRoomPlaceholder')}
+                  searchPlaceholder={t('pickerSearchRoomPlaceholder')}
+                  noResultsLabel={t('pickerNoRooms')}
+                />
               </label>
             )}
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('repairFormTenantLabel')}
-              <select
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                value={tenantId}
-                onChange={(event) => onTenantIdChange(event.target.value)}
-              >
-                <option value="">{t('repairFormTenantPlaceholder')}</option>
-                {tenants.map((tenant) => (
-                  <option key={tenant.id} value={tenant.id}>
-                    {tenant.first_name} {tenant.last_name}
-                  </option>
-                ))}
-              </select>
+              <TenantSearchSelect
+                selectedLabel={tenantDisplayName}
+                onSelectTenant={onSelectTenant}
+                clearLabel={t('repairFormTenantPlaceholder')}
+                onClear={onClearTenant}
+                placeholder={t('repairFormTenantPlaceholder')}
+                searchPlaceholder={t('pickerSearchTenantPlaceholder')}
+                noResultsLabel={t('pickerNoTenants')}
+              />
             </label>
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">

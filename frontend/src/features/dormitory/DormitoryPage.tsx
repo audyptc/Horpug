@@ -6,7 +6,7 @@ import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { InformationDialog } from '@/shared/components/information-dialog'
 import { DormitoryListCard } from './components/DormitoryListCard'
 import { DormitoryFormSheet } from './components/DormitoryFormSheet'
-import type { ApiDormitory, ApiDormitoryDeletionCheck, ApiUser } from './types'
+import type { ApiDormitory, ApiDormitoryDeletionCheck, ApiUser, FormManager } from './types'
 import {
   DORMITORY_PAGE_SIZE_OPTIONS,
   type DormitoryColumnFilters,
@@ -22,7 +22,6 @@ export default function DormitoryPage() {
   const { t } = useLanguage()
 
   const [dormitories, setDormitories] = useState<ApiDormitory[] | null>(null)
-  const [users, setUsers] = useState<ApiUser[]>([])
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -48,7 +47,7 @@ export default function DormitoryPage() {
   const [formPhone, setFormPhone] = useState('')
   const [formDescription, setFormDescription] = useState('')
   const [formIsActive, setFormIsActive] = useState(true)
-  const [formManagerIds, setFormManagerIds] = useState<string[]>([])
+  const [formManagers, setFormManagers] = useState<FormManager[]>([])
   const [formSaving, setFormSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -62,26 +61,6 @@ export default function DormitoryPage() {
     const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
     return () => window.clearTimeout(timer)
   }, [query])
-
-  // The manager selector in the form isn't affected by the list's filters, so
-  // it's loaded once rather than on every refetch.
-  useEffect(() => {
-    let cancelled = false
-
-    api
-      .get<ApiPage<ApiUser[]>>('/users', { params: { per_page: 100 } })
-      .then(({ data }) => {
-        if (!cancelled) setUsers(data.data.filter((user) => user.is_active))
-      })
-      .catch((err) => {
-        if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
-      })
-
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -153,7 +132,7 @@ export default function DormitoryPage() {
     setFormPhone('')
     setFormDescription('')
     setFormIsActive(true)
-    setFormManagerIds([])
+    setFormManagers([])
     setFormError(null)
     setFormOpen(true)
   }
@@ -165,7 +144,13 @@ export default function DormitoryPage() {
     setFormPhone(dormitory.phone)
     setFormDescription(dormitory.description)
     setFormIsActive(dormitory.is_active)
-    setFormManagerIds((dormitory.managers ?? []).map((manager) => manager.user_id))
+    setFormManagers(
+      (dormitory.managers ?? []).map((manager) => ({
+        id: manager.user_id,
+        username: manager.username,
+        email: manager.email,
+      }))
+    )
     setFormError(null)
     setFormOpen(true)
   }
@@ -188,7 +173,7 @@ export default function DormitoryPage() {
       phone: formPhone,
       description: formDescription,
       is_active: formIsActive,
-      manager_ids: formManagerIds,
+      manager_ids: formManagers.map((manager) => manager.id),
     }
 
     try {
@@ -333,9 +318,17 @@ export default function DormitoryPage() {
         onDescriptionChange={setFormDescription}
         isActive={formIsActive}
         onIsActiveChange={setFormIsActive}
-        users={users}
-        managerIds={formManagerIds}
-        onManagerIdsChange={setFormManagerIds}
+        managers={formManagers}
+        onAddManager={(user: ApiUser) =>
+          setFormManagers((prev) =>
+            prev.some((manager) => manager.id === user.id)
+              ? prev
+              : [...prev, { id: user.id, username: user.username, email: user.email }]
+          )
+        }
+        onRemoveManager={(userId: string) =>
+          setFormManagers((prev) => prev.filter((manager) => manager.id !== userId))
+        }
         saving={formSaving}
         error={formError}
         onSubmit={handleFormSubmit}

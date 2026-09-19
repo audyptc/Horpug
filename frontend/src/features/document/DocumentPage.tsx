@@ -6,6 +6,7 @@ import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiDormitory } from '@/features/dormitory/types'
 import type { ApiTenant } from '@/features/tenant/types'
 import type { ApiRoom } from '@/features/room/types'
+import { formatRoomLabel } from '@/features/room/utils'
 import { DocumentListCard } from './components/DocumentListCard'
 import { DocumentFormSheet } from './components/DocumentFormSheet'
 import type { ApiDocument, DocumentCategory } from './types'
@@ -29,8 +30,6 @@ export default function DocumentPage() {
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [dormitories, setDormitories] = useState<ApiDormitory[]>([])
-  const [tenants, setTenants] = useState<ApiTenant[]>([])
-  const [rooms, setRooms] = useState<ApiRoom[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
@@ -51,7 +50,9 @@ export default function DocumentPage() {
   const [formDocumentId, setFormDocumentId] = useState<string | null>(null)
   const [formDormitoryId, setFormDormitoryId] = useState('')
   const [formTenantId, setFormTenantId] = useState('')
+  const [formTenantDisplayName, setFormTenantDisplayName] = useState('')
   const [formRoomId, setFormRoomId] = useState('')
+  const [formRoomDisplayLabel, setFormRoomDisplayLabel] = useState('')
   const [formName, setFormName] = useState('')
   const [formCategory, setFormCategory] = useState<DocumentCategory>('other')
   const [formFileUrl, setFormFileUrl] = useState('')
@@ -72,19 +73,13 @@ export default function DocumentPage() {
   useEffect(() => {
     let cancelled = false
 
-    Promise.all([
-      api.get<ApiDormitory[]>('/dormitories/active', { params: { limit: 100 } }),
-      api.get<ApiTenant[]>('/tenants/active', { params: { limit: 100 } }),
-      api.get<ApiRoom[]>('/rooms/active', { params: { limit: 100 } }),
-    ])
-      .then(([dormitoriesRes, tenantsRes, roomsRes]) => {
-        if (cancelled) return
-        setDormitories(dormitoriesRes.data)
-        setTenants(tenantsRes.data)
-        setRooms(roomsRes.data)
+    api
+      .get<ApiDormitory[]>('/dormitories/active', { params: { limit: 100 } })
+      .then(({ data }) => {
+        if (!cancelled) setDormitories(data)
       })
       .catch(() => {
-        // Ignore — the create form just shows no dormitory/tenant/room choices.
+        // Ignore — the create form just shows no dormitory choices.
       })
 
     return () => {
@@ -158,7 +153,9 @@ export default function DocumentPage() {
     setFormDocumentId(null)
     setFormDormitoryId('')
     setFormTenantId('')
+    setFormTenantDisplayName('')
     setFormRoomId('')
+    setFormRoomDisplayLabel('')
     setFormName('')
     setFormCategory('other')
     setFormFileUrl('')
@@ -172,7 +169,9 @@ export default function DocumentPage() {
     setFormDocumentId(document.id)
     setFormDormitoryId(document.dormitory_id)
     setFormTenantId(document.tenant_id ?? '')
+    setFormTenantDisplayName(document.tenant_name ?? '')
     setFormRoomId(document.room_id ?? '')
+    setFormRoomDisplayLabel(formatRoomLabel(document))
     setFormName(document.name)
     setFormCategory(document.category)
     setFormFileUrl(document.file_url)
@@ -326,12 +325,24 @@ export default function DocumentPage() {
         dormitoryId={formDormitoryId}
         onDormitoryIdChange={setFormDormitoryId}
         dormitories={dormitories}
-        tenantId={formTenantId}
-        onTenantIdChange={setFormTenantId}
-        tenants={tenants}
-        roomId={formRoomId}
-        onRoomIdChange={setFormRoomId}
-        rooms={rooms}
+        tenantDisplayName={formTenantDisplayName}
+        onSelectTenant={(tenant: ApiTenant) => {
+          setFormTenantId(tenant.id)
+          setFormTenantDisplayName(`${tenant.first_name} ${tenant.last_name}`)
+        }}
+        onClearTenant={() => {
+          setFormTenantId('')
+          setFormTenantDisplayName('')
+        }}
+        roomDisplayLabel={formRoomDisplayLabel}
+        onSelectRoom={(room: ApiRoom) => {
+          setFormRoomId(room.id)
+          setFormRoomDisplayLabel(formatRoomLabel(room))
+        }}
+        onClearRoom={() => {
+          setFormRoomId('')
+          setFormRoomDisplayLabel('')
+        }}
         name={formName}
         onNameChange={setFormName}
         category={formCategory}

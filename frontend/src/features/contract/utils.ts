@@ -37,3 +37,15 @@ export function toDateInputValue(value?: string): string {
 export function toApiDate(value: string): string {
   return `${value}T00:00:00Z`
 }
+
+// Label for a contract in a picker: who rents which room. The dormitory name is
+// appended because room numbers repeat across dormitories.
+export function formatContractLabel(contract: {
+  tenant_name?: string
+  room_number?: string
+  dormitory_name?: string
+}): string {
+  return `${contract.tenant_name ?? ''} · ${contract.room_number ?? ''}${
+    contract.dormitory_name ? ` (${contract.dormitory_name})` : ''
+  }`
+}

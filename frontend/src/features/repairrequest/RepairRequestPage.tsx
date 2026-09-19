@@ -4,6 +4,7 @@ import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiRoom } from '@/features/room/types'
+import { formatRoomLabel } from '@/features/room/utils'
 import type { ApiTenant } from '@/features/tenant/types'
 import { RepairRequestListCard } from './components/RepairRequestListCard'
 import { RepairRequestFormSheet } from './components/RepairRequestFormSheet'
@@ -28,8 +29,6 @@ export default function RepairRequestPage() {
   const [repairRequests, setRepairRequests] = useState<ApiRepairRequest[] | null>(null)
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
-  const [rooms, setRooms] = useState<ApiRoom[]>([])
-  const [tenants, setTenants] = useState<ApiTenant[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
@@ -52,6 +51,7 @@ export default function RepairRequestPage() {
   const [formRoomId, setFormRoomId] = useState('')
   const [formRoomDisplayLabel, setFormRoomDisplayLabel] = useState('')
   const [formTenantId, setFormTenantId] = useState('')
+  const [formTenantDisplayName, setFormTenantDisplayName] = useState('')
   const [formCategory, setFormCategory] = useState<RepairCategory>('other')
   const [formDescription, setFormDescription] = useState('')
   const [formStatus, setFormStatus] = useState<RepairStatus>('pending')
@@ -67,27 +67,6 @@ export default function RepairRequestPage() {
     const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
     return () => window.clearTimeout(timer)
   }, [query])
-
-  useEffect(() => {
-    let cancelled = false
-
-    Promise.all([
-      api.get<ApiRoom[]>('/rooms/active', { params: { limit: 100 } }),
-      api.get<ApiTenant[]>('/tenants/active', { params: { limit: 100 } }),
-    ])
-      .then(([roomsRes, tenantsRes]) => {
-        if (cancelled) return
-        setRooms(roomsRes.data)
-        setTenants(tenantsRes.data)
-      })
-      .catch(() => {
-        // Ignore — the create form just shows no room/tenant choices.
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -158,6 +137,7 @@ export default function RepairRequestPage() {
     setFormRoomId('')
     setFormRoomDisplayLabel('')
     setFormTenantId('')
+    setFormTenantDisplayName('')
     setFormCategory('other')
     setFormDescription('')
     setFormStatus('pending')
@@ -169,10 +149,9 @@ export default function RepairRequestPage() {
   function openEditForm(repairRequest: ApiRepairRequest) {
     setFormRepairRequestId(repairRequest.id)
     setFormRoomId(repairRequest.room_id)
-    setFormRoomDisplayLabel(
-      [repairRequest.room_number, repairRequest.dormitory_name].filter(Boolean).join(' - ')
-    )
+    setFormRoomDisplayLabel(formatRoomLabel(repairRequest))
     setFormTenantId(repairRequest.tenant_id ?? '')
+    setFormTenantDisplayName(repairRequest.tenant_name ?? '')
     setFormCategory(repairRequest.category)
     setFormDescription(repairRequest.description)
     setFormStatus(repairRequest.status)
@@ -323,13 +302,20 @@ export default function RepairRequestPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         isEdit={formRepairRequestId !== null}
-        roomId={formRoomId}
-        onRoomIdChange={setFormRoomId}
-        rooms={rooms}
         roomDisplayLabel={formRoomDisplayLabel}
-        tenantId={formTenantId}
-        onTenantIdChange={setFormTenantId}
-        tenants={tenants}
+        onSelectRoom={(room: ApiRoom) => {
+          setFormRoomId(room.id)
+          setFormRoomDisplayLabel(formatRoomLabel(room))
+        }}
+        tenantDisplayName={formTenantDisplayName}
+        onSelectTenant={(tenant: ApiTenant) => {
+          setFormTenantId(tenant.id)
+          setFormTenantDisplayName(`${tenant.first_name} ${tenant.last_name}`)
+        }}
+        onClearTenant={() => {
+          setFormTenantId('')
+          setFormTenantDisplayName('')
+        }}
         category={formCategory}
         onCategoryChange={setFormCategory}
         description={formDescription}

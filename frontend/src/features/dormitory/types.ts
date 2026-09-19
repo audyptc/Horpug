@@ -28,3 +28,8 @@ export type ApiUser = {
   email: string
   is_active: boolean
 }
+
+// A user picked as a dormitory manager, as held in the form. It carries the
+// display fields so the chosen managers can be shown without being in any
+// loaded page of users.
+export type FormManager = Pick<ApiUser, 'id' | 'username' | 'email'>

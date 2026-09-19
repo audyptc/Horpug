@@ -5,6 +5,7 @@ import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiTenant } from '@/features/tenant/types'
 import type { ApiRoom } from '@/features/room/types'
+import { formatRoomLabel } from '@/features/room/utils'
 import { ParcelListCard } from './components/ParcelListCard'
 import { ParcelFormSheet } from './components/ParcelFormSheet'
 import type { ApiParcel, ParcelStatus } from './types'
@@ -27,8 +28,6 @@ export default function ParcelPage() {
   const [parcels, setParcels] = useState<ApiParcel[] | null>(null)
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
-  const [tenants, setTenants] = useState<ApiTenant[]>([])
-  const [rooms, setRooms] = useState<ApiRoom[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
@@ -50,6 +49,7 @@ export default function ParcelPage() {
   const [formTenantId, setFormTenantId] = useState('')
   const [formTenantDisplayName, setFormTenantDisplayName] = useState('')
   const [formRoomId, setFormRoomId] = useState('')
+  const [formRoomDisplayLabel, setFormRoomDisplayLabel] = useState('')
   const [formCourier, setFormCourier] = useState('')
   const [formTrackingNumber, setFormTrackingNumber] = useState('')
   const [formStatus, setFormStatus] = useState<ParcelStatus>('pending')
@@ -66,27 +66,6 @@ export default function ParcelPage() {
     const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
     return () => window.clearTimeout(timer)
   }, [query])
-
-  useEffect(() => {
-    let cancelled = false
-
-    Promise.all([
-      api.get<ApiTenant[]>('/tenants/active', { params: { limit: 100 } }),
-      api.get<ApiRoom[]>('/rooms/active', { params: { limit: 100 } }),
-    ])
-      .then(([tenantsRes, roomsRes]) => {
-        if (cancelled) return
-        setTenants(tenantsRes.data)
-        setRooms(roomsRes.data)
-      })
-      .catch(() => {
-        // Ignore — the create form just shows no tenant/room choices.
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -155,6 +134,7 @@ export default function ParcelPage() {
     setFormTenantId('')
     setFormTenantDisplayName('')
     setFormRoomId('')
+    setFormRoomDisplayLabel('')
     setFormCourier('')
     setFormTrackingNumber('')
     setFormStatus('pending')
@@ -169,6 +149,7 @@ export default function ParcelPage() {
     setFormTenantId(parcel.tenant_id)
     setFormTenantDisplayName(parcel.tenant_name ?? '')
     setFormRoomId(parcel.room_id ?? '')
+    setFormRoomDisplayLabel(formatRoomLabel(parcel))
     setFormCourier(parcel.courier)
     setFormTrackingNumber(parcel.tracking_number)
     setFormStatus(parcel.status)
@@ -313,13 +294,20 @@ export default function ParcelPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         isEdit={formParcelId !== null}
-        tenantId={formTenantId}
-        onTenantIdChange={setFormTenantId}
-        tenants={tenants}
         tenantDisplayName={formTenantDisplayName}
-        roomId={formRoomId}
-        onRoomIdChange={setFormRoomId}
-        rooms={rooms}
+        onSelectTenant={(tenant: ApiTenant) => {
+          setFormTenantId(tenant.id)
+          setFormTenantDisplayName(`${tenant.first_name} ${tenant.last_name}`)
+        }}
+        roomDisplayLabel={formRoomDisplayLabel}
+        onSelectRoom={(room: ApiRoom) => {
+          setFormRoomId(room.id)
+          setFormRoomDisplayLabel(formatRoomLabel(room))
+        }}
+        onClearRoom={() => {
+          setFormRoomId('')
+          setFormRoomDisplayLabel('')
+        }}
         courier={formCourier}
         onCourierChange={setFormCourier}
         trackingNumber={formTrackingNumber}

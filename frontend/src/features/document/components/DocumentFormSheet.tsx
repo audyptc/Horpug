@@ -11,7 +11,9 @@ import {
 } from '@/shared/components/ui/sheet'
 import type { ApiDormitory } from '@/features/dormitory/types'
 import type { ApiTenant } from '@/features/tenant/types'
+import { TenantSearchSelect } from '@/features/tenant/components/TenantSearchSelect'
 import type { ApiRoom } from '@/features/room/types'
+import { RoomSearchSelect } from '@/features/room/components/RoomSearchSelect'
 import type { DocumentCategory } from '../types'
 import { DOCUMENT_CATEGORIES } from '../utils'
 
@@ -29,12 +31,12 @@ type DocumentFormSheetProps = {
   dormitoryId: string
   onDormitoryIdChange: (dormitoryId: string) => void
   dormitories: ApiDormitory[]
-  tenantId: string
-  onTenantIdChange: (tenantId: string) => void
-  tenants: ApiTenant[]
-  roomId: string
-  onRoomIdChange: (roomId: string) => void
-  rooms: ApiRoom[]
+  tenantDisplayName: string
+  onSelectTenant: (tenant: ApiTenant) => void
+  onClearTenant: () => void
+  roomDisplayLabel: string
+  onSelectRoom: (room: ApiRoom) => void
+  onClearRoom: () => void
   name: string
   onNameChange: (value: string) => void
   category: DocumentCategory
@@ -57,12 +59,12 @@ export function DocumentFormSheet({
   dormitoryId,
   onDormitoryIdChange,
   dormitories,
-  tenantId,
-  onTenantIdChange,
-  tenants,
-  roomId,
-  onRoomIdChange,
-  rooms,
+  tenantDisplayName,
+  onSelectTenant,
+  onClearTenant,
+  roomDisplayLabel,
+  onSelectRoom,
+  onClearRoom,
   name,
   onNameChange,
   category,
@@ -114,42 +116,28 @@ export function DocumentFormSheet({
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('documentFormTenantLabel')}
-              {tenants.length === 0 ? (
-                <p className="text-xs font-normal text-muted-foreground">{t('documentFormNoTenants')}</p>
-              ) : (
-                <select
-                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                  value={tenantId}
-                  onChange={(event) => onTenantIdChange(event.target.value)}
-                >
-                  <option value="">{t('documentFormTenantPlaceholder')}</option>
-                  {tenants.map((tenant) => (
-                    <option key={tenant.id} value={tenant.id}>
-                      {tenant.first_name} {tenant.last_name}
-                    </option>
-                  ))}
-                </select>
-              )}
+              <TenantSearchSelect
+                selectedLabel={tenantDisplayName}
+                onSelectTenant={onSelectTenant}
+                clearLabel={t('documentFormTenantPlaceholder')}
+                onClear={onClearTenant}
+                placeholder={t('documentFormTenantPlaceholder')}
+                searchPlaceholder={t('pickerSearchTenantPlaceholder')}
+                noResultsLabel={t('pickerNoTenants')}
+              />
             </label>
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('documentFormRoomLabel')}
-              {rooms.length === 0 ? (
-                <p className="text-xs font-normal text-muted-foreground">{t('documentFormNoRooms')}</p>
-              ) : (
-                <select
-                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                  value={roomId}
-                  onChange={(event) => onRoomIdChange(event.target.value)}
-                >
-                  <option value="">{t('documentFormRoomPlaceholder')}</option>
-                  {rooms.map((room) => (
-                    <option key={room.id} value={room.id}>
-                      {room.room_number} {room.dormitory_name ? `(${room.dormitory_name})` : ''}
-                    </option>
-                  ))}
-                </select>
-              )}
+              <RoomSearchSelect
+                selectedLabel={roomDisplayLabel}
+                onSelectRoom={onSelectRoom}
+                clearLabel={t('documentFormRoomPlaceholder')}
+                onClear={onClearRoom}
+                placeholder={t('documentFormRoomPlaceholder')}
+                searchPlaceholder={t('pickerSearchRoomPlaceholder')}
+                noResultsLabel={t('pickerNoRooms')}
+              />
             </label>
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
