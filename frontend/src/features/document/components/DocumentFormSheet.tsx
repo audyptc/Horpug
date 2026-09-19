@@ -9,6 +9,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/shared/components/ui/sheet'
+import { DormitorySearchSelect } from '@/features/dormitory/components/DormitorySearchSelect'
 import type { ApiDormitory } from '@/features/dormitory/types'
 import type { ApiTenant } from '@/features/tenant/types'
 import { TenantSearchSelect } from '@/features/tenant/components/TenantSearchSelect'
@@ -28,9 +29,8 @@ type DocumentFormSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   isEdit: boolean
-  dormitoryId: string
-  onDormitoryIdChange: (dormitoryId: string) => void
-  dormitories: ApiDormitory[]
+  dormitoryName: string
+  onDormitorySelect: (dormitory: ApiDormitory) => void
   tenantDisplayName: string
   onSelectTenant: (tenant: ApiTenant) => void
   onClearTenant: () => void
@@ -56,9 +56,8 @@ export function DocumentFormSheet({
   open,
   onOpenChange,
   isEdit,
-  dormitoryId,
-  onDormitoryIdChange,
-  dormitories,
+  dormitoryName,
+  onDormitorySelect,
   tenantDisplayName,
   onSelectTenant,
   onClearTenant,
@@ -93,26 +92,17 @@ export function DocumentFormSheet({
           </SheetHeader>
 
           <div className="flex flex-1 flex-col gap-4 overflow-y-auto pr-1">
-            <label className="flex flex-col gap-1.5 text-sm font-medium">
+            <div className="flex flex-col gap-1.5 text-sm font-medium">
               {t('documentFormDormitoryLabel')}
-              {dormitories.length === 0 ? (
-                <p className="text-xs font-normal text-muted-foreground">{t('documentFormNoDormitories')}</p>
-              ) : (
-                <select
-                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                  value={dormitoryId}
-                  onChange={(event) => onDormitoryIdChange(event.target.value)}
-                  disabled={isEdit}
-                >
-                  <option value="">{t('documentFormDormitoryPlaceholder')}</option>
-                  {dormitories.map((dormitory) => (
-                    <option key={dormitory.id} value={dormitory.id}>
-                      {dormitory.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </label>
+              <DormitorySearchSelect
+                selectedLabel={dormitoryName}
+                onSelectDormitory={onDormitorySelect}
+                placeholder={t('documentFormDormitoryPlaceholder')}
+                searchPlaceholder={t('documentFormDormitorySearchPlaceholder')}
+                noResultsLabel={t('documentFormDormitoryNoResults')}
+                disabled={isEdit}
+              />
+            </div>
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('documentFormTenantLabel')}

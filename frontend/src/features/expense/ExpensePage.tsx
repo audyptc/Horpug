@@ -3,7 +3,6 @@ import axios from 'axios'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
-import type { ApiDormitory } from '@/features/dormitory/types'
 import { ExpenseListCard } from './components/ExpenseListCard'
 import { ExpenseFormSheet } from './components/ExpenseFormSheet'
 import type { ApiExpense, ExpenseCategory } from './types'
@@ -26,7 +25,6 @@ export default function ExpensePage() {
   const [expenses, setExpenses] = useState<ApiExpense[] | null>(null)
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
-  const [dormitories, setDormitories] = useState<ApiDormitory[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
@@ -46,6 +44,9 @@ export default function ExpensePage() {
   const [formOpen, setFormOpen] = useState(false)
   const [formExpenseId, setFormExpenseId] = useState<string | null>(null)
   const [formDormitoryId, setFormDormitoryId] = useState('')
+  // The picked dormitory is searched server-side and so isn't necessarily in
+  // any loaded list; its name is kept here for the selector's label.
+  const [formDormitoryName, setFormDormitoryName] = useState('')
   const [formCategory, setFormCategory] = useState<ExpenseCategory>('other')
   const [formExpenseDate, setFormExpenseDate] = useState('')
   const [formAmount, setFormAmount] = useState('')
@@ -61,24 +62,6 @@ export default function ExpensePage() {
     const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
     return () => window.clearTimeout(timer)
   }, [query])
-
-  useEffect(() => {
-    let cancelled = false
-
-    api
-      .get<ApiDormitory[]>('/dormitories/active', { params: { limit: 100 } })
-      .then(({ data }) => {
-        if (cancelled) return
-        setDormitories(data)
-      })
-      .catch(() => {
-        // Ignore — the create form just shows no dormitory choices.
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -145,6 +128,7 @@ export default function ExpensePage() {
   function openCreateForm() {
     setFormExpenseId(null)
     setFormDormitoryId('')
+    setFormDormitoryName('')
     setFormCategory('other')
     setFormExpenseDate(toDateInputValue(new Date().toISOString()))
     setFormAmount('')
@@ -156,6 +140,7 @@ export default function ExpensePage() {
   function openEditForm(expense: ApiExpense) {
     setFormExpenseId(expense.id)
     setFormDormitoryId(expense.dormitory_id)
+    setFormDormitoryName(expense.dormitory_name ?? '')
     setFormCategory(expense.category)
     setFormExpenseDate(toDateInputValue(expense.expense_date))
     setFormAmount(String(expense.amount))
@@ -298,9 +283,11 @@ export default function ExpensePage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         isEdit={formExpenseId !== null}
-        dormitoryId={formDormitoryId}
-        onDormitoryIdChange={setFormDormitoryId}
-        dormitories={dormitories}
+        dormitoryName={formDormitoryName}
+        onDormitorySelect={(dormitory) => {
+          setFormDormitoryId(dormitory.id)
+          setFormDormitoryName(dormitory.name)
+        }}
         category={formCategory}
         onCategoryChange={setFormCategory}
         expenseDate={formExpenseDate}

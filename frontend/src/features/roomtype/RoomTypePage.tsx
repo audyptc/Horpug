@@ -4,7 +4,6 @@ import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { InformationDialog } from '@/shared/components/information-dialog'
-import type { ApiDormitory } from '@/features/dormitory/types'
 import { RoomTypeListCard } from './components/RoomTypeListCard'
 import { RoomTypeFormSheet } from './components/RoomTypeFormSheet'
 import type { ApiRoomType, ApiRoomTypeDeletionCheck } from './types'
@@ -23,7 +22,6 @@ export default function RoomTypePage() {
   const { t } = useLanguage()
 
   const [roomTypes, setRoomTypes] = useState<ApiRoomType[] | null>(null)
-  const [dormitories, setDormitories] = useState<ApiDormitory[]>([])
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -45,6 +43,9 @@ export default function RoomTypePage() {
   const [formOpen, setFormOpen] = useState(false)
   const [formRoomTypeId, setFormRoomTypeId] = useState<string | null>(null)
   const [formDormitoryId, setFormDormitoryId] = useState('')
+  // The picked dormitory is searched server-side and so isn't necessarily in
+  // any loaded list; its name is kept here for the selector's label.
+  const [formDormitoryName, setFormDormitoryName] = useState('')
   const [formName, setFormName] = useState('')
   const [formDescription, setFormDescription] = useState('')
   const [formPrice, setFormPrice] = useState('')
@@ -62,26 +63,6 @@ export default function RoomTypePage() {
     const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
     return () => window.clearTimeout(timer)
   }, [query])
-
-  // The dormitory selector in the form isn't affected by the list's filters,
-  // so it's loaded once rather than on every refetch.
-  useEffect(() => {
-    let cancelled = false
-
-    api
-      .get<ApiDormitory[]>('/dormitories/active', { params: { limit: 100 } })
-      .then(({ data }) => {
-        if (!cancelled) setDormitories(data)
-      })
-      .catch((err) => {
-        if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
-      })
-
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -149,6 +130,7 @@ export default function RoomTypePage() {
   function openCreateForm() {
     setFormRoomTypeId(null)
     setFormDormitoryId('')
+    setFormDormitoryName('')
     setFormName('')
     setFormDescription('')
     setFormPrice('')
@@ -160,6 +142,7 @@ export default function RoomTypePage() {
   function openEditForm(roomType: ApiRoomType) {
     setFormRoomTypeId(roomType.id)
     setFormDormitoryId(roomType.dormitory_id)
+    setFormDormitoryName(roomType.dormitory_name ?? '')
     setFormName(roomType.name)
     setFormDescription(roomType.description)
     setFormPrice(String(roomType.price))
@@ -329,9 +312,11 @@ export default function RoomTypePage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         isEdit={formRoomTypeId !== null}
-        dormitoryId={formDormitoryId}
-        onDormitoryIdChange={setFormDormitoryId}
-        dormitories={dormitories}
+        dormitoryName={formDormitoryName}
+        onDormitorySelect={(dormitory) => {
+          setFormDormitoryId(dormitory.id)
+          setFormDormitoryName(dormitory.name)
+        }}
         name={formName}
         onNameChange={setFormName}
         description={formDescription}

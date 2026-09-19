@@ -9,6 +9,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/shared/components/ui/sheet'
+import { DormitorySearchSelect } from '@/features/dormitory/components/DormitorySearchSelect'
 import type { ApiDormitory } from '@/features/dormitory/types'
 import type { ExpenseCategory } from '../types'
 import { EXPENSE_CATEGORIES } from '../utils'
@@ -25,9 +26,8 @@ type ExpenseFormSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   isEdit: boolean
-  dormitoryId: string
-  onDormitoryIdChange: (dormitoryId: string) => void
-  dormitories: ApiDormitory[]
+  dormitoryName: string
+  onDormitorySelect: (dormitory: ApiDormitory) => void
   category: ExpenseCategory
   onCategoryChange: (category: ExpenseCategory) => void
   expenseDate: string
@@ -45,9 +45,8 @@ export function ExpenseFormSheet({
   open,
   onOpenChange,
   isEdit,
-  dormitoryId,
-  onDormitoryIdChange,
-  dormitories,
+  dormitoryName,
+  onDormitorySelect,
   category,
   onCategoryChange,
   expenseDate,
@@ -74,26 +73,17 @@ export function ExpenseFormSheet({
           </SheetHeader>
 
           <div className="flex flex-1 flex-col gap-4 overflow-y-auto pr-1">
-            <label className="flex flex-col gap-1.5 text-sm font-medium">
+            <div className="flex flex-col gap-1.5 text-sm font-medium">
               {t('expenseFormDormitoryLabel')}
-              {dormitories.length === 0 ? (
-                <p className="text-xs font-normal text-muted-foreground">{t('expenseFormNoDormitories')}</p>
-              ) : (
-                <select
-                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                  value={dormitoryId}
-                  onChange={(event) => onDormitoryIdChange(event.target.value)}
-                  disabled={isEdit}
-                >
-                  <option value="">{t('expenseFormDormitoryPlaceholder')}</option>
-                  {dormitories.map((dormitory) => (
-                    <option key={dormitory.id} value={dormitory.id}>
-                      {dormitory.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </label>
+              <DormitorySearchSelect
+                selectedLabel={dormitoryName}
+                onSelectDormitory={onDormitorySelect}
+                placeholder={t('expenseFormDormitoryPlaceholder')}
+                searchPlaceholder={t('expenseFormDormitorySearchPlaceholder')}
+                noResultsLabel={t('expenseFormDormitoryNoResults')}
+                disabled={isEdit}
+              />
+            </div>
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('expenseFormCategoryLabel')}

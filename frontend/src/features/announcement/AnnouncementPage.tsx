@@ -3,7 +3,6 @@ import axios from 'axios'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
-import type { ApiDormitory } from '@/features/dormitory/types'
 import { AnnouncementListCard } from './components/AnnouncementListCard'
 import { AnnouncementFormSheet } from './components/AnnouncementFormSheet'
 import type { ApiAnnouncement } from './types'
@@ -26,7 +25,6 @@ export default function AnnouncementPage() {
   const [announcements, setAnnouncements] = useState<ApiAnnouncement[] | null>(null)
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
-  const [dormitories, setDormitories] = useState<ApiDormitory[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
@@ -46,6 +44,9 @@ export default function AnnouncementPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [formAnnouncementId, setFormAnnouncementId] = useState<string | null>(null)
   const [formDormitoryId, setFormDormitoryId] = useState('')
+  // The picked dormitory is searched server-side and so isn't necessarily in
+  // any loaded list; its name is kept here for the selector's label.
+  const [formDormitoryName, setFormDormitoryName] = useState('')
   const [formTitle, setFormTitle] = useState('')
   const [formContent, setFormContent] = useState('')
   const [formIsPublished, setFormIsPublished] = useState(true)
@@ -61,24 +62,6 @@ export default function AnnouncementPage() {
     const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
     return () => window.clearTimeout(timer)
   }, [query])
-
-  useEffect(() => {
-    let cancelled = false
-
-    api
-      .get<ApiDormitory[]>('/dormitories/active', { params: { limit: 100 } })
-      .then(({ data }) => {
-        if (cancelled) return
-        setDormitories(data)
-      })
-      .catch(() => {
-        // Ignore — the create form just shows no dormitory choices.
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -145,6 +128,7 @@ export default function AnnouncementPage() {
   function openCreateForm() {
     setFormAnnouncementId(null)
     setFormDormitoryId('')
+    setFormDormitoryName('')
     setFormTitle('')
     setFormContent('')
     setFormIsPublished(true)
@@ -156,6 +140,7 @@ export default function AnnouncementPage() {
   function openEditForm(announcement: ApiAnnouncement) {
     setFormAnnouncementId(announcement.id)
     setFormDormitoryId(announcement.dormitory_id)
+    setFormDormitoryName(announcement.dormitory_name ?? '')
     setFormTitle(announcement.title)
     setFormContent(announcement.content)
     setFormIsPublished(announcement.is_published)
@@ -295,9 +280,11 @@ export default function AnnouncementPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         isEdit={formAnnouncementId !== null}
-        dormitoryId={formDormitoryId}
-        onDormitoryIdChange={setFormDormitoryId}
-        dormitories={dormitories}
+        dormitoryName={formDormitoryName}
+        onDormitorySelect={(dormitory) => {
+          setFormDormitoryId(dormitory.id)
+          setFormDormitoryName(dormitory.name)
+        }}
         title={formTitle}
         onTitleChange={setFormTitle}
         content={formContent}

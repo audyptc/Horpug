@@ -9,15 +9,15 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/shared/components/ui/sheet'
+import { DormitorySearchSelect } from '@/features/dormitory/components/DormitorySearchSelect'
 import type { ApiDormitory } from '@/features/dormitory/types'
 
 type AnnouncementFormSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   isEdit: boolean
-  dormitoryId: string
-  onDormitoryIdChange: (dormitoryId: string) => void
-  dormitories: ApiDormitory[]
+  dormitoryName: string
+  onDormitorySelect: (dormitory: ApiDormitory) => void
   title: string
   onTitleChange: (value: string) => void
   content: string
@@ -35,9 +35,8 @@ export function AnnouncementFormSheet({
   open,
   onOpenChange,
   isEdit,
-  dormitoryId,
-  onDormitoryIdChange,
-  dormitories,
+  dormitoryName,
+  onDormitorySelect,
   title,
   onTitleChange,
   content,
@@ -64,26 +63,17 @@ export function AnnouncementFormSheet({
           </SheetHeader>
 
           <div className="flex flex-1 flex-col gap-4 overflow-y-auto pr-1">
-            <label className="flex flex-col gap-1.5 text-sm font-medium">
+            <div className="flex flex-col gap-1.5 text-sm font-medium">
               {t('announcementFormDormitoryLabel')}
-              {dormitories.length === 0 ? (
-                <p className="text-xs font-normal text-muted-foreground">{t('announcementFormNoDormitories')}</p>
-              ) : (
-                <select
-                  className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
-                  value={dormitoryId}
-                  onChange={(event) => onDormitoryIdChange(event.target.value)}
-                  disabled={isEdit}
-                >
-                  <option value="">{t('announcementFormDormitoryPlaceholder')}</option>
-                  {dormitories.map((dormitory) => (
-                    <option key={dormitory.id} value={dormitory.id}>
-                      {dormitory.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </label>
+              <DormitorySearchSelect
+                selectedLabel={dormitoryName}
+                onSelectDormitory={onDormitorySelect}
+                placeholder={t('announcementFormDormitoryPlaceholder')}
+                searchPlaceholder={t('announcementFormDormitorySearchPlaceholder')}
+                noResultsLabel={t('announcementFormDormitoryNoResults')}
+                disabled={isEdit}
+              />
+            </div>
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('announcementFormTitleLabel')}

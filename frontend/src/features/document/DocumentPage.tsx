@@ -3,7 +3,6 @@ import axios from 'axios'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
-import type { ApiDormitory } from '@/features/dormitory/types'
 import type { ApiTenant } from '@/features/tenant/types'
 import type { ApiRoom } from '@/features/room/types'
 import { formatRoomLabel } from '@/features/room/utils'
@@ -29,7 +28,6 @@ export default function DocumentPage() {
   const [documents, setDocuments] = useState<ApiDocument[] | null>(null)
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
-  const [dormitories, setDormitories] = useState<ApiDormitory[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
@@ -49,6 +47,9 @@ export default function DocumentPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [formDocumentId, setFormDocumentId] = useState<string | null>(null)
   const [formDormitoryId, setFormDormitoryId] = useState('')
+  // The picked dormitory is searched server-side and so isn't necessarily in
+  // any loaded list; its name is kept here for the selector's label.
+  const [formDormitoryName, setFormDormitoryName] = useState('')
   const [formTenantId, setFormTenantId] = useState('')
   const [formTenantDisplayName, setFormTenantDisplayName] = useState('')
   const [formRoomId, setFormRoomId] = useState('')
@@ -69,23 +70,6 @@ export default function DocumentPage() {
     const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
     return () => window.clearTimeout(timer)
   }, [query])
-
-  useEffect(() => {
-    let cancelled = false
-
-    api
-      .get<ApiDormitory[]>('/dormitories/active', { params: { limit: 100 } })
-      .then(({ data }) => {
-        if (!cancelled) setDormitories(data)
-      })
-      .catch(() => {
-        // Ignore — the create form just shows no dormitory choices.
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -152,6 +136,7 @@ export default function DocumentPage() {
   function openCreateForm() {
     setFormDocumentId(null)
     setFormDormitoryId('')
+    setFormDormitoryName('')
     setFormTenantId('')
     setFormTenantDisplayName('')
     setFormRoomId('')
@@ -168,6 +153,7 @@ export default function DocumentPage() {
   function openEditForm(document: ApiDocument) {
     setFormDocumentId(document.id)
     setFormDormitoryId(document.dormitory_id)
+    setFormDormitoryName(document.dormitory_name ?? '')
     setFormTenantId(document.tenant_id ?? '')
     setFormTenantDisplayName(document.tenant_name ?? '')
     setFormRoomId(document.room_id ?? '')
@@ -322,9 +308,11 @@ export default function DocumentPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         isEdit={formDocumentId !== null}
-        dormitoryId={formDormitoryId}
-        onDormitoryIdChange={setFormDormitoryId}
-        dormitories={dormitories}
+        dormitoryName={formDormitoryName}
+        onDormitorySelect={(dormitory) => {
+          setFormDormitoryId(dormitory.id)
+          setFormDormitoryName(dormitory.name)
+        }}
         tenantDisplayName={formTenantDisplayName}
         onSelectTenant={(tenant: ApiTenant) => {
           setFormTenantId(tenant.id)

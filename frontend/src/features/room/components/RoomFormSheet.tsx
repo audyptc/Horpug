@@ -10,6 +10,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/shared/components/ui/sheet'
+import { DormitorySearchSelect } from '@/features/dormitory/components/DormitorySearchSelect'
 import type { ApiDormitory } from '@/features/dormitory/types'
 import type { ApiRoomType } from '@/features/roomtype/types'
 import type { RoomStatus } from '../types'
@@ -26,8 +27,8 @@ type RoomFormSheetProps = {
   onOpenChange: (open: boolean) => void
   isEdit: boolean
   dormitoryId: string
-  onDormitoryIdChange: (dormitoryId: string) => void
-  dormitories: ApiDormitory[]
+  dormitoryName: string
+  onDormitorySelect: (dormitory: ApiDormitory) => void
   roomTypeId: string
   onRoomTypeIdChange: (roomTypeId: string) => void
   roomTypes: ApiRoomType[]
@@ -49,8 +50,8 @@ export function RoomFormSheet({
   onOpenChange,
   isEdit,
   dormitoryId,
-  onDormitoryIdChange,
-  dormitories,
+  dormitoryName,
+  onDormitorySelect,
   roomTypeId,
   onRoomTypeIdChange,
   roomTypes,
@@ -80,27 +81,17 @@ export function RoomFormSheet({
           </SheetHeader>
 
           <div className="flex flex-1 flex-col gap-4 overflow-y-auto pr-1">
-            <label className="flex flex-col gap-1.5 text-sm font-medium">
+            <div className="flex flex-col gap-1.5 text-sm font-medium">
               {t('roomFormDormitoryLabel')}
-              {dormitories.length === 0 ? (
-                <p className="text-xs font-normal text-muted-foreground">
-                  {t('roomFormNoDormitories')}
-                </p>
-              ) : (
-                <Combobox
-                  options={dormitories.map((dormitory) => ({
-                    value: dormitory.id,
-                    label: dormitory.name,
-                  }))}
-                  value={dormitoryId}
-                  onChange={onDormitoryIdChange}
-                  placeholder={t('roomFormDormitoryPlaceholder')}
-                  searchPlaceholder={t('roomFormDormitorySearchPlaceholder')}
-                  emptyText={t('roomFormDormitoryNoResults')}
-                  disabled={isEdit}
-                />
-              )}
-            </label>
+              <DormitorySearchSelect
+                selectedLabel={dormitoryName}
+                onSelectDormitory={onDormitorySelect}
+                placeholder={t('roomFormDormitoryPlaceholder')}
+                searchPlaceholder={t('roomFormDormitorySearchPlaceholder')}
+                noResultsLabel={t('roomFormDormitoryNoResults')}
+                disabled={isEdit}
+              />
+            </div>
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('roomFormRoomTypeLabel')}
