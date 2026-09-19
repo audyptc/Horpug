@@ -1,7 +1,20 @@
 import { useEffect, useState } from 'react'
-import { BedDouble, FileText, ReceiptText, Wrench, type LucideIcon } from 'lucide-react'
+import {
+  BanknoteArrowDown,
+  BanknoteArrowUp,
+  BedDouble,
+  CalendarClock,
+  Droplets,
+  FileText,
+  ReceiptText,
+  TriangleAlert,
+  Wrench,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
+import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/components/ui/badge'
 import {
   Card,
@@ -50,8 +63,38 @@ function storeDormitory(dormitory: SelectedDormitory | null) {
   }
 }
 
+const moneyFormat = { maximumFractionDigits: 2 }
+
+// The cards are shown in these groups, in this order, so the page reads as
+// "how things stand", "the money", then "what needs doing". A group with no
+// card (the role can't read any of its sections) is left out entirely.
+const METRIC_GROUPS = [
+  { key: 'overview', titleKey: 'dashboardGroupOverview' },
+  { key: 'finance', titleKey: 'dashboardGroupFinance' },
+  { key: 'attention', titleKey: 'dashboardGroupAttention' },
+] as const
+
+type MetricGroup = (typeof METRIC_GROUPS)[number]['key']
+
+// Order of the cards within their group: money in first, then what is still owed.
+const METRIC_ORDER = [
+  'rooms',
+  'contracts',
+  'repairs',
+  'payments',
+  'expenses',
+  'invoices',
+  'invoices-overdue',
+  'contracts-expiring',
+  'electricity-readings',
+  'water-readings',
+]
+
 type Metric = {
   key: string
+  group: MetricGroup
+  // Draws attention to the card: there is something to act on.
+  alert?: boolean
   title: string
   value: string
   detail: string
@@ -162,12 +205,22 @@ export function DashboardPage() {
   const recentActivity = loaded?.recentActivity ?? null
   const isLoading = !loadError && (!ready || loaded?.key !== dormitoryKey)
 
+  // The month the "this month" figures cover is the server's, so the label
+  // can't disagree with the numbers if the browser's clock or zone differs.
+  const monthLabel = summary
+    ? new Date(summary.period.year, summary.period.month - 1, 1).toLocaleDateString(
+        language === 'th' ? 'th-TH' : 'en-US',
+        { month: 'long', year: 'numeric' }
+      )
+    : ''
+
   // A section the role can't read comes back null and simply gets no card.
   const metrics: Metric[] = []
   if (summary?.rooms) {
     const { total, available, occupied, maintenance } = summary.rooms
     metrics.push({
       key: 'rooms',
+      group: 'overview',
       title: t('dashboardTotalRooms'),
       value: total.toLocaleString(),
       detail: `${available.toLocaleString()} ${t('roomStatusAvailable')} · ${occupied.toLocaleString()} ${t('roomStatusOccupied')} · ${maintenance.toLocaleString()} ${t('roomStatusMaintenance')}`,
@@ -178,6 +231,7 @@ export function DashboardPage() {
   if (summary?.contracts) {
     metrics.push({
       key: 'contracts',
+      group: 'overview',
       title: t('dashboardActiveContracts'),
       value: summary.contracts.active.toLocaleString(),
       detail: `${summary.contracts.total.toLocaleString()} ${t('dashboardContractsTotalLabel')}`,
@@ -185,24 +239,102 @@ export function DashboardPage() {
       iconClass: 'bg-success/10 text-success',
     })
   }
+  if (summary?.contracts) {
+    metrics.push({
+      key: 'contracts-expiring',
+      group: 'attention',
+      alert: summary.contracts.expiring_soon + summary.contracts.past_end > 0,
+      title: t('dashboardExpiringContracts'),
+      value: summary.contracts.expiring_soon.toLocaleString(),
+      detail: t('dashboardExpiringContractsDetail').replace('{count}', summary.contracts.past_end.toLocaleString()),
+      icon: CalendarClock,
+      iconClass: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
+    })
+  }
   if (summary?.invoices) {
     metrics.push({
       key: 'invoices',
+      group: 'finance',
       title: t('dashboardUnpaidInvoices'),
       value: summary.invoices.outstanding_count.toLocaleString(),
-      detail: `${summary.invoices.outstanding_amount.toLocaleString()} ${t('dashboardBahtUnit')}`,
+      detail: `${summary.invoices.outstanding_amount.toLocaleString(undefined, moneyFormat)} ${t('dashboardBahtUnit')}`,
       icon: ReceiptText,
       iconClass: 'bg-warning/10 text-warning',
+    })
+    metrics.push({
+      key: 'invoices-overdue',
+      group: 'finance',
+      alert: summary.invoices.overdue_count > 0,
+      title: t('dashboardOverdueInvoices'),
+      value: summary.invoices.overdue_count.toLocaleString(),
+      detail: `${summary.invoices.overdue_amount.toLocaleString(undefined, moneyFormat)} ${t('dashboardOverdueAmountUnit')}`,
+      icon: TriangleAlert,
+      iconClass: 'bg-destructive/10 text-destructive',
     })
   }
   if (summary?.repairs) {
     metrics.push({
       key: 'repairs',
+      group: 'overview',
       title: t('dashboardPendingRepairs'),
       value: summary.repairs.pending.toLocaleString(),
       detail: `${summary.repairs.in_progress.toLocaleString()} ${t('repairStatusInProgress')}`,
       icon: Wrench,
       iconClass: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+    })
+  }
+  if (summary?.payments) {
+    const received = summary.payments.received_this_month
+    // Net needs both sides; without read access to expenses it is left out
+    // rather than shown as though expenses were zero.
+    const detail = summary.expenses
+      ? t('dashboardIncomeNetDetail')
+          .replace('{expenses}', summary.expenses.this_month.toLocaleString(undefined, moneyFormat))
+          .replace('{net}', (received - summary.expenses.this_month).toLocaleString(undefined, moneyFormat))
+      : t('dashboardIncomeDetail').replace('{month}', monthLabel)
+    metrics.push({
+      key: 'payments',
+      group: 'finance',
+      title: t('dashboardIncomeThisMonth'),
+      value: received.toLocaleString(undefined, moneyFormat),
+      detail,
+      icon: BanknoteArrowUp,
+      iconClass: 'bg-success/10 text-success',
+    })
+  }
+  if (summary?.expenses) {
+    metrics.push({
+      key: 'expenses',
+      group: 'finance',
+      title: t('dashboardExpensesThisMonth'),
+      value: summary.expenses.this_month.toLocaleString(undefined, moneyFormat),
+      detail: t('dashboardExpensesDetail').replace('{month}', monthLabel),
+      icon: BanknoteArrowDown,
+      iconClass: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+    })
+  }
+  if (summary?.electricity_readings) {
+    metrics.push({
+      key: 'electricity-readings',
+      group: 'attention',
+      alert: summary.electricity_readings.missing > 0,
+      title: t('dashboardMissingElectricity'),
+      value: summary.electricity_readings.missing.toLocaleString(),
+      detail: t('dashboardMissingReadingsDetail').replace('{month}', monthLabel),
+      icon: Zap,
+      iconClass: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
+    })
+  }
+  if (summary?.water_readings) {
+    metrics.push({
+      key: 'water-readings',
+      group: 'attention',
+      alert: summary.water_readings.missing > 0,
+      title: t('dashboardMissingWater'),
+      value: summary.water_readings.missing.toLocaleString(),
+      detail: t('dashboardMissingReadingsDetail').replace('{month}', monthLabel),
+      icon: Droplets,
+      iconClass: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400',
     })
   }
 
@@ -214,24 +346,26 @@ export function DashboardPage() {
       </section>
 
       {canChoose && (
-        <div className="flex max-w-sm flex-col gap-1.5 text-sm font-medium">
-          {t('dashboardDormitoryLabel')}
-          <DormitorySearchSelect
-            selectedLabel={dormitory?.name ?? ''}
-            onSelectDormitory={(selected) => selectDormitory({ id: selected.id, name: selected.name })}
-            clearLabel={t('dashboardAllDormitories')}
-            onClear={() => selectDormitory(null)}
-            placeholder={t('dashboardAllDormitories')}
-            searchPlaceholder={t('dashboardDormitorySearchPlaceholder')}
-            noResultsLabel={t('dashboardDormitoryNoResults')}
-          />
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-1 text-sm font-medium">
+          <span className="text-muted-foreground">{t('dashboardDormitoryLabel')}</span>
+          <div className="w-full sm:w-72">
+            <DormitorySearchSelect
+              selectedLabel={dormitory?.name ?? ''}
+              onSelectDormitory={(selected) => selectDormitory({ id: selected.id, name: selected.name })}
+              clearLabel={t('dashboardAllDormitories')}
+              onClear={() => selectDormitory(null)}
+              placeholder={t('dashboardAllDormitories')}
+              searchPlaceholder={t('dashboardDormitorySearchPlaceholder')}
+              noResultsLabel={t('dashboardDormitoryNoResults')}
+            />
+          </div>
         </div>
       )}
 
       {loadError && <p className="resource-error">{loadError}</p>}
 
       {!loadError && isLoading && (
-        <section className="metric-grid">
+        <section className="metric-grid" aria-busy="true">
           {Array.from({ length: 4 }).map((_, index) => (
             <Card key={index}>
               <CardHeader>
@@ -248,24 +382,44 @@ export function DashboardPage() {
 
       {!loadError && !isLoading && (
         <>
-          <section className="metric-grid">
-            {metrics.map((metric) => (
-              <Card key={metric.key} className="transition-shadow hover:shadow-md">
-                <CardHeader className="flex-row items-start justify-between space-y-0">
-                  <div>
-                    <CardDescription>{metric.title}</CardDescription>
-                    <CardTitle>{metric.value}</CardTitle>
-                  </div>
-                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${metric.iconClass}`}>
-                    <metric.icon size={20} strokeWidth={2} />
-                  </span>
-                </CardHeader>
-                <CardContent>
-                  <p className="metric-detail">{metric.detail}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </section>
+          {METRIC_GROUPS.map((group) => {
+            const items = metrics
+              .filter((metric) => metric.group === group.key)
+              .sort((x, y) => METRIC_ORDER.indexOf(x.key) - METRIC_ORDER.indexOf(y.key))
+            if (items.length === 0) return null
+
+            return (
+              <section key={group.key} className="flex flex-col gap-3">
+                <h2 className="px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t(group.titleKey)}
+                </h2>
+                <div className="metric-grid">
+                  {items.map((metric) => (
+                    <Card
+                      key={metric.key}
+                      className={cn(
+                        'transition-shadow hover:shadow-md',
+                        metric.alert && 'border-warning/60 ring-1 ring-warning/25'
+                      )}
+                    >
+                      <CardHeader className="flex-row items-start justify-between space-y-0">
+                        <div>
+                          <CardDescription>{metric.title}</CardDescription>
+                          <CardTitle className={cn(metric.alert && 'text-warning')}>{metric.value}</CardTitle>
+                        </div>
+                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${metric.iconClass}`}>
+                          <metric.icon size={20} strokeWidth={2} />
+                        </span>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="metric-detail">{metric.detail}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            )
+          })}
 
           {recentActivity && (
           <Card>
