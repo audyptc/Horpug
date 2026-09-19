@@ -94,7 +94,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 		return apierror.Unauthorized("authentication required")
 	}
 
-	filter :=activitylogusecase.ListFilter{
+	filter := activitylogusecase.ListFilter{
 		Search: strings.TrimSpace(c.Query("q")),
 	}
 

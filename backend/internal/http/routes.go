@@ -15,6 +15,9 @@ import (
 	contracthttp "apihorpug/internal/features/contract/delivery/http"
 	contractrepository "apihorpug/internal/features/contract/repository/postgres"
 	contractusecase "apihorpug/internal/features/contract/usecase"
+	dashboardhttp "apihorpug/internal/features/dashboard/delivery/http"
+	dashboardrepository "apihorpug/internal/features/dashboard/repository/postgres"
+	dashboardusecase "apihorpug/internal/features/dashboard/usecase"
 	documenthttp "apihorpug/internal/features/document/delivery/http"
 	documentrepository "apihorpug/internal/features/document/repository/postgres"
 	documentusecase "apihorpug/internal/features/document/usecase"
@@ -137,6 +140,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	documentRepo := documentrepository.NewRepository(db)
 	documentService := documentusecase.New(documentRepo)
 	documentHandler := documenthttp.NewHandler(documentService)
+	dashboardRepo := dashboardrepository.NewRepository(db)
+	dashboardService := dashboardusecase.New(dashboardRepo)
+	dashboardHandler := dashboardhttp.NewHandler(dashboardService)
 	authTokenRepo := authrepository.NewRepository(db)
 	authService := authusecase.New(userRepo, authTokenRepo, activityLogService, secretKey, accessTokenTTL, refreshTokenTTL)
 	authHandler := authhttp.NewHandler(authService, cookieSecure)
@@ -165,6 +171,10 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 
 	api.Get("/permissions", requirePermission("/permissions", permissiondomain.ActionRead), permissionHandler.List)
 	api.Post("/permissions", requirePermission("/permissions", permissiondomain.ActionCreate), permissionHandler.Create)
+
+	// The dashboard isn't a menu, so there is no route-level permission: the
+	// handler gates each section on its own menu's read permission instead.
+	api.Get("/dashboard/summary", dashboardHandler.GetSummary)
 
 	api.Get("/menus", menuHandler.List)
 	api.Get("/menus/mine", menuHandler.ListMine)

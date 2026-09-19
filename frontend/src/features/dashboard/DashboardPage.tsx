@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { BedDouble, FileText, ReceiptText, Wrench } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { BedDouble, FileText, ReceiptText, Wrench, type LucideIcon } from 'lucide-react'
 import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
@@ -18,20 +18,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/components/ui/table'
-import type { ApiRoom } from '@/features/room/types'
-import type { ApiContract } from '@/features/contract/types'
-import type { ApiInvoice } from '@/features/invoice/types'
-import type { ApiRepairRequest } from '@/features/repairrequest/types'
+import type { ApiDashboardSummary } from './types'
 import type { ApiActivityLog } from '@/features/activitylog/types'
 import { activityLogActionVariant } from '@/features/activitylog/utils'
+
+type Metric = {
+  key: string
+  title: string
+  value: string
+  detail: string
+  icon: LucideIcon
+  iconClass: string
+}
 
 export function DashboardPage() {
   const { t, language } = useLanguage()
 
-  const [rooms, setRooms] = useState<ApiRoom[] | null>(null)
-  const [contracts, setContracts] = useState<ApiContract[] | null>(null)
-  const [invoices, setInvoices] = useState<ApiInvoice[] | null>(null)
-  const [repairRequests, setRepairRequests] = useState<ApiRepairRequest[] | null>(null)
+  const [summary, setSummary] = useState<ApiDashboardSummary | null>(null)
+  // Null both while loading and when the role can't read activity logs; the
+  // card is only drawn once it holds a list.
   const [recentActivity, setRecentActivity] = useState<ApiActivityLog[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -39,19 +44,19 @@ export function DashboardPage() {
     let cancelled = false
 
     Promise.all([
-      api.get<ApiPage<ApiRoom[]>>('/rooms', { params: { per_page: 100 } }),
-      api.get<ApiPage<ApiContract[]>>('/contracts', { params: { per_page: 100 } }),
-      api.get<ApiPage<ApiInvoice[]>>('/invoices', { params: { per_page: 100 } }),
-      api.get<ApiPage<ApiRepairRequest[]>>('/repair-requests', { params: { per_page: 100 } }),
-      api.get<ApiPage<ApiActivityLog[]>>('/activity-logs', { params: { per_page: 5 } }),
+      // Counted by the server, so the figures stay right past any page size.
+      api.get<ApiDashboardSummary>('/dashboard/summary'),
+      // Needs its own menu permission, so a refusal hides this card rather
+      // than failing the whole dashboard.
+      api
+        .get<ApiPage<ApiActivityLog[]>>('/activity-logs', { params: { per_page: 5 } })
+        .then((res) => res.data.data)
+        .catch(() => null),
     ])
-      .then(([roomsRes, contractsRes, invoicesRes, repairRequestsRes, activityRes]) => {
+      .then(([summaryRes, activity]) => {
         if (cancelled) return
-        setRooms(roomsRes.data.data)
-        setContracts(contractsRes.data.data)
-        setInvoices(invoicesRes.data.data)
-        setRepairRequests(repairRequestsRes.data.data)
-        setRecentActivity(activityRes.data.data)
+        setSummary(summaryRes.data)
+        setRecentActivity(activity)
       })
       .catch((err) => {
         if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
@@ -63,77 +68,51 @@ export function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const isLoading = !loadError && (rooms === null || contracts === null || invoices === null || repairRequests === null)
+  const isLoading = !loadError && summary === null
 
-  const roomStats = useMemo(() => {
-    const list = rooms ?? []
-    return {
-      total: list.length,
-      available: list.filter((room) => room.status === 'available').length,
-      occupied: list.filter((room) => room.status === 'occupied').length,
-      maintenance: list.filter((room) => room.status === 'maintenance').length,
-    }
-  }, [rooms])
-
-  const contractStats = useMemo(() => {
-    const list = contracts ?? []
-    return {
-      total: list.length,
-      active: list.filter((contract) => contract.status === 'active').length,
-    }
-  }, [contracts])
-
-  const invoiceStats = useMemo(() => {
-    const list = invoices ?? []
-    const outstanding = list.filter((invoice) => invoice.status === 'unpaid' || invoice.status === 'overdue')
-    return {
-      count: outstanding.length,
-      amount: outstanding.reduce((sum, invoice) => sum + invoice.total_amount, 0),
-    }
-  }, [invoices])
-
-  const repairStats = useMemo(() => {
-    const list = repairRequests ?? []
-    return {
-      pending: list.filter((request) => request.status === 'pending').length,
-      inProgress: list.filter((request) => request.status === 'in_progress').length,
-    }
-  }, [repairRequests])
-
-  const metrics = [
-    {
+  // A section the role can't read comes back null and simply gets no card.
+  const metrics: Metric[] = []
+  if (summary?.rooms) {
+    const { total, available, occupied, maintenance } = summary.rooms
+    metrics.push({
       key: 'rooms',
       title: t('dashboardTotalRooms'),
-      value: roomStats.total.toLocaleString(),
-      detail: `${roomStats.available.toLocaleString()} ${t('roomStatusAvailable')} · ${roomStats.occupied.toLocaleString()} ${t('roomStatusOccupied')} · ${roomStats.maintenance.toLocaleString()} ${t('roomStatusMaintenance')}`,
+      value: total.toLocaleString(),
+      detail: `${available.toLocaleString()} ${t('roomStatusAvailable')} · ${occupied.toLocaleString()} ${t('roomStatusOccupied')} · ${maintenance.toLocaleString()} ${t('roomStatusMaintenance')}`,
       icon: BedDouble,
       iconClass: 'bg-primary/10 text-primary',
-    },
-    {
+    })
+  }
+  if (summary?.contracts) {
+    metrics.push({
       key: 'contracts',
       title: t('dashboardActiveContracts'),
-      value: contractStats.active.toLocaleString(),
-      detail: `${contractStats.total.toLocaleString()} ${t('dashboardContractsTotalLabel')}`,
+      value: summary.contracts.active.toLocaleString(),
+      detail: `${summary.contracts.total.toLocaleString()} ${t('dashboardContractsTotalLabel')}`,
       icon: FileText,
       iconClass: 'bg-success/10 text-success',
-    },
-    {
+    })
+  }
+  if (summary?.invoices) {
+    metrics.push({
       key: 'invoices',
       title: t('dashboardUnpaidInvoices'),
-      value: invoiceStats.count.toLocaleString(),
-      detail: `${invoiceStats.amount.toLocaleString()} ${t('dashboardBahtUnit')}`,
+      value: summary.invoices.outstanding_count.toLocaleString(),
+      detail: `${summary.invoices.outstanding_amount.toLocaleString()} ${t('dashboardBahtUnit')}`,
       icon: ReceiptText,
       iconClass: 'bg-warning/10 text-warning',
-    },
-    {
+    })
+  }
+  if (summary?.repairs) {
+    metrics.push({
       key: 'repairs',
       title: t('dashboardPendingRepairs'),
-      value: repairStats.pending.toLocaleString(),
-      detail: `${repairStats.inProgress.toLocaleString()} ${t('repairStatusInProgress')}`,
+      value: summary.repairs.pending.toLocaleString(),
+      detail: `${summary.repairs.in_progress.toLocaleString()} ${t('repairStatusInProgress')}`,
       icon: Wrench,
       iconClass: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
-    },
-  ]
+    })
+  }
 
   return (
     <main className="content">
@@ -181,6 +160,7 @@ export function DashboardPage() {
             ))}
           </section>
 
+          {recentActivity && (
           <Card>
             <CardHeader>
               <CardTitle>{t('dashboardRecentActivity')}</CardTitle>
@@ -225,6 +205,7 @@ export function DashboardPage() {
               )}
             </CardContent>
           </Card>
+          )}
         </>
       )}
     </main>

@@ -7,12 +7,12 @@ import (
 )
 
 type ActivityLog struct {
-	ID          uuid.UUID  `json:"id" gorm:"type:uuid;primaryKey"`
-	UserID      *uuid.UUID `json:"user_id,omitempty" gorm:"type:uuid"`
-	Username    string     `json:"username,omitempty" gorm:"-"`
-	Action      string     `json:"action" gorm:"size:50;not null"`
-	EntityType  string     `json:"entity_type" gorm:"size:80;not null"`
-	EntityID    *uuid.UUID `json:"entity_id,omitempty" gorm:"type:uuid"`
+	ID         uuid.UUID  `json:"id" gorm:"type:uuid;primaryKey"`
+	UserID     *uuid.UUID `json:"user_id,omitempty" gorm:"type:uuid"`
+	Username   string     `json:"username,omitempty" gorm:"-"`
+	Action     string     `json:"action" gorm:"size:50;not null"`
+	EntityType string     `json:"entity_type" gorm:"size:80;not null"`
+	EntityID   *uuid.UUID `json:"entity_id,omitempty" gorm:"type:uuid"`
 	// DormitoryID is the dormitory the event belongs to. It is nil for events
 	// that aren't tied to one (users, roles, tenants, auth), which only roles
 	// with full dormitory access can see.
