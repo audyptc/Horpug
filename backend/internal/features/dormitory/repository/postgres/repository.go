@@ -9,6 +9,7 @@ import (
 
 	dormdomain "apihorpug/internal/features/dormitory/domain"
 	dormusecase "apihorpug/internal/features/dormitory/usecase"
+	"apihorpug/internal/platform/sqlutil"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -49,7 +50,7 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 			`(d.name ILIKE $%d OR d.address ILIKE $%d OR d.phone ILIKE $%d)`,
 			*argIdx, *argIdx, *argIdx,
 		))
-		*args = append(*args, "%"+filters.Search+"%")
+		*args = append(*args, sqlutil.ContainsPattern(filters.Search))
 		*argIdx++
 	}
 
@@ -67,7 +68,7 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 			continue
 		}
 		conditions = append(conditions, fmt.Sprintf("%s ILIKE $%d", column, *argIdx))
-		*args = append(*args, "%"+filters.Columns[key]+"%")
+		*args = append(*args, sqlutil.ContainsPattern(filters.Columns[key]))
 		*argIdx++
 	}
 
@@ -198,7 +199,7 @@ func (r *Repository) ListActive(ctx context.Context, requesterID uuid.UUID, sear
 	}
 	if search != "" {
 		query += fmt.Sprintf(` AND d.name ILIKE $%d`, argIdx)
-		args = append(args, "%"+search+"%")
+		args = append(args, sqlutil.ContainsPattern(search))
 		argIdx++
 	}
 	query += fmt.Sprintf(` ORDER BY d.name ASC LIMIT $%d`, argIdx)

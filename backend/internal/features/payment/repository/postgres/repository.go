@@ -10,6 +10,7 @@ import (
 
 	paymentdomain "apihorpug/internal/features/payment/domain"
 	paymentusecase "apihorpug/internal/features/payment/usecase"
+	"apihorpug/internal/platform/sqlutil"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -108,7 +109,7 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 			`((t.first_name || ' ' || t.last_name) ILIKE $%d OR rm.room_number ILIKE $%d OR d.name ILIKE $%d OR EXISTS (SELECT 1 FROM payment_items pi WHERE pi.payment_id = p.id AND pi.reference_no ILIKE $%d))`,
 			*argIdx, *argIdx, *argIdx, *argIdx,
 		))
-		*args = append(*args, "%"+filters.Search+"%")
+		*args = append(*args, sqlutil.ContainsPattern(filters.Search))
 		*argIdx++
 	}
 
@@ -136,7 +137,7 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 			continue
 		}
 		conditions = append(conditions, clause)
-		*args = append(*args, "%"+value+"%")
+		*args = append(*args, sqlutil.ContainsPattern(value))
 		*argIdx++
 	}
 

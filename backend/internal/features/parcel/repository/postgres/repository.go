@@ -9,6 +9,7 @@ import (
 
 	parceldomain "apihorpug/internal/features/parcel/domain"
 	parcelusecase "apihorpug/internal/features/parcel/usecase"
+	"apihorpug/internal/platform/sqlutil"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -77,7 +78,7 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 			`((t.first_name || ' ' || t.last_name) ILIKE $%d OR rm.room_number ILIKE $%d OR d.name ILIKE $%d OR p.courier ILIKE $%d OR p.tracking_number ILIKE $%d)`,
 			*argIdx, *argIdx, *argIdx, *argIdx, *argIdx,
 		))
-		*args = append(*args, "%"+filters.Search+"%")
+		*args = append(*args, sqlutil.ContainsPattern(filters.Search))
 		*argIdx++
 	}
 
@@ -105,7 +106,7 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 			continue
 		}
 		conditions = append(conditions, clause)
-		*args = append(*args, "%"+value+"%")
+		*args = append(*args, sqlutil.ContainsPattern(value))
 		*argIdx++
 	}
 

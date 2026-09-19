@@ -10,6 +10,7 @@ import (
 
 	metdomain "apihorpug/internal/features/watermeter/domain"
 	metusecase "apihorpug/internal/features/watermeter/usecase"
+	"apihorpug/internal/platform/sqlutil"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -76,7 +77,7 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 		conditions = append(conditions, fmt.Sprintf(
 			`(rm.room_number ILIKE $%d OR d.name ILIKE $%d)`, *argIdx, *argIdx,
 		))
-		*args = append(*args, "%"+filters.Search+"%")
+		*args = append(*args, sqlutil.ContainsPattern(filters.Search))
 		*argIdx++
 	}
 
@@ -94,7 +95,7 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 			continue
 		}
 		conditions = append(conditions, fmt.Sprintf("%s ILIKE $%d", column, *argIdx))
-		*args = append(*args, "%"+filters.Columns[key]+"%")
+		*args = append(*args, sqlutil.ContainsPattern(filters.Columns[key]))
 		*argIdx++
 	}
 

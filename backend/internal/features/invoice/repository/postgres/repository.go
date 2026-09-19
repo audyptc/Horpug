@@ -10,6 +10,7 @@ import (
 
 	invoicedomain "apihorpug/internal/features/invoice/domain"
 	invoiceusecase "apihorpug/internal/features/invoice/usecase"
+	"apihorpug/internal/platform/sqlutil"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -92,7 +93,7 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 			`((t.first_name || ' ' || t.last_name) ILIKE $%d OR rm.room_number ILIKE $%d OR d.name ILIKE $%d)`,
 			*argIdx, *argIdx, *argIdx,
 		))
-		*args = append(*args, "%"+filters.Search+"%")
+		*args = append(*args, sqlutil.ContainsPattern(filters.Search))
 		*argIdx++
 	}
 
@@ -110,7 +111,7 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 			continue
 		}
 		conditions = append(conditions, fmt.Sprintf("%s ILIKE $%d", column, *argIdx))
-		*args = append(*args, "%"+filters.Columns[key]+"%")
+		*args = append(*args, sqlutil.ContainsPattern(filters.Columns[key]))
 		*argIdx++
 	}
 

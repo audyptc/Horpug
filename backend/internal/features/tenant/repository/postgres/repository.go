@@ -9,6 +9,7 @@ import (
 
 	tenantdomain "apihorpug/internal/features/tenant/domain"
 	tenantusecase "apihorpug/internal/features/tenant/usecase"
+	"apihorpug/internal/platform/sqlutil"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -37,7 +38,7 @@ func listWhere(filter tenantusecase.ListFilter) (string, []any) {
 			`(first_name ILIKE $%d OR last_name ILIKE $%d OR phone ILIKE $%d OR line_id ILIKE $%d OR id_card ILIKE $%d OR email ILIKE $%d)`,
 			idx, idx, idx, idx, idx, idx,
 		))
-		args = append(args, "%"+filter.Search+"%")
+		args = append(args, sqlutil.ContainsPattern(filter.Search))
 	}
 
 	// Sorted so the generated SQL is stable for a given set of filters rather
@@ -54,7 +55,7 @@ func listWhere(filter tenantusecase.ListFilter) (string, []any) {
 			continue
 		}
 		clauses = append(clauses, fmt.Sprintf("%s ILIKE $%d", column, len(args)+1))
-		args = append(args, "%"+filter.Columns[key]+"%")
+		args = append(args, sqlutil.ContainsPattern(filter.Columns[key]))
 	}
 
 	if filter.IsActive != nil {
@@ -134,7 +135,7 @@ func (r *Repository) ListActive(ctx context.Context, search string, limit int) (
 	argIdx := 1
 	if search != "" {
 		query += fmt.Sprintf(` AND (first_name ILIKE $%d OR last_name ILIKE $%d OR phone ILIKE $%d OR id_card ILIKE $%d)`, argIdx, argIdx, argIdx, argIdx)
-		args = append(args, "%"+search+"%")
+		args = append(args, sqlutil.ContainsPattern(search))
 		argIdx++
 	}
 	query += fmt.Sprintf(` ORDER BY first_name ASC, last_name ASC LIMIT $%d`, argIdx)

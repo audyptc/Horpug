@@ -1,7 +1,6 @@
 import type { FormEvent } from 'react'
 import { useLanguage } from '@/shared/i18n/language'
 import { Button } from '@/shared/components/ui/button'
-import { Combobox } from '@/shared/components/ui/combobox'
 import {
   Sheet,
   SheetContent,
@@ -10,6 +9,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/shared/components/ui/sheet'
+import { RoleSearchSelect } from '@/features/role/components/RoleSearchSelect'
 import type { ApiUserRole } from '../types'
 
 type UserFormSheetProps = {
@@ -22,9 +22,8 @@ type UserFormSheetProps = {
   onEmailChange: (email: string) => void
   password: string
   onPasswordChange: (password: string) => void
-  roles: ApiUserRole[]
-  roleId: string
-  onRoleIdChange: (roleId: string) => void
+  roleName: string
+  onRoleSelect: (role: ApiUserRole) => void
   isActive: boolean
   onIsActiveChange: (isActive: boolean) => void
   saving: boolean
@@ -42,9 +41,8 @@ export function UserFormSheet({
   onEmailChange,
   password,
   onPasswordChange,
-  roles,
-  roleId,
-  onRoleIdChange,
+  roleName,
+  onRoleSelect,
   isActive,
   onIsActiveChange,
   saving,
@@ -97,26 +95,16 @@ export function UserFormSheet({
               />
             </label>
 
-            <label className="flex flex-col gap-1.5 text-sm font-medium">
+            <div className="flex flex-col gap-1.5 text-sm font-medium">
               {t('userFormRoleLabel')}
-              {roles.length === 0 ? (
-                <p className="text-xs font-normal text-muted-foreground">
-                  {t('userFormNoRoles')}
-                </p>
-              ) : (
-                <Combobox
-                  options={roles.map((role) => ({
-                    value: role.id,
-                    label: role.name,
-                  }))}
-                  value={roleId}
-                  onChange={onRoleIdChange}
-                  placeholder={t('userFormRolePlaceholder')}
-                  searchPlaceholder={t('userFormRoleSearchPlaceholder')}
-                  emptyText={t('userFormRoleNoResults')}
-                />
-              )}
-            </label>
+              <RoleSearchSelect
+                selectedLabel={roleName}
+                onSelectRole={onRoleSelect}
+                placeholder={t('userFormRolePlaceholder')}
+                searchPlaceholder={t('userFormRoleSearchPlaceholder')}
+                noResultsLabel={t('userFormRoleNoResults')}
+              />
+            </div>
 
             <label className="flex items-center gap-2 text-sm font-medium">
               <input

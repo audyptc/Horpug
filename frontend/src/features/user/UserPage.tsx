@@ -6,7 +6,7 @@ import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { InformationDialog } from '@/shared/components/information-dialog'
 import { UserListCard } from './components/UserListCard'
 import { UserFormSheet } from './components/UserFormSheet'
-import type { ApiUser, ApiUserDeletionCheck, ApiUserRole } from './types'
+import type { ApiUser, ApiUserDeletionCheck } from './types'
 import {
   USER_PAGE_SIZE_OPTIONS,
   type UserColumnFilters,
@@ -22,7 +22,6 @@ export default function UserPage() {
   const { t } = useLanguage()
 
   const [users, setUsers] = useState<ApiUser[] | null>(null)
-  const [roles, setRoles] = useState<ApiUserRole[]>([])
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -47,6 +46,9 @@ export default function UserPage() {
   const [formEmail, setFormEmail] = useState('')
   const [formPassword, setFormPassword] = useState('')
   const [formRoleId, setFormRoleId] = useState('')
+  // The picked role is searched server-side and so isn't necessarily in any
+  // loaded list; its name is kept here for the selector's label.
+  const [formRoleName, setFormRoleName] = useState('')
   const [formIsActive, setFormIsActive] = useState(true)
   const [formSaving, setFormSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -64,26 +66,6 @@ export default function UserPage() {
     const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
     return () => window.clearTimeout(timer)
   }, [query])
-
-  // The role selector in the form isn't affected by the list's filters, so
-  // it's loaded once rather than on every refetch.
-  useEffect(() => {
-    let cancelled = false
-
-    api
-      .get<ApiPage<ApiUserRole[]>>('/roles', { params: { per_page: 100 } })
-      .then(({ data }) => {
-        if (!cancelled) setRoles(data.data)
-      })
-      .catch((err) => {
-        if (!cancelled) setLoadError(extractErrorMessage(err, t('resourceLoadError')))
-      })
-
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -154,6 +136,7 @@ export default function UserPage() {
     setFormEmail('')
     setFormPassword('')
     setFormRoleId('')
+    setFormRoleName('')
     setFormIsActive(true)
     setFormError(null)
     setFormOpen(true)
@@ -165,6 +148,7 @@ export default function UserPage() {
     setFormEmail(user.email)
     setFormPassword('')
     setFormRoleId(user.role_id)
+    setFormRoleName(user.role?.name ?? '')
     setFormIsActive(user.is_active)
     setFormError(null)
     setFormOpen(true)
@@ -367,9 +351,11 @@ export default function UserPage() {
         onEmailChange={setFormEmail}
         password={formPassword}
         onPasswordChange={setFormPassword}
-        roles={roles}
-        roleId={formRoleId}
-        onRoleIdChange={setFormRoleId}
+        roleName={formRoleName}
+        onRoleSelect={(role) => {
+          setFormRoleId(role.id)
+          setFormRoleName(role.name)
+        }}
         isActive={formIsActive}
         onIsActiveChange={setFormIsActive}
         saving={formSaving}

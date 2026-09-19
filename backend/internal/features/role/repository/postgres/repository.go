@@ -9,6 +9,7 @@ import (
 
 	roledomain "apihorpug/internal/features/role/domain"
 	roleusecase "apihorpug/internal/features/role/usecase"
+	"apihorpug/internal/platform/sqlutil"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -41,7 +42,7 @@ func (r *Repository) buildScope(filters roleusecase.ListFilters, argIdx *int, ar
 			`(name ILIKE $%d OR description ILIKE $%d)`,
 			*argIdx, *argIdx,
 		))
-		*args = append(*args, "%"+filters.Search+"%")
+		*args = append(*args, sqlutil.ContainsPattern(filters.Search))
 		*argIdx++
 	}
 
@@ -59,7 +60,7 @@ func (r *Repository) buildScope(filters roleusecase.ListFilters, argIdx *int, ar
 			continue
 		}
 		conditions = append(conditions, fmt.Sprintf("%s ILIKE $%d", column, *argIdx))
-		*args = append(*args, "%"+filters.Columns[key]+"%")
+		*args = append(*args, sqlutil.ContainsPattern(filters.Columns[key]))
 		*argIdx++
 	}
 
@@ -153,7 +154,7 @@ func (r *Repository) ListActive(ctx context.Context, search string, limit int) (
 	argIdx := 1
 	if search != "" {
 		query += fmt.Sprintf(" AND name ILIKE $%d", argIdx)
-		args = append(args, "%"+search+"%")
+		args = append(args, sqlutil.ContainsPattern(search))
 		argIdx++
 	}
 	query += fmt.Sprintf(" ORDER BY name ASC LIMIT $%d", argIdx)

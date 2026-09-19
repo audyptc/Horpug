@@ -939,7 +939,6 @@ const en = {
   userFormRolePlaceholder: 'Select a role',
   userFormRoleSearchPlaceholder: 'Search roles...',
   userFormRoleNoResults: 'No roles found.',
-  userFormNoRoles: 'No roles available.',
   userFormActiveLabel: 'Active',
   userFormCreateTitle: 'Create user',
   userFormEditTitle: 'Edit user',

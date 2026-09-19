@@ -10,6 +10,7 @@ import (
 	roledomain "apihorpug/internal/features/role/domain"
 	userdomain "apihorpug/internal/features/user/domain"
 	userusecase "apihorpug/internal/features/user/usecase"
+	"apihorpug/internal/platform/sqlutil"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -46,7 +47,7 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 			`(u.username ILIKE $%d OR u.email ILIKE $%d OR r.name ILIKE $%d)`,
 			*argIdx, *argIdx, *argIdx,
 		))
-		*args = append(*args, "%"+filters.Search+"%")
+		*args = append(*args, sqlutil.ContainsPattern(filters.Search))
 		*argIdx++
 	}
 
@@ -64,7 +65,7 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 			continue
 		}
 		conditions = append(conditions, fmt.Sprintf("%s ILIKE $%d", column, *argIdx))
-		*args = append(*args, "%"+filters.Columns[key]+"%")
+		*args = append(*args, sqlutil.ContainsPattern(filters.Columns[key]))
 		*argIdx++
 	}
 
@@ -225,7 +226,7 @@ func (r *Repository) ListActive(ctx context.Context, requesterID uuid.UUID, sear
 	}
 	if search != "" {
 		query += fmt.Sprintf(` AND (u.username ILIKE $%d OR u.email ILIKE $%d)`, argIdx, argIdx)
-		args = append(args, "%"+search+"%")
+		args = append(args, sqlutil.ContainsPattern(search))
 		argIdx++
 	}
 	query += fmt.Sprintf(` ORDER BY u.username ASC LIMIT $%d`, argIdx)

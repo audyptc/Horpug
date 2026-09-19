@@ -9,6 +9,7 @@ import (
 
 	activitylogdomain "apihorpug/internal/features/activitylog/domain"
 	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
+	"apihorpug/internal/platform/sqlutil"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -121,7 +122,7 @@ func (r *Repository) buildListConditions(ctx context.Context, requesterID uuid.U
 			`(COALESCE(u.username, '') ILIKE $%d OR al.action ILIKE $%d OR al.entity_type ILIKE $%d OR al.description ILIKE $%d OR al.ip_address ILIKE $%d)`,
 			*argIdx, *argIdx, *argIdx, *argIdx, *argIdx,
 		))
-		*args = append(*args, "%"+filter.Search+"%")
+		*args = append(*args, sqlutil.ContainsPattern(filter.Search))
 		*argIdx++
 	}
 
@@ -139,7 +140,7 @@ func (r *Repository) buildListConditions(ctx context.Context, requesterID uuid.U
 			continue
 		}
 		conditions = append(conditions, fmt.Sprintf("%s ILIKE $%d", column, *argIdx))
-		*args = append(*args, "%"+filter.Columns[key]+"%")
+		*args = append(*args, sqlutil.ContainsPattern(filter.Columns[key]))
 		*argIdx++
 	}
 

@@ -939,7 +939,6 @@ const th: Record<TranslationKey, string> = {
   userFormRolePlaceholder: 'เลือกบทบาท',
   userFormRoleSearchPlaceholder: 'ค้นหาบทบาท...',
   userFormRoleNoResults: 'ไม่พบบทบาทที่ค้นหา',
-  userFormNoRoles: 'ไม่มีบทบาทที่พร้อมใช้งาน',
   userFormActiveLabel: 'ใช้งาน',
   userFormCreateTitle: 'สร้างผู้ใช้งาน',
   userFormEditTitle: 'แก้ไขผู้ใช้งาน',

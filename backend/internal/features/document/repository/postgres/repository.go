@@ -9,6 +9,7 @@ import (
 
 	documentdomain "apihorpug/internal/features/document/domain"
 	documentusecase "apihorpug/internal/features/document/usecase"
+	"apihorpug/internal/platform/sqlutil"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -74,7 +75,7 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 			`(doc.name ILIKE $%d OR d.name ILIKE $%d OR (t.first_name || ' ' || t.last_name) ILIKE $%d OR rm.room_number ILIKE $%d)`,
 			*argIdx, *argIdx, *argIdx, *argIdx,
 		))
-		*args = append(*args, "%"+filters.Search+"%")
+		*args = append(*args, sqlutil.ContainsPattern(filters.Search))
 		*argIdx++
 	}
 
@@ -102,7 +103,7 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 			continue
 		}
 		conditions = append(conditions, clause)
-		*args = append(*args, "%"+value+"%")
+		*args = append(*args, sqlutil.ContainsPattern(value))
 		*argIdx++
 	}
 
