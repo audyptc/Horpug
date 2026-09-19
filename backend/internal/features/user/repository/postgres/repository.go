@@ -29,8 +29,12 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 // apply exactly the same conditions, otherwise the reported total disagrees
 // with the rows returned and the client paginates over a page count that
 // doesn't exist.
-func (r *Repository) buildScope(filters userusecase.ListFilters, argIdx *int, args *[]any) []string {
+func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filters userusecase.ListFilters, argIdx *int, args *[]any) []string {
 	conditions := make([]string, 0)
+
+	if !full {
+		conditions = append(conditions, visibleUserCondition(requesterID, roleID, argIdx, args))
+	}
 
 	if filters.IsActive != nil {
 		conditions = append(conditions, fmt.Sprintf(`u.is_active = $%d`, *argIdx))
@@ -84,10 +88,15 @@ func listOrderBy(filters userusecase.ListFilters) string {
 	return fmt.Sprintf(" ORDER BY %s %s, u.id ASC", column, direction)
 }
 
-func (r *Repository) Count(ctx context.Context, filters userusecase.ListFilters) (int64, error) {
+func (r *Repository) Count(ctx context.Context, requesterID uuid.UUID, filters userusecase.ListFilters) (int64, error) {
+	full, roleID, err := r.requesterScope(ctx, requesterID)
+	if err != nil {
+		return 0, err
+	}
+
 	argIdx := 1
 	args := make([]any, 0)
-	conditions := r.buildScope(filters, &argIdx, &args)
+	conditions := r.buildScope(full, roleID, requesterID, filters, &argIdx, &args)
 
 	query := `SELECT COUNT(*) FROM users u JOIN roles r ON r.id = u.role_id`
 	if len(conditions) > 0 {
@@ -101,10 +110,15 @@ func (r *Repository) Count(ctx context.Context, filters userusecase.ListFilters)
 	return total, nil
 }
 
-func (r *Repository) List(ctx context.Context, filters userusecase.ListFilters, limit, offset int) ([]userdomain.User, error) {
+func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, filters userusecase.ListFilters, limit, offset int) ([]userdomain.User, error) {
+	full, roleID, err := r.requesterScope(ctx, requesterID)
+	if err != nil {
+		return nil, err
+	}
+
 	argIdx := 1
 	args := make([]any, 0)
-	conditions := r.buildScope(filters, &argIdx, &args)
+	conditions := r.buildScope(full, roleID, requesterID, filters, &argIdx, &args)
 
 	query := `
 		SELECT
@@ -175,7 +189,12 @@ func (r *Repository) List(ctx context.Context, filters userusecase.ListFilters, 
 	return users, nil
 }
 
-func (r *Repository) ListActive(ctx context.Context, search string, limit int) ([]userdomain.User, error) {
+func (r *Repository) ListActive(ctx context.Context, requesterID uuid.UUID, search string, limit int) ([]userdomain.User, error) {
+	full, roleID, err := r.requesterScope(ctx, requesterID)
+	if err != nil {
+		return nil, err
+	}
+
 	query := `
 		SELECT
 			u.id,
@@ -201,6 +220,9 @@ func (r *Repository) ListActive(ctx context.Context, search string, limit int) (
 	`
 	args := make([]any, 0)
 	argIdx := 1
+	if !full {
+		query += ` AND ` + visibleUserCondition(requesterID, roleID, &argIdx, &args)
+	}
 	if search != "" {
 		query += fmt.Sprintf(` AND (u.username ILIKE $%d OR u.email ILIKE $%d)`, argIdx, argIdx)
 		args = append(args, "%"+search+"%")

@@ -84,10 +84,17 @@ var SortColumns = map[string]string{
 const DefaultSortKey = "username"
 
 type Repository interface {
-	Count(ctx context.Context, filters ListFilters) (int64, error)
-	List(ctx context.Context, filters ListFilters, limit, offset int) ([]userdomain.User, error)
-	ListActive(ctx context.Context, search string, limit int) ([]userdomain.User, error)
+	Count(ctx context.Context, requesterID uuid.UUID, filters ListFilters) (int64, error)
+	List(ctx context.Context, requesterID uuid.UUID, filters ListFilters, limit, offset int) ([]userdomain.User, error)
+	ListActive(ctx context.Context, requesterID uuid.UUID, search string, limit int) ([]userdomain.User, error)
 	GetByID(ctx context.Context, id uuid.UUID) (userdomain.User, error)
+	// EnsureAccess fails with ErrUserNotFound unless the user exists and the
+	// requester may see and act on them. GetByID stays unscoped because the
+	// auth flow also loads users through it.
+	EnsureAccess(ctx context.Context, id, requesterID uuid.UUID) error
+	// EnsureRoleAssignable fails unless the role exists and grants nothing the
+	// requester lacks (ErrRoleNotFound / ErrRoleNotAssignable).
+	EnsureRoleAssignable(ctx context.Context, roleID, requesterID uuid.UUID) error
 	GetPermissions(ctx context.Context, id uuid.UUID) ([]UserPermissionItem, error)
 	CountReferences(ctx context.Context, id uuid.UUID) (int64, error)
 	Create(ctx context.Context, input CreateInput, hashedPassword string) (userdomain.User, error)
@@ -129,13 +136,16 @@ func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action 
 	}
 }
 
-func (s *Service) List(ctx context.Context, filters ListFilters, limit, offset int) ([]userdomain.User, int64, error) {
-	total, err := s.repo.Count(ctx, filters)
+// List returns every user for roles with full dormitory access, otherwise only
+// the users the requester may see: themselves, users they created and users
+// sharing a dormitory with them, excluding those with a more privileged role.
+func (s *Service) List(ctx context.Context, requesterID uuid.UUID, filters ListFilters, limit, offset int) ([]userdomain.User, int64, error) {
+	total, err := s.repo.Count(ctx, requesterID, filters)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	users, err := s.repo.List(ctx, filters, limit, offset)
+	users, err := s.repo.List(ctx, requesterID, filters, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -143,19 +153,25 @@ func (s *Service) List(ctx context.Context, filters ListFilters, limit, offset i
 	return users, total, nil
 }
 
-func (s *Service) ListActive(ctx context.Context, search string, limit int) ([]userdomain.User, error) {
-	return s.repo.ListActive(ctx, strings.TrimSpace(search), limit)
+func (s *Service) ListActive(ctx context.Context, requesterID uuid.UUID, search string, limit int) ([]userdomain.User, error) {
+	return s.repo.ListActive(ctx, requesterID, strings.TrimSpace(search), limit)
 }
 
-func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (userdomain.User, error) {
+func (s *Service) GetByID(ctx context.Context, id, requesterID uuid.UUID) (userdomain.User, error) {
+	if err := s.repo.EnsureAccess(ctx, id, requesterID); err != nil {
+		return userdomain.User{}, err
+	}
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *Service) GetPermissions(ctx context.Context, id uuid.UUID) ([]UserPermissionItem, error) {
+func (s *Service) GetPermissions(ctx context.Context, id, requesterID uuid.UUID) ([]UserPermissionItem, error) {
+	if err := s.repo.EnsureAccess(ctx, id, requesterID); err != nil {
+		return nil, err
+	}
 	return s.repo.GetPermissions(ctx, id)
 }
 
-func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress string) (userdomain.User, error) {
+func (s *Service) Create(ctx context.Context, requesterID uuid.UUID, input CreateInput, ipAddress string) (userdomain.User, error) {
 	input.Username = strings.TrimSpace(input.Username)
 	input.Email = strings.TrimSpace(strings.ToLower(input.Email))
 	if input.Username == "" || input.Email == "" || strings.TrimSpace(input.Password) == "" {
@@ -163,6 +179,9 @@ func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress strin
 	}
 	if input.RoleID == uuid.Nil {
 		return userdomain.User{}, userdomain.ErrRoleNotFound
+	}
+	if err := s.repo.EnsureRoleAssignable(ctx, input.RoleID, requesterID); err != nil {
+		return userdomain.User{}, err
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
@@ -179,7 +198,11 @@ func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress strin
 	return user, nil
 }
 
-func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput, ipAddress string) (userdomain.User, error) {
+func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput, ipAddress string) (userdomain.User, error) {
+	if err := s.repo.EnsureAccess(ctx, id, requesterID); err != nil {
+		return userdomain.User{}, err
+	}
+
 	user, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return userdomain.User{}, err
@@ -202,8 +225,13 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput, i
 		}
 		input.Email = &email
 	}
-	if input.RoleID != nil && *input.RoleID == uuid.Nil {
-		return userdomain.User{}, userdomain.ErrRoleNotFound
+	if input.RoleID != nil {
+		if *input.RoleID == uuid.Nil {
+			return userdomain.User{}, userdomain.ErrRoleNotFound
+		}
+		if err := s.repo.EnsureRoleAssignable(ctx, *input.RoleID, requesterID); err != nil {
+			return userdomain.User{}, err
+		}
 	}
 
 	var hashedPassword *string
@@ -230,6 +258,10 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateInput, i
 }
 
 func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddress string) error {
+	if err := s.repo.EnsureAccess(ctx, id, requesterID); err != nil {
+		return err
+	}
+
 	user, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return err
@@ -246,7 +278,11 @@ func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddre
 	return nil
 }
 
-func (s *Service) CheckDeletion(ctx context.Context, id uuid.UUID) (DeletionCheck, error) {
+func (s *Service) CheckDeletion(ctx context.Context, id, requesterID uuid.UUID) (DeletionCheck, error) {
+	if err := s.repo.EnsureAccess(ctx, id, requesterID); err != nil {
+		return DeletionCheck{}, err
+	}
+
 	user, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return DeletionCheck{}, err

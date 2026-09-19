@@ -141,6 +141,11 @@ func parseListFilters(c fiber.Ctx) (userusecase.ListFilters, error) {
 // @Security BearerAuth
 // @Router /users [get]
 func (h *Handler) List(c fiber.Ctx) error {
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
 	filters, err := parseListFilters(c)
 	if err != nil {
 		return err
@@ -154,7 +159,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	users, total, err := h.usecase.List(ctx, filters, perPage, offset)
+	users, total, err := h.usecase.List(ctx, requesterID, filters, perPage, offset)
 	if err != nil {
 		return apierror.Internal("failed to list users")
 	}
@@ -175,6 +180,11 @@ func (h *Handler) List(c fiber.Ctx) error {
 // @Security BearerAuth
 // @Router /users/active [get]
 func (h *Handler) ListActive(c fiber.Ctx) error {
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
 	search := strings.TrimSpace(c.Query("q"))
 
 	limit := defaultActiveListLimit
@@ -192,7 +202,7 @@ func (h *Handler) ListActive(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	users, err := h.usecase.ListActive(ctx, search, limit)
+	users, err := h.usecase.ListActive(ctx, requesterID, search, limit)
 	if err != nil {
 		return apierror.Internal("failed to list active users")
 	}
@@ -217,10 +227,15 @@ func (h *Handler) Get(c fiber.Ctx) error {
 		return apierror.BadRequest("invalid user id")
 	}
 
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	user, err := h.usecase.GetByID(ctx, id)
+	user, err := h.usecase.GetByID(ctx, id, requesterID)
 	if err != nil {
 		if errors.Is(err, userdomain.ErrUserNotFound) {
 			return apierror.NotFound("user not found")
@@ -248,10 +263,15 @@ func (h *Handler) GetPermissions(c fiber.Ctx) error {
 		return apierror.BadRequest("invalid user id")
 	}
 
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	permissions, err := h.usecase.GetPermissions(ctx, id)
+	permissions, err := h.usecase.GetPermissions(ctx, id, requesterID)
 	if err != nil {
 		if errors.Is(err, userdomain.ErrUserNotFound) {
 			return apierror.NotFound("user not found")
@@ -279,10 +299,15 @@ func (h *Handler) CheckDeletion(c fiber.Ctx) error {
 		return apierror.BadRequest("invalid user id")
 	}
 
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	check, err := h.usecase.CheckDeletion(ctx, id)
+	check, err := h.usecase.CheckDeletion(ctx, id, requesterID)
 	if err != nil {
 		if errors.Is(err, userdomain.ErrUserNotFound) {
 			return apierror.NotFound("user not found")
@@ -301,6 +326,7 @@ func (h *Handler) CheckDeletion(c fiber.Ctx) error {
 // @Param request body createUserRequest true "User payload"
 // @Success 201 {object} userdomain.User
 // @Failure 400 {object} apierror.Error
+// @Failure 403 {object} apierror.Error "Role grants more access than the caller has"
 // @Failure 409 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
 // @Security BearerAuth
@@ -324,7 +350,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	user, err := h.usecase.Create(ctx, userusecase.CreateInput{
+	user, err := h.usecase.Create(ctx, requesterID, userusecase.CreateInput{
 		Username:  strings.TrimSpace(req.Username),
 		Email:     strings.TrimSpace(req.Email),
 		Password:  req.Password,
@@ -341,6 +367,9 @@ func (h *Handler) Create(c fiber.Ctx) error {
 				return apierror.BadRequest("role_id is required")
 			}
 			return apierror.BadRequest("role not found")
+		}
+		if errors.Is(err, userdomain.ErrRoleNotAssignable) {
+			return apierror.Forbidden("you cannot assign a role with more access than your own")
 		}
 		if errors.Is(err, userdomain.ErrUserDuplicate) {
 			return apierror.Conflict("username or email already exists")
@@ -360,6 +389,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 // @Param request body updateUserRequest true "User payload"
 // @Success 200 {object} userdomain.User
 // @Failure 400 {object} apierror.Error
+// @Failure 403 {object} apierror.Error "Protected user, or role grants more access than the caller has"
 // @Failure 404 {object} apierror.Error
 // @Failure 409 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
@@ -384,7 +414,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	updatedUser, err := h.usecase.Update(ctx, id, userusecase.UpdateInput{
+	updatedUser, err := h.usecase.Update(ctx, id, requesterID, userusecase.UpdateInput{
 		Username:  req.Username,
 		Email:     req.Email,
 		Password:  req.Password,
@@ -407,6 +437,9 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		}
 		if errors.Is(err, userdomain.ErrRoleNotFound) {
 			return apierror.BadRequest("role not found")
+		}
+		if errors.Is(err, userdomain.ErrRoleNotAssignable) {
+			return apierror.Forbidden("you cannot assign a role with more access than your own")
 		}
 		if errors.Is(err, userdomain.ErrUserDuplicate) {
 			return apierror.Conflict("username or email already exists")

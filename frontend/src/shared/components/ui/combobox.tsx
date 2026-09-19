@@ -60,16 +60,21 @@ export function Combobox({
   }, [open])
 
   useEffect(() => {
-    if (open) {
-      setQuery('')
-      setHighlightedIndex(0)
-      requestAnimationFrame(() => inputRef.current?.focus())
-    }
+    if (open) requestAnimationFrame(() => inputRef.current?.focus())
   }, [open])
 
-  useEffect(() => {
+  function togglePanel() {
+    if (!open) {
+      setQuery('')
+      setHighlightedIndex(0)
+    }
+    setOpen(!open)
+  }
+
+  function changeQuery(value: string) {
+    setQuery(value)
     setHighlightedIndex(0)
-  }, [query])
+  }
 
   function selectOption(option: ComboboxOption) {
     onChange(option.value)
@@ -101,7 +106,7 @@ export function Combobox({
           'flex h-10 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50',
           !selected && 'text-muted-foreground'
         )}
-        onClick={() => setOpen((value) => !value)}
+        onClick={togglePanel}
         disabled={disabled}
       >
         <span className="truncate">{selected ? selected.label : placeholder}</span>
@@ -116,7 +121,7 @@ export function Combobox({
               ref={inputRef}
               type="text"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => changeQuery(event.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={searchPlaceholder}
               className="h-10 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
