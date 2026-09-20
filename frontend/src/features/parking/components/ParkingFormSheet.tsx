@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Button } from '@/shared/components/ui/button'
+import { Combobox } from '@/shared/components/ui/combobox'
 import {
   Sheet,
   SheetContent,
@@ -109,17 +110,18 @@ export function ParkingFormSheet({
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('parkingFormVehicleTypeLabel')}
-              <select
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+              <Combobox
+                options={VEHICLE_TYPES.map((value) => ({
+                  value,
+                  label: t(vehicleTypeLabelKeys[value]),
+                }))}
                 value={vehicleType}
-                onChange={(event) => onVehicleTypeChange(event.target.value as VehicleType)}
-              >
-                {VEHICLE_TYPES.map((value) => (
-                  <option key={value} value={value}>
-                    {t(vehicleTypeLabelKeys[value])}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => onVehicleTypeChange(value as VehicleType)}
+                showCheck={false}
+                placeholder={t('parkingFormVehicleTypePlaceholder')}
+                searchPlaceholder={t('parkingFormVehicleTypeSearchPlaceholder')}
+                emptyText={t('parkingFormVehicleTypeNoResults')}
+              />
             </label>
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">

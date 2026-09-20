@@ -2,8 +2,12 @@ package usecase
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"strings"
 
+	activitylogdomain "apihorpug/internal/features/activitylog/domain"
+	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
 	parkingdomain "apihorpug/internal/features/parking/domain"
 
 	"github.com/google/uuid"
@@ -75,12 +79,45 @@ type Repository interface {
 	Delete(ctx context.Context, id, requesterID uuid.UUID) error
 }
 
-type Service struct {
-	repo Repository
+// ActivityLogger records who registered, changed or deleted a parking
+// registration for the audit trail. Failures to record are logged but never
+// block the flow.
+type ActivityLogger interface {
+	Create(ctx context.Context, input activitylogusecase.CreateInput) (activitylogdomain.ActivityLog, error)
 }
 
-func New(repo Repository) *Service {
-	return &Service{repo: repo}
+type Service struct {
+	repo        Repository
+	activityLog ActivityLogger
+}
+
+func New(repo Repository, activityLog ActivityLogger) *Service {
+	return &Service{repo: repo, activityLog: activityLog}
+}
+
+// recordActivity is best-effort: a failure to write the audit trail must
+// never fail the parking flow itself.
+func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, parking parkingdomain.Parking, description, ipAddress string) {
+	if s.activityLog == nil {
+		return
+	}
+	entityID := parking.ID
+	_, err := s.activityLog.Create(ctx, activitylogusecase.CreateInput{
+		UserID:      userID,
+		Action:      action,
+		EntityType:  "parking",
+		EntityID:    &entityID,
+		DormitoryID: parking.DormitoryID,
+		Description: description,
+		IPAddress:   ipAddress,
+	})
+	if err != nil {
+		log.Printf("failed to record activity log (action=%s): %v", action, err)
+	}
+}
+
+func parkingActivityDescription(parking parkingdomain.Parking) string {
+	return fmt.Sprintf("parking: %s, %s, %s", parking.TenantName, parking.VehicleType, parking.LicensePlate)
 }
 
 func (s *Service) List(ctx context.Context, requesterID uuid.UUID, filters ListFilters, limit, offset int) ([]parkingdomain.Parking, int64, error) {
@@ -117,7 +154,7 @@ func (s *Service) GetByID(ctx context.Context, id, requesterID uuid.UUID) (parki
 	return s.repo.GetByID(ctx, id, requesterID)
 }
 
-func (s *Service) Create(ctx context.Context, input CreateInput) (parkingdomain.Parking, error) {
+func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress string) (parkingdomain.Parking, error) {
 	input.LicensePlate = strings.TrimSpace(input.LicensePlate)
 	input.ParkingSpot = strings.TrimSpace(input.ParkingSpot)
 	if input.VehicleType == "" {
@@ -134,10 +171,16 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (parkingdomain.
 		return parkingdomain.Parking{}, parkingdomain.ErrInvalidVehicleType
 	}
 
-	return s.repo.Create(ctx, input)
+	parking, err := s.repo.Create(ctx, input)
+	if err != nil {
+		return parkingdomain.Parking{}, err
+	}
+
+	s.recordActivity(ctx, input.CreatedBy, "CREATE", parking, "Created "+parkingActivityDescription(parking), ipAddress)
+	return parking, nil
 }
 
-func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (parkingdomain.Parking, error) {
+func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput, ipAddress string) (parkingdomain.Parking, error) {
 	if input.VehicleType != nil && !input.VehicleType.Valid() {
 		return parkingdomain.Parking{}, parkingdomain.ErrInvalidVehicleType
 	}
@@ -153,9 +196,28 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 		input.ParkingSpot = &parkingSpot
 	}
 
-	return s.repo.Update(ctx, id, requesterID, input)
+	parking, err := s.repo.Update(ctx, id, requesterID, input)
+	if err != nil {
+		return parkingdomain.Parking{}, err
+	}
+
+	s.recordActivity(ctx, &requesterID, "UPDATE", parking, "Updated "+parkingActivityDescription(parking), ipAddress)
+	return parking, nil
 }
 
-func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
-	return s.repo.Delete(ctx, id, requesterID)
+func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddress string) error {
+	// Read first: once deleted there is no tenant or plate left to describe.
+	// It also checks the requester's access, so a missing or out-of-scope
+	// registration fails here as not found, same as the delete itself would.
+	parking, err := s.repo.GetByID(ctx, id, requesterID)
+	if err != nil {
+		return err
+	}
+
+	if err := s.repo.Delete(ctx, id, requesterID); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, &requesterID, "DELETE", parking, "Deleted "+parkingActivityDescription(parking), ipAddress)
+	return nil
 }
