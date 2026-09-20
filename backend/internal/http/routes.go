@@ -135,7 +135,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	parcelService := parcelusecase.New(parcelRepo)
 	parcelHandler := parcelhttp.NewHandler(parcelService)
 	announcementRepo := announcementrepository.NewRepository(db)
-	announcementService := announcementusecase.New(announcementRepo)
+	announcementService := announcementusecase.New(announcementRepo, activityLogService)
 	announcementHandler := announcementhttp.NewHandler(announcementService)
 	documentRepo := documentrepository.NewRepository(db)
 	documentService := documentusecase.New(documentRepo)
