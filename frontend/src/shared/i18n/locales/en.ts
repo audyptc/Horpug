@@ -389,8 +389,12 @@ const en = {
   lineLinkNotConfigured: 'LINE integration is not configured yet.',
   invoiceDelete: 'Delete invoice',
   invoiceDeleting: 'Deleting...',
-  invoiceDeleteConfirm: 'You are about to delete this invoice. Its data will be removed from the system and cannot be recovered.',
+  invoiceDeleteConfirm:
+    'You are about to delete this invoice. Its line items will be removed, and any electricity/water readings billed on it will become unbilled again. This cannot be undone.',
   invoiceDeleteError: 'Failed to delete invoice.',
+  invoiceDeleteHasPayments:
+    'A paid invoice, or one with recorded payments, cannot be deleted. Set its status to cancelled instead.',
+  invoiceDeletePaidUnavailable: 'Paid invoices cannot be deleted. Set the status to cancelled instead.',
   invoiceCreateError: 'Failed to create invoice.',
   invoiceUpdateError: 'Failed to update invoice.',
   invoiceContractRequired: 'Contract is required.',

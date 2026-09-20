@@ -340,7 +340,11 @@ export default function InvoicePage() {
       refresh()
       setConfirmDeleteInvoice(null)
     } catch (err) {
-      setDeleteError(extractErrorMessage(err, t('invoiceDeleteError')))
+      setDeleteError(
+        extractErrorCode(err) === 'invoice_has_payments'
+          ? t('invoiceDeleteHasPayments')
+          : extractErrorMessage(err, t('invoiceDeleteError')),
+      )
     } finally {
       setDeletingInvoiceId(null)
     }

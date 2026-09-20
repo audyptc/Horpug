@@ -32,20 +32,32 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "Filter by user, action, entity type, description or IP",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[action]=create; column must be one of username, action, entity_type, description, ip_address",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Filter by user ID",
                         "name": "user_id",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Filter by entity type",
-                        "name": "entity_type",
+                        "description": "Filter by entity ID",
+                        "name": "entity_id",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Filter by entity ID",
-                        "name": "entity_id",
+                        "description": "Narrow to one dormitory (combined with the caller's own access, never widening it)",
+                        "name": "dormitory_id",
                         "in": "query"
                     },
                     {
@@ -58,6 +70,18 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter by date, inclusive (YYYY-MM-DD)",
                         "name": "date_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: created_at, username, action, entity_type, description, ip_address (default created_at)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
                         "in": "query"
                     },
                     {
@@ -232,6 +256,30 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter by published date, inclusive (YYYY-MM-DD)",
                         "name": "date_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by dormitory name, title or content",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[title]=maintenance; column must be one of dormitory_name, title",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: dormitory_name, title, is_published, published_date (default published_date)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
                         "in": "query"
                     },
                     {
@@ -928,6 +976,51 @@ const docTemplate = `{
                 }
             }
         },
+        "/dashboard/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns headline counts over the dormitories the caller manages (every dormitory for roles with full access), or over a single one when dormitory_id is given. A dormitory the caller has no access to counts as zero rather than being disclosed. A section is null when the caller's role cannot read the menu it comes from.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard"
+                ],
+                "summary": "Get dashboard summary",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Narrow the counts to one dormitory",
+                        "name": "dormitory_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_dashboard_domain.Summary"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/documents": {
             "get": {
                 "security": [
@@ -966,6 +1059,30 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter by category (contract, id_card, receipt, other)",
                         "name": "category",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by name, dormitory name, tenant name or room number",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[name]=lease; column must be one of name, dormitory_name, tenant_name, room_number",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name, category, dormitory_name, tenant_name, room_number, uploaded_date (default uploaded_date)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
                         "in": "query"
                     },
                     {
@@ -1244,6 +1361,36 @@ const docTemplate = `{
                 ],
                 "summary": "List dormitories",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by name, address or phone",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[phone]=081; column must be one of name, address, phone",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by active status",
+                        "name": "is_active",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name, address, phone, is_active, created_at (default name)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    },
                     {
                         "type": "integer",
                         "description": "Page number (default 1)",
@@ -1661,6 +1808,30 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Filter by dormitory name or description",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[description]=repair; column must be one of dormitory_name, description",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: dormitory_name, category, expense_date, amount, description (default expense_date)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Page number (default 1)",
                         "name": "page",
@@ -1979,6 +2150,30 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Filter by tenant name, room number or dormitory name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[room_number]=101; column must be one of tenant_name, room_number, dormitory_name",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: tenant_name, room_number, dormitory_name, period, due_date, total_amount, status, created_at (default period)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Page number (default 1)",
                         "name": "page",
@@ -2197,6 +2392,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Only invoices that are unpaid and have no recorded payments can be deleted. A paid invoice, or one with payment history, is rejected with 409 (slug invoice_has_payments) and should be cancelled by setting its status to cancelled instead.",
                 "produces": [
                     "application/json"
                 ],
@@ -2231,6 +2427,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
                         }
@@ -2545,6 +2747,42 @@ const docTemplate = `{
                 }
             }
         },
+        "/menus/mine": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "menus"
+                ],
+                "summary": "List menus the current user's role can read",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apiresponse.Meta"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/meters": {
             "get": {
                 "security": [
@@ -2571,6 +2809,42 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter by dormitory ID",
                         "name": "dormitory_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by billing method (metered, flat)",
+                        "name": "billing_method",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by whether the reading has been billed on an invoice",
+                        "name": "is_billed",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by room number or dormitory name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[room_number]=101; column must be one of room_number, dormitory_name",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: room_number, dormitory_name, reading_date, billing_method, previous_unit, current_unit, unit_used, price_per_unit, total_amount, is_billed, created_at (default reading_date)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
                         "in": "query"
                     },
                     {
@@ -2886,6 +3160,30 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Filter by tenant name, room number, dormitory name, courier or tracking number",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[courier]=kerry; column must be one of tenant_name, room_number, courier, tracking_number",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: tenant_name, room_number, courier, tracking_number, status, received_date (default received_date)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Page number (default 1)",
                         "name": "page",
@@ -3183,6 +3481,30 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter by vehicle type (car, motorcycle, other)",
                         "name": "vehicle_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by tenant name, room number, dormitory name, license plate or parking spot",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[license_plate]=1กก; column must be one of tenant_name, room_number, license_plate, parking_spot",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: tenant_name, room_number, vehicle_type, license_plate, parking_spot, created_at (default created_at)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
                         "in": "query"
                     },
                     {
@@ -3501,6 +3823,36 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter by payment date, inclusive (YYYY-MM-DD)",
                         "name": "date_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by tenant name, room number, dormitory name or reference no.",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[room_number]=101; column must be one of tenant_name, room_number, dormitory_name, reference_no",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by payment method: cash, transfer, credit_card, other",
+                        "name": "payment_method",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: tenant_name, room_number, amount, payment_date (default payment_date)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
                         "in": "query"
                     },
                     {
@@ -3948,6 +4300,30 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Filter by room number, dormitory name, tenant name or description",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[room_number]=101; column must be one of room_number, dormitory_name, tenant_name, description",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: room_number, tenant_name, category, status, reported_date, description (default reported_date)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Page number (default 1)",
                         "name": "page",
@@ -4222,6 +4598,36 @@ const docTemplate = `{
                 ],
                 "summary": "List roles",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by name or description",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[name]=manager; column must be one of name, description",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by active status",
+                        "name": "is_active",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name, description, is_active, created_at (default name)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    },
                     {
                         "type": "integer",
                         "description": "Page number (default 1)",
@@ -4610,8 +5016,38 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "Filter by name or dormitory",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[name]=deluxe; column must be one of name, dormitory",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by active status",
+                        "name": "is_active",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Filter by dormitory ID",
                         "name": "dormitory_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: name, dormitory, price, is_active, created_at (default name)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
                         "in": "query"
                     },
                     {
@@ -5032,8 +5468,44 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "Filter by room number, dormitory or room type",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[room_number]=101; column must be one of room_number, dormitory, room_type",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by active status",
+                        "name": "is_active",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (available, occupied, maintenance)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Filter by dormitory ID",
                         "name": "dormitory_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: room_number, dormitory, room_type, floor, status, is_active, created_at (default room_number)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
                         "in": "query"
                     },
                     {
@@ -6001,6 +6473,36 @@ const docTemplate = `{
                 "summary": "List users",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Filter by username, email or role",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[username]=admin; column must be one of username, email, role",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by active status",
+                        "name": "is_active",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: username, email, role, is_active, created_at (default username)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Page number (default 1)",
                         "name": "page",
@@ -6070,6 +6572,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Role grants more access than the caller has",
                         "schema": {
                             "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
                         }
@@ -6236,6 +6744,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Protected user, or role grants more access than the caller has",
                         "schema": {
                             "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
                         }
@@ -6444,6 +6958,42 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter by dormitory ID",
                         "name": "dormitory_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by billing method (metered, flat)",
+                        "name": "billing_method",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by whether the reading has been billed on an invoice",
+                        "name": "is_billed",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by room number or dormitory name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-column substring filter, e.g. f[room_number]=101; column must be one of room_number, dormitory_name",
+                        "name": "f[column]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field: room_number, dormitory_name, reading_date, billing_method, previous_unit, current_unit, unit_used, price_per_unit, total_amount, is_billed, created_at (default reading_date)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort direction: asc or desc",
+                        "name": "order",
                         "in": "query"
                     },
                     {
@@ -6732,6 +7282,10 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "dormitory_id": {
+                    "description": "DormitoryID is the dormitory the event belongs to. It is nil for events\nthat aren't tied to one (users, roles, tenants, auth), which only roles\nwith full dormitory access can see.",
+                    "type": "string"
+                },
                 "entity_id": {
                     "type": "string"
                 },
@@ -6861,6 +7415,138 @@ const docTemplate = `{
                 "ContractStatusExpired",
                 "ContractStatusTerminated"
             ]
+        },
+        "apihorpug_internal_features_dashboard_domain.ContractStats": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "integer"
+                },
+                "expiring_soon": {
+                    "description": "ExpiringSoon counts active contracts ending within the expiry window\n(today included).",
+                    "type": "integer"
+                },
+                "past_end": {
+                    "description": "PastEnd counts contracts still marked active although their end date has\nalready passed: nobody has renewed or terminated them.",
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "apihorpug_internal_features_dashboard_domain.ExpenseStats": {
+            "type": "object",
+            "properties": {
+                "this_month": {
+                    "type": "number"
+                }
+            }
+        },
+        "apihorpug_internal_features_dashboard_domain.InvoiceStats": {
+            "type": "object",
+            "properties": {
+                "outstanding_amount": {
+                    "type": "number"
+                },
+                "outstanding_count": {
+                    "type": "integer"
+                },
+                "overdue_amount": {
+                    "type": "number"
+                },
+                "overdue_count": {
+                    "description": "Overdue is the part of the outstanding total that is past its due date.\nThe stored status is only ever changed by hand, so this is judged from\nthe due date rather than trusting an \"overdue\" flag that nothing sets.",
+                    "type": "integer"
+                }
+            }
+        },
+        "apihorpug_internal_features_dashboard_domain.PaymentStats": {
+            "type": "object",
+            "properties": {
+                "received_this_month": {
+                    "type": "number"
+                }
+            }
+        },
+        "apihorpug_internal_features_dashboard_domain.Period": {
+            "type": "object",
+            "properties": {
+                "month": {
+                    "type": "integer"
+                },
+                "year": {
+                    "type": "integer"
+                }
+            }
+        },
+        "apihorpug_internal_features_dashboard_domain.ReadingStats": {
+            "type": "object",
+            "properties": {
+                "missing": {
+                    "type": "integer"
+                }
+            }
+        },
+        "apihorpug_internal_features_dashboard_domain.RepairStats": {
+            "type": "object",
+            "properties": {
+                "in_progress": {
+                    "type": "integer"
+                },
+                "pending": {
+                    "type": "integer"
+                }
+            }
+        },
+        "apihorpug_internal_features_dashboard_domain.RoomStats": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "integer"
+                },
+                "maintenance": {
+                    "type": "integer"
+                },
+                "occupied": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "apihorpug_internal_features_dashboard_domain.Summary": {
+            "type": "object",
+            "properties": {
+                "contracts": {
+                    "$ref": "#/definitions/apihorpug_internal_features_dashboard_domain.ContractStats"
+                },
+                "electricity_readings": {
+                    "$ref": "#/definitions/apihorpug_internal_features_dashboard_domain.ReadingStats"
+                },
+                "expenses": {
+                    "$ref": "#/definitions/apihorpug_internal_features_dashboard_domain.ExpenseStats"
+                },
+                "invoices": {
+                    "$ref": "#/definitions/apihorpug_internal_features_dashboard_domain.InvoiceStats"
+                },
+                "payments": {
+                    "$ref": "#/definitions/apihorpug_internal_features_dashboard_domain.PaymentStats"
+                },
+                "period": {
+                    "$ref": "#/definitions/apihorpug_internal_features_dashboard_domain.Period"
+                },
+                "repairs": {
+                    "$ref": "#/definitions/apihorpug_internal_features_dashboard_domain.RepairStats"
+                },
+                "rooms": {
+                    "$ref": "#/definitions/apihorpug_internal_features_dashboard_domain.RoomStats"
+                },
+                "water_readings": {
+                    "$ref": "#/definitions/apihorpug_internal_features_dashboard_domain.ReadingStats"
+                }
+            }
         },
         "apihorpug_internal_features_document_domain.Document": {
             "type": "object",

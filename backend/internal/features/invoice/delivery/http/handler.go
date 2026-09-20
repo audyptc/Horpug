@@ -293,7 +293,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		DueDate:     req.DueDate,
 		Note:        req.Note,
 		CreatedBy:   &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, invoicedomain.ErrRequiredInvoiceData) {
 			return apierror.BadRequest("contract_id, period_year, period_month, issue_date and due_date are required")
@@ -353,7 +353,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		DueDate:   req.DueDate,
 		Note:      req.Note,
 		UpdatedBy: &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, invoicedomain.ErrInvoiceNotFound) {
 			return apierror.NotFound("invoice not found")
@@ -405,7 +405,7 @@ func (h *Handler) AddItem(c fiber.Ctx) error {
 		Description: req.Description,
 		Amount:      req.Amount,
 		UpdatedBy:   &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, invoicedomain.ErrInvoiceNotFound) {
 			return apierror.NotFound("invoice not found")
@@ -457,7 +457,7 @@ func (h *Handler) RemoveItem(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	invoice, err := h.usecase.RemoveItem(ctx, id, itemID, requesterID)
+	invoice, err := h.usecase.RemoveItem(ctx, id, itemID, requesterID, c.IP())
 	if err != nil {
 		if errors.Is(err, invoicedomain.ErrInvoiceNotFound) {
 			return apierror.NotFound("invoice not found")
@@ -504,7 +504,7 @@ func (h *Handler) SendLine(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
-	if err := h.usecase.SendLine(ctx, id, requesterID); err != nil {
+	if err := h.usecase.SendLine(ctx, id, requesterID, c.IP()); err != nil {
 		if errors.Is(err, invoicedomain.ErrInvoiceNotFound) {
 			return apierror.NotFound("invoice not found")
 		}
@@ -559,12 +559,14 @@ func (h *Handler) LineMessagePreview(c fiber.Ctx) error {
 
 // Delete godoc
 // @Summary Delete an invoice
+// @Description Only invoices that are unpaid and have no recorded payments can be deleted. A paid invoice, or one with payment history, is rejected with 409 (slug invoice_has_payments) and should be cancelled by setting its status to cancelled instead.
 // @Tags invoices
 // @Produce json
 // @Param id path string true "Invoice ID"
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} apierror.Error
 // @Failure 404 {object} apierror.Error
+// @Failure 409 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
 // @Security BearerAuth
 // @Router /invoices/{id} [delete]
@@ -582,9 +584,12 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := h.usecase.Delete(ctx, id, requesterID); err != nil {
+	if err := h.usecase.Delete(ctx, id, requesterID, c.IP()); err != nil {
 		if errors.Is(err, invoicedomain.ErrInvoiceNotFound) {
 			return apierror.NotFound("invoice not found")
+		}
+		if errors.Is(err, invoicedomain.ErrInvoiceHasPayments) {
+			return apierror.Conflict("an invoice that is paid or has recorded payments cannot be deleted; cancel it instead").WithSlug("invoice_has_payments")
 		}
 		return apierror.Internal("failed to delete invoice")
 	}

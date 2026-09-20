@@ -58,8 +58,10 @@ API ใช้ [swaggo/swag](https://github.com/swaggo/swag) generate เอก�
 ### ติดตั้ง swag CLI (ครั้งแรก)
 
 ```bash
-go install github.com/swaggo/swag/cmd/swag@latest
+go install github.com/swaggo/swag/cmd/swag@v1.16.6
 ```
+
+ใช้เวอร์ชันเดียวกับ `github.com/swaggo/swag` ใน `go.mod` และต้อง build ด้วย Go เวอร์ชันเดียวกับที่ใช้พัฒนาโปรเจกต์ (ตรวจด้วย `go version`) เพราะ `swag` อ่านซอร์ส Go ของ stdlib ตอน generate ถ้าติดตั้งไว้ด้วย Go รุ่นเก่ากว่า จะ error แบบ `method must have no type parameters` ให้รัน `go install` ข้างบนซ้ำเพื่อ build ใหม่
 
 ตรวจสอบว่า `$GOPATH/bin` (หรือ `$HOME/go/bin`) อยู่ใน `PATH` แล้ว ถึงจะเรียกคำสั่ง `swag` ได้ตรง ๆ
 
@@ -72,6 +74,8 @@ swag init -g cmd/api/main.go -o docs --parseDependency --parseInternal
 ```
 
 (ต้องใส่ `--parseDependency --parseInternal` เพราะ domain struct ถูกอ้างอิงข้าม feature package กัน มิฉะนั้น swag จะ error แบบ `cannot find type definition`)
+
+swag หา type ใน annotation (เช่น `{object} invoicedomain.Invoice`) จาก import ของไฟล์ handler เดียวกัน ดังนั้น package domain ที่อ้างถึงต้อง import ในไฟล์นั้นด้วย alias เดียวกับที่เขียนใน annotation และมีการใช้งานจริงในโค้ด ไม่เช่นนั้นจะ error `cannot find type definition` และ docs จะไม่ถูกอัปเดต
 
 คำสั่งนี้จะ generate/อัปเดตไฟล์ในโฟลเดอร์ `docs/`:
 

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	dashboarddomain "apihorpug/internal/features/dashboard/domain"
 	dashboardusecase "apihorpug/internal/features/dashboard/usecase"
 	"apihorpug/internal/http/apierror"
 	"apihorpug/internal/http/apiresponse"
@@ -51,6 +52,9 @@ func (h *Handler) GetSummary(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
 	defer cancel()
 
+	// Declared with its concrete type so the swag annotation above can resolve
+	// dashboarddomain.Summary through this file's imports.
+	var summary dashboarddomain.Summary
 	summary, err := h.usecase.GetSummary(ctx, requesterID, dormitoryID)
 	if err != nil {
 		return apierror.Internal("failed to get dashboard summary")

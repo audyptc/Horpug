@@ -3,9 +3,12 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
+	activitylogdomain "apihorpug/internal/features/activitylog/domain"
+	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
 	invoicedomain "apihorpug/internal/features/invoice/domain"
 
 	"github.com/google/uuid"
@@ -97,13 +100,49 @@ type LinePusher interface {
 	IsFriend(ctx context.Context, lineUserID string) (bool, error)
 }
 
-type Service struct {
-	repo       Repository
-	linePusher LinePusher
+// ActivityLogger records invoice create/update/delete, line-item and LINE-send
+// events for the audit trail. Failures to record are logged but never block
+// the invoice flow.
+type ActivityLogger interface {
+	Create(ctx context.Context, input activitylogusecase.CreateInput) (activitylogdomain.ActivityLog, error)
 }
 
-func New(repo Repository, linePusher LinePusher) *Service {
-	return &Service{repo: repo, linePusher: linePusher}
+type Service struct {
+	repo        Repository
+	linePusher  LinePusher
+	activityLog ActivityLogger
+}
+
+func New(repo Repository, linePusher LinePusher, activityLog ActivityLogger) *Service {
+	return &Service{repo: repo, linePusher: linePusher, activityLog: activityLog}
+}
+
+// recordActivity is best-effort: a failure to write the audit trail must
+// never fail the invoice flow itself.
+func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, entityID, dormitoryID uuid.UUID, description, ipAddress string) {
+	if s.activityLog == nil {
+		return
+	}
+	var dormitoryRef *uuid.UUID
+	if dormitoryID != uuid.Nil {
+		dormitoryRef = &dormitoryID
+	}
+	_, err := s.activityLog.Create(ctx, activitylogusecase.CreateInput{
+		UserID:      userID,
+		Action:      action,
+		EntityType:  "invoice",
+		EntityID:    &entityID,
+		DormitoryID: dormitoryRef,
+		Description: description,
+		IPAddress:   ipAddress,
+	})
+	if err != nil {
+		log.Printf("failed to record activity log (action=%s): %v", action, err)
+	}
+}
+
+func invoiceActivityDescription(invoice invoicedomain.Invoice) string {
+	return fmt.Sprintf("invoice: room %s (%04d-%02d)", invoice.RoomNumber, invoice.PeriodYear, invoice.PeriodMonth)
 }
 
 func (s *Service) List(ctx context.Context, requesterID uuid.UUID, filters ListFilters, limit, offset int) ([]invoicedomain.Invoice, int64, error) {
@@ -124,7 +163,7 @@ func (s *Service) GetByID(ctx context.Context, id, requesterID uuid.UUID) (invoi
 	return s.repo.GetByID(ctx, id, requesterID)
 }
 
-func (s *Service) Create(ctx context.Context, input CreateInput) (invoicedomain.Invoice, error) {
+func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress string) (invoicedomain.Invoice, error) {
 	input.Note = strings.TrimSpace(input.Note)
 
 	if input.ContractID == uuid.Nil || input.PeriodYear <= 0 || input.IssueDate.IsZero() || input.DueDate.IsZero() {
@@ -137,10 +176,16 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (invoicedomain.
 		return invoicedomain.Invoice{}, invoicedomain.ErrInvalidInvoiceDates
 	}
 
-	return s.repo.Create(ctx, input)
+	invoice, err := s.repo.Create(ctx, input)
+	if err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+
+	s.recordActivity(ctx, input.CreatedBy, "CREATE", invoice.ID, invoice.DormitoryID, "Created "+invoiceActivityDescription(invoice), ipAddress)
+	return invoice, nil
 }
 
-func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (invoicedomain.Invoice, error) {
+func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput, ipAddress string) (invoicedomain.Invoice, error) {
 	if input.Status != nil && !input.Status.Valid() {
 		return invoicedomain.Invoice{}, invoicedomain.ErrInvalidInvoiceStatus
 	}
@@ -149,14 +194,34 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 		input.Note = &note
 	}
 
-	return s.repo.Update(ctx, id, requesterID, input)
+	invoice, err := s.repo.Update(ctx, id, requesterID, input)
+	if err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+
+	description := "Updated " + invoiceActivityDescription(invoice)
+	if input.Status != nil {
+		description += fmt.Sprintf(" — status: %s", *input.Status)
+	}
+	s.recordActivity(ctx, &requesterID, "UPDATE", invoice.ID, invoice.DormitoryID, description, ipAddress)
+	return invoice, nil
 }
 
-func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
-	return s.repo.Delete(ctx, id, requesterID)
+func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddress string) error {
+	invoice, err := s.repo.GetByID(ctx, id, requesterID)
+	if err != nil {
+		return err
+	}
+
+	if err := s.repo.Delete(ctx, id, requesterID); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, &requesterID, "DELETE", id, invoice.DormitoryID, "Deleted "+invoiceActivityDescription(invoice), ipAddress)
+	return nil
 }
 
-func (s *Service) AddItem(ctx context.Context, invoiceID, requesterID uuid.UUID, input AddItemInput) (invoicedomain.Invoice, error) {
+func (s *Service) AddItem(ctx context.Context, invoiceID, requesterID uuid.UUID, input AddItemInput, ipAddress string) (invoicedomain.Invoice, error) {
 	input.Description = strings.TrimSpace(input.Description)
 
 	if input.Description == "" {
@@ -166,16 +231,29 @@ func (s *Service) AddItem(ctx context.Context, invoiceID, requesterID uuid.UUID,
 		return invoicedomain.Invoice{}, invoicedomain.ErrInvalidInvoiceItemAmount
 	}
 
-	return s.repo.AddItem(ctx, invoiceID, requesterID, input)
+	invoice, err := s.repo.AddItem(ctx, invoiceID, requesterID, input)
+	if err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+
+	s.recordActivity(ctx, &requesterID, "UPDATE", invoice.ID, invoice.DormitoryID,
+		fmt.Sprintf("Added item %q (%.2f) to %s", input.Description, input.Amount, invoiceActivityDescription(invoice)), ipAddress)
+	return invoice, nil
 }
 
-func (s *Service) RemoveItem(ctx context.Context, invoiceID, itemID, requesterID uuid.UUID) (invoicedomain.Invoice, error) {
-	return s.repo.RemoveItem(ctx, invoiceID, itemID, requesterID)
+func (s *Service) RemoveItem(ctx context.Context, invoiceID, itemID, requesterID uuid.UUID, ipAddress string) (invoicedomain.Invoice, error) {
+	invoice, err := s.repo.RemoveItem(ctx, invoiceID, itemID, requesterID)
+	if err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+
+	s.recordActivity(ctx, &requesterID, "UPDATE", invoice.ID, invoice.DormitoryID, "Removed item from "+invoiceActivityDescription(invoice), ipAddress)
+	return invoice, nil
 }
 
 // SendLine pushes a text summary of the invoice to the tenant's linked LINE
 // account through the dormitory's LINE Official Account.
-func (s *Service) SendLine(ctx context.Context, invoiceID, requesterID uuid.UUID) error {
+func (s *Service) SendLine(ctx context.Context, invoiceID, requesterID uuid.UUID, ipAddress string) error {
 	invoice, err := s.repo.GetByID(ctx, invoiceID, requesterID)
 	if err != nil {
 		return err
@@ -192,7 +270,12 @@ func (s *Service) SendLine(ctx context.Context, invoiceID, requesterID uuid.UUID
 		return invoicedomain.ErrTenantLineUnreachable
 	}
 
-	return s.linePusher.PushMessage(ctx, invoice.TenantLineUserID, buildInvoiceLineMessage(invoice))
+	if err := s.linePusher.PushMessage(ctx, invoice.TenantLineUserID, buildInvoiceLineMessage(invoice)); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, &requesterID, "SEND_LINE", invoice.ID, invoice.DormitoryID, "Sent LINE message for "+invoiceActivityDescription(invoice), ipAddress)
+	return nil
 }
 
 // LineMessagePreview returns the same text SendLine would push, for tenants

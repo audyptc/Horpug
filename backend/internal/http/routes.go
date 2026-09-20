@@ -117,7 +117,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	waterMeterService := watermeterusecase.New(waterMeterRepo, activityLogService)
 	waterMeterHandler := watermeterhttp.NewHandler(waterMeterService)
 	invoiceRepo := invoicerepository.NewRepository(db)
-	invoiceService := invoiceusecase.New(invoiceRepo, lineClient)
+	invoiceService := invoiceusecase.New(invoiceRepo, lineClient, activityLogService)
 	invoiceHandler := invoicehttp.NewHandler(invoiceService)
 	paymentRepo := paymentrepository.NewRepository(db)
 	paymentService := paymentusecase.New(paymentRepo)

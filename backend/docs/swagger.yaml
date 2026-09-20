@@ -8,6 +8,12 @@ definitions:
         type: string
       description:
         type: string
+      dormitory_id:
+        description: |-
+          DormitoryID is the dormitory the event belongs to. It is nil for events
+          that aren't tied to one (users, roles, tenants, auth), which only roles
+          with full dormitory access can see.
+        type: string
       entity_id:
         type: string
       entity_type:
@@ -95,6 +101,99 @@ definitions:
     - ContractStatusActive
     - ContractStatusExpired
     - ContractStatusTerminated
+  apihorpug_internal_features_dashboard_domain.ContractStats:
+    properties:
+      active:
+        type: integer
+      expiring_soon:
+        description: |-
+          ExpiringSoon counts active contracts ending within the expiry window
+          (today included).
+        type: integer
+      past_end:
+        description: |-
+          PastEnd counts contracts still marked active although their end date has
+          already passed: nobody has renewed or terminated them.
+        type: integer
+      total:
+        type: integer
+    type: object
+  apihorpug_internal_features_dashboard_domain.ExpenseStats:
+    properties:
+      this_month:
+        type: number
+    type: object
+  apihorpug_internal_features_dashboard_domain.InvoiceStats:
+    properties:
+      outstanding_amount:
+        type: number
+      outstanding_count:
+        type: integer
+      overdue_amount:
+        type: number
+      overdue_count:
+        description: |-
+          Overdue is the part of the outstanding total that is past its due date.
+          The stored status is only ever changed by hand, so this is judged from
+          the due date rather than trusting an "overdue" flag that nothing sets.
+        type: integer
+    type: object
+  apihorpug_internal_features_dashboard_domain.PaymentStats:
+    properties:
+      received_this_month:
+        type: number
+    type: object
+  apihorpug_internal_features_dashboard_domain.Period:
+    properties:
+      month:
+        type: integer
+      year:
+        type: integer
+    type: object
+  apihorpug_internal_features_dashboard_domain.ReadingStats:
+    properties:
+      missing:
+        type: integer
+    type: object
+  apihorpug_internal_features_dashboard_domain.RepairStats:
+    properties:
+      in_progress:
+        type: integer
+      pending:
+        type: integer
+    type: object
+  apihorpug_internal_features_dashboard_domain.RoomStats:
+    properties:
+      available:
+        type: integer
+      maintenance:
+        type: integer
+      occupied:
+        type: integer
+      total:
+        type: integer
+    type: object
+  apihorpug_internal_features_dashboard_domain.Summary:
+    properties:
+      contracts:
+        $ref: '#/definitions/apihorpug_internal_features_dashboard_domain.ContractStats'
+      electricity_readings:
+        $ref: '#/definitions/apihorpug_internal_features_dashboard_domain.ReadingStats'
+      expenses:
+        $ref: '#/definitions/apihorpug_internal_features_dashboard_domain.ExpenseStats'
+      invoices:
+        $ref: '#/definitions/apihorpug_internal_features_dashboard_domain.InvoiceStats'
+      payments:
+        $ref: '#/definitions/apihorpug_internal_features_dashboard_domain.PaymentStats'
+      period:
+        $ref: '#/definitions/apihorpug_internal_features_dashboard_domain.Period'
+      repairs:
+        $ref: '#/definitions/apihorpug_internal_features_dashboard_domain.RepairStats'
+      rooms:
+        $ref: '#/definitions/apihorpug_internal_features_dashboard_domain.RoomStats'
+      water_readings:
+        $ref: '#/definitions/apihorpug_internal_features_dashboard_domain.ReadingStats'
+    type: object
   apihorpug_internal_features_document_domain.Document:
     properties:
       category:
@@ -1499,17 +1598,27 @@ paths:
   /activity-logs:
     get:
       parameters:
+      - description: Filter by user, action, entity type, description or IP
+        in: query
+        name: q
+        type: string
+      - description: Per-column substring filter, e.g. f[action]=create; column must
+          be one of username, action, entity_type, description, ip_address
+        in: query
+        name: f[column]
+        type: string
       - description: Filter by user ID
         in: query
         name: user_id
         type: string
-      - description: Filter by entity type
-        in: query
-        name: entity_type
-        type: string
       - description: Filter by entity ID
         in: query
         name: entity_id
+        type: string
+      - description: Narrow to one dormitory (combined with the caller's own access,
+          never widening it)
+        in: query
+        name: dormitory_id
         type: string
       - description: Filter by date, inclusive (YYYY-MM-DD)
         in: query
@@ -1518,6 +1627,15 @@ paths:
       - description: Filter by date, inclusive (YYYY-MM-DD)
         in: query
         name: date_to
+        type: string
+      - description: 'Sort field: created_at, username, action, entity_type, description,
+          ip_address (default created_at)'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc or desc'
+        in: query
+        name: order
         type: string
       - description: Page number (default 1)
         in: query
@@ -1630,6 +1748,24 @@ paths:
       - description: Filter by published date, inclusive (YYYY-MM-DD)
         in: query
         name: date_to
+        type: string
+      - description: Filter by dormitory name, title or content
+        in: query
+        name: q
+        type: string
+      - description: Per-column substring filter, e.g. f[title]=maintenance; column
+          must be one of dormitory_name, title
+        in: query
+        name: f[column]
+        type: string
+      - description: 'Sort field: dormitory_name, title, is_published, published_date
+          (default published_date)'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc or desc'
+        in: query
+        name: order
         type: string
       - description: Page number (default 1)
         in: query
@@ -2086,6 +2222,38 @@ paths:
       summary: Update a contract
       tags:
       - contracts
+  /dashboard/summary:
+    get:
+      description: Returns headline counts over the dormitories the caller manages
+        (every dormitory for roles with full access), or over a single one when dormitory_id
+        is given. A dormitory the caller has no access to counts as zero rather than
+        being disclosed. A section is null when the caller's role cannot read the
+        menu it comes from.
+      parameters:
+      - description: Narrow the counts to one dormitory
+        in: query
+        name: dormitory_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_dashboard_domain.Summary'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get dashboard summary
+      tags:
+      - dashboard
   /documents:
     get:
       description: Returns document records for roles with full dormitory access,
@@ -2107,6 +2275,24 @@ paths:
       - description: Filter by category (contract, id_card, receipt, other)
         in: query
         name: category
+        type: string
+      - description: Filter by name, dormitory name, tenant name or room number
+        in: query
+        name: q
+        type: string
+      - description: Per-column substring filter, e.g. f[name]=lease; column must
+          be one of name, dormitory_name, tenant_name, room_number
+        in: query
+        name: f[column]
+        type: string
+      - description: 'Sort field: name, category, dormitory_name, tenant_name, room_number,
+          uploaded_date (default uploaded_date)'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc or desc'
+        in: query
+        name: order
         type: string
       - description: Page number (default 1)
         in: query
@@ -2285,6 +2471,28 @@ paths:
       description: Returns every dormitory for roles with full dormitory access, otherwise
         only the dormitories the caller manages.
       parameters:
+      - description: Filter by name, address or phone
+        in: query
+        name: q
+        type: string
+      - description: Per-column substring filter, e.g. f[phone]=081; column must be
+          one of name, address, phone
+        in: query
+        name: f[column]
+        type: string
+      - description: Filter by active status
+        in: query
+        name: is_active
+        type: boolean
+      - description: 'Sort field: name, address, phone, is_active, created_at (default
+          name)'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc or desc'
+        in: query
+        name: order
+        type: string
       - description: Page number (default 1)
         in: query
         name: page
@@ -2553,6 +2761,24 @@ paths:
         in: query
         name: date_to
         type: string
+      - description: Filter by dormitory name or description
+        in: query
+        name: q
+        type: string
+      - description: Per-column substring filter, e.g. f[description]=repair; column
+          must be one of dormitory_name, description
+        in: query
+        name: f[column]
+        type: string
+      - description: 'Sort field: dormitory_name, category, expense_date, amount,
+          description (default expense_date)'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc or desc'
+        in: query
+        name: order
+        type: string
       - description: Page number (default 1)
         in: query
         name: page
@@ -2759,6 +2985,24 @@ paths:
         in: query
         name: period_month
         type: integer
+      - description: Filter by tenant name, room number or dormitory name
+        in: query
+        name: q
+        type: string
+      - description: Per-column substring filter, e.g. f[room_number]=101; column
+          must be one of tenant_name, room_number, dormitory_name
+        in: query
+        name: f[column]
+        type: string
+      - description: 'Sort field: tenant_name, room_number, dormitory_name, period,
+          due_date, total_amount, status, created_at (default period)'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc or desc'
+        in: query
+        name: order
+        type: string
       - description: Page number (default 1)
         in: query
         name: page
@@ -2834,6 +3078,10 @@ paths:
       - invoices
   /invoices/{id}:
     delete:
+      description: Only invoices that are unpaid and have no recorded payments can
+        be deleted. A paid invoice, or one with payment history, is rejected with
+        409 (slug invoice_has_payments) and should be cancelled by setting its status
+        to cancelled instead.
       parameters:
       - description: Invoice ID
         in: path
@@ -2855,6 +3103,10 @@ paths:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
         "404":
           description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
         "500":
@@ -3135,6 +3387,28 @@ paths:
       summary: List menus
       tags:
       - menus
+  /menus/mine:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apiresponse.Meta'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List menus the current user's role can read
+      tags:
+      - menus
   /meters:
     get:
       description: Returns every meter reading for roles with full dormitory access,
@@ -3148,6 +3422,33 @@ paths:
       - description: Filter by dormitory ID
         in: query
         name: dormitory_id
+        type: string
+      - description: Filter by billing method (metered, flat)
+        in: query
+        name: billing_method
+        type: string
+      - description: Filter by whether the reading has been billed on an invoice
+        in: query
+        name: is_billed
+        type: boolean
+      - description: Filter by room number or dormitory name
+        in: query
+        name: q
+        type: string
+      - description: Per-column substring filter, e.g. f[room_number]=101; column
+          must be one of room_number, dormitory_name
+        in: query
+        name: f[column]
+        type: string
+      - description: 'Sort field: room_number, dormitory_name, reading_date, billing_method,
+          previous_unit, current_unit, unit_used, price_per_unit, total_amount, is_billed,
+          created_at (default reading_date)'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc or desc'
+        in: query
+        name: order
         type: string
       - description: Page number (default 1)
         in: query
@@ -3354,6 +3655,25 @@ paths:
         in: query
         name: status
         type: string
+      - description: Filter by tenant name, room number, dormitory name, courier or
+          tracking number
+        in: query
+        name: q
+        type: string
+      - description: Per-column substring filter, e.g. f[courier]=kerry; column must
+          be one of tenant_name, room_number, courier, tracking_number
+        in: query
+        name: f[column]
+        type: string
+      - description: 'Sort field: tenant_name, room_number, courier, tracking_number,
+          status, received_date (default received_date)'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc or desc'
+        in: query
+        name: order
+        type: string
       - description: Page number (default 1)
         in: query
         name: page
@@ -3548,6 +3868,25 @@ paths:
       - description: Filter by vehicle type (car, motorcycle, other)
         in: query
         name: vehicle_type
+        type: string
+      - description: Filter by tenant name, room number, dormitory name, license plate
+          or parking spot
+        in: query
+        name: q
+        type: string
+      - description: Per-column substring filter, e.g. f[license_plate]=1กก; column
+          must be one of tenant_name, room_number, license_plate, parking_spot
+        in: query
+        name: f[column]
+        type: string
+      - description: 'Sort field: tenant_name, room_number, vehicle_type, license_plate,
+          parking_spot, created_at (default created_at)'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc or desc'
+        in: query
+        name: order
         type: string
       - description: Page number (default 1)
         in: query
@@ -3754,6 +4093,29 @@ paths:
       - description: Filter by payment date, inclusive (YYYY-MM-DD)
         in: query
         name: date_to
+        type: string
+      - description: Filter by tenant name, room number, dormitory name or reference
+          no.
+        in: query
+        name: q
+        type: string
+      - description: Per-column substring filter, e.g. f[room_number]=101; column
+          must be one of tenant_name, room_number, dormitory_name, reference_no
+        in: query
+        name: f[column]
+        type: string
+      - description: 'Filter by payment method: cash, transfer, credit_card, other'
+        in: query
+        name: payment_method
+        type: string
+      - description: 'Sort field: tenant_name, room_number, amount, payment_date (default
+          payment_date)'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc or desc'
+        in: query
+        name: order
         type: string
       - description: Page number (default 1)
         in: query
@@ -4056,6 +4418,24 @@ paths:
         in: query
         name: status
         type: string
+      - description: Filter by room number, dormitory name, tenant name or description
+        in: query
+        name: q
+        type: string
+      - description: Per-column substring filter, e.g. f[room_number]=101; column
+          must be one of room_number, dormitory_name, tenant_name, description
+        in: query
+        name: f[column]
+        type: string
+      - description: 'Sort field: room_number, tenant_name, category, status, reported_date,
+          description (default reported_date)'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc or desc'
+        in: query
+        name: order
+        type: string
       - description: Page number (default 1)
         in: query
         name: page
@@ -4231,6 +4611,28 @@ paths:
   /roles:
     get:
       parameters:
+      - description: Filter by name or description
+        in: query
+        name: q
+        type: string
+      - description: Per-column substring filter, e.g. f[name]=manager; column must
+          be one of name, description
+        in: query
+        name: f[column]
+        type: string
+      - description: Filter by active status
+        in: query
+        name: is_active
+        type: boolean
+      - description: 'Sort field: name, description, is_active, created_at (default
+          name)'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc or desc'
+        in: query
+        name: order
+        type: string
       - description: Page number (default 1)
         in: query
         name: page
@@ -4478,9 +4880,31 @@ paths:
         only room types under dormitories the caller manages. Optionally filter by
         dormitory.
       parameters:
+      - description: Filter by name or dormitory
+        in: query
+        name: q
+        type: string
+      - description: Per-column substring filter, e.g. f[name]=deluxe; column must
+          be one of name, dormitory
+        in: query
+        name: f[column]
+        type: string
+      - description: Filter by active status
+        in: query
+        name: is_active
+        type: boolean
       - description: Filter by dormitory ID
         in: query
         name: dormitory_id
+        type: string
+      - description: 'Sort field: name, dormitory, price, is_active, created_at (default
+          name)'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc or desc'
+        in: query
+        name: order
         type: string
       - description: Page number (default 1)
         in: query
@@ -4750,9 +5174,35 @@ paths:
       description: Returns every room for roles with full dormitory access, otherwise
         only rooms under dormitories the caller manages. Optionally filter by dormitory.
       parameters:
+      - description: Filter by room number, dormitory or room type
+        in: query
+        name: q
+        type: string
+      - description: Per-column substring filter, e.g. f[room_number]=101; column
+          must be one of room_number, dormitory, room_type
+        in: query
+        name: f[column]
+        type: string
+      - description: Filter by active status
+        in: query
+        name: is_active
+        type: boolean
+      - description: Filter by status (available, occupied, maintenance)
+        in: query
+        name: status
+        type: string
       - description: Filter by dormitory ID
         in: query
         name: dormitory_id
+        type: string
+      - description: 'Sort field: room_number, dormitory, room_type, floor, status,
+          is_active, created_at (default room_number)'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc or desc'
+        in: query
+        name: order
         type: string
       - description: Page number (default 1)
         in: query
@@ -5376,6 +5826,28 @@ paths:
   /users:
     get:
       parameters:
+      - description: Filter by username, email or role
+        in: query
+        name: q
+        type: string
+      - description: Per-column substring filter, e.g. f[username]=admin; column must
+          be one of username, email, role
+        in: query
+        name: f[column]
+        type: string
+      - description: Filter by active status
+        in: query
+        name: is_active
+        type: boolean
+      - description: 'Sort field: username, email, role, is_active, created_at (default
+          username)'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc or desc'
+        in: query
+        name: order
+        type: string
       - description: Page number (default 1)
         in: query
         name: page
@@ -5423,6 +5895,10 @@ paths:
             $ref: '#/definitions/apihorpug_internal_features_user_domain.User'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "403":
+          description: Role grants more access than the caller has
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
         "409":
@@ -5527,6 +6003,11 @@ paths:
             $ref: '#/definitions/apihorpug_internal_features_user_domain.User'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "403":
+          description: Protected user, or role grants more access than the caller
+            has
           schema:
             $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
         "404":
@@ -5660,6 +6141,33 @@ paths:
       - description: Filter by dormitory ID
         in: query
         name: dormitory_id
+        type: string
+      - description: Filter by billing method (metered, flat)
+        in: query
+        name: billing_method
+        type: string
+      - description: Filter by whether the reading has been billed on an invoice
+        in: query
+        name: is_billed
+        type: boolean
+      - description: Filter by room number or dormitory name
+        in: query
+        name: q
+        type: string
+      - description: Per-column substring filter, e.g. f[room_number]=101; column
+          must be one of room_number, dormitory_name
+        in: query
+        name: f[column]
+        type: string
+      - description: 'Sort field: room_number, dormitory_name, reading_date, billing_method,
+          previous_unit, current_unit, unit_used, price_per_unit, total_amount, is_billed,
+          created_at (default reading_date)'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc or desc'
+        in: query
+        name: order
         type: string
       - description: Page number (default 1)
         in: query

@@ -16,6 +16,7 @@ var (
 	ErrInvoiceItemNotFound      = errors.New("invoice item not found")
 	ErrInvoiceItemNotRemovable  = errors.New("only manually added items can be removed")
 	ErrInvoiceLocked            = errors.New("invoice items cannot be changed once the invoice is paid or cancelled")
+	ErrInvoiceHasPayments       = errors.New("an invoice that is paid or has recorded payments cannot be deleted; cancel it instead")
 
 	ErrTenantLineNotLinked   = errors.New("tenant has not linked a LINE account")
 	ErrTenantLineUnreachable = errors.New("tenant has not added the LINE OA as a friend or has blocked it")

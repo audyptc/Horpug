@@ -355,10 +355,10 @@ export function InvoiceListCard({
                               type="button"
                               size="icon"
                               variant="destructive"
-                              title={t('invoiceDelete')}
+                              title={invoice.status === 'paid' ? t('invoiceDeletePaidUnavailable') : t('invoiceDelete')}
                               aria-label={t('invoiceDelete')}
                               onClick={() => onDeleteInvoice(invoice)}
-                              disabled={deletingInvoiceId === invoice.id}
+                              disabled={invoice.status === 'paid' || deletingInvoiceId === invoice.id}
                             >
                               <Trash2 />
                             </Button>

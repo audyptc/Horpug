@@ -511,20 +511,45 @@ func (r *Repository) loadInvoiceWithItems(ctx context.Context, invoiceID uuid.UU
 	return invoice, nil
 }
 
+// Delete removes an invoice that has no financial footprint. payments and
+// invoice_items both cascade off invoices, so deleting a paid invoice would
+// silently erase the receipt history with it — those must be cancelled
+// instead. The check runs in the same transaction as the delete, with the
+// invoice row locked: recording a payment takes a key-share lock on that row
+// through its foreign key, so a payment landing concurrently either commits
+// first (and is seen here) or waits until the delete finishes.
 func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
 	if err := r.ensureInvoiceAccess(ctx, id, requesterID); err != nil {
 		return err
 	}
 
-	result, err := r.db.Exec(ctx, `DELETE FROM invoices WHERE id = $1`, id)
+	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	if result.RowsAffected() == 0 {
-		return invoicedomain.ErrInvoiceNotFound
+	defer tx.Rollback(ctx)
+
+	var status invoicedomain.InvoiceStatus
+	if err := tx.QueryRow(ctx, `SELECT status FROM invoices WHERE id = $1 FOR UPDATE`, id).Scan(&status); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return invoicedomain.ErrInvoiceNotFound
+		}
+		return err
 	}
 
-	return nil
+	var hasPayments bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM payments WHERE invoice_id = $1)`, id).Scan(&hasPayments); err != nil {
+		return err
+	}
+	if status == invoicedomain.InvoiceStatusPaid || hasPayments {
+		return invoicedomain.ErrInvoiceHasPayments
+	}
+
+	if _, err := tx.Exec(ctx, `DELETE FROM invoices WHERE id = $1`, id); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *Repository) loadInvoiceByID(ctx context.Context, id uuid.UUID) (invoicedomain.Invoice, error) {
