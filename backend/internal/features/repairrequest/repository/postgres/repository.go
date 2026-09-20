@@ -245,7 +245,9 @@ func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, inpu
 	args := make([]any, 0)
 	argIdx := 1
 
-	if input.TenantID != nil {
+	if input.ClearTenant {
+		setClauses = append(setClauses, "tenant_id = NULL")
+	} else if input.TenantID != nil {
 		setClauses = append(setClauses, fmt.Sprintf("tenant_id = $%d", argIdx))
 		args = append(args, *input.TenantID)
 		argIdx++

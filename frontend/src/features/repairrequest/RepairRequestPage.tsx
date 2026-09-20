@@ -193,8 +193,10 @@ export default function RepairRequestPage() {
         }
         await api.post<ApiRepairRequest>('/repair-requests', payload)
       } else {
+        // The API treats a missing tenant_id as "unchanged", so removing the
+        // tenant has to be requested explicitly.
         const payload = {
-          tenant_id: formTenantId || null,
+          ...(formTenantId ? { tenant_id: formTenantId } : { clear_tenant: true }),
           category: formCategory,
           description: formDescription.trim(),
           status: formStatus,

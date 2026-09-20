@@ -32,6 +32,7 @@ type createRepairRequestRequest struct {
 
 type updateRepairRequestRequest struct {
 	TenantID     *uuid.UUID                          `json:"tenant_id"`
+	ClearTenant  bool                                `json:"clear_tenant"`
 	Category     *repairrequestdomain.RepairCategory `json:"category"`
 	Description  *string                             `json:"description"`
 	Status       *repairrequestdomain.RepairStatus   `json:"status"`
@@ -315,6 +316,10 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		return apierror.BadRequest("invalid request body")
 	}
 
+	if req.ClearTenant && req.TenantID != nil {
+		return apierror.BadRequest("tenant_id and clear_tenant cannot be used together")
+	}
+
 	requesterID, ok := middleware.UserID(c)
 	if !ok {
 		return apierror.Unauthorized("authentication required")
@@ -325,6 +330,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 
 	request, err := h.usecase.Update(ctx, id, requesterID, repairrequestusecase.UpdateInput{
 		TenantID:     req.TenantID,
+		ClearTenant:  req.ClearTenant,
 		Category:     req.Category,
 		Description:  req.Description,
 		Status:       req.Status,

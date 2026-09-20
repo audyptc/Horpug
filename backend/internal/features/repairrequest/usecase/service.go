@@ -62,7 +62,10 @@ type CreateInput struct {
 }
 
 type UpdateInput struct {
-	TenantID     *uuid.UUID
+	TenantID *uuid.UUID
+	// ClearTenant detaches the reporting tenant. A nil TenantID only means
+	// "leave unchanged", so removing the tenant needs its own signal.
+	ClearTenant  bool
 	Category     *repairrequestdomain.RepairCategory
 	Description  *string
 	Status       *repairrequestdomain.RepairStatus
