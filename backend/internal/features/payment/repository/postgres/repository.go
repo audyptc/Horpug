@@ -264,6 +264,12 @@ func (r *Repository) Create(ctx context.Context, input paymentusecase.CreateInpu
 	}
 	defer tx.Rollback(ctx)
 
+	// Serialise payments on the same invoice so two concurrent ones can't each
+	// pass the overpayment check below against the other's uncommitted rows.
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM invoices WHERE id = $1 FOR UPDATE`, input.InvoiceID); err != nil {
+		return paymentdomain.Payment{}, err
+	}
+
 	id := uuid.New()
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO payments (id, invoice_id, payment_date, total_amount, note, created_by)
@@ -290,6 +296,10 @@ func (r *Repository) Create(ctx context.Context, input paymentusecase.CreateInpu
 		return paymentdomain.Payment{}, err
 	}
 
+	if exceedsInvoice(totalPaid, invoiceTotal) {
+		return paymentdomain.Payment{}, paymentdomain.ErrPaymentExceedsInvoice
+	}
+
 	if totalPaid >= invoiceTotal && invoiceStatus != "paid" {
 		if _, err := tx.Exec(ctx, `UPDATE invoices SET status = 'paid', paid_at = NOW(), updated_at = NOW() WHERE id = $1`, input.InvoiceID); err != nil {
 			return paymentdomain.Payment{}, err
@@ -301,6 +311,13 @@ func (r *Repository) Create(ctx context.Context, input paymentusecase.CreateInpu
 	}
 
 	return r.loadPaymentByID(ctx, id)
+}
+
+// exceedsInvoice reports whether the recorded payments add up to more than the
+// invoice total. Amounts are NUMERIC(10,2) read into float64, so a half-satang
+// tolerance stops a sum like 0.1+0.2 from tripping it on an exact settlement.
+func exceedsInvoice(totalPaid, invoiceTotal float64) bool {
+	return totalPaid > invoiceTotal+0.005
 }
 
 // Update replaces a payment's date, note and items, then re-evaluates the
@@ -366,6 +383,10 @@ func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, inpu
 	var totalPaid float64
 	if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(total_amount), 0) FROM payments WHERE invoice_id = $1`, invoiceID).Scan(&totalPaid); err != nil {
 		return paymentdomain.Payment{}, err
+	}
+
+	if exceedsInvoice(totalPaid, invoiceTotal) {
+		return paymentdomain.Payment{}, paymentdomain.ErrPaymentExceedsInvoice
 	}
 
 	if totalPaid >= invoiceTotal && invoiceStatus != "paid" {

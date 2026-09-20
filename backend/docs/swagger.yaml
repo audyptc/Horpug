@@ -1346,6 +1346,17 @@ definitions:
       payment_date:
         type: string
     type: object
+  internal_features_payment_delivery_http.updatePaymentRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/internal_features_payment_delivery_http.createPaymentItemRequest'
+        type: array
+      note:
+        type: string
+      payment_date:
+        type: string
+    type: object
   internal_features_permission_delivery_http.createPermissionRequest:
     properties:
       description:
@@ -4253,6 +4264,49 @@ paths:
       security:
       - BearerAuth: []
       summary: Get a payment by ID
+      tags:
+      - payments
+    put:
+      consumes:
+      - application/json
+      description: 'Replaces the payment''s date, note and method lines (the invoice
+        can''t be changed) and re-evaluates the invoice''s paid status: it becomes
+        paid once the recorded payments reach total_amount, and a paid invoice drops
+        back to unpaid if they no longer do. Not allowed on a cancelled invoice.'
+      parameters:
+      - description: Payment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Payment payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_payment_delivery_http.updatePaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_payment_domain.Payment'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Update a payment's date, note and items
       tags:
       - payments
   /permissions:

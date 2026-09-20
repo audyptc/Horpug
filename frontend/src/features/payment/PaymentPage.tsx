@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import axios from 'axios'
-import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
+import { api, extractErrorCode, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiInvoice } from '@/features/invoice/types'
@@ -216,7 +216,11 @@ export default function PaymentPage() {
       refresh()
       setFormOpen(false)
     } catch (err) {
-      setFormError(extractErrorMessage(err, t(isEditing ? 'paymentUpdateError' : 'paymentCreateError')))
+      setFormError(
+        extractErrorCode(err) === 'payment_exceeds_invoice'
+          ? t('paymentExceedsInvoice')
+          : extractErrorMessage(err, t(isEditing ? 'paymentUpdateError' : 'paymentCreateError')),
+      )
     } finally {
       setFormSaving(false)
     }

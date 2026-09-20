@@ -3994,6 +3994,68 @@
                     }
                 }
             },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replaces the payment's date, note and method lines (the invoice can't be changed) and re-evaluates the invoice's paid status: it becomes paid once the recorded payments reach total_amount, and a paid invoice drops back to unpaid if they no longer do. Not allowed on a cancelled invoice.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Update a payment's date, note and items",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payment payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_payment_delivery_http.updatePaymentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_payment_domain.Payment"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -9247,6 +9309,23 @@
                 "invoice_id": {
                     "type": "string"
                 },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_features_payment_delivery_http.createPaymentItemRequest"
+                    }
+                },
+                "note": {
+                    "type": "string"
+                },
+                "payment_date": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_payment_delivery_http.updatePaymentRequest": {
+            "type": "object",
+            "properties": {
                 "items": {
                     "type": "array",
                     "items": {

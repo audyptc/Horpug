@@ -471,6 +471,7 @@ const en = {
   paymentDeleteError: 'Failed to delete payment.',
   paymentCreateError: 'Failed to record payment.',
   paymentUpdateError: 'Failed to update payment.',
+  paymentExceedsInvoice: "The total paid for this invoice would exceed the amount due. Please check the amounts (including payments already recorded).",
   paymentInvoiceRequired: 'Invoice is required.',
   paymentAmountInvalid: 'Each item amount must be greater than zero.',
   paymentDateRequired: 'Payment date is required.',

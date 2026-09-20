@@ -471,6 +471,7 @@ const th: Record<TranslationKey, string> = {
   paymentDeleteError: 'ลบรายการชำระเงินไม่สำเร็จ',
   paymentCreateError: 'บันทึกการชำระเงินไม่สำเร็จ',
   paymentUpdateError: 'แก้ไขการชำระเงินไม่สำเร็จ',
+  paymentExceedsInvoice: 'ยอดชำระรวมของใบแจ้งหนี้นี้เกินยอดที่ต้องชำระ กรุณาตรวจสอบจำนวนเงิน (รวมรายการชำระที่บันทึกไว้ก่อนหน้า)',
   paymentInvoiceRequired: 'กรุณาเลือกใบแจ้งหนี้',
   paymentAmountInvalid: 'จำนวนเงินในแต่ละรายการต้องมากกว่า 0',
   paymentDateRequired: 'กรุณาระบุวันที่ชำระ',

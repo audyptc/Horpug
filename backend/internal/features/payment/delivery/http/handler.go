@@ -270,7 +270,7 @@ func (h *Handler) Get(c fiber.Ctx) error {
 
 // Create godoc
 // @Summary Record a payment against an invoice, split across one or more payment methods
-// @Description Records a payment for an invoice as one or more line items (e.g. part cash, part transfer), each with its own method, amount and optional reference number. Once the invoice's recorded payments reach its total_amount, the invoice is automatically marked paid.
+// @Description Records a payment for an invoice as one or more line items (e.g. part cash, part transfer), each with its own method, amount and optional reference number. Once the invoice's recorded payments reach its total_amount, the invoice is automatically marked paid. The recorded payments may not exceed the invoice's total_amount: a payment that would push them over is rejected with 400 (slug payment_exceeds_invoice).
 // @Tags payments
 // @Accept json
 // @Produce json
@@ -330,6 +330,9 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		if errors.Is(err, paymentdomain.ErrInvoiceCancelled) {
 			return apierror.BadRequest("cannot record a payment against a cancelled invoice")
 		}
+		if errors.Is(err, paymentdomain.ErrPaymentExceedsInvoice) {
+			return apierror.BadRequest("recorded payments cannot exceed the invoice total").WithSlug("payment_exceeds_invoice")
+		}
 		return apierror.Internal("failed to create payment")
 	}
 
@@ -338,7 +341,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 
 // Update godoc
 // @Summary Update a payment's date, note and items
-// @Description Replaces the payment's date, note and method lines (the invoice can't be changed) and re-evaluates the invoice's paid status: it becomes paid once the recorded payments reach total_amount, and a paid invoice drops back to unpaid if they no longer do. Not allowed on a cancelled invoice.
+// @Description Replaces the payment's date, note and method lines (the invoice can't be changed) and re-evaluates the invoice's paid status: it becomes paid once the recorded payments reach total_amount, and a paid invoice drops back to unpaid if they no longer do. Not allowed on a cancelled invoice, and the invoice's recorded payments may not exceed its total_amount (400, slug payment_exceeds_invoice).
 // @Tags payments
 // @Accept json
 // @Produce json
@@ -401,6 +404,9 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		}
 		if errors.Is(err, paymentdomain.ErrInvoiceCancelled) {
 			return apierror.BadRequest("cannot change a payment on a cancelled invoice")
+		}
+		if errors.Is(err, paymentdomain.ErrPaymentExceedsInvoice) {
+			return apierror.BadRequest("recorded payments cannot exceed the invoice total").WithSlug("payment_exceeds_invoice")
 		}
 		return apierror.Internal("failed to update payment")
 	}
