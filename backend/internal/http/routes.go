@@ -138,7 +138,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	announcementService := announcementusecase.New(announcementRepo, activityLogService)
 	announcementHandler := announcementhttp.NewHandler(announcementService)
 	documentRepo := documentrepository.NewRepository(db)
-	documentService := documentusecase.New(documentRepo)
+	documentService := documentusecase.New(documentRepo, activityLogService)
 	documentHandler := documenthttp.NewHandler(documentService)
 	dashboardRepo := dashboardrepository.NewRepository(db)
 	dashboardService := dashboardusecase.New(dashboardRepo)

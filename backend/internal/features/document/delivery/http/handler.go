@@ -268,7 +268,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		UploadedDate: uploadedDate,
 		Note:         req.Note,
 		CreatedBy:    &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, documentdomain.ErrRequiredDocumentData) {
 			return apierror.BadRequest("dormitory_id, name and file_url are required")
@@ -332,7 +332,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		UploadedDate: req.UploadedDate,
 		Note:         req.Note,
 		UpdatedBy:    &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, documentdomain.ErrDocumentNotFound) {
 			return apierror.NotFound("document not found")
@@ -380,7 +380,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := h.usecase.Delete(ctx, id, requesterID); err != nil {
+	if err := h.usecase.Delete(ctx, id, requesterID, c.IP()); err != nil {
 		if errors.Is(err, documentdomain.ErrDocumentNotFound) {
 			return apierror.NotFound("document not found")
 		}

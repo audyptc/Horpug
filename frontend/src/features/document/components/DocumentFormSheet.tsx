@@ -1,6 +1,8 @@
 import type { FormEvent } from 'react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Button } from '@/shared/components/ui/button'
+import { Combobox } from '@/shared/components/ui/combobox'
+import { DatePickerField } from '@/shared/components/date-picker-field'
 import {
   Sheet,
   SheetContent,
@@ -142,17 +144,18 @@ export function DocumentFormSheet({
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('documentFormCategoryLabel')}
-              <select
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+              <Combobox
+                options={DOCUMENT_CATEGORIES.map((value) => ({
+                  value,
+                  label: t(documentCategoryLabelKeys[value]),
+                }))}
                 value={category}
-                onChange={(event) => onCategoryChange(event.target.value as DocumentCategory)}
-              >
-                {DOCUMENT_CATEGORIES.map((value) => (
-                  <option key={value} value={value}>
-                    {t(documentCategoryLabelKeys[value])}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => onCategoryChange(value as DocumentCategory)}
+                showCheck={false}
+                placeholder={t('documentFormCategoryPlaceholder')}
+                searchPlaceholder={t('documentFormCategorySearchPlaceholder')}
+                emptyText={t('documentFormCategoryNoResults')}
+              />
             </label>
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
@@ -169,11 +172,10 @@ export function DocumentFormSheet({
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('documentFormUploadedDateLabel')}
-              <input
-                type="date"
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+              <DatePickerField
                 value={uploadedDate}
-                onChange={(event) => onUploadedDateChange(event.target.value)}
+                onChange={onUploadedDateChange}
+                placeholder={t('documentFormUploadedDateLabel')}
               />
             </label>
 
