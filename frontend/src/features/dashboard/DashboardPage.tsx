@@ -65,6 +65,73 @@ function storeDormitory(dormitory: SelectedDormitory | null) {
 
 const moneyFormat = { maximumFractionDigits: 2 }
 
+// One hue per card, used for the accent bar, the tint, the number and the icon.
+// `alert` is the extra emphasis when a card has something to act on.
+const TONES = {
+  blue: {
+    card: 'border-t-blue-500 from-blue-500/10',
+    icon: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
+    value: 'text-blue-600 dark:text-blue-400',
+    alert: 'ring-2 ring-blue-500/40 shadow-md',
+  },
+  teal: {
+    card: 'border-t-teal-500 from-teal-500/10',
+    icon: 'bg-teal-500/15 text-teal-600 dark:text-teal-400',
+    value: 'text-teal-600 dark:text-teal-400',
+    alert: 'ring-2 ring-teal-500/40 shadow-md',
+  },
+  violet: {
+    card: 'border-t-violet-500 from-violet-500/10',
+    icon: 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
+    value: 'text-violet-600 dark:text-violet-400',
+    alert: 'ring-2 ring-violet-500/40 shadow-md',
+  },
+  emerald: {
+    card: 'border-t-emerald-500 from-emerald-500/10',
+    icon: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+    value: 'text-emerald-600 dark:text-emerald-400',
+    alert: 'ring-2 ring-emerald-500/40 shadow-md',
+  },
+  orange: {
+    card: 'border-t-orange-500 from-orange-500/10',
+    icon: 'bg-orange-500/15 text-orange-600 dark:text-orange-400',
+    value: 'text-orange-600 dark:text-orange-400',
+    alert: 'ring-2 ring-orange-500/40 shadow-md',
+  },
+  sky: {
+    card: 'border-t-sky-500 from-sky-500/10',
+    icon: 'bg-sky-500/15 text-sky-600 dark:text-sky-400',
+    value: 'text-sky-600 dark:text-sky-400',
+    alert: 'ring-2 ring-sky-500/40 shadow-md',
+  },
+  red: {
+    card: 'border-t-red-500 from-red-500/10',
+    icon: 'bg-red-500/15 text-red-600 dark:text-red-400',
+    value: 'text-red-600 dark:text-red-400',
+    alert: 'ring-2 ring-red-500/40 shadow-md',
+  },
+  pink: {
+    card: 'border-t-pink-500 from-pink-500/10',
+    icon: 'bg-pink-500/15 text-pink-600 dark:text-pink-400',
+    value: 'text-pink-600 dark:text-pink-400',
+    alert: 'ring-2 ring-pink-500/40 shadow-md',
+  },
+  yellow: {
+    card: 'border-t-yellow-500 from-yellow-500/10',
+    icon: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400',
+    value: 'text-yellow-600 dark:text-yellow-400',
+    alert: 'ring-2 ring-yellow-500/40 shadow-md',
+  },
+  cyan: {
+    card: 'border-t-cyan-500 from-cyan-500/10',
+    icon: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400',
+    value: 'text-cyan-600 dark:text-cyan-400',
+    alert: 'ring-2 ring-cyan-500/40 shadow-md',
+  },
+} as const
+
+type Tone = keyof typeof TONES
+
 // The cards are shown in these groups, in this order, so the page reads as
 // "how things stand", "the money", then "what needs doing". A group with no
 // card (the role can't read any of its sections) is left out entirely.
@@ -99,7 +166,7 @@ type Metric = {
   value: string
   detail: string
   icon: LucideIcon
-  iconClass: string
+  tone: Tone
 }
 
 export function DashboardPage() {
@@ -225,7 +292,7 @@ export function DashboardPage() {
       value: total.toLocaleString(),
       detail: `${available.toLocaleString()} ${t('roomStatusAvailable')} · ${occupied.toLocaleString()} ${t('roomStatusOccupied')} · ${maintenance.toLocaleString()} ${t('roomStatusMaintenance')}`,
       icon: BedDouble,
-      iconClass: 'bg-primary/10 text-primary',
+      tone: 'blue',
     })
   }
   if (summary?.contracts) {
@@ -236,7 +303,7 @@ export function DashboardPage() {
       value: summary.contracts.active.toLocaleString(),
       detail: `${summary.contracts.total.toLocaleString()} ${t('dashboardContractsTotalLabel')}`,
       icon: FileText,
-      iconClass: 'bg-success/10 text-success',
+      tone: 'teal',
     })
   }
   if (summary?.contracts) {
@@ -248,7 +315,7 @@ export function DashboardPage() {
       value: summary.contracts.expiring_soon.toLocaleString(),
       detail: t('dashboardExpiringContractsDetail').replace('{count}', summary.contracts.past_end.toLocaleString()),
       icon: CalendarClock,
-      iconClass: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
+      tone: 'pink',
     })
   }
   if (summary?.invoices) {
@@ -259,7 +326,7 @@ export function DashboardPage() {
       value: summary.invoices.outstanding_count.toLocaleString(),
       detail: `${summary.invoices.outstanding_amount.toLocaleString(undefined, moneyFormat)} ${t('dashboardBahtUnit')}`,
       icon: ReceiptText,
-      iconClass: 'bg-warning/10 text-warning',
+      tone: 'sky',
     })
     metrics.push({
       key: 'invoices-overdue',
@@ -269,7 +336,7 @@ export function DashboardPage() {
       value: summary.invoices.overdue_count.toLocaleString(),
       detail: `${summary.invoices.overdue_amount.toLocaleString(undefined, moneyFormat)} ${t('dashboardOverdueAmountUnit')}`,
       icon: TriangleAlert,
-      iconClass: 'bg-destructive/10 text-destructive',
+      tone: 'red',
     })
   }
   if (summary?.repairs) {
@@ -280,7 +347,7 @@ export function DashboardPage() {
       value: summary.repairs.pending.toLocaleString(),
       detail: `${summary.repairs.in_progress.toLocaleString()} ${t('repairStatusInProgress')}`,
       icon: Wrench,
-      iconClass: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+      tone: 'violet',
     })
   }
   if (summary?.payments) {
@@ -299,7 +366,7 @@ export function DashboardPage() {
       value: received.toLocaleString(undefined, moneyFormat),
       detail,
       icon: BanknoteArrowUp,
-      iconClass: 'bg-success/10 text-success',
+      tone: 'emerald',
     })
   }
   if (summary?.expenses) {
@@ -310,7 +377,7 @@ export function DashboardPage() {
       value: summary.expenses.this_month.toLocaleString(undefined, moneyFormat),
       detail: t('dashboardExpensesDetail').replace('{month}', monthLabel),
       icon: BanknoteArrowDown,
-      iconClass: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+      tone: 'orange',
     })
   }
   if (summary?.electricity_readings) {
@@ -322,7 +389,7 @@ export function DashboardPage() {
       value: summary.electricity_readings.missing.toLocaleString(),
       detail: t('dashboardMissingReadingsDetail').replace('{month}', monthLabel),
       icon: Zap,
-      iconClass: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
+      tone: 'yellow',
     })
   }
   if (summary?.water_readings) {
@@ -334,7 +401,7 @@ export function DashboardPage() {
       value: summary.water_readings.missing.toLocaleString(),
       detail: t('dashboardMissingReadingsDetail').replace('{month}', monthLabel),
       icon: Droplets,
-      iconClass: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400',
+      tone: 'cyan',
     })
   }
 
@@ -398,16 +465,17 @@ export function DashboardPage() {
                     <Card
                       key={metric.key}
                       className={cn(
-                        'transition-shadow hover:shadow-md',
-                        metric.alert && 'border-warning/60 ring-1 ring-warning/25'
+                        'border-t-4 bg-linear-to-br to-transparent transition-shadow hover:shadow-md',
+                        TONES[metric.tone].card,
+                        metric.alert && TONES[metric.tone].alert
                       )}
                     >
                       <CardHeader className="flex-row items-start justify-between space-y-0">
                         <div>
                           <CardDescription>{metric.title}</CardDescription>
-                          <CardTitle className={cn(metric.alert && 'text-warning')}>{metric.value}</CardTitle>
+                          <CardTitle className={TONES[metric.tone].value}>{metric.value}</CardTitle>
                         </div>
-                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${metric.iconClass}`}>
+                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${TONES[metric.tone].icon}`}>
                           <metric.icon size={20} strokeWidth={2} />
                         </span>
                       </CardHeader>
