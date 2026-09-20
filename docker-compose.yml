@@ -32,6 +32,11 @@ services:
       # Postgres runs as the `postgres` service below; reach it by service
       # name on the shared backend_net network.
       DB_HOST: postgres
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      # Uploaded documents. A named volume so they survive rebuilds — back it up
+      # along with postgres_data.
+      - uploads_data:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -120,3 +125,4 @@ networks:
 
 volumes:
   postgres_data:
+  uploads_data:

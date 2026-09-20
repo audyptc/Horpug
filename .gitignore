@@ -27,3 +27,5 @@ node_modules
 # never commit private key material. See nginx/generate-cert.sh.
 nginx/certs/*
 !nginx/certs/.gitkeep
+# Locally stored uploads (see backend UPLOAD_DIR)
+backend/uploads/

@@ -37,10 +37,17 @@ type Document struct {
 	Name          string           `json:"name"`
 	Category      DocumentCategory `json:"category"`
 	FileURL       string           `json:"file_url"`
-	UploadedDate  time.Time        `json:"uploaded_date"`
-	Note          string           `json:"note"`
-	CreatedBy     *uuid.UUID       `json:"created_by,omitempty"`
-	UpdatedBy     *uuid.UUID       `json:"updated_by,omitempty"`
-	CreatedAt     time.Time        `json:"created_at"`
-	UpdatedAt     time.Time        `json:"updated_at"`
+	// FilePath is the storage key of an uploaded file; it is never exposed —
+	// clients fetch the bytes through the authenticated file endpoint.
+	FilePath     string     `json:"-"`
+	FileName     string     `json:"file_name,omitempty"`
+	FileMime     string     `json:"file_mime,omitempty"`
+	FileSize     int64      `json:"file_size,omitempty"`
+	HasFile      bool       `json:"has_file"`
+	UploadedDate time.Time  `json:"uploaded_date"`
+	Note         string     `json:"note"`
+	CreatedBy    *uuid.UUID `json:"created_by,omitempty"`
+	UpdatedBy    *uuid.UUID `json:"updated_by,omitempty"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
 }

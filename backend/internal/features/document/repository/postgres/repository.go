@@ -27,7 +27,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 
 const selectDocumentColumns = `
 	doc.id, doc.dormitory_id, d.name, doc.tenant_id, t.first_name || ' ' || t.last_name, doc.room_id, rm.room_number,
-	doc.name, doc.category, doc.file_url, doc.uploaded_date, doc.note, doc.created_by, doc.updated_by, doc.created_at, doc.updated_at
+	doc.name, doc.category, doc.file_url, doc.file_path, doc.file_name, doc.file_mime, doc.file_size, doc.uploaded_date, doc.note, doc.created_by, doc.updated_by, doc.created_at, doc.updated_at
 `
 
 const documentFromJoins = `
@@ -210,11 +210,17 @@ func (r *Repository) Create(ctx context.Context, input documentusecase.CreateInp
 		}
 	}
 
+	var file documentusecase.StoredFile
+	if input.File != nil {
+		file = *input.File
+	}
+
 	id := uuid.New()
 	_, err := r.db.Exec(ctx, `
-		INSERT INTO documents (id, dormitory_id, tenant_id, room_id, name, category, file_url, uploaded_date, note, created_by, updated_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
-	`, id, input.DormitoryID, input.TenantID, input.RoomID, input.Name, input.Category, input.FileURL, input.UploadedDate, input.Note, input.CreatedBy)
+		INSERT INTO documents (id, dormitory_id, tenant_id, room_id, name, category, file_url, file_path, file_name, file_mime, file_size, uploaded_date, note, created_by, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $14)
+	`, id, input.DormitoryID, input.TenantID, input.RoomID, input.Name, input.Category, input.FileURL,
+		file.Path, file.Name, file.Mime, file.Size, input.UploadedDate, input.Note, input.CreatedBy)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
@@ -262,8 +268,14 @@ func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, inpu
 		args = append(args, *input.Category)
 		argIdx++
 	}
-	if input.FileURL != nil {
-		setClauses = append(setClauses, fmt.Sprintf("file_url = $%d", argIdx))
+	// A new upload replaces whatever the document pointed at before, and a new
+	// link likewise replaces a stored file — a document is one or the other.
+	if input.File != nil {
+		setClauses = append(setClauses, fmt.Sprintf("file_url = '', file_path = $%d, file_name = $%d, file_mime = $%d, file_size = $%d", argIdx, argIdx+1, argIdx+2, argIdx+3))
+		args = append(args, input.File.Path, input.File.Name, input.File.Mime, input.File.Size)
+		argIdx += 4
+	} else if input.FileURL != nil {
+		setClauses = append(setClauses, fmt.Sprintf("file_url = $%d, file_path = '', file_name = '', file_mime = '', file_size = 0", argIdx))
 		args = append(args, *input.FileURL)
 		argIdx++
 	}
@@ -338,6 +350,10 @@ func scanDocument(row pgx.Row) (documentdomain.Document, error) {
 		&document.Name,
 		&document.Category,
 		&document.FileURL,
+		&document.FilePath,
+		&document.FileName,
+		&document.FileMime,
+		&document.FileSize,
 		&document.UploadedDate,
 		&document.Note,
 		&document.CreatedBy,
@@ -347,6 +363,7 @@ func scanDocument(row pgx.Row) (documentdomain.Document, error) {
 	); err != nil {
 		return documentdomain.Document{}, err
 	}
+	document.HasFile = document.FilePath != ""
 	return document, nil
 }
 

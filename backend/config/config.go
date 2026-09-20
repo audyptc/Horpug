@@ -25,6 +25,7 @@ type Config struct {
 	CookieSecure           bool
 	LineChannelAccessToken string
 	LineChannelID          string
+	UploadDir              string
 }
 
 func Load() Config {
@@ -63,6 +64,10 @@ func Load() Config {
 		// (its "aud" claim is the channel that owns the LIFF app).
 		LineChannelAccessToken: getEnv("LINE_CHANNEL_ACCESS_TOKEN", ""),
 		LineChannelID:          getEnv("LINE_CHANNEL_ID", ""),
+
+		// UploadDir is where uploaded files (e.g. documents) are stored. In
+		// Docker it is a mounted volume so files survive container rebuilds.
+		UploadDir: getEnv("UPLOAD_DIR", "./uploads"),
 	}
 }
 

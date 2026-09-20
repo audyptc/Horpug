@@ -9,6 +9,7 @@ import (
 	menurepository "apihorpug/internal/features/menu/repository/postgres"
 	"apihorpug/internal/http"
 	"apihorpug/internal/platform/database"
+	"apihorpug/internal/platform/filestore"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -45,19 +46,27 @@ func main() {
 		log.Fatalf("failed to seed admin user: %v", err)
 	}
 
+	files, err := filestore.NewLocal(cfg.UploadDir)
+	if err != nil {
+		log.Fatalf("failed to prepare upload directory: %v", err)
+	}
+
 	// Backend is only reachable through nginx on the docker-internal network
 	// (see docker-compose.yml — backend has no exposed port), so it's safe to
 	// trust X-Forwarded-For from any private-range peer and recover the real
 	// client IP nginx already forwards (nginx/proxy_params.conf).
 	app := fiber.New(fiber.Config{
 		ErrorHandler: http.ErrorHandler,
-		ProxyHeader:  fiber.HeaderXForwardedFor,
-		TrustProxy:   true,
+		// Uploaded files arrive as multipart bodies; the default 4 MB limit
+		// would reject them. Kept in step with nginx's client_max_body_size.
+		BodyLimit:   10 * 1024 * 1024,
+		ProxyHeader: fiber.HeaderXForwardedFor,
+		TrustProxy:  true,
 		TrustProxyConfig: fiber.TrustProxyConfig{
 			Private: true,
 		},
 	})
-	http.RegisterRoutes(app, db, cfg.SecretKey, cfg.AccessTokenTTL, cfg.RefreshTokenTTL, cfg.CookieSecure, cfg.LineChannelAccessToken, cfg.LineChannelID)
+	http.RegisterRoutes(app, db, cfg.SecretKey, cfg.AccessTokenTTL, cfg.RefreshTokenTTL, cfg.CookieSecure, cfg.LineChannelAccessToken, cfg.LineChannelID, files)
 	http.RegisterDocsRoutes(app)
 
 	go func() {

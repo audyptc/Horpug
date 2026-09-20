@@ -71,13 +71,14 @@ import (
 	watermeterrepository "apihorpug/internal/features/watermeter/repository/postgres"
 	watermeterusecase "apihorpug/internal/features/watermeter/usecase"
 	"apihorpug/internal/http/middleware"
+	"apihorpug/internal/platform/filestore"
 	"apihorpug/internal/platform/lineapi"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTokenTTL, refreshTokenTTL time.Duration, cookieSecure bool, lineChannelAccessToken, lineChannelID string) {
+func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTokenTTL, refreshTokenTTL time.Duration, cookieSecure bool, lineChannelAccessToken, lineChannelID string, files *filestore.Local) {
 	lineClient := lineapi.New(lineChannelAccessToken, lineChannelID)
 
 	permissionRepo := permissionrepository.NewRepository(db)
@@ -138,7 +139,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	announcementService := announcementusecase.New(announcementRepo, activityLogService)
 	announcementHandler := announcementhttp.NewHandler(announcementService)
 	documentRepo := documentrepository.NewRepository(db)
-	documentService := documentusecase.New(documentRepo, activityLogService)
+	documentService := documentusecase.New(documentRepo, files, activityLogService)
 	documentHandler := documenthttp.NewHandler(documentService)
 	dashboardRepo := dashboardrepository.NewRepository(db)
 	dashboardService := dashboardusecase.New(dashboardRepo)
@@ -303,6 +304,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 
 	api.Get("/documents", requirePermission("/documents", permissiondomain.ActionRead), documentHandler.List)
 	api.Get("/documents/:id", requirePermission("/documents", permissiondomain.ActionRead), documentHandler.Get)
+	api.Get("/documents/:id/file", requirePermission("/documents", permissiondomain.ActionRead), documentHandler.File)
 	api.Post("/documents", requirePermission("/documents", permissiondomain.ActionCreate), documentHandler.Create)
 	api.Put("/documents/:id", requirePermission("/documents", permissiondomain.ActionUpdate), documentHandler.Update)
 	api.Delete("/documents/:id", requirePermission("/documents", permissiondomain.ActionDelete), documentHandler.Delete)

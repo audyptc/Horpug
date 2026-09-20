@@ -1,4 +1,5 @@
-import type { FormEvent } from 'react'
+import { useRef, type FormEvent } from 'react'
+import { FileUp, X } from 'lucide-react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Button } from '@/shared/components/ui/button'
 import { Combobox } from '@/shared/components/ui/combobox'
@@ -18,7 +19,7 @@ import { TenantSearchSelect } from '@/features/tenant/components/TenantSearchSel
 import type { ApiRoom } from '@/features/room/types'
 import { RoomSearchSelect } from '@/features/room/components/RoomSearchSelect'
 import type { DocumentCategory } from '../types'
-import { DOCUMENT_CATEGORIES } from '../utils'
+import { DOCUMENT_CATEGORIES, DOCUMENT_UPLOAD_ACCEPT, formatFileSize } from '../utils'
 
 const documentCategoryLabelKeys: Record<DocumentCategory, TranslationKey> = {
   contract: 'documentCategoryContract',
@@ -43,6 +44,11 @@ type DocumentFormSheetProps = {
   onNameChange: (value: string) => void
   category: DocumentCategory
   onCategoryChange: (category: DocumentCategory) => void
+  // The file picked for upload, and the name of one already stored for the
+  // document being edited (replaced if a new one is picked).
+  file: File | null
+  onFileChange: (file: File | null) => void
+  storedFileName: string | null
   fileUrl: string
   onFileUrlChange: (value: string) => void
   uploadedDate: string
@@ -70,6 +76,9 @@ export function DocumentFormSheet({
   onNameChange,
   category,
   onCategoryChange,
+  file,
+  onFileChange,
+  storedFileName,
   fileUrl,
   onFileUrlChange,
   uploadedDate,
@@ -81,6 +90,13 @@ export function DocumentFormSheet({
   onSubmit,
 }: DocumentFormSheetProps) {
   const { t } = useLanguage()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function pickFile(picked: File | null | undefined) {
+    if (picked) onFileChange(picked)
+    // Reset so picking the same file again after removing it still fires.
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -157,6 +173,54 @@ export function DocumentFormSheet({
                 emptyText={t('documentFormCategoryNoResults')}
               />
             </label>
+
+            <div className="flex flex-col gap-1.5 text-sm font-medium">
+              {t('documentFormFileLabel')}
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="sr-only"
+                accept={DOCUMENT_UPLOAD_ACCEPT}
+                onChange={(event) => pickFile(event.target.files?.[0])}
+              />
+              {file ? (
+                <div className="flex items-center justify-between gap-2 rounded-md border border-input px-3 py-2 font-normal">
+                  <span className="min-w-0 truncate">
+                    {file.name} <span className="text-muted-foreground">({formatFileSize(file.size)})</span>
+                  </span>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    title={t('documentFormFileRemove')}
+                    aria-label={t('documentFormFileRemove')}
+                    onClick={() => onFileChange(null)}
+                  >
+                    <X />
+                  </Button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="flex flex-col items-center gap-1 rounded-md border border-dashed border-input px-3 py-5 text-center font-normal text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault()
+                    pickFile(event.dataTransfer.files?.[0])
+                  }}
+                >
+                  <FileUp className="size-5" />
+                  <span>{t('documentFormFileDrop')}</span>
+                  <span className="text-xs">{t('documentFormFileHint')}</span>
+                </button>
+              )}
+              {storedFileName && !file && (
+                <span className="text-xs font-normal text-muted-foreground">
+                  {t('documentFormFileCurrent')}: {storedFileName}
+                </span>
+              )}
+            </div>
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('documentFormFileUrlLabel')}

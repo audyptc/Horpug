@@ -1,15 +1,18 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ExternalLink, Pencil, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, Eye, File, FileImage, FileText, Pencil, Trash2, X } from 'lucide-react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { ColumnFilterMenu } from '@/shared/components/column-filter-menu'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
 import { Button } from '@/shared/components/ui/button'
+import { cn } from '@/shared/lib/utils'
 import type { ApiDocument, DocumentCategory } from '../types'
 import {
   DOCUMENT_CATEGORIES,
   DOCUMENT_PAGE_SIZE_OPTIONS,
+  getDocumentKind,
   isDocumentTextFilterKey,
+  isOpenableUrl,
   toDateInputValue,
   type DocumentCategoryFilter,
   type DocumentColumnFilters,
@@ -31,6 +34,13 @@ const documentCategoryBadgeVariant: Record<DocumentCategory, 'default' | 'outlin
   receipt: 'outline',
   other: 'outline',
 }
+
+const documentFileKindIcons = {
+  image: FileImage,
+  pdf: FileText,
+  google: FileText,
+  other: File,
+} as const
 
 const SORTABLE_COLUMNS: { key: DocumentSortKey; labelKey: TranslationKey }[] = [
   { key: 'name', labelKey: 'documentNameColumn' },
@@ -69,8 +79,15 @@ type DocumentListCardProps = {
   onLastPage: () => void
   deletingDocumentId: string | null
   onCreateDocument: () => void
+  onPreviewDocument: (document: ApiDocument) => void
+  onDownloadDocument: (document: ApiDocument) => void
   onEditDocument: (document: ApiDocument) => void
   onDeleteDocument: (document: ApiDocument) => void
+}
+
+function FileKindIcon({ document }: { document: ApiDocument }) {
+  const Icon = documentFileKindIcons[getDocumentKind(document)]
+  return <Icon size={16} className="shrink-0 text-muted-foreground" />
 }
 
 export function DocumentListCard({
@@ -101,6 +118,8 @@ export function DocumentListCard({
   onLastPage,
   deletingDocumentId,
   onCreateDocument,
+  onPreviewDocument,
+  onDownloadDocument,
   onEditDocument,
   onDeleteDocument,
 }: DocumentListCardProps) {
@@ -110,14 +129,6 @@ export function DocumentListCard({
   // they're off to the right and there's no way to tell what's applied.
   // Summarising them here keeps that visible and clearable at any size.
   const activeFilters: { id: string; label: string; onClear: () => void }[] = []
-
-  if (categoryFilter !== 'all') {
-    activeFilters.push({
-      id: 'category',
-      label: `${t('documentFilterCategoryLabel')}: ${t(documentCategoryLabelKeys[categoryFilter])}`,
-      onClear: () => onCategoryFilterChange('all'),
-    })
-  }
 
   for (const column of SORTABLE_COLUMNS) {
     const key = column.key
@@ -153,6 +164,32 @@ export function DocumentListCard({
           <>
             <div className="overflow-hidden rounded-md border border-border">
               <div className="flex flex-col gap-3 border-b border-border bg-muted/40 p-3">
+                <div
+                  className="flex flex-wrap gap-1.5"
+                  role="group"
+                  aria-label={t('documentFilterCategoryLabel')}
+                >
+                  {(['all', ...DOCUMENT_CATEGORIES] as const).map((value) => {
+                    const active = categoryFilter === value
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => onCategoryFilterChange(value)}
+                        className={cn(
+                          'rounded-full border px-3 py-1 text-sm transition-colors',
+                          active
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground'
+                        )}
+                      >
+                        {value === 'all' ? t('filterAll') : t(documentCategoryLabelKeys[value])}
+                      </button>
+                    )
+                  })}
+                </div>
+
                 <label className="flex w-full flex-col gap-1.5 text-sm font-medium sm:max-w-md">
                   {t('documentSearchLabel')}
                   <input
@@ -226,21 +263,6 @@ export function DocumentListCard({
                                 )}
                               </button>
 
-                              {column.key === 'category' && (
-                                <ColumnFilterMenu
-                                  label={t('documentFilterCategoryLabel')}
-                                  optionValue={categoryFilter}
-                                  onOptionChange={onCategoryFilterChange}
-                                  options={[
-                                    { value: 'all', label: t('filterAll') },
-                                    ...DOCUMENT_CATEGORIES.map((category) => ({
-                                      value: category,
-                                      label: t(documentCategoryLabelKeys[category]),
-                                    })),
-                                  ]}
-                                />
-                              )}
-
                               {isDocumentTextFilterKey(column.key) && (
                                 <ColumnFilterMenu
                                   label={t(column.labelKey)}
@@ -273,16 +295,15 @@ export function DocumentListCard({
                     {documents.map((document) => (
                       <TableRow key={document.id}>
                         <TableCell className="font-semibold">
-                          <a
-                            href={document.file_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 hover:underline"
-                            title={t('documentFileLink')}
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 text-left hover:underline"
+                            title={t('documentPreview')}
+                            onClick={() => onPreviewDocument(document)}
                           >
+                            <FileKindIcon document={document} />
                             {document.name}
-                            <ExternalLink size={14} />
-                          </a>
+                          </button>
                         </TableCell>
                         <TableCell>
                           <Badge variant={documentCategoryBadgeVariant[document.category]}>
@@ -297,6 +318,42 @@ export function DocumentListCard({
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex flex-nowrap justify-end gap-2">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              title={t('documentPreview')}
+                              aria-label={t('documentPreview')}
+                              onClick={() => onPreviewDocument(document)}
+                            >
+                              <Eye />
+                            </Button>
+                            {document.has_file && (
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                title={t('documentDownload')}
+                                aria-label={t('documentDownload')}
+                                onClick={() => onDownloadDocument(document)}
+                              >
+                                <Download />
+                              </Button>
+                            )}
+                            {!document.has_file && isOpenableUrl(document.file_url) && (
+                              <Button asChild size="icon" variant="outline">
+                                <a
+                                  href={document.file_url}
+                                  download
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  title={t('documentDownload')}
+                                  aria-label={t('documentDownload')}
+                                >
+                                  <Download />
+                                </a>
+                              </Button>
+                            )}
                             <Button
                               type="button"
                               size="icon"

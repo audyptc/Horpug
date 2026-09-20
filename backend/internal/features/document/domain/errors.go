@@ -9,4 +9,8 @@ var (
 	ErrDormitoryNotFound       = errors.New("dormitory not found")
 	ErrTenantNotFound          = errors.New("tenant not found")
 	ErrRoomNotFound            = errors.New("room not found")
+	ErrFileNotFound            = errors.New("document has no stored file")
+	ErrFileTooLarge            = errors.New("file is too large")
+	ErrUnsupportedFileType     = errors.New("unsupported file type")
+	ErrEmptyFile               = errors.New("file is empty")
 )

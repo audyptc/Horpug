@@ -240,9 +240,9 @@ func (h *Handler) Get(c fiber.Ctx) error {
 // @Security BearerAuth
 // @Router /documents [post]
 func (h *Handler) Create(c fiber.Ctx) error {
-	var req createDocumentRequest
-	if err := c.Bind().Body(&req); err != nil {
-		return apierror.BadRequest("invalid request body")
+	req, upload, err := parseCreateRequest(c)
+	if err != nil {
+		return err
 	}
 
 	requesterID, ok := middleware.UserID(c)
@@ -265,13 +265,14 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		Name:         req.Name,
 		Category:     req.Category,
 		FileURL:      req.FileURL,
+		Upload:       upload,
 		UploadedDate: uploadedDate,
 		Note:         req.Note,
 		CreatedBy:    &requesterID,
 	}, c.IP())
 	if err != nil {
 		if errors.Is(err, documentdomain.ErrRequiredDocumentData) {
-			return apierror.BadRequest("dormitory_id, name and file_url are required")
+			return apierror.BadRequest("dormitory_id, name and a file or file_url are required")
 		}
 		if errors.Is(err, documentdomain.ErrInvalidDocumentCategory) {
 			return apierror.BadRequest("invalid document category")
@@ -284,6 +285,9 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		}
 		if errors.Is(err, documentdomain.ErrRoomNotFound) {
 			return apierror.NotFound("room not found")
+		}
+		if uploadErr := uploadError(err); uploadErr != nil {
+			return uploadErr
 		}
 		return apierror.Internal("failed to create document")
 	}
@@ -310,9 +314,9 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		return apierror.BadRequest("invalid document id")
 	}
 
-	var req updateDocumentRequest
-	if err := c.Bind().Body(&req); err != nil {
-		return apierror.BadRequest("invalid request body")
+	req, upload, err := parseUpdateRequest(c)
+	if err != nil {
+		return err
 	}
 
 	requesterID, ok := middleware.UserID(c)
@@ -329,6 +333,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		Name:         req.Name,
 		Category:     req.Category,
 		FileURL:      req.FileURL,
+		Upload:       upload,
 		UploadedDate: req.UploadedDate,
 		Note:         req.Note,
 		UpdatedBy:    &requesterID,
@@ -348,6 +353,9 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		}
 		if errors.Is(err, documentdomain.ErrRoomNotFound) {
 			return apierror.NotFound("room not found")
+		}
+		if uploadErr := uploadError(err); uploadErr != nil {
+			return uploadErr
 		}
 		return apierror.Internal("failed to update document")
 	}

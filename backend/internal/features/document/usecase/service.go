@@ -2,7 +2,9 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"strings"
 	"time"
@@ -10,6 +12,7 @@ import (
 	activitylogdomain "apihorpug/internal/features/activitylog/domain"
 	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
 	documentdomain "apihorpug/internal/features/document/domain"
+	"apihorpug/internal/platform/filestore"
 
 	"github.com/google/uuid"
 )
@@ -54,12 +57,16 @@ var SortColumns = map[string]string{
 const DefaultSortKey = "uploaded_date"
 
 type CreateInput struct {
-	DormitoryID  uuid.UUID
-	TenantID     *uuid.UUID
-	RoomID       *uuid.UUID
-	Name         string
-	Category     documentdomain.DocumentCategory
-	FileURL      string
+	DormitoryID uuid.UUID
+	TenantID    *uuid.UUID
+	RoomID      *uuid.UUID
+	Name        string
+	Category    documentdomain.DocumentCategory
+	FileURL     string
+	// Upload, when set, supplies the document's file and takes precedence over
+	// FileURL. File is filled in by the service once the upload is stored.
+	Upload       *FileUpload
+	File         *StoredFile
 	UploadedDate time.Time
 	Note         string
 	CreatedBy    *uuid.UUID
@@ -71,6 +78,8 @@ type UpdateInput struct {
 	Name         *string
 	Category     *documentdomain.DocumentCategory
 	FileURL      *string
+	Upload       *FileUpload
+	File         *StoredFile
 	UploadedDate *time.Time
 	Note         *string
 	UpdatedBy    *uuid.UUID
@@ -91,13 +100,33 @@ type ActivityLogger interface {
 	Create(ctx context.Context, input activitylogusecase.CreateInput) (activitylogdomain.ActivityLog, error)
 }
 
+// FileStorage holds the bytes of uploaded documents. Keys are opaque and
+// returned by Save.
+type FileStorage interface {
+	Save(folder, ext string, r io.Reader) (string, error)
+	Read(key string) ([]byte, error)
+	Delete(key string) error
+}
+
 type Service struct {
 	repo        Repository
+	files       FileStorage
 	activityLog ActivityLogger
 }
 
-func New(repo Repository, activityLog ActivityLogger) *Service {
-	return &Service{repo: repo, activityLog: activityLog}
+func New(repo Repository, files FileStorage, activityLog ActivityLogger) *Service {
+	return &Service{repo: repo, files: files, activityLog: activityLog}
+}
+
+// discardFile removes a stored file that is no longer referenced. Best-effort:
+// a leftover file is wasted space, not a reason to fail the request.
+func (s *Service) discardFile(key string) {
+	if key == "" {
+		return
+	}
+	if err := s.files.Delete(key); err != nil {
+		log.Printf("failed to delete stored file %q: %v", key, err)
+	}
 }
 
 // recordActivity is best-effort: a failure to write the audit trail must
@@ -160,6 +189,28 @@ func (s *Service) GetByID(ctx context.Context, id, requesterID uuid.UUID) (docum
 	return s.repo.GetByID(ctx, id, requesterID)
 }
 
+// GetFile returns the document together with the bytes of its stored file.
+// Access is checked by GetByID, so a document outside the requester's
+// dormitories is reported as not found.
+func (s *Service) GetFile(ctx context.Context, id, requesterID uuid.UUID) (documentdomain.Document, []byte, error) {
+	document, err := s.repo.GetByID(ctx, id, requesterID)
+	if err != nil {
+		return documentdomain.Document{}, nil, err
+	}
+	if !document.HasFile {
+		return documentdomain.Document{}, nil, documentdomain.ErrFileNotFound
+	}
+
+	data, err := s.files.Read(document.FilePath)
+	if err != nil {
+		if errors.Is(err, filestore.ErrNotFound) {
+			return documentdomain.Document{}, nil, documentdomain.ErrFileNotFound
+		}
+		return documentdomain.Document{}, nil, err
+	}
+	return document, data, nil
+}
+
 func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress string) (documentdomain.Document, error) {
 	input.Name = strings.TrimSpace(input.Name)
 	input.FileURL = strings.TrimSpace(input.FileURL)
@@ -177,15 +228,27 @@ func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress strin
 		input.RoomID = nil
 	}
 
-	if input.DormitoryID == uuid.Nil || input.Name == "" || input.FileURL == "" {
+	if input.DormitoryID == uuid.Nil || input.Name == "" || (input.FileURL == "" && input.Upload == nil) {
 		return documentdomain.Document{}, documentdomain.ErrRequiredDocumentData
 	}
 	if !input.Category.Valid() {
 		return documentdomain.Document{}, documentdomain.ErrInvalidDocumentCategory
 	}
 
+	if input.Upload != nil {
+		stored, err := s.storeUpload(input.DormitoryID.String(), input.Upload)
+		if err != nil {
+			return documentdomain.Document{}, err
+		}
+		input.File = stored
+		input.FileURL = ""
+	}
+
 	document, err := s.repo.Create(ctx, input)
 	if err != nil {
+		if input.File != nil {
+			s.discardFile(input.File.Path)
+		}
 		return documentdomain.Document{}, err
 	}
 
@@ -216,9 +279,32 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 		input.Note = &note
 	}
 
-	document, err := s.repo.Update(ctx, id, requesterID, input)
+	// Read first: it checks the requester's access before anything is written
+	// to storage, and remembers the previous file so it can be cleaned up.
+	previous, err := s.repo.GetByID(ctx, id, requesterID)
 	if err != nil {
 		return documentdomain.Document{}, err
+	}
+
+	if input.Upload != nil {
+		stored, err := s.storeUpload(previous.DormitoryID.String(), input.Upload)
+		if err != nil {
+			return documentdomain.Document{}, err
+		}
+		input.File = stored
+		input.FileURL = nil
+	}
+
+	document, err := s.repo.Update(ctx, id, requesterID, input)
+	if err != nil {
+		if input.File != nil {
+			s.discardFile(input.File.Path)
+		}
+		return documentdomain.Document{}, err
+	}
+
+	if previous.FilePath != "" && previous.FilePath != document.FilePath {
+		s.discardFile(previous.FilePath)
 	}
 
 	s.recordActivity(ctx, &requesterID, "UPDATE", document, "Updated "+documentActivityDescription(document), ipAddress)
@@ -238,6 +324,7 @@ func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddre
 		return err
 	}
 
+	s.discardFile(document.FilePath)
 	s.recordActivity(ctx, &requesterID, "DELETE", document, "Deleted "+documentActivityDescription(document), ipAddress)
 	return nil
 }

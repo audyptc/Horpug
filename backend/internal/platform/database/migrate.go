@@ -432,6 +432,10 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		`CREATE INDEX IF NOT EXISTS idx_documents_tenant_id ON documents(tenant_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_documents_room_id ON documents(room_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_documents_category ON documents(category)`,
+		`ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_path VARCHAR(500) NOT NULL DEFAULT ''`,
+		`ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_name VARCHAR(255) NOT NULL DEFAULT ''`,
+		`ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_mime VARCHAR(100) NOT NULL DEFAULT ''`,
+		`ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_size BIGINT NOT NULL DEFAULT 0`,
 		`CREATE TABLE IF NOT EXISTS activity_logs (
 			id UUID PRIMARY KEY,
 			user_id UUID,
