@@ -7,6 +7,7 @@ import { InformationDialog } from '@/shared/components/information-dialog'
 import { TenantListCard } from './components/TenantListCard'
 import { TenantFormSheet } from './components/TenantFormSheet'
 import { TenantLineLinkDialog } from './components/TenantLineLinkDialog'
+import { EntityDocumentsSheet } from '@/features/document/components/EntityDocumentsSheet'
 import type { ApiTenant, ApiTenantDeletionCheck } from './types'
 import {
   TENANT_PAGE_SIZE_OPTIONS,
@@ -61,6 +62,7 @@ export default function TenantPage() {
   const [checkingTenantId, setCheckingTenantId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [confirmDeleteTenant, setConfirmDeleteTenant] = useState<ApiTenant | null>(null)
+  const [documentsTenant, setDocumentsTenant] = useState<ApiTenant | null>(null)
   const [blockedDeletionContractCount, setBlockedDeletionContractCount] = useState<number | null>(null)
 
   const [lineLinkInfo, setLineLinkInfo] = useState<{ tenant: ApiTenant; link: string } | null>(null)
@@ -365,6 +367,7 @@ export default function TenantPage() {
         deletingTenantId={checkingTenantId ?? deletingTenantId}
         onCreateTenant={openCreateForm}
         onEditTenant={openEditForm}
+        onOpenDocuments={setDocumentsTenant}
         onDeleteTenant={handleRequestDeleteTenant}
         onCopyLineLink={handleCopyLineLink}
         onUnlinkLine={setConfirmUnlinkTenant}
@@ -409,6 +412,14 @@ export default function TenantPage() {
         title={t('tenantDeleteBlockedTitle')}
         description={t('tenantDeleteBlockedDescription').replace('{count}', String(blockedDeletionContractCount ?? 0))}
         actionLabel={t('acknowledge')}
+      />
+
+      <EntityDocumentsSheet
+        open={documentsTenant !== null}
+        onOpenChange={(open) => !open && setDocumentsTenant(null)}
+        scope={{ tenantId: documentsTenant?.id ?? '' }}
+        title={t('documentsOfTitle').replace('{name}', documentsTenant ? `${documentsTenant.first_name} ${documentsTenant.last_name}` : '')}
+        prefill={{ tenant: documentsTenant ?? undefined }}
       />
 
       <TenantFormSheet

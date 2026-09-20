@@ -1,22 +1,16 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState } from 'react'
 import axios from 'axios'
-import { api, extractErrorCode, extractErrorMessage, type ApiPage } from '@/shared/api/client'
+import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
-import type { ApiTenant } from '@/features/tenant/types'
-import type { ApiRoom } from '@/features/room/types'
-import { formatRoomLabel } from '@/features/room/utils'
 import { DocumentListCard } from './components/DocumentListCard'
 import { DocumentFormSheet } from './components/DocumentFormSheet'
 import { DocumentPreviewSheet } from './components/DocumentPreviewSheet'
-import type { ApiDocument, DocumentCategory } from './types'
+import type { ApiDocument } from './types'
 import { downloadDocumentFile } from './files'
+import { useDocumentForm } from './useDocumentForm'
 import {
-  DOCUMENT_MAX_UPLOAD_BYTES,
   DOCUMENT_PAGE_SIZE_OPTIONS,
-  isAllowedUploadName,
-  toApiDate,
-  toDateInputValue,
   type DocumentCategoryFilter,
   type DocumentColumnFilters,
   type DocumentSortDirection,
@@ -48,33 +42,13 @@ export default function DocumentPage() {
   // and page boundaries now, so patching rows locally would misplace them.
   const [refreshToken, setRefreshToken] = useState(0)
 
-  const [formOpen, setFormOpen] = useState(false)
-  const [formDocumentId, setFormDocumentId] = useState<string | null>(null)
-  const [formDormitoryId, setFormDormitoryId] = useState('')
-  // The picked dormitory is searched server-side and so isn't necessarily in
-  // any loaded list; its name is kept here for the selector's label.
-  const [formDormitoryName, setFormDormitoryName] = useState('')
-  const [formTenantId, setFormTenantId] = useState('')
-  const [formTenantDisplayName, setFormTenantDisplayName] = useState('')
-  const [formRoomId, setFormRoomId] = useState('')
-  const [formRoomDisplayLabel, setFormRoomDisplayLabel] = useState('')
-  const [formName, setFormName] = useState('')
-  const [formCategory, setFormCategory] = useState<DocumentCategory>('other')
-  const [formFileUrl, setFormFileUrl] = useState('')
-  const [formFile, setFormFile] = useState<File | null>(null)
-  // Name of the file already stored for the document being edited, if it has
-  // one; it stays unless a new file or link is supplied.
-  const [formStoredFileName, setFormStoredFileName] = useState<string | null>(null)
-  const [formUploadedDate, setFormUploadedDate] = useState('')
-  const [formNote, setFormNote] = useState('')
-  const [formSaving, setFormSaving] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
-
   const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [confirmDeleteDocument, setConfirmDeleteDocument] = useState<ApiDocument | null>(null)
   const [previewDocument, setPreviewDocument] = useState<ApiDocument | null>(null)
   const [downloadError, setDownloadError] = useState<string | null>(null)
+
+  const form = useDocumentForm({ onSaved: refresh })
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
@@ -141,133 +115,6 @@ export default function DocumentPage() {
       setSortDirection('asc')
     }
     setPage(1)
-  }
-
-  function openCreateForm() {
-    setFormDocumentId(null)
-    setFormDormitoryId('')
-    setFormDormitoryName('')
-    setFormTenantId('')
-    setFormTenantDisplayName('')
-    setFormRoomId('')
-    setFormRoomDisplayLabel('')
-    setFormName('')
-    setFormCategory('other')
-    setFormFileUrl('')
-    setFormFile(null)
-    setFormStoredFileName(null)
-    setFormUploadedDate(toDateInputValue(new Date().toISOString()))
-    setFormNote('')
-    setFormError(null)
-    setFormOpen(true)
-  }
-
-  function openEditForm(document: ApiDocument) {
-    setFormDocumentId(document.id)
-    setFormDormitoryId(document.dormitory_id)
-    setFormDormitoryName(document.dormitory_name ?? '')
-    setFormTenantId(document.tenant_id ?? '')
-    setFormTenantDisplayName(document.tenant_name ?? '')
-    setFormRoomId(document.room_id ?? '')
-    setFormRoomDisplayLabel(formatRoomLabel(document))
-    setFormName(document.name)
-    setFormCategory(document.category)
-    setFormFileUrl(document.file_url)
-    setFormFile(null)
-    setFormStoredFileName(document.has_file ? document.file_name || document.name : null)
-    setFormUploadedDate(toDateInputValue(document.uploaded_date))
-    setFormNote(document.note)
-    setFormError(null)
-    setFormOpen(true)
-  }
-
-  async function handleFormSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-
-    const isEdit = formDocumentId !== null
-
-    if (!isEdit && !formDormitoryId) {
-      setFormError(t('documentDormitoryRequired'))
-      return
-    }
-    if (!formName.trim()) {
-      setFormError(t('documentNameRequired'))
-      return
-    }
-    if (!formFile && !formFileUrl.trim() && !formStoredFileName) {
-      setFormError(t('documentFileUrlRequired'))
-      return
-    }
-    if (formFile) {
-      if (formFile.size > DOCUMENT_MAX_UPLOAD_BYTES) {
-        setFormError(t('documentFileTooLarge'))
-        return
-      }
-      if (formFile.size === 0) {
-        setFormError(t('documentFileEmpty'))
-        return
-      }
-      if (!isAllowedUploadName(formFile.name)) {
-        setFormError(t('documentFileUnsupported'))
-        return
-      }
-    }
-
-    setFormSaving(true)
-    setFormError(null)
-
-    try {
-      // A picked file goes up as multipart (the file takes precedence over any
-      // link); otherwise it's the plain JSON body. An edit that keeps the
-      // stored file and has no link leaves file_url out, so the file isn't
-      // replaced by an empty link.
-      const fileUrl = formFileUrl.trim()
-      const fields = {
-        tenant_id: formTenantId || null,
-        room_id: formRoomId || null,
-        name: formName.trim(),
-        category: formCategory,
-        uploaded_date: formUploadedDate ? toApiDate(formUploadedDate) : undefined,
-        note: formNote.trim(),
-      }
-
-      let body: Record<string, unknown> | FormData
-      if (formFile) {
-        const form = new FormData()
-        if (!isEdit) form.append('dormitory_id', formDormitoryId)
-        for (const [key, value] of Object.entries(fields)) {
-          if (value) form.append(key, value)
-        }
-        // Empty note is meaningful (it clears it), so it's always sent.
-        form.set('note', fields.note)
-        form.append('file', formFile)
-        body = form
-      } else {
-        body = {
-          ...(isEdit ? {} : { dormitory_id: formDormitoryId }),
-          ...fields,
-          ...(fileUrl || !formStoredFileName ? { file_url: fileUrl } : {}),
-        }
-      }
-
-      if (!isEdit) {
-        await api.post<ApiDocument>('/documents', body)
-      } else {
-        await api.put<ApiDocument>(`/documents/${formDocumentId}`, body)
-      }
-      refresh()
-      setFormOpen(false)
-    } catch (err) {
-      const fallback = isEdit ? t('documentUpdateError') : t('documentCreateError')
-      const codeMessages: Record<string, string> = {
-        file_too_large: t('documentFileTooLarge'),
-        unsupported_file_type: t('documentFileUnsupported'),
-        empty_file: t('documentFileEmpty'),
-      }
-      setFormError(codeMessages[extractErrorCode(err) ?? ''] ?? extractErrorMessage(err, fallback))
-    } finally {
-      setFormSaving(false)
-    }
   }
 
   async function handleDeleteDocument() {
@@ -343,10 +190,10 @@ export default function DocumentPage() {
         onNextPage={() => setPage((value) => Math.min(totalPages, value + 1))}
         onLastPage={() => setPage(totalPages)}
         deletingDocumentId={deletingDocumentId}
-        onCreateDocument={openCreateForm}
+        onCreateDocument={() => form.openCreate()}
         onPreviewDocument={setPreviewDocument}
         onDownloadDocument={handleDownloadDocument}
-        onEditDocument={openEditForm}
+        onEditDocument={form.openEdit}
         onDeleteDocument={setConfirmDeleteDocument}
       />
 
@@ -367,50 +214,7 @@ export default function DocumentPage() {
         onOpenChange={(open) => !open && setPreviewDocument(null)}
       />
 
-      <DocumentFormSheet
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        isEdit={formDocumentId !== null}
-        dormitoryName={formDormitoryName}
-        onDormitorySelect={(dormitory) => {
-          setFormDormitoryId(dormitory.id)
-          setFormDormitoryName(dormitory.name)
-        }}
-        tenantDisplayName={formTenantDisplayName}
-        onSelectTenant={(tenant: ApiTenant) => {
-          setFormTenantId(tenant.id)
-          setFormTenantDisplayName(`${tenant.first_name} ${tenant.last_name}`)
-        }}
-        onClearTenant={() => {
-          setFormTenantId('')
-          setFormTenantDisplayName('')
-        }}
-        roomDisplayLabel={formRoomDisplayLabel}
-        onSelectRoom={(room: ApiRoom) => {
-          setFormRoomId(room.id)
-          setFormRoomDisplayLabel(formatRoomLabel(room))
-        }}
-        onClearRoom={() => {
-          setFormRoomId('')
-          setFormRoomDisplayLabel('')
-        }}
-        name={formName}
-        onNameChange={setFormName}
-        category={formCategory}
-        onCategoryChange={setFormCategory}
-        file={formFile}
-        onFileChange={setFormFile}
-        storedFileName={formStoredFileName}
-        fileUrl={formFileUrl}
-        onFileUrlChange={setFormFileUrl}
-        uploadedDate={formUploadedDate}
-        onUploadedDateChange={setFormUploadedDate}
-        note={formNote}
-        onNoteChange={setFormNote}
-        saving={formSaving}
-        error={formError}
-        onSubmit={handleFormSubmit}
-      />
+      <DocumentFormSheet {...form.sheetProps} />
     </main>
   )
 }

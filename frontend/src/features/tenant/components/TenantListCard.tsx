@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, CheckCircle2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Link2, Pencil, Trash2, Unlink, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, CheckCircle2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, FileText, Link2, Pencil, Trash2, Unlink, X } from 'lucide-react'
 import { useLanguage } from '@/shared/i18n/language'
 import type { TranslationKey } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
@@ -59,6 +59,7 @@ type TenantListCardProps = {
   deletingTenantId: string | null
   onCreateTenant: () => void
   onEditTenant: (tenant: ApiTenant) => void
+  onOpenDocuments: (tenant: ApiTenant) => void
   onDeleteTenant: (tenant: ApiTenant) => void
   onCopyLineLink: (tenant: ApiTenant) => void
   onUnlinkLine: (tenant: ApiTenant) => void
@@ -95,6 +96,7 @@ export function TenantListCard({
   deletingTenantId,
   onCreateTenant,
   onEditTenant,
+  onOpenDocuments,
   onDeleteTenant,
   onCopyLineLink,
   onUnlinkLine,
@@ -337,6 +339,16 @@ export function TenantListCard({
                                 <Unlink />
                               </Button>
                             )}
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              title={t('documentsOpen')}
+                              aria-label={t('documentsOpen')}
+                              onClick={() => onOpenDocuments(tenant)}
+                            >
+                              <FileText />
+                            </Button>
                             <Button
                               type="button"
                               size="icon"

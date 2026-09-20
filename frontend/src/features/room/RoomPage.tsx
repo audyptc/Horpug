@@ -7,6 +7,8 @@ import { InformationDialog } from '@/shared/components/information-dialog'
 import type { ApiRoomType } from '@/features/roomtype/types'
 import { RoomListCard } from './components/RoomListCard'
 import { RoomFormSheet } from './components/RoomFormSheet'
+import { EntityDocumentsSheet } from '@/features/document/components/EntityDocumentsSheet'
+import { formatRoomLabel } from './utils'
 import type { ApiRoom, ApiRoomDeletionCheck, RoomStatus } from './types'
 import {
   ROOM_PAGE_SIZE_OPTIONS,
@@ -62,6 +64,7 @@ export default function RoomPage() {
   const [checkingRoomId, setCheckingRoomId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [confirmDeleteRoom, setConfirmDeleteRoom] = useState<ApiRoom | null>(null)
+  const [documentsRoom, setDocumentsRoom] = useState<ApiRoom | null>(null)
   const [blockedDeletionContractCount, setBlockedDeletionContractCount] = useState<number | null>(null)
 
   useEffect(() => {
@@ -327,6 +330,7 @@ export default function RoomPage() {
         deletingRoomId={checkingRoomId ?? deletingRoomId}
         onCreateRoom={openCreateForm}
         onEditRoom={openEditForm}
+        onOpenDocuments={setDocumentsRoom}
         onDeleteRoom={handleRequestDeleteRoom}
       />
 
@@ -348,6 +352,14 @@ export default function RoomPage() {
         title={t('roomDeleteBlockedTitle')}
         description={t('roomDeleteBlockedDescription').replace('{count}', String(blockedDeletionContractCount ?? 0))}
         actionLabel={t('acknowledge')}
+      />
+
+      <EntityDocumentsSheet
+        open={documentsRoom !== null}
+        onOpenChange={(open) => !open && setDocumentsRoom(null)}
+        scope={{ roomId: documentsRoom?.id ?? '' }}
+        title={t('documentsOfTitle').replace('{name}', documentsRoom ? formatRoomLabel(documentsRoom) : '')}
+        prefill={{ room: documentsRoom ?? undefined }}
       />
 
       <RoomFormSheet

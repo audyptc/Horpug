@@ -6,6 +6,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  FileText,
   Pencil,
   Trash2,
   X,
@@ -95,6 +96,7 @@ type RoomListCardProps = {
   deletingRoomId: string | null
   onCreateRoom: () => void
   onEditRoom: (room: ApiRoom) => void
+  onOpenDocuments: (room: ApiRoom) => void
   onDeleteRoom: (room: ApiRoom) => void
 }
 
@@ -129,6 +131,7 @@ export function RoomListCard({
   deletingRoomId,
   onCreateRoom,
   onEditRoom,
+  onOpenDocuments,
   onDeleteRoom,
 }: RoomListCardProps) {
   const { t } = useLanguage()
@@ -334,6 +337,16 @@ export function RoomListCard({
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              title={t('documentsOpen')}
+                              aria-label={t('documentsOpen')}
+                              onClick={() => onOpenDocuments(room)}
+                            >
+                              <FileText />
+                            </Button>
                             <Button
                               type="button"
                               size="icon"
