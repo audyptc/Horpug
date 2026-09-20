@@ -29,6 +29,8 @@ definitions:
     type: object
   apihorpug_internal_features_announcement_domain.Announcement:
     properties:
+      category:
+        type: string
       content:
         type: string
       created_at:
@@ -41,7 +43,15 @@ definitions:
         type: string
       id:
         type: string
+      is_pinned:
+        description: IsPinned keeps the announcement at the top of the default listing.
+        type: boolean
       is_published:
+        type: boolean
+      is_read:
+        description: |-
+          IsRead is whether the requesting user has opened this announcement; it
+          is per user, not a property of the announcement itself.
         type: boolean
       published_date:
         type: string
@@ -51,6 +61,13 @@ definitions:
         type: string
       updated_by:
         type: string
+    type: object
+  apihorpug_internal_features_announcement_domain.Summary:
+    properties:
+      can_manage:
+        type: boolean
+      unread_count:
+        type: integer
     type: object
   apihorpug_internal_features_contract_domain.Contract:
     properties:
@@ -1034,10 +1051,14 @@ definitions:
     type: object
   internal_features_announcement_delivery_http.createAnnouncementRequest:
     properties:
+      category:
+        type: string
       content:
         type: string
       dormitory_id:
         type: string
+      is_pinned:
+        type: boolean
       is_published:
         type: boolean
       published_date:
@@ -1047,8 +1068,12 @@ definitions:
     type: object
   internal_features_announcement_delivery_http.updateAnnouncementRequest:
     properties:
+      category:
+        type: string
       content:
         type: string
+      is_pinned:
+        type: boolean
       is_published:
         type: boolean
       published_date:
@@ -1383,6 +1408,8 @@ definitions:
     properties:
       category:
         $ref: '#/definitions/apihorpug_internal_features_repairrequest_domain.RepairCategory'
+      clear_tenant:
+        type: boolean
       description:
         type: string
       reported_date:
@@ -1741,12 +1768,19 @@ paths:
   /announcements:
     get:
       description: Returns every announcement for roles with full dormitory access,
-        otherwise only announcements under dormitories the caller manages. Optionally
-        filter by dormitory, published status or published date range.
+        otherwise only announcements under dormitories the caller manages. Roles that
+        cannot create, update or delete announcements only ever see published ones
+        whose date has arrived. Pinned announcements come first when sorting by published_date.
+        Optionally filter by dormitory, category, published status or published date
+        range.
       parameters:
       - description: Filter by dormitory ID
         in: query
         name: dormitory_id
+        type: string
+      - description: 'Filter by category: general, urgent, billing, maintenance, event'
+        in: query
+        name: category
         type: string
       - description: Filter by published status
         in: query
@@ -1769,7 +1803,7 @@ paths:
         in: query
         name: f[column]
         type: string
-      - description: 'Sort field: dormitory_name, title, is_published, published_date
+      - description: 'Sort field: dormitory_name, title, category, is_published, published_date
           (default published_date)'
         in: query
         name: sort
@@ -1948,6 +1982,66 @@ paths:
       security:
       - BearerAuth: []
       summary: Update an announcement
+      tags:
+      - announcements
+  /announcements/{id}/read:
+    post:
+      description: Records that the caller has opened the announcement. Repeating
+        it is harmless.
+      parameters:
+      - description: Announcement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Mark an announcement as read
+      tags:
+      - announcements
+  /announcements/summary:
+    get:
+      description: How many visible announcements the caller has not opened yet, and
+        whether their role can create, update or delete announcements.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_announcement_domain.Summary'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Announcement unread count and manage access
       tags:
       - announcements
   /auth/login:

@@ -269,7 +269,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		Status:       req.Status,
 		ReportedDate: req.ReportedDate,
 		CreatedBy:    &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, repairrequestdomain.ErrRequiredRepairRequestData) {
 			return apierror.BadRequest("room_id, description and reported_date are required")
@@ -336,7 +336,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		Status:       req.Status,
 		ReportedDate: req.ReportedDate,
 		UpdatedBy:    &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, repairrequestdomain.ErrRepairRequestNotFound) {
 			return apierror.NotFound("repair request not found")
@@ -384,7 +384,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := h.usecase.Delete(ctx, id, requesterID); err != nil {
+	if err := h.usecase.Delete(ctx, id, requesterID, c.IP()); err != nil {
 		if errors.Is(err, repairrequestdomain.ErrRepairRequestNotFound) {
 			return apierror.NotFound("repair request not found")
 		}

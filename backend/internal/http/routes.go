@@ -126,7 +126,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	expenseService := expenseusecase.New(expenseRepo, activityLogService)
 	expenseHandler := expensehttp.NewHandler(expenseService)
 	repairRequestRepo := repairrequestrepository.NewRepository(db)
-	repairRequestService := repairrequestusecase.New(repairRequestRepo)
+	repairRequestService := repairrequestusecase.New(repairRequestRepo, activityLogService)
 	repairRequestHandler := repairrequesthttp.NewHandler(repairRequestService)
 	parkingRepo := parkingrepository.NewRepository(db)
 	parkingService := parkingusecase.New(parkingRepo)

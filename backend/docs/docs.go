@@ -225,7 +225,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns every announcement for roles with full dormitory access, otherwise only announcements under dormitories the caller manages. Optionally filter by dormitory, published status or published date range.",
+                "description": "Returns every announcement for roles with full dormitory access, otherwise only announcements under dormitories the caller manages. Roles that cannot create, update or delete announcements only ever see published ones whose date has arrived. Pinned announcements come first when sorting by published_date. Optionally filter by dormitory, category, published status or published date range.",
                 "produces": [
                     "application/json"
                 ],
@@ -238,6 +238,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter by dormitory ID",
                         "name": "dormitory_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by category: general, urgent, billing, maintenance, event",
+                        "name": "category",
                         "in": "query"
                     },
                     {
@@ -272,7 +278,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Sort field: dormitory_name, title, is_published, published_date (default published_date)",
+                        "description": "Sort field: dormitory_name, title, category, is_published, published_date (default published_date)",
                         "name": "sort",
                         "in": "query"
                     },
@@ -365,6 +371,43 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/announcements/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "How many visible announcements the caller has not opened yet, and whether their role can create, update or delete announcements.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "announcements"
+                ],
+                "summary": "Announcement unread count and manage access",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_announcement_domain.Summary"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
                         }
@@ -502,6 +545,61 @@ const docTemplate = `{
                     "announcements"
                 ],
                 "summary": "Delete an announcement",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Announcement ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/announcements/{id}/read": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Records that the caller has opened the announcement. Repeating it is harmless.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "announcements"
+                ],
+                "summary": "Mark an announcement as read",
                 "parameters": [
                     {
                         "type": "string",
@@ -7371,6 +7469,9 @@ const docTemplate = `{
         "apihorpug_internal_features_announcement_domain.Announcement": {
             "type": "object",
             "properties": {
+                "category": {
+                    "type": "string"
+                },
                 "content": {
                     "type": "string"
                 },
@@ -7389,7 +7490,15 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "is_pinned": {
+                    "description": "IsPinned keeps the announcement at the top of the default listing.",
+                    "type": "boolean"
+                },
                 "is_published": {
+                    "type": "boolean"
+                },
+                "is_read": {
+                    "description": "IsRead is whether the requesting user has opened this announcement; it\nis per user, not a property of the announcement itself.",
                     "type": "boolean"
                 },
                 "published_date": {
@@ -7403,6 +7512,17 @@ const docTemplate = `{
                 },
                 "updated_by": {
                     "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_announcement_domain.Summary": {
+            "type": "object",
+            "properties": {
+                "can_manage": {
+                    "type": "boolean"
+                },
+                "unread_count": {
+                    "type": "integer"
                 }
             }
         },
@@ -8851,11 +8971,17 @@ const docTemplate = `{
         "internal_features_announcement_delivery_http.createAnnouncementRequest": {
             "type": "object",
             "properties": {
+                "category": {
+                    "type": "string"
+                },
                 "content": {
                     "type": "string"
                 },
                 "dormitory_id": {
                     "type": "string"
+                },
+                "is_pinned": {
+                    "type": "boolean"
                 },
                 "is_published": {
                     "type": "boolean"
@@ -8871,8 +8997,14 @@ const docTemplate = `{
         "internal_features_announcement_delivery_http.updateAnnouncementRequest": {
             "type": "object",
             "properties": {
+                "category": {
+                    "type": "string"
+                },
                 "content": {
                     "type": "string"
+                },
+                "is_pinned": {
+                    "type": "boolean"
                 },
                 "is_published": {
                     "type": "boolean"
@@ -9386,6 +9518,9 @@ const docTemplate = `{
             "properties": {
                 "category": {
                     "$ref": "#/definitions/apihorpug_internal_features_repairrequest_domain.RepairCategory"
+                },
+                "clear_tenant": {
+                    "type": "boolean"
                 },
                 "description": {
                     "type": "string"
