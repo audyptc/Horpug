@@ -260,7 +260,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		ReceivedDate:   req.ReceivedDate,
 		Note:           req.Note,
 		CreatedBy:      &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, parceldomain.ErrRequiredParcelData) {
 			return apierror.BadRequest("tenant_id and received_date are required")
@@ -320,7 +320,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		ReceivedDate:   req.ReceivedDate,
 		Note:           req.Note,
 		UpdatedBy:      &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, parceldomain.ErrParcelNotFound) {
 			return apierror.NotFound("parcel not found")
@@ -362,7 +362,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := h.usecase.Delete(ctx, id, requesterID); err != nil {
+	if err := h.usecase.Delete(ctx, id, requesterID, c.IP()); err != nil {
 		if errors.Is(err, parceldomain.ErrParcelNotFound) {
 			return apierror.NotFound("parcel not found")
 		}

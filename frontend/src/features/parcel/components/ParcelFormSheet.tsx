@@ -1,6 +1,8 @@
 import type { FormEvent } from 'react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Button } from '@/shared/components/ui/button'
+import { Combobox } from '@/shared/components/ui/combobox'
+import { DatePickerField } from '@/shared/components/date-picker-field'
 import {
   Sheet,
   SheetContent,
@@ -137,26 +139,26 @@ export function ParcelFormSheet({
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('parcelFormStatusLabel')}
-              <select
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+              <Combobox
+                options={PARCEL_STATUSES.map((value) => ({
+                  value,
+                  label: t(parcelStatusLabelKeys[value]),
+                }))}
                 value={status}
-                onChange={(event) => onStatusChange(event.target.value as ParcelStatus)}
-              >
-                {PARCEL_STATUSES.map((value) => (
-                  <option key={value} value={value}>
-                    {t(parcelStatusLabelKeys[value])}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => onStatusChange(value as ParcelStatus)}
+                showCheck={false}
+                placeholder={t('parcelFormStatusPlaceholder')}
+                searchPlaceholder={t('parcelFormStatusSearchPlaceholder')}
+                emptyText={t('parcelFormStatusNoResults')}
+              />
             </label>
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('parcelFormReceivedDateLabel')}
-              <input
-                type="date"
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+              <DatePickerField
                 value={receivedDate}
-                onChange={(event) => onReceivedDateChange(event.target.value)}
+                onChange={onReceivedDateChange}
+                placeholder={t('parcelFormReceivedDateLabel')}
               />
             </label>
 
