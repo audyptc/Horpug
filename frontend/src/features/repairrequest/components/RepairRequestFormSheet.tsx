@@ -1,6 +1,8 @@
 import type { FormEvent } from 'react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Button } from '@/shared/components/ui/button'
+import { Combobox } from '@/shared/components/ui/combobox'
+import { DatePickerField } from '@/shared/components/date-picker-field'
 import {
   Sheet,
   SheetContent,
@@ -121,41 +123,42 @@ export function RepairRequestFormSheet({
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('repairFormCategoryLabel')}
-              <select
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+              <Combobox
+                options={REPAIR_CATEGORIES.map((value) => ({
+                  value,
+                  label: t(repairCategoryLabelKeys[value]),
+                }))}
                 value={category}
-                onChange={(event) => onCategoryChange(event.target.value as RepairCategory)}
-              >
-                {REPAIR_CATEGORIES.map((value) => (
-                  <option key={value} value={value}>
-                    {t(repairCategoryLabelKeys[value])}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => onCategoryChange(value as RepairCategory)}
+                showCheck={false}
+                placeholder={t('repairFormCategoryPlaceholder')}
+                searchPlaceholder={t('repairFormCategorySearchPlaceholder')}
+                emptyText={t('repairFormCategoryNoResults')}
+              />
             </label>
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('repairFormStatusLabel')}
-              <select
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+              <Combobox
+                options={REPAIR_STATUSES.map((value) => ({
+                  value,
+                  label: t(repairStatusLabelKeys[value]),
+                }))}
                 value={status}
-                onChange={(event) => onStatusChange(event.target.value as RepairStatus)}
-              >
-                {REPAIR_STATUSES.map((value) => (
-                  <option key={value} value={value}>
-                    {t(repairStatusLabelKeys[value])}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => onStatusChange(value as RepairStatus)}
+                showCheck={false}
+                placeholder={t('repairFormStatusPlaceholder')}
+                searchPlaceholder={t('repairFormStatusSearchPlaceholder')}
+                emptyText={t('repairFormStatusNoResults')}
+              />
             </label>
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('repairFormReportedDateLabel')}
-              <input
-                type="date"
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+              <DatePickerField
                 value={reportedDate}
-                onChange={(event) => onReportedDateChange(event.target.value)}
+                onChange={onReportedDateChange}
+                placeholder={t('repairFormReportedDateLabel')}
               />
             </label>
 

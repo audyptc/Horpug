@@ -16,6 +16,8 @@ type ComboboxProps = {
   searchPlaceholder?: string
   emptyText?: string
   disabled?: boolean
+  // Marks the currently selected option with a check. On by default.
+  showCheck?: boolean
   className?: string
 }
 
@@ -27,6 +29,7 @@ export function Combobox({
   searchPlaceholder = '',
   emptyText = '',
   disabled = false,
+  showCheck = true,
   className,
 }: ComboboxProps) {
   const [open, setOpen] = useState(false)
@@ -144,7 +147,7 @@ export function Combobox({
                   onClick={() => selectOption(option)}
                 >
                   <span className="truncate">{option.label}</span>
-                  {option.value === value && <Check className="size-4 shrink-0" />}
+                  {showCheck && option.value === value && <Check className="size-4 shrink-0" />}
                 </button>
               ))
             )}
