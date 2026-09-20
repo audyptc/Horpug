@@ -266,7 +266,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		Amount:      req.Amount,
 		Description: req.Description,
 		CreatedBy:   &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, expensedomain.ErrRequiredExpenseData) {
 			return apierror.BadRequest("dormitory_id and expense_date are required")
@@ -324,7 +324,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		Amount:      req.Amount,
 		Description: req.Description,
 		UpdatedBy:   &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, expensedomain.ErrExpenseNotFound) {
 			return apierror.NotFound("expense not found")
@@ -366,7 +366,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := h.usecase.Delete(ctx, id, requesterID); err != nil {
+	if err := h.usecase.Delete(ctx, id, requesterID, c.IP()); err != nil {
 		if errors.Is(err, expensedomain.ErrExpenseNotFound) {
 			return apierror.NotFound("expense not found")
 		}

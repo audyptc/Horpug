@@ -123,7 +123,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	paymentService := paymentusecase.New(paymentRepo, activityLogService)
 	paymentHandler := paymenthttp.NewHandler(paymentService)
 	expenseRepo := expenserepository.NewRepository(db)
-	expenseService := expenseusecase.New(expenseRepo)
+	expenseService := expenseusecase.New(expenseRepo, activityLogService)
 	expenseHandler := expensehttp.NewHandler(expenseService)
 	repairRequestRepo := repairrequestrepository.NewRepository(db)
 	repairRequestService := repairrequestusecase.New(repairRequestRepo)

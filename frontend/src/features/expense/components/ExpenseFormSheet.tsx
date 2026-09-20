@@ -1,6 +1,8 @@
 import type { FormEvent } from 'react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Button } from '@/shared/components/ui/button'
+import { Combobox } from '@/shared/components/ui/combobox'
+import { DatePickerField } from '@/shared/components/date-picker-field'
 import {
   Sheet,
   SheetContent,
@@ -87,26 +89,25 @@ export function ExpenseFormSheet({
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('expenseFormCategoryLabel')}
-              <select
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+              <Combobox
+                options={EXPENSE_CATEGORIES.map((value) => ({
+                  value,
+                  label: t(expenseCategoryLabelKeys[value]),
+                }))}
                 value={category}
-                onChange={(event) => onCategoryChange(event.target.value as ExpenseCategory)}
-              >
-                {EXPENSE_CATEGORIES.map((value) => (
-                  <option key={value} value={value}>
-                    {t(expenseCategoryLabelKeys[value])}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => onCategoryChange(value as ExpenseCategory)}
+                placeholder={t('expenseFormCategoryLabel')}
+                searchPlaceholder={t('expenseFormCategorySearchPlaceholder')}
+                emptyText={t('expenseFormCategoryNoResults')}
+              />
             </label>
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('expenseFormDateLabel')}
-              <input
-                type="date"
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+              <DatePickerField
                 value={expenseDate}
-                onChange={(event) => onExpenseDateChange(event.target.value)}
+                onChange={onExpenseDateChange}
+                placeholder={t('expenseFormDateLabel')}
               />
             </label>
 
@@ -116,7 +117,7 @@ export function ExpenseFormSheet({
                 type="number"
                 min="0"
                 step="0.01"
-                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                className="h-10 rounded-md border border-input bg-transparent px-3 text-right text-sm"
                 value={amount}
                 onChange={(event) => onAmountChange(event.target.value)}
               />

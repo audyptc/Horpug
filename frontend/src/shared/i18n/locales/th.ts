@@ -530,6 +530,8 @@ const th: Record<TranslationKey, string> = {
   expenseFormDormitorySearchPlaceholder: 'ค้นหาหอพัก...',
   expenseFormDormitoryNoResults: 'ไม่พบหอพักที่ค้นหา',
   expenseFormCategoryLabel: 'ประเภท',
+  expenseFormCategorySearchPlaceholder: 'ค้นหาประเภท...',
+  expenseFormCategoryNoResults: 'ไม่พบประเภทที่ค้นหา',
   expenseFormDateLabel: 'วันที่จ่าย',
   expenseFormAmountLabel: 'จำนวนเงิน',
   expenseFormDescriptionLabel: 'รายละเอียด',

@@ -530,6 +530,8 @@ const en = {
   expenseFormDormitorySearchPlaceholder: 'Search dormitories...',
   expenseFormDormitoryNoResults: 'No dormitories found.',
   expenseFormCategoryLabel: 'Category',
+  expenseFormCategorySearchPlaceholder: 'Search categories...',
+  expenseFormCategoryNoResults: 'No categories found.',
   expenseFormDateLabel: 'Expense date',
   expenseFormAmountLabel: 'Amount',
   expenseFormDescriptionLabel: 'Description',
