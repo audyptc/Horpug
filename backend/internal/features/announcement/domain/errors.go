@@ -6,4 +6,5 @@ var (
 	ErrAnnouncementNotFound     = errors.New("announcement not found")
 	ErrRequiredAnnouncementData = errors.New("dormitory_id and title are required")
 	ErrDormitoryNotFound        = errors.New("dormitory not found")
+	ErrInvalidCategory          = errors.New("invalid category")
 )

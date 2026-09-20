@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ChartNoAxesColumn, ChevronDown, ClipboardList, ConciergeBell, DoorOpen, Lock, Settings, Wallet } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useLanguage } from '@/shared/i18n/language'
+import { useAnnouncementSummary } from '@/features/announcement/summary'
 import { menuMeta, useMenus, type ApiMenu } from './menus'
 
 export function SidebarNav({
@@ -13,6 +14,9 @@ export function SidebarNav({
 }) {
   const { t } = useLanguage()
   const { menus } = useMenus()
+  // Only asked for when the role has the menu; otherwise the request could only be refused.
+  const announcementSummary = useAnnouncementSummary(menus.some((menu) => menu.path === '/announcements'))
+  const unreadAnnouncements = announcementSummary?.unread_count ?? 0
 
   const metaOrder = Object.keys(menuMeta)
   const byMetaOrder = (a: ApiMenu, b: ApiMenu) => metaOrder.indexOf(a.path) - metaOrder.indexOf(b.path)
@@ -54,6 +58,15 @@ export function SidebarNav({
       >
         <Icon size={16} />
         <span className="menu-text">{t(meta.labelKey)}</span>
+        {menu.path === '/announcements' && unreadAnnouncements > 0 && (
+          <span
+            className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold leading-5 text-primary-foreground"
+            title={t('announcementUnreadBadgeLabel')}
+            aria-label={`${t('announcementUnreadBadgeLabel')}: ${unreadAnnouncements}`}
+          >
+            {unreadAnnouncements > 99 ? '99+' : unreadAnnouncements}
+          </span>
+        )}
       </NavLink>
     )
   }

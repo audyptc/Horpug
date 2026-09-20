@@ -26,6 +26,8 @@ type createAnnouncementRequest struct {
 	DormitoryID   uuid.UUID  `json:"dormitory_id"`
 	Title         string     `json:"title"`
 	Content       string     `json:"content"`
+	Category      string     `json:"category"`
+	IsPinned      bool       `json:"is_pinned"`
 	IsPublished   *bool      `json:"is_published"`
 	PublishedDate *time.Time `json:"published_date"`
 }
@@ -33,6 +35,8 @@ type createAnnouncementRequest struct {
 type updateAnnouncementRequest struct {
 	Title         *string    `json:"title"`
 	Content       *string    `json:"content"`
+	Category      *string    `json:"category"`
+	IsPinned      *bool      `json:"is_pinned"`
 	IsPublished   *bool      `json:"is_published"`
 	PublishedDate *time.Time `json:"published_date"`
 }
@@ -147,6 +151,7 @@ func parseListFilters(c fiber.Ctx) (announcementusecase.ListFilters, error) {
 	return announcementusecase.ListFilters{
 		DormitoryID: dormitoryID,
 		IsPublished: isPublished,
+		Category:    strings.TrimSpace(c.Query("category")),
 		DateFrom:    dateFrom,
 		DateTo:      dateTo,
 		Search:      strings.TrimSpace(c.Query("q")),
@@ -158,16 +163,17 @@ func parseListFilters(c fiber.Ctx) (announcementusecase.ListFilters, error) {
 
 // List godoc
 // @Summary List announcements
-// @Description Returns every announcement for roles with full dormitory access, otherwise only announcements under dormitories the caller manages. Optionally filter by dormitory, published status or published date range.
+// @Description Returns every announcement for roles with full dormitory access, otherwise only announcements under dormitories the caller manages. Roles that cannot create, update or delete announcements only ever see published ones whose date has arrived. Pinned announcements come first when sorting by published_date. Optionally filter by dormitory, category, published status or published date range.
 // @Tags announcements
 // @Produce json
 // @Param dormitory_id query string false "Filter by dormitory ID"
+// @Param category query string false "Filter by category: general, urgent, billing, maintenance, event"
 // @Param is_published query bool false "Filter by published status"
 // @Param date_from query string false "Filter by published date, inclusive (YYYY-MM-DD)"
 // @Param date_to query string false "Filter by published date, inclusive (YYYY-MM-DD)"
 // @Param q query string false "Filter by dormitory name, title or content"
 // @Param f[column] query string false "Per-column substring filter, e.g. f[title]=maintenance; column must be one of dormitory_name, title"
-// @Param sort query string false "Sort field: dormitory_name, title, is_published, published_date (default published_date)"
+// @Param sort query string false "Sort field: dormitory_name, title, category, is_published, published_date (default published_date)"
 // @Param order query string false "Sort direction: asc or desc"
 // @Param page query int false "Page number (default 1)"
 // @Param per_page query int false "Results per page (default 10, max 100)"
@@ -198,10 +204,76 @@ func (h *Handler) List(c fiber.Ctx) error {
 
 	announcements, total, err := h.usecase.List(ctx, requesterID, filters, perPage, offset)
 	if err != nil {
+		if errors.Is(err, announcementdomain.ErrInvalidCategory) {
+			return apierror.BadRequest("invalid category")
+		}
 		return apierror.Internal("failed to list announcements")
 	}
 
 	return apiresponse.Paginated(c, announcements, page, perPage, total)
+}
+
+// Summary godoc
+// @Summary Announcement unread count and manage access
+// @Description How many visible announcements the caller has not opened yet, and whether their role can create, update or delete announcements.
+// @Tags announcements
+// @Produce json
+// @Success 200 {object} announcementdomain.Summary
+// @Failure 401 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /announcements/summary [get]
+func (h *Handler) Summary(c fiber.Ctx) error {
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	defer cancel()
+
+	summary, err := h.usecase.Summary(ctx, requesterID)
+	if err != nil {
+		return apierror.Internal("failed to load announcement summary")
+	}
+
+	return apiresponse.OK(c, summary)
+}
+
+// MarkRead godoc
+// @Summary Mark an announcement as read
+// @Description Records that the caller has opened the announcement. Repeating it is harmless.
+// @Tags announcements
+// @Produce json
+// @Param id path string true "Announcement ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /announcements/{id}/read [post]
+func (h *Handler) MarkRead(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return apierror.BadRequest("invalid announcement id")
+	}
+
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	defer cancel()
+
+	if err := h.usecase.MarkRead(ctx, id, requesterID); err != nil {
+		if errors.Is(err, announcementdomain.ErrAnnouncementNotFound) {
+			return apierror.NotFound("announcement not found")
+		}
+		return apierror.Internal("failed to mark announcement as read")
+	}
+
+	return apiresponse.Message(c, "announcement marked as read")
 }
 
 // Get godoc
@@ -276,6 +348,8 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		DormitoryID:   req.DormitoryID,
 		Title:         req.Title,
 		Content:       req.Content,
+		Category:      req.Category,
+		IsPinned:      req.IsPinned,
 		IsPublished:   req.IsPublished,
 		PublishedDate: publishedDate,
 		CreatedBy:     &requesterID,
@@ -283,6 +357,9 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	if err != nil {
 		if errors.Is(err, announcementdomain.ErrRequiredAnnouncementData) {
 			return apierror.BadRequest("dormitory_id and title are required")
+		}
+		if errors.Is(err, announcementdomain.ErrInvalidCategory) {
+			return apierror.BadRequest("invalid category")
 		}
 		if errors.Is(err, announcementdomain.ErrDormitoryNotFound) {
 			return apierror.NotFound("dormitory not found")
@@ -328,6 +405,8 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	announcement, err := h.usecase.Update(ctx, id, requesterID, announcementusecase.UpdateInput{
 		Title:         req.Title,
 		Content:       req.Content,
+		Category:      req.Category,
+		IsPinned:      req.IsPinned,
 		IsPublished:   req.IsPublished,
 		PublishedDate: req.PublishedDate,
 		UpdatedBy:     &requesterID,
@@ -335,6 +414,9 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	if err != nil {
 		if errors.Is(err, announcementdomain.ErrAnnouncementNotFound) {
 			return apierror.NotFound("announcement not found")
+		}
+		if errors.Is(err, announcementdomain.ErrInvalidCategory) {
+			return apierror.BadRequest("invalid category")
 		}
 		if errors.Is(err, announcementdomain.ErrRequiredAnnouncementData) {
 			return apierror.BadRequest("title must not be empty")

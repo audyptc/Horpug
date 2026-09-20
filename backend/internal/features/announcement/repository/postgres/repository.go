@@ -25,27 +25,57 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-const selectAnnouncementColumns = `
-	a.id, a.dormitory_id, d.name, a.title, a.content, a.is_published, a.published_date,
+// selectAnnouncementColumns embeds the requester as a literal for is_read. It is
+// a uuid.UUID rendered in canonical form, so it can't carry SQL, and it saves
+// threading one more positional argument through every query that selects rows.
+func selectAnnouncementColumns(requesterID uuid.UUID) string {
+	return fmt.Sprintf(`
+	a.id, a.dormitory_id, d.name, a.title, a.content, a.category, a.is_pinned, a.is_published, a.published_date,
+	EXISTS (SELECT 1 FROM announcement_reads ar WHERE ar.announcement_id = a.id AND ar.user_id = '%s'),
 	a.created_by, a.updated_by, a.created_at, a.updated_at
-`
+`, requesterID)
+}
 
 const announcementFromJoins = `
 	FROM announcements a
 	JOIN dormitories d ON d.id = a.dormitory_id
 `
 
-func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filters announcementusecase.ListFilters, argIdx *int, args *[]any) []string {
+// visibleToTenants is what someone who can't manage announcements may see:
+// only published ones whose date has arrived. The date is judged in Thailand
+// time, as the rest of the system is, so a notice dated "today" appears from
+// local midnight rather than seven hours later.
+const visibleToTenants = `(a.is_published = TRUE AND a.published_date <= (NOW() AT TIME ZONE 'Asia/Bangkok')::date)`
+
+// viewer is how the requester's role decides what they can see.
+type viewer struct {
+	// full roles are exempt from per-dormitory scoping.
+	full   bool
+	roleID uuid.UUID
+	// canManage roles (any of create/update/delete on the announcements menu)
+	// also see drafts and announcements dated in the future.
+	canManage bool
+}
+
+func (r *Repository) buildScope(v viewer, requesterID uuid.UUID, filters announcementusecase.ListFilters, argIdx *int, args *[]any) []string {
 	conditions := make([]string, 0)
 
-	if !full {
+	if !v.full {
 		conditions = append(conditions, fmt.Sprintf(`a.dormitory_id IN (
 			SELECT dormitory_id FROM user_dormitories WHERE user_id = $%d
 			UNION
 			SELECT dormitory_id FROM role_dormitories WHERE role_id = $%d
 		)`, *argIdx, *argIdx+1))
-		*args = append(*args, requesterID, roleID)
+		*args = append(*args, requesterID, v.roleID)
 		*argIdx += 2
+	}
+	if !v.canManage {
+		conditions = append(conditions, visibleToTenants)
+	}
+	if filters.Category != "" {
+		conditions = append(conditions, fmt.Sprintf(`a.category = $%d`, *argIdx))
+		*args = append(*args, filters.Category)
+		*argIdx++
 	}
 	if filters.DormitoryID != nil {
 		conditions = append(conditions, fmt.Sprintf(`a.dormitory_id = $%d`, *argIdx))
@@ -120,22 +150,24 @@ func listOrderBy(filters announcementusecase.ListFilters) string {
 		return fmt.Sprintf(" ORDER BY d.name %s, a.id ASC", direction)
 	case "title":
 		return fmt.Sprintf(" ORDER BY a.title %s, a.id ASC", direction)
+	case "category":
+		return fmt.Sprintf(" ORDER BY a.category %s, a.id ASC", direction)
 	case "is_published":
 		return fmt.Sprintf(" ORDER BY a.is_published %s, a.id ASC", direction)
-	default: // published_date
-		return fmt.Sprintf(" ORDER BY a.published_date %s, a.id ASC", direction)
+	default: // published_date; pinned notices stay on top whichever way dates run
+		return fmt.Sprintf(" ORDER BY a.is_pinned DESC, a.published_date %s, a.id ASC", direction)
 	}
 }
 
 func (r *Repository) Count(ctx context.Context, requesterID uuid.UUID, filters announcementusecase.ListFilters) (int64, error) {
-	full, roleID, err := r.dormitoryScope(ctx, requesterID)
+	v, err := r.viewerFor(ctx, requesterID)
 	if err != nil {
 		return 0, err
 	}
 
 	argIdx := 1
 	args := make([]any, 0)
-	conditions := r.buildScope(full, roleID, requesterID, filters, &argIdx, &args)
+	conditions := r.buildScope(v, requesterID, filters, &argIdx, &args)
 
 	query := `SELECT COUNT(*) ` + announcementFromJoins
 	if len(conditions) > 0 {
@@ -150,16 +182,16 @@ func (r *Repository) Count(ctx context.Context, requesterID uuid.UUID, filters a
 }
 
 func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, filters announcementusecase.ListFilters, limit, offset int) ([]announcementdomain.Announcement, error) {
-	full, roleID, err := r.dormitoryScope(ctx, requesterID)
+	v, err := r.viewerFor(ctx, requesterID)
 	if err != nil {
 		return nil, err
 	}
 
 	argIdx := 1
 	args := make([]any, 0)
-	conditions := r.buildScope(full, roleID, requesterID, filters, &argIdx, &args)
+	conditions := r.buildScope(v, requesterID, filters, &argIdx, &args)
 
-	query := `SELECT ` + selectAnnouncementColumns + announcementFromJoins
+	query := `SELECT ` + selectAnnouncementColumns(requesterID) + announcementFromJoins
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
@@ -180,7 +212,7 @@ func (r *Repository) GetByID(ctx context.Context, id, requesterID uuid.UUID) (an
 		return announcementdomain.Announcement{}, err
 	}
 
-	announcement, err := r.loadAnnouncementByID(ctx, id)
+	announcement, err := r.loadAnnouncementByID(ctx, id, requesterID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return announcementdomain.Announcement{}, announcementdomain.ErrAnnouncementNotFound
@@ -189,6 +221,45 @@ func (r *Repository) GetByID(ctx context.Context, id, requesterID uuid.UUID) (an
 	}
 
 	return announcement, nil
+}
+
+// Summary counts the announcements the requester can see but hasn't opened.
+// Drafts and not-yet-dated ones never count, even for managers: they aren't
+// news to anyone yet.
+func (r *Repository) Summary(ctx context.Context, requesterID uuid.UUID) (announcementdomain.Summary, error) {
+	v, err := r.viewerFor(ctx, requesterID)
+	if err != nil {
+		return announcementdomain.Summary{}, err
+	}
+
+	argIdx := 1
+	args := make([]any, 0)
+	audience := viewer{full: v.full, roleID: v.roleID, canManage: false}
+	conditions := r.buildScope(audience, requesterID, announcementusecase.ListFilters{}, &argIdx, &args)
+	conditions = append(conditions, fmt.Sprintf(
+		`NOT EXISTS (SELECT 1 FROM announcement_reads ar WHERE ar.announcement_id = a.id AND ar.user_id = $%d)`, argIdx))
+	args = append(args, requesterID)
+
+	query := `SELECT COUNT(*) ` + announcementFromJoins + ` WHERE ` + strings.Join(conditions, " AND ")
+
+	summary := announcementdomain.Summary{CanManage: v.canManage}
+	if err := r.db.QueryRow(ctx, query, args...).Scan(&summary.UnreadCount); err != nil {
+		return announcementdomain.Summary{}, err
+	}
+	return summary, nil
+}
+
+func (r *Repository) MarkRead(ctx context.Context, id, requesterID uuid.UUID) error {
+	if err := r.ensureAnnouncementAccess(ctx, id, requesterID); err != nil {
+		return err
+	}
+
+	_, err := r.db.Exec(ctx, `
+		INSERT INTO announcement_reads (announcement_id, user_id)
+		VALUES ($1, $2)
+		ON CONFLICT (announcement_id, user_id) DO NOTHING
+	`, id, requesterID)
+	return err
 }
 
 func (r *Repository) Create(ctx context.Context, input announcementusecase.CreateInput) (announcementdomain.Announcement, error) {
@@ -200,9 +271,9 @@ func (r *Repository) Create(ctx context.Context, input announcementusecase.Creat
 
 	id := uuid.New()
 	_, err := r.db.Exec(ctx, `
-		INSERT INTO announcements (id, dormitory_id, title, content, is_published, published_date, created_by, updated_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
-	`, id, input.DormitoryID, input.Title, input.Content, *input.IsPublished, input.PublishedDate, input.CreatedBy)
+		INSERT INTO announcements (id, dormitory_id, title, content, category, is_pinned, is_published, published_date, created_by, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+	`, id, input.DormitoryID, input.Title, input.Content, input.Category, input.IsPinned, *input.IsPublished, input.PublishedDate, input.CreatedBy)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
@@ -211,7 +282,7 @@ func (r *Repository) Create(ctx context.Context, input announcementusecase.Creat
 		return announcementdomain.Announcement{}, err
 	}
 
-	return r.loadAnnouncementByID(ctx, id)
+	return r.loadAnnouncementByID(ctx, id, requesterOrNil(input.CreatedBy))
 }
 
 func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, input announcementusecase.UpdateInput) (announcementdomain.Announcement, error) {
@@ -231,6 +302,16 @@ func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, inpu
 	if input.Content != nil {
 		setClauses = append(setClauses, fmt.Sprintf("content = $%d", argIdx))
 		args = append(args, *input.Content)
+		argIdx++
+	}
+	if input.Category != nil {
+		setClauses = append(setClauses, fmt.Sprintf("category = $%d", argIdx))
+		args = append(args, *input.Category)
+		argIdx++
+	}
+	if input.IsPinned != nil {
+		setClauses = append(setClauses, fmt.Sprintf("is_pinned = $%d", argIdx))
+		args = append(args, *input.IsPinned)
 		argIdx++
 	}
 	if input.IsPublished != nil {
@@ -258,7 +339,7 @@ func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, inpu
 		}
 	}
 
-	return r.loadAnnouncementByID(ctx, id)
+	return r.loadAnnouncementByID(ctx, id, requesterID)
 }
 
 func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
@@ -277,9 +358,18 @@ func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) erro
 	return nil
 }
 
-func (r *Repository) loadAnnouncementByID(ctx context.Context, id uuid.UUID) (announcementdomain.Announcement, error) {
-	row := r.db.QueryRow(ctx, `SELECT `+selectAnnouncementColumns+announcementFromJoins+` WHERE a.id = $1`, id)
+func (r *Repository) loadAnnouncementByID(ctx context.Context, id, requesterID uuid.UUID) (announcementdomain.Announcement, error) {
+	row := r.db.QueryRow(ctx, `SELECT `+selectAnnouncementColumns(requesterID)+announcementFromJoins+` WHERE a.id = $1`, id)
 	return scanAnnouncement(row)
+}
+
+// requesterOrNil lets a create with no recorded author still read back its row;
+// uuid.Nil matches no reader, so is_read comes out false.
+func requesterOrNil(id *uuid.UUID) uuid.UUID {
+	if id == nil {
+		return uuid.Nil
+	}
+	return *id
 }
 
 func scanAnnouncement(row pgx.Row) (announcementdomain.Announcement, error) {
@@ -290,8 +380,11 @@ func scanAnnouncement(row pgx.Row) (announcementdomain.Announcement, error) {
 		&announcement.DormitoryName,
 		&announcement.Title,
 		&announcement.Content,
+		&announcement.Category,
+		&announcement.IsPinned,
 		&announcement.IsPublished,
 		&announcement.PublishedDate,
+		&announcement.IsRead,
 		&announcement.CreatedBy,
 		&announcement.UpdatedBy,
 		&announcement.CreatedAt,
@@ -318,27 +411,37 @@ func scanAnnouncements(rows pgx.Rows) ([]announcementdomain.Announcement, error)
 	return announcements, nil
 }
 
-// dormitoryScope reports whether the user's role is exempt from per-dormitory
-// scoping (sees and manages announcements in every dormitory), along with
-// their role ID so callers can also check role-level dormitory grants.
-func (r *Repository) dormitoryScope(ctx context.Context, userID uuid.UUID) (full bool, roleID uuid.UUID, err error) {
-	err = r.db.QueryRow(ctx, `
-		SELECT r.full_dormitory_access, r.id
+// viewerFor resolves how the user's role scopes what they can see: whether it
+// is exempt from per-dormitory scoping, its role ID (for role-level dormitory
+// grants), and whether it can manage announcements at all. Managing means
+// holding any of create/update/delete on the announcements menu; a role that
+// can only read is treated as a tenant and never sees drafts.
+func (r *Repository) viewerFor(ctx context.Context, userID uuid.UUID) (viewer, error) {
+	var v viewer
+	err := r.db.QueryRow(ctx, `
+		SELECT r.full_dormitory_access, r.id, EXISTS (
+			SELECT 1
+			FROM role_menu_permissions rmp
+			JOIN menus m ON m.id = rmp.menu_id
+			JOIN permissions p ON p.id = rmp.permission_id
+			WHERE rmp.role_id = r.id AND m.path = '/announcements'
+			AND p.name IN ('create', 'update', 'delete')
+		)
 		FROM users u
 		JOIN roles r ON r.id = u.role_id
 		WHERE u.id = $1
-	`, userID).Scan(&full, &roleID)
+	`, userID).Scan(&v.full, &v.roleID, &v.canManage)
 	if err != nil {
-		return false, uuid.Nil, err
+		return viewer{}, err
 	}
-	return full, roleID, nil
+	return v, nil
 }
 
 // ensureDormitoryAccess confirms the dormitory exists and the requester may
 // post announcements under it (unrestricted, individually assigned via
 // user_dormitories, or granted through their role via role_dormitories).
 func (r *Repository) ensureDormitoryAccess(ctx context.Context, dormitoryID, requesterID uuid.UUID) error {
-	full, roleID, err := r.dormitoryScope(ctx, requesterID)
+	v, err := r.viewerFor(ctx, requesterID)
 	if err != nil {
 		return err
 	}
@@ -352,7 +455,7 @@ func (r *Repository) ensureDormitoryAccess(ctx context.Context, dormitoryID, req
 		) OR EXISTS (
 			SELECT 1 FROM role_dormitories rd WHERE rd.dormitory_id = d.id AND rd.role_id = $4
 		))
-	`, dormitoryID, full, requesterID, roleID).Scan(&exists)
+	`, dormitoryID, v.full, requesterID, v.roleID).Scan(&exists)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return announcementdomain.ErrDormitoryNotFound
@@ -363,11 +466,12 @@ func (r *Repository) ensureDormitoryAccess(ctx context.Context, dormitoryID, req
 }
 
 // ensureAnnouncementAccess confirms the announcement exists and the
-// requester may act on it, based on access to its parent dormitory. Both a
-// missing announcement and a missing grant surface as
-// ErrAnnouncementNotFound so scoped-out callers can't distinguish the two.
+// requester may act on it, based on access to its parent dormitory. Someone
+// who can't manage announcements also can't reach a draft or one dated in the
+// future by id. A missing announcement, a missing grant and a hidden draft all
+// surface as ErrAnnouncementNotFound so callers can't tell them apart.
 func (r *Repository) ensureAnnouncementAccess(ctx context.Context, id, requesterID uuid.UUID) error {
-	full, roleID, err := r.dormitoryScope(ctx, requesterID)
+	v, err := r.viewerFor(ctx, requesterID)
 	if err != nil {
 		return err
 	}
@@ -381,7 +485,8 @@ func (r *Repository) ensureAnnouncementAccess(ctx context.Context, id, requester
 		) OR EXISTS (
 			SELECT 1 FROM role_dormitories rd WHERE rd.dormitory_id = a.dormitory_id AND rd.role_id = $4
 		))
-	`, id, full, requesterID, roleID).Scan(&exists)
+		AND ($5 OR `+visibleToTenants+`)
+	`, id, v.full, requesterID, v.roleID, v.canManage).Scan(&exists)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return announcementdomain.ErrAnnouncementNotFound

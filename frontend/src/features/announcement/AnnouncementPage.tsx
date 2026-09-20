@@ -5,11 +5,14 @@ import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { AnnouncementListCard } from './components/AnnouncementListCard'
 import { AnnouncementFormSheet } from './components/AnnouncementFormSheet'
-import type { ApiAnnouncement } from './types'
+import { AnnouncementDetailSheet } from './components/AnnouncementDetailSheet'
+import { markOneRead, refreshAnnouncementSummary, useAnnouncementSummary } from './summary'
+import type { AnnouncementCategory, ApiAnnouncement } from './types'
 import {
   ANNOUNCEMENT_PAGE_SIZE_OPTIONS,
   toApiDate,
   toDateInputValue,
+  type AnnouncementCategoryFilter,
   type AnnouncementColumnFilters,
   type AnnouncementSortDirection,
   type AnnouncementSortKey,
@@ -21,6 +24,10 @@ const SEARCH_DEBOUNCE_MS = 300
 
 export default function AnnouncementPage() {
   const { t } = useLanguage()
+  const summary = useAnnouncementSummary()
+  // Until the summary arrives this is false, so the management controls appear
+  // a moment after the list rather than being shown to a role that can't use them.
+  const canManage = summary?.can_manage ?? false
 
   const [announcements, setAnnouncements] = useState<ApiAnnouncement[] | null>(null)
   const [total, setTotal] = useState(0)
@@ -30,6 +37,7 @@ export default function AnnouncementPage() {
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<AnnouncementStatusFilter>('all')
+  const [categoryFilter, setCategoryFilter] = useState<AnnouncementCategoryFilter>('all')
   // Applied on submit from each column's menu, so no debounce is needed here.
   const [columnFilters, setColumnFilters] = useState<AnnouncementColumnFilters>({})
   const [sortKey, setSortKey] = useState<AnnouncementSortKey>('published_date')
@@ -49,10 +57,15 @@ export default function AnnouncementPage() {
   const [formDormitoryName, setFormDormitoryName] = useState('')
   const [formTitle, setFormTitle] = useState('')
   const [formContent, setFormContent] = useState('')
+  const [formCategory, setFormCategory] = useState<AnnouncementCategory>('general')
+  const [formIsPinned, setFormIsPinned] = useState(false)
   const [formIsPublished, setFormIsPublished] = useState(true)
   const [formPublishedDate, setFormPublishedDate] = useState('')
   const [formSaving, setFormSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+
+  const [detailAnnouncement, setDetailAnnouncement] = useState<ApiAnnouncement | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
 
   const [deletingAnnouncementId, setDeletingAnnouncementId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -79,6 +92,7 @@ export default function AnnouncementPage() {
           per_page: pageSize,
           q: debouncedQuery.trim() || undefined,
           is_published: statusFilter === 'all' ? undefined : statusFilter === 'published',
+          category: categoryFilter === 'all' ? undefined : categoryFilter,
           sort: sortKey,
           order: sortDirection,
           ...columnParams,
@@ -99,15 +113,36 @@ export default function AnnouncementPage() {
 
     return () => controller.abort()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize, debouncedQuery, statusFilter, columnFilters, sortKey, sortDirection, refreshToken])
+  }, [page, pageSize, debouncedQuery, statusFilter, categoryFilter, columnFilters, sortKey, sortDirection, refreshToken])
 
   const isLoading = !loadError && announcements === null
-  const hasFilters = query !== '' || statusFilter !== 'all' || Object.values(columnFilters).some(Boolean)
+  const hasFilters =
+    query !== '' || statusFilter !== 'all' || categoryFilter !== 'all' || Object.values(columnFilters).some(Boolean)
   const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
   const rangeEnd = Math.min(page * pageSize, total)
 
   function refresh() {
     setRefreshToken((value) => value + 1)
+    // Creating, editing or deleting can change what counts as unread.
+    void refreshAnnouncementSummary()
+  }
+
+  function openDetail(announcement: ApiAnnouncement) {
+    setDetailAnnouncement(announcement)
+    setDetailOpen(true)
+
+    if (announcement.is_read) return
+
+    // Opening it is what marks it read. The row and badge update at once; the
+    // request runs behind that, and a failure only leaves it unread for now.
+    setAnnouncements((prev) =>
+      prev ? prev.map((item) => (item.id === announcement.id ? { ...item, is_read: true } : item)) : prev
+    )
+    markOneRead()
+    api
+      .post(`/announcements/${announcement.id}/read`)
+      .catch(() => {})
+      .finally(() => void refreshAnnouncementSummary())
   }
 
   function setPageSize(size: number) {
@@ -131,6 +166,8 @@ export default function AnnouncementPage() {
     setFormDormitoryName('')
     setFormTitle('')
     setFormContent('')
+    setFormCategory('general')
+    setFormIsPinned(false)
     setFormIsPublished(true)
     setFormPublishedDate(toDateInputValue(new Date().toISOString()))
     setFormError(null)
@@ -143,6 +180,8 @@ export default function AnnouncementPage() {
     setFormDormitoryName(announcement.dormitory_name ?? '')
     setFormTitle(announcement.title)
     setFormContent(announcement.content)
+    setFormCategory(announcement.category)
+    setFormIsPinned(announcement.is_pinned)
     setFormIsPublished(announcement.is_published)
     setFormPublishedDate(toDateInputValue(announcement.published_date))
     setFormError(null)
@@ -172,6 +211,8 @@ export default function AnnouncementPage() {
           dormitory_id: formDormitoryId,
           title: formTitle.trim(),
           content: formContent.trim(),
+          category: formCategory,
+          is_pinned: formIsPinned,
           is_published: formIsPublished,
           published_date: formPublishedDate ? toApiDate(formPublishedDate) : undefined,
         }
@@ -180,6 +221,8 @@ export default function AnnouncementPage() {
         const payload = {
           title: formTitle.trim(),
           content: formContent.trim(),
+          category: formCategory,
+          is_pinned: formIsPinned,
           is_published: formIsPublished,
           published_date: formPublishedDate ? toApiDate(formPublishedDate) : undefined,
         }
@@ -237,6 +280,13 @@ export default function AnnouncementPage() {
           setStatusFilter(value)
           setPage(1)
         }}
+        categoryFilter={categoryFilter}
+        onCategoryFilterChange={(value) => {
+          setCategoryFilter(value)
+          setPage(1)
+        }}
+        canManage={canManage}
+        onOpenAnnouncement={openDetail}
         columnFilters={columnFilters}
         onColumnFilterChange={(key: AnnouncementTextFilterKey, value: string) => {
           setColumnFilters((prev) => ({ ...prev, [key]: value }))
@@ -276,6 +326,8 @@ export default function AnnouncementPage() {
         onConfirm={handleDeleteAnnouncement}
       />
 
+      <AnnouncementDetailSheet open={detailOpen} onOpenChange={setDetailOpen} announcement={detailAnnouncement} />
+
       <AnnouncementFormSheet
         open={formOpen}
         onOpenChange={setFormOpen}
@@ -289,6 +341,10 @@ export default function AnnouncementPage() {
         onTitleChange={setFormTitle}
         content={formContent}
         onContentChange={setFormContent}
+        category={formCategory}
+        onCategoryChange={setFormCategory}
+        isPinned={formIsPinned}
+        onIsPinnedChange={setFormIsPinned}
         isPublished={formIsPublished}
         onIsPublishedChange={setFormIsPublished}
         publishedDate={formPublishedDate}

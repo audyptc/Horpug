@@ -293,7 +293,10 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Post("/activity-logs", requirePermission("/activity-logs", permissiondomain.ActionCreate), activityLogHandler.Create)
 
 	api.Get("/announcements", requirePermission("/announcements", permissiondomain.ActionRead), announcementHandler.List)
+	// Registered before /:id so "summary" isn't taken for an announcement id.
+	api.Get("/announcements/summary", requirePermission("/announcements", permissiondomain.ActionRead), announcementHandler.Summary)
 	api.Get("/announcements/:id", requirePermission("/announcements", permissiondomain.ActionRead), announcementHandler.Get)
+	api.Post("/announcements/:id/read", requirePermission("/announcements", permissiondomain.ActionRead), announcementHandler.MarkRead)
 	api.Post("/announcements", requirePermission("/announcements", permissiondomain.ActionCreate), announcementHandler.Create)
 	api.Put("/announcements/:id", requirePermission("/announcements", permissiondomain.ActionUpdate), announcementHandler.Update)
 	api.Delete("/announcements/:id", requirePermission("/announcements", permissiondomain.ActionDelete), announcementHandler.Delete)

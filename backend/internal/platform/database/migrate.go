@@ -396,6 +396,17 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_announcements_dormitory_id ON announcements(dormitory_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_announcements_published_date ON announcements(published_date DESC)`,
+		`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS category VARCHAR(30) NOT NULL DEFAULT 'general'`,
+		`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN NOT NULL DEFAULT FALSE`,
+		`CREATE TABLE IF NOT EXISTS announcement_reads (
+			announcement_id UUID NOT NULL,
+			user_id UUID NOT NULL,
+			read_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			PRIMARY KEY (announcement_id, user_id),
+			CONSTRAINT announcement_reads_announcement_fkey FOREIGN KEY (announcement_id) REFERENCES announcements(id) ON DELETE CASCADE,
+			CONSTRAINT announcement_reads_user_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_announcement_reads_user_id ON announcement_reads(user_id)`,
 		`CREATE TABLE IF NOT EXISTS documents (
 			id UUID PRIMARY KEY,
 			dormitory_id UUID NOT NULL,

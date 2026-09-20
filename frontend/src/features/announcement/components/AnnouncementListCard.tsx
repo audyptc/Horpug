@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Pin, Trash2, X } from 'lucide-react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
@@ -7,9 +7,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/shared/components/ui/button'
 import type { ApiAnnouncement } from '../types'
 import {
+  ANNOUNCEMENT_CATEGORIES,
   ANNOUNCEMENT_PAGE_SIZE_OPTIONS,
+  announcementCategoryLabelKeys,
+  announcementCategoryVariant,
   isAnnouncementTextFilterKey,
   toDateInputValue,
+  type AnnouncementCategoryFilter,
   type AnnouncementColumnFilters,
   type AnnouncementSortDirection,
   type AnnouncementSortKey,
@@ -20,6 +24,7 @@ import {
 const SORTABLE_COLUMNS: { key: AnnouncementSortKey; labelKey: TranslationKey }[] = [
   { key: 'dormitory_name', labelKey: 'announcementDormitoryColumn' },
   { key: 'title', labelKey: 'announcementTitleColumn' },
+  { key: 'category', labelKey: 'announcementCategoryColumn' },
   { key: 'is_published', labelKey: 'announcementStatusColumn' },
   { key: 'published_date', labelKey: 'announcementDateColumn' },
 ]
@@ -32,6 +37,12 @@ type AnnouncementListCardProps = {
   onQueryChange: (query: string) => void
   statusFilter: AnnouncementStatusFilter
   onStatusFilterChange: (value: AnnouncementStatusFilter) => void
+  categoryFilter: AnnouncementCategoryFilter
+  onCategoryFilterChange: (value: AnnouncementCategoryFilter) => void
+  // Roles that can't manage announcements only read them: no status column
+  // (they only ever see published ones) and no create/edit/delete controls.
+  canManage: boolean
+  onOpenAnnouncement: (announcement: ApiAnnouncement) => void
   columnFilters: AnnouncementColumnFilters
   onColumnFilterChange: (key: AnnouncementTextFilterKey, value: string) => void
   hasFilters: boolean
@@ -64,6 +75,10 @@ export function AnnouncementListCard({
   onQueryChange,
   statusFilter,
   onStatusFilterChange,
+  categoryFilter,
+  onCategoryFilterChange,
+  canManage,
+  onOpenAnnouncement,
   columnFilters,
   onColumnFilterChange,
   hasFilters,
@@ -89,6 +104,8 @@ export function AnnouncementListCard({
 }: AnnouncementListCardProps) {
   const { t } = useLanguage()
 
+  const columns = canManage ? SORTABLE_COLUMNS : SORTABLE_COLUMNS.filter((column) => column.key !== 'is_published')
+
   // The column filters live in a table that scrolls, so on a narrow screen
   // they're off to the right and there's no way to tell what's applied.
   // Summarising them here keeps that visible and clearable at any size.
@@ -104,7 +121,15 @@ export function AnnouncementListCard({
     })
   }
 
-  for (const column of SORTABLE_COLUMNS) {
+  if (categoryFilter !== 'all') {
+    activeFilters.push({
+      id: 'category',
+      label: `${t('announcementFilterCategoryLabel')}: ${t(announcementCategoryLabelKeys[categoryFilter])}`,
+      onClear: () => onCategoryFilterChange('all'),
+    })
+  }
+
+  for (const column of columns) {
     const key = column.key
     if (!isAnnouncementTextFilterKey(key)) continue
 
@@ -124,9 +149,11 @@ export function AnnouncementListCard({
         <div>
           <CardTitle>{t('menuAnnouncements')}</CardTitle>
         </div>
-        <Button onClick={onCreateAnnouncement} disabled={isLoading}>
-          {t('announcementCreate')}
-        </Button>
+        {canManage && (
+          <Button onClick={onCreateAnnouncement} disabled={isLoading}>
+            {t('announcementCreate')}
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {loadError && <p className="resource-error">{loadError}</p>}
@@ -179,7 +206,7 @@ export function AnnouncementListCard({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      {SORTABLE_COLUMNS.map((column) => {
+                      {columns.map((column) => {
                         const isSorted = sortKey === column.key
                         return (
                           <TableHead
@@ -224,6 +251,21 @@ export function AnnouncementListCard({
                                 />
                               )}
 
+                              {column.key === 'category' && (
+                                <ColumnFilterMenu
+                                  label={t('announcementFilterCategoryLabel')}
+                                  optionValue={categoryFilter}
+                                  onOptionChange={onCategoryFilterChange}
+                                  options={[
+                                    { value: 'all', label: t('filterAll') },
+                                    ...ANNOUNCEMENT_CATEGORIES.map((value) => ({
+                                      value,
+                                      label: t(announcementCategoryLabelKeys[value]),
+                                    })),
+                                  ]}
+                                />
+                              )}
+
                               {isAnnouncementTextFilterKey(column.key) && (
                                 <ColumnFilterMenu
                                   label={t(column.labelKey)}
@@ -237,7 +279,9 @@ export function AnnouncementListCard({
                           </TableHead>
                         )
                       })}
-                      <TableHead className="text-right">{t('announcementActionsColumn')}</TableHead>
+                      {canManage && (
+                        <TableHead className="text-right">{t('announcementActionsColumn')}</TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -246,7 +290,7 @@ export function AnnouncementListCard({
                         {/* The table scrolls horizontally, so centring this
                             across every column would push it off a phone
                             screen. Pin it to the left edge instead. */}
-                        <TableCell colSpan={SORTABLE_COLUMNS.length + 1} className="p-0">
+                        <TableCell colSpan={columns.length + (canManage ? 1 : 0)} className="p-0">
                           <p className="metric-detail sticky left-0 px-3 py-6">
                             {hasFilters ? t('announcementNoMatching') : t('announcementNoAnnouncements')}
                           </p>
@@ -256,15 +300,48 @@ export function AnnouncementListCard({
                     {announcements.map((announcement) => (
                       <TableRow key={announcement.id}>
                         <TableCell className="font-semibold">{announcement.dormitory_name || '—'}</TableCell>
-                        <TableCell className="text-muted-foreground">{announcement.title}</TableCell>
                         <TableCell>
-                          <Badge variant={announcement.is_published ? 'default' : 'outline'}>
-                            {t(announcement.is_published ? 'announcementStatusPublished' : 'announcementStatusDraft')}
+                          <button
+                            type="button"
+                            title={t('announcementOpen')}
+                            onClick={() => onOpenAnnouncement(announcement)}
+                            className={`inline-flex max-w-full items-center gap-2 text-left transition-colors hover:text-foreground hover:underline ${
+                              announcement.is_read ? 'text-muted-foreground' : 'font-semibold text-foreground'
+                            }`}
+                          >
+                            {!announcement.is_read && (
+                              <span
+                                className="size-2 shrink-0 rounded-full bg-primary"
+                                title={t('announcementUnread')}
+                                aria-label={t('announcementUnread')}
+                              />
+                            )}
+                            {announcement.is_pinned && (
+                              <Pin
+                                size={14}
+                                className="shrink-0 text-muted-foreground"
+                                aria-label={t('announcementPinned')}
+                              />
+                            )}
+                            <span>{announcement.title}</span>
+                          </button>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={announcementCategoryVariant(announcement.category)}>
+                            {t(announcementCategoryLabelKeys[announcement.category] ?? 'announcementCategoryGeneral')}
                           </Badge>
                         </TableCell>
+                        {canManage && (
+                          <TableCell>
+                            <Badge variant={announcement.is_published ? 'default' : 'outline'}>
+                              {t(announcement.is_published ? 'announcementStatusPublished' : 'announcementStatusDraft')}
+                            </Badge>
+                          </TableCell>
+                        )}
                         <TableCell className="text-muted-foreground">
                           {toDateInputValue(announcement.published_date)}
                         </TableCell>
+                        {canManage && (
                         <TableCell className="text-right">
                           <div className="flex flex-nowrap justify-end gap-2">
                             <Button
@@ -290,6 +367,7 @@ export function AnnouncementListCard({
                             </Button>
                           </div>
                         </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>

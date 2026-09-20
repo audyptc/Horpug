@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import { api, extractErrorMessage, refreshAccessToken } from '@/shared/api/client'
+import { resetAnnouncementSummary } from '@/features/announcement/summary'
 import { getSession, setSession, subscribe, type Session } from './session'
 
 type AuthContextValue = {
@@ -26,6 +27,12 @@ function getServerSnapshot(): Session | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const session = useSyncExternalStore(subscribe, getSession, getServerSnapshot)
   const [isLoading, setIsLoading] = useState(true)
+
+  // The announcement badge is per user; drop it whenever the session goes away
+  // (logout or a failed refresh) so the next sign-in never inherits it.
+  useEffect(() => {
+    if (!session) resetAnnouncementSummary()
+  }, [session])
 
   // The access token lives only in memory (see session.ts), so a hard
   // refresh starts with none. Trade the httpOnly refresh cookie — which

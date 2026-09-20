@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   BanknoteArrowDown,
   BanknoteArrowUp,
@@ -6,6 +7,8 @@ import {
   CalendarClock,
   Droplets,
   FileText,
+  Megaphone,
+  Pin,
   ReceiptText,
   TriangleAlert,
   Wrench,
@@ -36,6 +39,13 @@ import type { ApiActivityLog } from '@/features/activitylog/types'
 import { DormitorySearchSelect } from '@/features/dormitory/components/DormitorySearchSelect'
 import type { ApiDormitory } from '@/features/dormitory/types'
 import { activityLogActionVariant } from '@/features/activitylog/utils'
+import type { ApiAnnouncement } from '@/features/announcement/types'
+import { useAnnouncementSummary } from '@/features/announcement/summary'
+import {
+  announcementCategoryLabelKeys,
+  announcementCategoryVariant,
+  toDateInputValue,
+} from '@/features/announcement/utils'
 
 type SelectedDormitory = { id: string; name: string }
 
@@ -64,6 +74,17 @@ function storeDormitory(dormitory: SelectedDormitory | null) {
 }
 
 const moneyFormat = { maximumFractionDigits: 2 }
+
+const DASHBOARD_ANNOUNCEMENT_COUNT = 5
+
+// Today's date as the API's YYYY-MM-DD, in the browser's own zone: the card
+// should hide announcements dated after the day the reader is living in.
+function todayDateParam(): string {
+  const now = new Date()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${now.getFullYear()}-${month}-${day}`
+}
 
 // One hue per card, used for the accent bar, the tint, the number and the icon.
 // `alert` is the extra emphasis when a card has something to act on.
@@ -188,6 +209,9 @@ export function DashboardPage() {
     // Null when the role can't read activity logs; the card is only drawn once
     // it holds a list.
     recentActivity: ApiActivityLog[] | null
+    // Null when the role can't read announcements; the card is only drawn once
+    // it holds a list.
+    announcements: ApiAnnouncement[] | null
   } | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -247,10 +271,23 @@ export function DashboardPage() {
         .get<ApiPage<ApiActivityLog[]>>('/activity-logs', { params: { per_page: 5, ...dormitoryParams } })
         .then((res) => res.data.data)
         .catch(() => null),
+      // Same: its own menu permission. Only published announcements already in
+      // effect, so a manager's drafts and scheduled ones don't show up here.
+      api
+        .get<ApiPage<ApiAnnouncement[]>>('/announcements', {
+          params: {
+            per_page: DASHBOARD_ANNOUNCEMENT_COUNT,
+            is_published: true,
+            date_to: todayDateParam(),
+            ...dormitoryParams,
+          },
+        })
+        .then((res) => res.data.data)
+        .catch(() => null),
     ])
-      .then(([summaryRes, activity]) => {
+      .then(([summaryRes, activity, announcements]) => {
         if (cancelled) return
-        setLoaded({ key: dormitoryKey, summary: summaryRes.data, recentActivity: activity })
+        setLoaded({ key: dormitoryKey, summary: summaryRes.data, recentActivity: activity, announcements })
         setLoadError(null)
       })
       .catch((err) => {
@@ -270,6 +307,9 @@ export function DashboardPage() {
 
   const summary = loaded?.summary ?? null
   const recentActivity = loaded?.recentActivity ?? null
+  const latestAnnouncements = loaded?.announcements ?? null
+  const announcementSummary = useAnnouncementSummary(latestAnnouncements !== null)
+  const unreadAnnouncements = announcementSummary?.unread_count ?? 0
   const isLoading = !loadError && (!ready || loaded?.key !== dormitoryKey)
 
   // The month the "this month" figures cover is the server's, so the label
@@ -488,6 +528,71 @@ export function DashboardPage() {
               </section>
             )
           })}
+
+          {latestAnnouncements && (
+            <Card>
+              <CardHeader className="flex-row items-start justify-between space-y-0">
+                <div>
+                  <CardTitle>{t('dashboardAnnouncements')}</CardTitle>
+                  <CardDescription>
+                    {unreadAnnouncements > 0
+                      ? t('dashboardAnnouncementsUnread').replace('{count}', unreadAnnouncements.toLocaleString())
+                      : t('dashboardAnnouncementsDescription')}
+                  </CardDescription>
+                </div>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-400">
+                  <Megaphone size={20} strokeWidth={2} />
+                </span>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                {latestAnnouncements.length === 0 && (
+                  <p className="metric-detail">{t('dashboardNoAnnouncements')}</p>
+                )}
+
+                {latestAnnouncements.length > 0 && (
+                  <ul className="flex flex-col divide-y divide-border rounded-md border border-border">
+                    {latestAnnouncements.map((announcement) => (
+                      <li key={announcement.id}>
+                        <Link
+                          to="/announcements"
+                          className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 text-sm transition-colors hover:bg-accent"
+                        >
+                          <Badge variant={announcementCategoryVariant(announcement.category)}>
+                            {t(announcementCategoryLabelKeys[announcement.category] ?? 'announcementCategoryGeneral')}
+                          </Badge>
+                          <span
+                            className={cn(
+                              'flex min-w-0 flex-1 items-center gap-2',
+                              announcement.is_read ? 'text-muted-foreground' : 'font-semibold'
+                            )}
+                          >
+                            {!announcement.is_read && (
+                              <span
+                                className="size-2 shrink-0 rounded-full bg-primary"
+                                title={t('announcementUnread')}
+                                aria-label={t('announcementUnread')}
+                              />
+                            )}
+                            {announcement.is_pinned && (
+                              <Pin size={14} className="shrink-0" aria-label={t('announcementPinned')} />
+                            )}
+                            <span className="truncate">{announcement.title}</span>
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {toDateInputValue(announcement.published_date)}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <Link to="/announcements" className="text-sm font-medium text-primary hover:underline">
+                  {t('dashboardAnnouncementsViewAll')}
+                </Link>
+              </CardContent>
+            </Card>
+          )}
 
           {recentActivity && (
           <Card>
