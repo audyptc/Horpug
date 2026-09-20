@@ -2,6 +2,7 @@ import { useMemo, type FormEvent } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Button } from '@/shared/components/ui/button'
+import { DatePickerField } from '@/shared/components/date-picker-field'
 import { Combobox } from '@/shared/components/ui/combobox'
 import {
   Sheet,
@@ -95,11 +96,10 @@ export function PaymentFormSheet({
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('paymentFormDateLabel')}
-              <input
-                type="date"
-                className="h-10 w-full min-w-0 rounded-md border border-input bg-transparent px-3 text-sm"
+              <DatePickerField
                 value={paymentDate}
-                onChange={(event) => onPaymentDateChange(event.target.value)}
+                onChange={onPaymentDateChange}
+                placeholder={t('paymentFormDateLabel')}
               />
             </label>
 
