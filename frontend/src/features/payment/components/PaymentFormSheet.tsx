@@ -2,6 +2,7 @@ import { useMemo, type FormEvent } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Button } from '@/shared/components/ui/button'
+import { Combobox } from '@/shared/components/ui/combobox'
 import {
   Sheet,
   SheetContent,
@@ -25,6 +26,9 @@ const paymentMethodLabelKeys: Record<PaymentMethod, TranslationKey> = {
 type PaymentFormSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  // Editing keeps the payment on its invoice: the invoice picker is locked,
+  // since moving a payment elsewhere is a delete and a fresh record.
+  isEditing: boolean
   invoiceLabel: string
   onSelectInvoice: (invoice: ApiInvoice) => void
   paymentDate: string
@@ -43,6 +47,7 @@ type PaymentFormSheetProps = {
 export function PaymentFormSheet({
   open,
   onOpenChange,
+  isEditing,
   invoiceLabel,
   onSelectInvoice,
   paymentDate,
@@ -69,8 +74,10 @@ export function PaymentFormSheet({
       <SheetContent>
         <form className="flex h-full flex-col gap-4" onSubmit={onSubmit}>
           <SheetHeader>
-            <SheetTitle>{t('paymentFormCreateTitle')}</SheetTitle>
-            <SheetDescription>{t('paymentFormCreateDescription')}</SheetDescription>
+            <SheetTitle>{t(isEditing ? 'paymentFormEditTitle' : 'paymentFormCreateTitle')}</SheetTitle>
+            <SheetDescription>
+              {t(isEditing ? 'paymentFormEditDescription' : 'paymentFormCreateDescription')}
+            </SheetDescription>
           </SheetHeader>
 
           <div className="flex flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden pr-1">
@@ -82,6 +89,7 @@ export function PaymentFormSheet({
                 placeholder={t('paymentFormInvoicePlaceholder')}
                 searchPlaceholder={t('pickerSearchInvoicePlaceholder')}
                 noResultsLabel={t('pickerNoInvoices')}
+                disabled={isEditing}
               />
             </label>
 
@@ -127,19 +135,17 @@ export function PaymentFormSheet({
 
                     <label className="flex flex-col gap-1.5 text-sm font-medium">
                       {t('paymentFormMethodLabel')}
-                      <select
-                        className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm"
+                      <Combobox
+                        options={PAYMENT_METHODS.map((value) => ({
+                          value,
+                          label: t(paymentMethodLabelKeys[value]),
+                        }))}
                         value={item.paymentMethod}
-                        onChange={(event) =>
-                          onItemChange(item.key, { paymentMethod: event.target.value as PaymentMethod })
-                        }
-                      >
-                        {PAYMENT_METHODS.map((value) => (
-                          <option key={value} value={value}>
-                            {t(paymentMethodLabelKeys[value])}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(value) => onItemChange(item.key, { paymentMethod: value as PaymentMethod })}
+                        placeholder={t('paymentFormMethodLabel')}
+                        searchPlaceholder={t('paymentFormMethodSearchPlaceholder')}
+                        emptyText={t('paymentFormMethodNoResults')}
+                      />
                     </label>
 
                     <label className="flex flex-col gap-1.5 text-sm font-medium">
@@ -148,7 +154,7 @@ export function PaymentFormSheet({
                         type="number"
                         min="0"
                         step="0.01"
-                        className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm"
+                        className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-right text-sm"
                         value={item.amount}
                         onChange={(event) => onItemChange(item.key, { amount: event.target.value })}
                       />

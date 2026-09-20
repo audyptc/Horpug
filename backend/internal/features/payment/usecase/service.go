@@ -68,11 +68,21 @@ type CreateInput struct {
 	CreatedBy   *uuid.UUID
 }
 
+// UpdateInput replaces a payment's date, note and items wholesale. The invoice
+// a payment belongs to is deliberately not editable: moving a payment to a
+// different invoice is a delete and a fresh Create.
+type UpdateInput struct {
+	PaymentDate time.Time
+	Note        string
+	Items       []ItemInput
+}
+
 type Repository interface {
 	Count(ctx context.Context, requesterID uuid.UUID, filters ListFilters) (int64, error)
 	List(ctx context.Context, requesterID uuid.UUID, filters ListFilters, limit, offset int) ([]paymentdomain.Payment, error)
 	GetByID(ctx context.Context, id, requesterID uuid.UUID) (paymentdomain.Payment, error)
 	Create(ctx context.Context, input CreateInput) (paymentdomain.Payment, error)
+	Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (paymentdomain.Payment, error)
 	Delete(ctx context.Context, id, requesterID uuid.UUID) error
 }
 
@@ -124,25 +134,48 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (paymentdomain.
 	if input.InvoiceID == uuid.Nil || input.PaymentDate.IsZero() {
 		return paymentdomain.Payment{}, paymentdomain.ErrRequiredPaymentData
 	}
-	if len(input.Items) == 0 {
-		return paymentdomain.Payment{}, paymentdomain.ErrRequiredItems
+	if err := normalizeItems(input.Items); err != nil {
+		return paymentdomain.Payment{}, err
 	}
 
-	for i, item := range input.Items {
+	return s.repo.Create(ctx, input)
+}
+
+func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (paymentdomain.Payment, error) {
+	input.Note = strings.TrimSpace(input.Note)
+
+	if input.PaymentDate.IsZero() {
+		return paymentdomain.Payment{}, paymentdomain.ErrRequiredPaymentData
+	}
+	if err := normalizeItems(input.Items); err != nil {
+		return paymentdomain.Payment{}, err
+	}
+
+	return s.repo.Update(ctx, id, requesterID, input)
+}
+
+// normalizeItems validates a payment's method lines and tidies them in place
+// (trimmed reference, cash as the default method).
+func normalizeItems(items []ItemInput) error {
+	if len(items) == 0 {
+		return paymentdomain.ErrRequiredItems
+	}
+
+	for i, item := range items {
 		item.ReferenceNo = strings.TrimSpace(item.ReferenceNo)
 		if item.PaymentMethod == "" {
 			item.PaymentMethod = paymentdomain.PaymentMethodCash
 		}
 		if item.Amount <= 0 {
-			return paymentdomain.Payment{}, paymentdomain.ErrInvalidAmount
+			return paymentdomain.ErrInvalidAmount
 		}
 		if !item.PaymentMethod.Valid() {
-			return paymentdomain.Payment{}, paymentdomain.ErrInvalidMethod
+			return paymentdomain.ErrInvalidMethod
 		}
-		input.Items[i] = item
+		items[i] = item
 	}
 
-	return s.repo.Create(ctx, input)
+	return nil
 }
 
 func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID) error {

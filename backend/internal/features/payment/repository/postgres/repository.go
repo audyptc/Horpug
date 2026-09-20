@@ -303,6 +303,88 @@ func (r *Repository) Create(ctx context.Context, input paymentusecase.CreateInpu
 	return r.loadPaymentByID(ctx, id)
 }
 
+// Update replaces a payment's date, note and items, then re-evaluates the
+// invoice's paid status in both directions: an edit that brings the total up to
+// the invoice amount marks it paid, one that drops it below reverts a paid
+// invoice to unpaid (as Delete does). It runs in a transaction, holding the
+// invoice row so a concurrent payment can't leave the status stale.
+func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, input paymentusecase.UpdateInput) (paymentdomain.Payment, error) {
+	if err := r.ensurePaymentAccess(ctx, id, requesterID); err != nil {
+		return paymentdomain.Payment{}, err
+	}
+
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return paymentdomain.Payment{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	var invoiceID uuid.UUID
+	if err := tx.QueryRow(ctx, `SELECT invoice_id FROM payments WHERE id = $1`, id).Scan(&invoiceID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return paymentdomain.Payment{}, paymentdomain.ErrPaymentNotFound
+		}
+		return paymentdomain.Payment{}, err
+	}
+
+	var invoiceTotal float64
+	var invoiceStatus string
+	if err := tx.QueryRow(ctx, `SELECT total_amount, status FROM invoices WHERE id = $1 FOR UPDATE`, invoiceID).Scan(&invoiceTotal, &invoiceStatus); err != nil {
+		return paymentdomain.Payment{}, err
+	}
+	if invoiceStatus == "cancelled" {
+		return paymentdomain.Payment{}, paymentdomain.ErrInvoiceCancelled
+	}
+
+	total := 0.0
+	for _, item := range input.Items {
+		total += item.Amount
+	}
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE payments SET payment_date = $1, total_amount = $2, note = $3 WHERE id = $4
+	`, input.PaymentDate, total, input.Note, id); err != nil {
+		return paymentdomain.Payment{}, err
+	}
+
+	if _, err := tx.Exec(ctx, `DELETE FROM payment_items WHERE payment_id = $1`, id); err != nil {
+		return paymentdomain.Payment{}, err
+	}
+
+	// clock_timestamp() rather than the default NOW(): NOW() is fixed for the
+	// whole transaction, which would give every row the same created_at and
+	// lose the order the user entered the lines in.
+	for _, item := range input.Items {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO payment_items (id, payment_id, payment_method, amount, reference_no, created_at)
+			VALUES ($1, $2, $3, $4, $5, clock_timestamp())
+		`, uuid.New(), id, item.PaymentMethod, item.Amount, item.ReferenceNo); err != nil {
+			return paymentdomain.Payment{}, err
+		}
+	}
+
+	var totalPaid float64
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(total_amount), 0) FROM payments WHERE invoice_id = $1`, invoiceID).Scan(&totalPaid); err != nil {
+		return paymentdomain.Payment{}, err
+	}
+
+	if totalPaid >= invoiceTotal && invoiceStatus != "paid" {
+		if _, err := tx.Exec(ctx, `UPDATE invoices SET status = 'paid', paid_at = NOW(), updated_at = NOW() WHERE id = $1`, invoiceID); err != nil {
+			return paymentdomain.Payment{}, err
+		}
+	} else if totalPaid < invoiceTotal && invoiceStatus == "paid" {
+		if _, err := tx.Exec(ctx, `UPDATE invoices SET status = 'unpaid', paid_at = NULL, updated_at = NOW() WHERE id = $1`, invoiceID); err != nil {
+			return paymentdomain.Payment{}, err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return paymentdomain.Payment{}, err
+	}
+
+	return r.loadPaymentByID(ctx, id)
+}
+
 func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
 	if err := r.ensurePaymentAccess(ctx, id, requesterID); err != nil {
 		return err

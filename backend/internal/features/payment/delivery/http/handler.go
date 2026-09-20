@@ -34,6 +34,12 @@ type createPaymentRequest struct {
 	Items       []createPaymentItemRequest `json:"items"`
 }
 
+type updatePaymentRequest struct {
+	PaymentDate time.Time                  `json:"payment_date"`
+	Note        string                     `json:"note"`
+	Items       []createPaymentItemRequest `json:"items"`
+}
+
 func NewHandler(usecase *paymentusecase.Service) *Handler {
 	return &Handler{usecase: usecase}
 }
@@ -328,6 +334,78 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	}
 
 	return apiresponse.Created(c, payment)
+}
+
+// Update godoc
+// @Summary Update a payment's date, note and items
+// @Description Replaces the payment's date, note and method lines (the invoice can't be changed) and re-evaluates the invoice's paid status: it becomes paid once the recorded payments reach total_amount, and a paid invoice drops back to unpaid if they no longer do. Not allowed on a cancelled invoice.
+// @Tags payments
+// @Accept json
+// @Produce json
+// @Param id path string true "Payment ID"
+// @Param request body updatePaymentRequest true "Payment payload"
+// @Success 200 {object} paymentdomain.Payment
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /payments/{id} [put]
+func (h *Handler) Update(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return apierror.BadRequest("invalid payment id")
+	}
+
+	var req updatePaymentRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return apierror.BadRequest("invalid request body")
+	}
+
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
+	items := make([]paymentusecase.ItemInput, 0, len(req.Items))
+	for _, item := range req.Items {
+		items = append(items, paymentusecase.ItemInput{
+			PaymentMethod: item.PaymentMethod,
+			Amount:        item.Amount,
+			ReferenceNo:   item.ReferenceNo,
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	payment, err := h.usecase.Update(ctx, id, requesterID, paymentusecase.UpdateInput{
+		PaymentDate: req.PaymentDate,
+		Note:        req.Note,
+		Items:       items,
+	})
+	if err != nil {
+		if errors.Is(err, paymentdomain.ErrPaymentNotFound) {
+			return apierror.NotFound("payment not found")
+		}
+		if errors.Is(err, paymentdomain.ErrRequiredPaymentData) {
+			return apierror.BadRequest("payment_date is required")
+		}
+		if errors.Is(err, paymentdomain.ErrRequiredItems) {
+			return apierror.BadRequest("at least one payment item is required")
+		}
+		if errors.Is(err, paymentdomain.ErrInvalidAmount) {
+			return apierror.BadRequest("each payment item's amount must be greater than zero")
+		}
+		if errors.Is(err, paymentdomain.ErrInvalidMethod) {
+			return apierror.BadRequest("invalid payment method")
+		}
+		if errors.Is(err, paymentdomain.ErrInvoiceCancelled) {
+			return apierror.BadRequest("cannot change a payment on a cancelled invoice")
+		}
+		return apierror.Internal("failed to update payment")
+	}
+
+	return apiresponse.OK(c, payment)
 }
 
 // Delete godoc

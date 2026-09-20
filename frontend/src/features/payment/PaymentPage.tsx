@@ -46,6 +46,8 @@ export default function PaymentPage() {
   const [refreshToken, setRefreshToken] = useState(0)
 
   const [formOpen, setFormOpen] = useState(false)
+  // Set while editing an existing payment; null means the form is recording a new one.
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null)
   const [formInvoiceId, setFormInvoiceId] = useState('')
   const [formInvoiceLabel, setFormInvoiceLabel] = useState('')
   const [formPaymentDate, setFormPaymentDate] = useState('')
@@ -126,11 +128,32 @@ export default function PaymentPage() {
   }
 
   function openCreateForm() {
+    setEditingPaymentId(null)
     setFormInvoiceId('')
     setFormInvoiceLabel('')
     setFormPaymentDate(toDateInputValue(new Date().toISOString()))
     setFormItems([createPaymentItemRow()])
     setFormNote('')
+    setFormError(null)
+    setFormOpen(true)
+  }
+
+  function openEditForm(payment: ApiPayment) {
+    const room = `${payment.room_number ?? ''}${payment.dormitory_name ? ` (${payment.dormitory_name})` : ''}`
+
+    setEditingPaymentId(payment.id)
+    setFormInvoiceId(payment.invoice_id)
+    setFormInvoiceLabel(`${payment.tenant_name ?? ''} · ${room}`)
+    setFormPaymentDate(toDateInputValue(payment.payment_date))
+    setFormItems(
+      payment.items.map((item) => ({
+        ...createPaymentItemRow(),
+        paymentMethod: item.payment_method,
+        amount: String(item.amount),
+        referenceNo: item.reference_no,
+      }))
+    )
+    setFormNote(payment.note)
     setFormError(null)
     setFormOpen(true)
   }
@@ -173,9 +196,10 @@ export default function PaymentPage() {
     setFormSaving(true)
     setFormError(null)
 
+    const isEditing = editingPaymentId !== null
+
     try {
       const payload = {
-        invoice_id: formInvoiceId,
         payment_date: toApiDate(formPaymentDate),
         note: formNote.trim(),
         items: formItems.map((item) => ({
@@ -184,11 +208,15 @@ export default function PaymentPage() {
           reference_no: item.referenceNo.trim(),
         })),
       }
-      await api.post<ApiPayment>('/payments', payload)
+      if (isEditing) {
+        await api.put<ApiPayment>(`/payments/${editingPaymentId}`, payload)
+      } else {
+        await api.post<ApiPayment>('/payments', { ...payload, invoice_id: formInvoiceId })
+      }
       refresh()
       setFormOpen(false)
     } catch (err) {
-      setFormError(extractErrorMessage(err, t('paymentCreateError')))
+      setFormError(extractErrorMessage(err, t(isEditing ? 'paymentUpdateError' : 'paymentCreateError')))
     } finally {
       setFormSaving(false)
     }
@@ -259,6 +287,7 @@ export default function PaymentPage() {
         onLastPage={() => setPage(totalPages)}
         deletingPaymentId={deletingPaymentId}
         onCreatePayment={openCreateForm}
+        onEditPayment={openEditForm}
         onDeletePayment={setConfirmDeletePayment}
       />
 
@@ -266,7 +295,14 @@ export default function PaymentPage() {
         open={confirmDeletePayment !== null}
         onOpenChange={(open) => !open && setConfirmDeletePayment(null)}
         title={t('confirmDeleteTitle')}
-        description={t('paymentDeleteConfirm')}
+        description={
+          confirmDeletePayment
+            ? t('paymentDeleteConfirm')
+                .replace('{tenant}', confirmDeletePayment.tenant_name || '-')
+                .replace('{room}', confirmDeletePayment.room_number || '-')
+                .replace('{amount}', confirmDeletePayment.total_amount.toLocaleString())
+            : ''
+        }
         confirmLabel={t('paymentDelete')}
         cancelLabel={t('cancel')}
         loading={deletingPaymentId === confirmDeletePayment?.id}
@@ -277,6 +313,7 @@ export default function PaymentPage() {
       <PaymentFormSheet
         open={formOpen}
         onOpenChange={setFormOpen}
+        isEditing={editingPaymentId !== null}
         invoiceLabel={formInvoiceLabel}
         onSelectInvoice={(invoice: ApiInvoice) => {
           setFormInvoiceId(invoice.id)

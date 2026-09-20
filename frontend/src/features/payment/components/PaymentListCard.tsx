@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, X } from 'lucide-react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
@@ -66,6 +66,7 @@ type PaymentListCardProps = {
   onLastPage: () => void
   deletingPaymentId: string | null
   onCreatePayment: () => void
+  onEditPayment: (payment: ApiPayment) => void
   onDeletePayment: (payment: ApiPayment) => void
 }
 
@@ -97,6 +98,7 @@ export function PaymentListCard({
   onLastPage,
   deletingPaymentId,
   onCreatePayment,
+  onEditPayment,
   onDeletePayment,
 }: PaymentListCardProps) {
   const { t } = useLanguage()
@@ -315,6 +317,16 @@ export function PaymentListCard({
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex flex-nowrap justify-end gap-2">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                title={t('paymentEdit')}
+                                aria-label={t('paymentEdit')}
+                                onClick={() => onEditPayment(payment)}
+                              >
+                                <Pencil />
+                              </Button>
                               <Button
                                 type="button"
                                 size="icon"
