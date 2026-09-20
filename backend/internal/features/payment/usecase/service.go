@@ -2,9 +2,13 @@ package usecase
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"strings"
 	"time"
 
+	activitylogdomain "apihorpug/internal/features/activitylog/domain"
+	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
 	paymentdomain "apihorpug/internal/features/payment/domain"
 
 	"github.com/google/uuid"
@@ -81,17 +85,63 @@ type Repository interface {
 	Count(ctx context.Context, requesterID uuid.UUID, filters ListFilters) (int64, error)
 	List(ctx context.Context, requesterID uuid.UUID, filters ListFilters, limit, offset int) ([]paymentdomain.Payment, error)
 	GetByID(ctx context.Context, id, requesterID uuid.UUID) (paymentdomain.Payment, error)
-	Create(ctx context.Context, input CreateInput) (paymentdomain.Payment, error)
-	Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (paymentdomain.Payment, error)
-	Delete(ctx context.Context, id, requesterID uuid.UUID) error
+	// Create, Update and Delete also report the invoice status flip the change
+	// caused (if any), so it can be written into the activity log.
+	Create(ctx context.Context, input CreateInput) (paymentdomain.Payment, paymentdomain.InvoiceStatusChange, error)
+	Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (paymentdomain.Payment, paymentdomain.InvoiceStatusChange, error)
+	Delete(ctx context.Context, id, requesterID uuid.UUID) (paymentdomain.InvoiceStatusChange, error)
+}
+
+// ActivityLogger records who created, changed or deleted a payment for the
+// audit trail. Failures to record are logged but never block the payment flow.
+type ActivityLogger interface {
+	Create(ctx context.Context, input activitylogusecase.CreateInput) (activitylogdomain.ActivityLog, error)
 }
 
 type Service struct {
-	repo Repository
+	repo        Repository
+	activityLog ActivityLogger
 }
 
-func New(repo Repository) *Service {
-	return &Service{repo: repo}
+func New(repo Repository, activityLog ActivityLogger) *Service {
+	return &Service{repo: repo, activityLog: activityLog}
+}
+
+// recordActivity is best-effort: a failure to write the audit trail must
+// never fail the payment flow itself.
+func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action string, payment paymentdomain.Payment, description, ipAddress string) {
+	if s.activityLog == nil {
+		return
+	}
+	var dormitoryRef *uuid.UUID
+	if payment.DormitoryID != uuid.Nil {
+		dormitoryRef = &payment.DormitoryID
+	}
+	entityID := payment.ID
+	_, err := s.activityLog.Create(ctx, activitylogusecase.CreateInput{
+		UserID:      userID,
+		Action:      action,
+		EntityType:  "payment",
+		EntityID:    &entityID,
+		DormitoryID: dormitoryRef,
+		Description: description,
+		IPAddress:   ipAddress,
+	})
+	if err != nil {
+		log.Printf("failed to record activity log (action=%s): %v", action, err)
+	}
+}
+
+func paymentActivityDescription(payment paymentdomain.Payment) string {
+	return fmt.Sprintf("payment: room %s, %.2f THB", payment.RoomNumber, payment.TotalAmount)
+}
+
+// withInvoiceStatusChange appends the invoice status flip, when there was one.
+func withInvoiceStatusChange(description string, change paymentdomain.InvoiceStatusChange) string {
+	if !change.Changed() {
+		return description
+	}
+	return fmt.Sprintf("%s — invoice status: %s -> %s", description, change.From, change.To)
 }
 
 func (s *Service) List(ctx context.Context, requesterID uuid.UUID, filters ListFilters, limit, offset int) ([]paymentdomain.Payment, int64, error) {
@@ -128,7 +178,7 @@ func (s *Service) GetByID(ctx context.Context, id, requesterID uuid.UUID) (payme
 	return s.repo.GetByID(ctx, id, requesterID)
 }
 
-func (s *Service) Create(ctx context.Context, input CreateInput) (paymentdomain.Payment, error) {
+func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress string) (paymentdomain.Payment, error) {
 	input.Note = strings.TrimSpace(input.Note)
 
 	if input.InvoiceID == uuid.Nil || input.PaymentDate.IsZero() {
@@ -138,10 +188,17 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (paymentdomain.
 		return paymentdomain.Payment{}, err
 	}
 
-	return s.repo.Create(ctx, input)
+	payment, change, err := s.repo.Create(ctx, input)
+	if err != nil {
+		return paymentdomain.Payment{}, err
+	}
+
+	s.recordActivity(ctx, input.CreatedBy, "CREATE", payment,
+		withInvoiceStatusChange("Created "+paymentActivityDescription(payment), change), ipAddress)
+	return payment, nil
 }
 
-func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (paymentdomain.Payment, error) {
+func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput, ipAddress string) (paymentdomain.Payment, error) {
 	input.Note = strings.TrimSpace(input.Note)
 
 	if input.PaymentDate.IsZero() {
@@ -151,7 +208,22 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 		return paymentdomain.Payment{}, err
 	}
 
-	return s.repo.Update(ctx, id, requesterID, input)
+	// Read before the update so the log can show what the amount changed from.
+	// It also checks the requester's access, so a missing or out-of-scope
+	// payment fails here as not found, same as the update itself would.
+	before, err := s.repo.GetByID(ctx, id, requesterID)
+	if err != nil {
+		return paymentdomain.Payment{}, err
+	}
+
+	payment, change, err := s.repo.Update(ctx, id, requesterID, input)
+	if err != nil {
+		return paymentdomain.Payment{}, err
+	}
+
+	description := fmt.Sprintf("Updated payment: room %s, %.2f -> %.2f THB", payment.RoomNumber, before.TotalAmount, payment.TotalAmount)
+	s.recordActivity(ctx, &requesterID, "UPDATE", payment, withInvoiceStatusChange(description, change), ipAddress)
+	return payment, nil
 }
 
 // normalizeItems validates a payment's method lines and tidies them in place
@@ -178,6 +250,19 @@ func normalizeItems(items []ItemInput) error {
 	return nil
 }
 
-func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
-	return s.repo.Delete(ctx, id, requesterID)
+func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddress string) error {
+	// Read first: once deleted there is no room or amount left to describe.
+	payment, err := s.repo.GetByID(ctx, id, requesterID)
+	if err != nil {
+		return err
+	}
+
+	change, err := s.repo.Delete(ctx, id, requesterID)
+	if err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, &requesterID, "DELETE", payment,
+		withInvoiceStatusChange("Deleted "+paymentActivityDescription(payment), change), ipAddress)
+	return nil
 }

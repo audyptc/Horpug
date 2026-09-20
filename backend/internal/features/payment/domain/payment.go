@@ -35,6 +35,18 @@ type PaymentItem struct {
 	CreatedAt     time.Time     `json:"created_at"`
 }
 
+// InvoiceStatusChange reports the invoice status flip a payment change caused
+// (unpaid -> paid when payments reach the total, paid -> unpaid when they fall
+// short). Both fields are empty when the status was left alone.
+type InvoiceStatusChange struct {
+	From string
+	To   string
+}
+
+func (c InvoiceStatusChange) Changed() bool {
+	return c.To != ""
+}
+
 type Payment struct {
 	ID            uuid.UUID     `json:"id"`
 	InvoiceID     uuid.UUID     `json:"invoice_id"`

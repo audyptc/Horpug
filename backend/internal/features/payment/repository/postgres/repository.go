@@ -244,13 +244,13 @@ func (r *Repository) GetByID(ctx context.Context, id, requesterID uuid.UUID) (pa
 // (e.g. part cash, part transfer), then, once the invoice's payments sum to
 // its total_amount or more, marks the invoice paid. It runs in a transaction
 // so the payment row, its items and the invoice status stay consistent.
-func (r *Repository) Create(ctx context.Context, input paymentusecase.CreateInput) (paymentdomain.Payment, error) {
+func (r *Repository) Create(ctx context.Context, input paymentusecase.CreateInput) (paymentdomain.Payment, paymentdomain.InvoiceStatusChange, error) {
 	invoiceTotal, invoiceStatus, err := r.loadInvoiceForPayment(ctx, input.InvoiceID, input.CreatedBy)
 	if err != nil {
-		return paymentdomain.Payment{}, err
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
 	if invoiceStatus == "cancelled" {
-		return paymentdomain.Payment{}, paymentdomain.ErrInvoiceCancelled
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, paymentdomain.ErrInvoiceCancelled
 	}
 
 	total := 0.0
@@ -260,14 +260,14 @@ func (r *Repository) Create(ctx context.Context, input paymentusecase.CreateInpu
 
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
-		return paymentdomain.Payment{}, err
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
 	defer tx.Rollback(ctx)
 
 	// Serialise payments on the same invoice so two concurrent ones can't each
 	// pass the overpayment check below against the other's uncommitted rows.
 	if _, err := tx.Exec(ctx, `SELECT 1 FROM invoices WHERE id = $1 FOR UPDATE`, input.InvoiceID); err != nil {
-		return paymentdomain.Payment{}, err
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
 
 	id := uuid.New()
@@ -277,9 +277,9 @@ func (r *Repository) Create(ctx context.Context, input paymentusecase.CreateInpu
 	`, id, input.InvoiceID, input.PaymentDate, total, input.Note, input.CreatedBy); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
-			return paymentdomain.Payment{}, paymentdomain.ErrInvoiceNotFound
+			return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, paymentdomain.ErrInvoiceNotFound
 		}
-		return paymentdomain.Payment{}, err
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
 
 	for _, item := range input.Items {
@@ -287,30 +287,33 @@ func (r *Repository) Create(ctx context.Context, input paymentusecase.CreateInpu
 			INSERT INTO payment_items (id, payment_id, payment_method, amount, reference_no)
 			VALUES ($1, $2, $3, $4, $5)
 		`, uuid.New(), id, item.PaymentMethod, item.Amount, item.ReferenceNo); err != nil {
-			return paymentdomain.Payment{}, err
+			return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 		}
 	}
 
 	var totalPaid float64
 	if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(total_amount), 0) FROM payments WHERE invoice_id = $1`, input.InvoiceID).Scan(&totalPaid); err != nil {
-		return paymentdomain.Payment{}, err
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
 
 	if exceedsInvoice(totalPaid, invoiceTotal) {
-		return paymentdomain.Payment{}, paymentdomain.ErrPaymentExceedsInvoice
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, paymentdomain.ErrPaymentExceedsInvoice
 	}
 
+	var change paymentdomain.InvoiceStatusChange
 	if totalPaid >= invoiceTotal && invoiceStatus != "paid" {
 		if _, err := tx.Exec(ctx, `UPDATE invoices SET status = 'paid', paid_at = NOW(), updated_at = NOW() WHERE id = $1`, input.InvoiceID); err != nil {
-			return paymentdomain.Payment{}, err
+			return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 		}
+		change = paymentdomain.InvoiceStatusChange{From: invoiceStatus, To: "paid"}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return paymentdomain.Payment{}, err
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
 
-	return r.loadPaymentByID(ctx, id)
+	payment, err := r.loadPaymentByID(ctx, id)
+	return payment, change, err
 }
 
 // exceedsInvoice reports whether the recorded payments add up to more than the
@@ -325,32 +328,32 @@ func exceedsInvoice(totalPaid, invoiceTotal float64) bool {
 // the invoice amount marks it paid, one that drops it below reverts a paid
 // invoice to unpaid (as Delete does). It runs in a transaction, holding the
 // invoice row so a concurrent payment can't leave the status stale.
-func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, input paymentusecase.UpdateInput) (paymentdomain.Payment, error) {
+func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, input paymentusecase.UpdateInput) (paymentdomain.Payment, paymentdomain.InvoiceStatusChange, error) {
 	if err := r.ensurePaymentAccess(ctx, id, requesterID); err != nil {
-		return paymentdomain.Payment{}, err
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
 
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
-		return paymentdomain.Payment{}, err
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
 	defer tx.Rollback(ctx)
 
 	var invoiceID uuid.UUID
 	if err := tx.QueryRow(ctx, `SELECT invoice_id FROM payments WHERE id = $1`, id).Scan(&invoiceID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return paymentdomain.Payment{}, paymentdomain.ErrPaymentNotFound
+			return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, paymentdomain.ErrPaymentNotFound
 		}
-		return paymentdomain.Payment{}, err
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
 
 	var invoiceTotal float64
 	var invoiceStatus string
 	if err := tx.QueryRow(ctx, `SELECT total_amount, status FROM invoices WHERE id = $1 FOR UPDATE`, invoiceID).Scan(&invoiceTotal, &invoiceStatus); err != nil {
-		return paymentdomain.Payment{}, err
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
 	if invoiceStatus == "cancelled" {
-		return paymentdomain.Payment{}, paymentdomain.ErrInvoiceCancelled
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, paymentdomain.ErrInvoiceCancelled
 	}
 
 	total := 0.0
@@ -361,11 +364,11 @@ func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, inpu
 	if _, err := tx.Exec(ctx, `
 		UPDATE payments SET payment_date = $1, total_amount = $2, note = $3 WHERE id = $4
 	`, input.PaymentDate, total, input.Note, id); err != nil {
-		return paymentdomain.Payment{}, err
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
 
 	if _, err := tx.Exec(ctx, `DELETE FROM payment_items WHERE payment_id = $1`, id); err != nil {
-		return paymentdomain.Payment{}, err
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
 
 	// clock_timestamp() rather than the default NOW(): NOW() is fixed for the
@@ -376,73 +379,82 @@ func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, inpu
 			INSERT INTO payment_items (id, payment_id, payment_method, amount, reference_no, created_at)
 			VALUES ($1, $2, $3, $4, $5, clock_timestamp())
 		`, uuid.New(), id, item.PaymentMethod, item.Amount, item.ReferenceNo); err != nil {
-			return paymentdomain.Payment{}, err
+			return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 		}
 	}
 
 	var totalPaid float64
 	if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(total_amount), 0) FROM payments WHERE invoice_id = $1`, invoiceID).Scan(&totalPaid); err != nil {
-		return paymentdomain.Payment{}, err
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
 
 	if exceedsInvoice(totalPaid, invoiceTotal) {
-		return paymentdomain.Payment{}, paymentdomain.ErrPaymentExceedsInvoice
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, paymentdomain.ErrPaymentExceedsInvoice
 	}
 
+	var change paymentdomain.InvoiceStatusChange
 	if totalPaid >= invoiceTotal && invoiceStatus != "paid" {
 		if _, err := tx.Exec(ctx, `UPDATE invoices SET status = 'paid', paid_at = NOW(), updated_at = NOW() WHERE id = $1`, invoiceID); err != nil {
-			return paymentdomain.Payment{}, err
+			return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 		}
+		change = paymentdomain.InvoiceStatusChange{From: invoiceStatus, To: "paid"}
 	} else if totalPaid < invoiceTotal && invoiceStatus == "paid" {
 		if _, err := tx.Exec(ctx, `UPDATE invoices SET status = 'unpaid', paid_at = NULL, updated_at = NOW() WHERE id = $1`, invoiceID); err != nil {
-			return paymentdomain.Payment{}, err
+			return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 		}
+		change = paymentdomain.InvoiceStatusChange{From: "paid", To: "unpaid"}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return paymentdomain.Payment{}, err
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
 
-	return r.loadPaymentByID(ctx, id)
+	payment, err := r.loadPaymentByID(ctx, id)
+	return payment, change, err
 }
 
-func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) error {
+func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) (paymentdomain.InvoiceStatusChange, error) {
 	if err := r.ensurePaymentAccess(ctx, id, requesterID); err != nil {
-		return err
+		return paymentdomain.InvoiceStatusChange{}, err
 	}
 
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
-		return err
+		return paymentdomain.InvoiceStatusChange{}, err
 	}
 	defer tx.Rollback(ctx)
 
 	var invoiceID uuid.UUID
 	if err := tx.QueryRow(ctx, `DELETE FROM payments WHERE id = $1 RETURNING invoice_id`, id).Scan(&invoiceID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return paymentdomain.ErrPaymentNotFound
+			return paymentdomain.InvoiceStatusChange{}, paymentdomain.ErrPaymentNotFound
 		}
-		return err
+		return paymentdomain.InvoiceStatusChange{}, err
 	}
 
 	var invoiceTotal float64
 	var invoiceStatus string
 	if err := tx.QueryRow(ctx, `SELECT total_amount, status FROM invoices WHERE id = $1`, invoiceID).Scan(&invoiceTotal, &invoiceStatus); err != nil {
-		return err
+		return paymentdomain.InvoiceStatusChange{}, err
 	}
 
 	var totalPaid float64
 	if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(total_amount), 0) FROM payments WHERE invoice_id = $1`, invoiceID).Scan(&totalPaid); err != nil {
-		return err
+		return paymentdomain.InvoiceStatusChange{}, err
 	}
 
+	var change paymentdomain.InvoiceStatusChange
 	if totalPaid < invoiceTotal && invoiceStatus == "paid" {
 		if _, err := tx.Exec(ctx, `UPDATE invoices SET status = 'unpaid', paid_at = NULL, updated_at = NOW() WHERE id = $1`, invoiceID); err != nil {
-			return err
+			return paymentdomain.InvoiceStatusChange{}, err
 		}
+		change = paymentdomain.InvoiceStatusChange{From: "paid", To: "unpaid"}
 	}
 
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return paymentdomain.InvoiceStatusChange{}, err
+	}
+	return change, nil
 }
 
 func (r *Repository) loadPaymentByID(ctx context.Context, id uuid.UUID) (paymentdomain.Payment, error) {

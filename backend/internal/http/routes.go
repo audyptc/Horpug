@@ -120,7 +120,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	invoiceService := invoiceusecase.New(invoiceRepo, lineClient, activityLogService)
 	invoiceHandler := invoicehttp.NewHandler(invoiceService)
 	paymentRepo := paymentrepository.NewRepository(db)
-	paymentService := paymentusecase.New(paymentRepo)
+	paymentService := paymentusecase.New(paymentRepo, activityLogService)
 	paymentHandler := paymenthttp.NewHandler(paymentService)
 	expenseRepo := expenserepository.NewRepository(db)
 	expenseService := expenseusecase.New(expenseRepo)

@@ -310,7 +310,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		Note:        req.Note,
 		Items:       items,
 		CreatedBy:   &requesterID,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, paymentdomain.ErrRequiredPaymentData) {
 			return apierror.BadRequest("invoice_id and payment_date are required")
@@ -385,7 +385,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		PaymentDate: req.PaymentDate,
 		Note:        req.Note,
 		Items:       items,
-	})
+	}, c.IP())
 	if err != nil {
 		if errors.Is(err, paymentdomain.ErrPaymentNotFound) {
 			return apierror.NotFound("payment not found")
@@ -440,7 +440,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := h.usecase.Delete(ctx, id, requesterID); err != nil {
+	if err := h.usecase.Delete(ctx, id, requesterID, c.IP()); err != nil {
 		if errors.Is(err, paymentdomain.ErrPaymentNotFound) {
 			return apierror.NotFound("payment not found")
 		}

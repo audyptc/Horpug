@@ -3901,7 +3901,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Records a payment for an invoice as one or more line items (e.g. part cash, part transfer), each with its own method, amount and optional reference number. Once the invoice's recorded payments reach its total_amount, the invoice is automatically marked paid.",
+                "description": "Records a payment for an invoice as one or more line items (e.g. part cash, part transfer), each with its own method, amount and optional reference number. Once the invoice's recorded payments reach its total_amount, the invoice is automatically marked paid. The recorded payments may not exceed the invoice's total_amount: a payment that would push them over is rejected with 400 (slug payment_exceeds_invoice).",
                 "consumes": [
                     "application/json"
                 ],
@@ -4007,7 +4007,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Replaces the payment's date, note and method lines (the invoice can't be changed) and re-evaluates the invoice's paid status: it becomes paid once the recorded payments reach total_amount, and a paid invoice drops back to unpaid if they no longer do. Not allowed on a cancelled invoice.",
+                "description": "Replaces the payment's date, note and method lines (the invoice can't be changed) and re-evaluates the invoice's paid status: it becomes paid once the recorded payments reach total_amount, and a paid invoice drops back to unpaid if they no longer do. Not allowed on a cancelled invoice, and the invoice's recorded payments may not exceed its total_amount (400, slug payment_exceeds_invoice).",
                 "consumes": [
                     "application/json"
                 ],
