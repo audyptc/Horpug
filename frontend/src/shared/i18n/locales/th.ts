@@ -382,6 +382,9 @@ const th: Record<TranslationKey, string> = {
   lineLinkAddFriendAction: 'เพิ่มเพื่อน LINE OA ของหอพัก',
   lineLinkAlreadyLinkedError:
     'บัญชี LINE นี้ถูกผูกกับผู้เช่ารายอื่นไปแล้ว หากนี่เป็นบัญชี LINE ของคุณเอง กรุณาติดต่อผู้ดูแลหอพักเพื่อตรวจสอบ',
+  lineLinkTenantAlreadyLinkedError:
+    'ผู้เช่ารายนี้ผูกบัญชี LINE อื่นไว้แล้ว หากต้องการเปลี่ยนบัญชี กรุณาติดต่อผู้ดูแลหอพักให้ยกเลิกการผูกเดิมก่อน',
+  lineLinkTooManyRequestsError: 'มีการลองเชื่อมต่อหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่',
   lineLinkMissingTenant: 'ลิงก์นี้ไม่ถูกต้อง (ไม่พบรหัสผู้เช่า)',
   lineLinkNotConfigured: 'ระบบยังไม่ได้ตั้งค่าการเชื่อมต่อ LINE',
   invoiceDelete: 'ลบรายการ',

@@ -80,12 +80,14 @@ func (s *Service) Login(ctx context.Context, login, password, ipAddress string) 
 		return LoginResult{}, err
 	}
 
-	if !user.IsActive {
-		return LoginResult{}, authdomain.ErrAccountInactive
-	}
-
+	// Check the password before the active flag, so only someone who already
+	// knows the password can learn that the account exists but is disabled.
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
 		return LoginResult{}, authdomain.ErrInvalidCredentials
+	}
+
+	if !user.IsActive {
+		return LoginResult{}, authdomain.ErrAccountInactive
 	}
 
 	result, err := s.issueSession(ctx, user)

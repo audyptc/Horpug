@@ -446,6 +446,9 @@ func (h *Handler) LinkLine(c fiber.Ctx) error {
 		if errors.Is(err, tenantdomain.ErrLineAccountAlreadyLinked) {
 			return apierror.Conflict("this LINE account is already linked to another tenant").WithSlug("line_account_already_linked")
 		}
+		if errors.Is(err, tenantdomain.ErrTenantLineAlreadyLinked) {
+			return apierror.Conflict("this tenant already has a LINE account linked").WithSlug("tenant_line_already_linked")
+		}
 		return apierror.Internal("failed to link LINE account")
 	}
 

@@ -382,6 +382,9 @@ const en = {
   lineLinkAddFriendAction: "Add the dormitory's LINE OA as a friend",
   lineLinkAlreadyLinkedError:
     'This LINE account is already linked to a different tenant. If this is your own LINE account, please contact the dormitory staff to sort it out.',
+  lineLinkTenantAlreadyLinkedError:
+    'This tenant already has a different LINE account linked. To switch accounts, ask the dormitory staff to remove the existing link first.',
+  lineLinkTooManyRequestsError: 'Too many attempts. Please wait a moment and try again.',
   lineLinkMissingTenant: 'This link is invalid (missing tenant reference).',
   lineLinkNotConfigured: 'LINE integration is not configured yet.',
   invoiceDelete: 'Delete invoice',

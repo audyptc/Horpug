@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"strconv"
 	"time"
@@ -9,6 +10,7 @@ import (
 )
 
 type Config struct {
+	AppEnv                 string
 	AppPort                string
 	DBHost                 string
 	DBPort                 string
@@ -32,6 +34,10 @@ func Load() Config {
 	_ = godotenv.Load(".env")
 
 	return Config{
+		// AppEnv is "production" on the deployed server (set by
+		// .github/workflows/deploy.yml); Validate only enforces its checks there
+		// so local dev keeps working with the defaults below.
+		AppEnv:          getEnv("APP_ENV", "development"),
 		AppPort:         getEnv("APP_PORT", "8080"),
 		DBHost:          getEnv("DB_HOST", "localhost"),
 		DBPort:          getEnv("DB_PORT", "5432"),
@@ -69,6 +75,36 @@ func Load() Config {
 		// Docker it is a mounted volume so files survive container rebuilds.
 		UploadDir: getEnv("UPLOAD_DIR", "./uploads"),
 	}
+}
+
+const (
+	defaultSecretKey     = "change-me-in-production"
+	defaultAdminPassword = "Admin@12345"
+	minSecretKeyLength   = 32
+	minAdminPasswordLen  = 12
+)
+
+func (c Config) IsProduction() bool {
+	return c.AppEnv == "production"
+}
+
+// Validate refuses to start production with a missing or default secret: the
+// JWT key and the admin password fall back to well-known values, which would
+// let anyone forge tokens or log in as admin. SeedAdmin re-applies
+// ADMIN_PASSWORD on every start, so a default here resets the live admin.
+func (c Config) Validate() error {
+	if !c.IsProduction() {
+		return nil
+	}
+
+	var errs []error
+	if c.SecretKey == defaultSecretKey || len(c.SecretKey) < minSecretKeyLength {
+		errs = append(errs, errors.New("APP_SECRETKEY must be set to a random value of at least 32 characters"))
+	}
+	if c.AdminPassword == defaultAdminPassword || len(c.AdminPassword) < minAdminPasswordLen {
+		errs = append(errs, errors.New("ADMIN_PASSWORD must be set to a non-default value of at least 12 characters"))
+	}
+	return errors.Join(errs...)
 }
 
 func getEnv(key, fallback string) string {

@@ -70,11 +70,13 @@ import (
 	watermeterhttp "apihorpug/internal/features/watermeter/delivery/http"
 	watermeterrepository "apihorpug/internal/features/watermeter/repository/postgres"
 	watermeterusecase "apihorpug/internal/features/watermeter/usecase"
+	"apihorpug/internal/http/apierror"
 	"apihorpug/internal/http/middleware"
 	"apihorpug/internal/platform/filestore"
 	"apihorpug/internal/platform/lineapi"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -153,14 +155,14 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	})
 
 	authGroup := app.Group("/api/v1/auth")
-	authGroup.Post("/login", authHandler.Login)
+	authGroup.Post("/login", rateLimit(10, 5*time.Minute), authHandler.Login)
 	authGroup.Post("/refresh", authHandler.Refresh)
 	authGroup.Post("/logout", authHandler.Logout)
 
 	// Unauthenticated: called from the LIFF linking page a tenant opens from
 	// their own LINE app, before they have any session with this system.
 	publicGroup := app.Group("/api/v1/public")
-	publicGroup.Post("/tenants/:id/line/link", tenantHandler.LinkLine)
+	publicGroup.Post("/tenants/:id/line/link", rateLimit(20, 10*time.Minute), tenantHandler.LinkLine)
 	publicGroup.Get("/line/oa", tenantHandler.LineOAInfo)
 
 	api := app.Group("/api/v1")
@@ -308,4 +310,18 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Post("/documents", requirePermission("/documents", permissiondomain.ActionCreate), documentHandler.Create)
 	api.Put("/documents/:id", requirePermission("/documents", permissiondomain.ActionUpdate), documentHandler.Update)
 	api.Delete("/documents/:id", requirePermission("/documents", permissiondomain.ActionDelete), documentHandler.Delete)
+}
+
+// rateLimit caps requests per client IP (the real one, recovered from nginx's
+// X-Forwarded-For — see main.go) on endpoints anyone can hit without a
+// session, so passwords and tenant ids can't be brute-forced. Counts live in
+// memory, which is enough for the single backend instance.
+func rateLimit(max int, window time.Duration) fiber.Handler {
+	return limiter.New(limiter.Config{
+		Max:        max,
+		Expiration: window,
+		LimitReached: func(c fiber.Ctx) error {
+			return apierror.TooManyRequests("too many attempts, please try again later").WithSlug("too_many_requests")
+		},
+	})
 }

@@ -298,12 +298,21 @@ func (r *Repository) UpdateLineUserID(ctx context.Context, id uuid.UUID, lineUse
 		return tenantdomain.Tenant{}, err
 	}
 
-	if _, err := r.db.Exec(ctx, `UPDATE tenants SET line_user_id = $1, updated_at = NOW() WHERE id = $2`, lineUserID, id); err != nil {
+	// Only fill an empty link (or re-confirm the same account); never replace
+	// a different one — see ErrTenantLineAlreadyLinked.
+	tag, err := r.db.Exec(ctx, `
+		UPDATE tenants SET line_user_id = $1, updated_at = NOW()
+		WHERE id = $2 AND (line_user_id = '' OR line_user_id = $1)
+	`, lineUserID, id)
+	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return tenantdomain.Tenant{}, tenantdomain.ErrLineAccountAlreadyLinked
 		}
 		return tenantdomain.Tenant{}, err
+	}
+	if tag.RowsAffected() == 0 {
+		return tenantdomain.Tenant{}, tenantdomain.ErrTenantLineAlreadyLinked
 	}
 
 	return r.loadTenantByID(ctx, id)

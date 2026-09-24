@@ -15,4 +15,11 @@ var (
 	// into LINE as an account already linked elsewhere (e.g. staff testing
 	// the flow with their own LINE account across several tenants).
 	ErrLineAccountAlreadyLinked = errors.New("this LINE account is already linked to another tenant")
+
+	// ErrTenantLineAlreadyLinked means this tenant already has a different
+	// LINE account linked. The public linking endpoint only needs a tenant id,
+	// so letting it overwrite an existing link would let anyone holding the
+	// link redirect that tenant's invoices to their own LINE. Staff must
+	// unlink first (DELETE /tenants/:id/line) to allow a new link.
+	ErrTenantLineAlreadyLinked = errors.New("this tenant already has a LINE account linked")
 )

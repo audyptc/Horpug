@@ -147,7 +147,11 @@ export default function LineLinkPage() {
           setError(
             code === 'line_account_already_linked'
               ? t('lineLinkAlreadyLinkedError')
-              : extractErrorMessage(err, t('lineLinkError')),
+              : code === 'tenant_line_already_linked'
+                ? t('lineLinkTenantAlreadyLinkedError')
+                : code === 'too_many_requests'
+                  ? t('lineLinkTooManyRequestsError')
+                  : extractErrorMessage(err, t('lineLinkError')),
           )
         }
       }

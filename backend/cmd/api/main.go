@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"apihorpug/config"
@@ -12,6 +15,7 @@ import (
 	"apihorpug/internal/platform/filestore"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/recover"
 )
 
 // @title Horpug API
@@ -24,6 +28,9 @@ import (
 // @description Type "Bearer" followed by a space and the JWT token.
 func main() {
 	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("invalid configuration: %v", err)
+	}
 
 	db, err := database.NewPostgres(cfg)
 	if err != nil {
@@ -66,6 +73,9 @@ func main() {
 			Private: true,
 		},
 	})
+	// Turn a panic in any handler into a 500 instead of taking the whole
+	// process (and every in-flight request) down with it.
+	app.Use(recover.New())
 	http.RegisterRoutes(app, db, cfg.SecretKey, cfg.AccessTokenTTL, cfg.RefreshTokenTTL, cfg.CookieSecure, cfg.LineChannelAccessToken, cfg.LineChannelID, files)
 	http.RegisterDocsRoutes(app)
 
@@ -75,8 +85,19 @@ func main() {
 		fmt.Printf("\x1b[1;32m➜\x1b[0m  \x1b[1mSwagger UI:\x1b[0m \x1b[36mhttp://localhost:%s/docs/swagger\x1b[0m\n\n", cfg.AppPort)
 	}()
 
+	// docker stop / compose restarts send SIGTERM: stop accepting new
+	// connections and let in-flight requests finish before exiting.
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	log.Printf("server running on :%s", cfg.AppPort)
-	if err := app.Listen(":" + cfg.AppPort); err != nil {
-		log.Fatalf("server stopped: %v", err)
+	if err := app.Listen(":"+cfg.AppPort, fiber.ListenConfig{
+		GracefulContext: ctx,
+		ShutdownTimeout: 10 * time.Second,
+	}); err != nil {
+		log.Printf("server stopped: %v", err)
 	}
+
+	db.Close()
+	log.Println("server shut down")
 }

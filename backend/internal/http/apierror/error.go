@@ -45,6 +45,10 @@ func Conflict(message string) *Error {
 	return New(fiber.StatusConflict, message)
 }
 
+func TooManyRequests(message string) *Error {
+	return New(fiber.StatusTooManyRequests, message)
+}
+
 func Internal(message string) *Error {
 	return New(fiber.StatusInternalServerError, message)
 }
