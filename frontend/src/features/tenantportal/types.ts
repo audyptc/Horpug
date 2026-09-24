@@ -24,6 +24,7 @@ export type PortalSession = {
 
 export type PortalInvoice = {
   id: string
+  invoice_no: string
   room_number: string
   dormitory_name: string
   period_year: number

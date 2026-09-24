@@ -47,6 +47,7 @@ type Profile struct {
 // Invoice is a line of the tenant's invoice list.
 type Invoice struct {
 	ID            uuid.UUID `json:"id"`
+	InvoiceNo     string    `json:"invoice_no"`
 	RoomNumber    string    `json:"room_number"`
 	DormitoryName string    `json:"dormitory_name"`
 	PeriodYear    int       `json:"period_year"`

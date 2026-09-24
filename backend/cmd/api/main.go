@@ -101,7 +101,8 @@ func main() {
 	// soon after midnight even though the server may have started at any hour.
 	// The same run sends the weekly LINE reminders for overdue invoices.
 	go invoiceusecase.RunInvoiceJobs(ctx, invoicerepository.NewRepository(db),
-		lineapi.New(cfg.LineChannelAccessToken, cfg.LineChannelID), time.Hour)
+		lineapi.New(cfg.LineChannelAccessToken, cfg.LineChannelID),
+		invoiceusecase.NewQRLinker(cfg.PublicURL, cfg.SecretKey), time.Hour)
 
 	log.Printf("server running on :%s", cfg.AppPort)
 	if err := app.Listen(":"+cfg.AppPort, fiber.ListenConfig{

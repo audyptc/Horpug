@@ -10,6 +10,7 @@ import (
 // what the message needs.
 type ReminderCandidate struct {
 	InvoiceID        uuid.UUID
+	InvoiceNo        string
 	DormitoryID      uuid.UUID
 	DormitoryName    string
 	PromptPayID      string

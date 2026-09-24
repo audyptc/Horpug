@@ -16,6 +16,7 @@ export type ApiReceipt = {
   dormitory: { id: string; name: string; address: string; phone: string }
   invoice: {
     id: string
+    invoice_no: string
     period_year: number
     period_month: number
     total_amount: number

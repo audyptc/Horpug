@@ -707,6 +707,10 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		return err
 	}
 
+	if err := migrateInvoiceNumbers(ctx, db); err != nil {
+		return err
+	}
+
 	if err := migrateMoveOuts(ctx, db); err != nil {
 		return err
 	}

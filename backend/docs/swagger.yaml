@@ -505,6 +505,8 @@ definitions:
         type: string
       id:
         type: string
+      invoice_no:
+        type: string
       issue_date:
         type: string
       items:
@@ -980,6 +982,8 @@ definitions:
     properties:
       id:
         type: string
+      invoice_no:
+        type: string
       outstanding:
         type: number
       paid_amount:
@@ -1008,6 +1012,8 @@ definitions:
       id:
         type: string
       invoice_id:
+        type: string
+      invoice_no:
         type: string
       invoice_total:
         type: number
@@ -1441,6 +1447,8 @@ definitions:
         type: string
       id:
         type: string
+      invoice_no:
+        type: string
       outstanding:
         type: number
       period_month:
@@ -1675,6 +1683,13 @@ definitions:
       published_date:
         type: string
       title:
+        type: string
+    type: object
+  internal_features_auth_delivery_http.changePasswordRequest:
+    properties:
+      current_password:
+        type: string
+      new_password:
         type: string
     type: object
   internal_features_auth_delivery_http.loginRequest:
@@ -2733,6 +2748,41 @@ paths:
       summary: Announcement unread count and manage access
       tags:
       - announcements
+  /auth/change-password:
+    post:
+      consumes:
+      - application/json
+      description: Requires the current password. Signs out every other device; this
+        device stays signed in.
+      parameters:
+      - description: Change password payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_auth_delivery_http.changePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Change the signed-in user's own password
+      tags:
+      - auth
   /auth/login:
     post:
       consumes:
@@ -5664,6 +5714,31 @@ paths:
       summary: Create a permission
       tags:
       - permissions
+  /public/invoice-qr/{token}:
+    get:
+      description: The link is sent in LINE overdue reminders; LINE downloads the
+        image itself, so there is no session. The QR is for the amount still owed
+        at request time.
+      parameters:
+      - description: Signed invoice QR token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - image/png
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      summary: PromptPay QR image of an invoice (public, signed link)
+      tags:
+      - invoices
   /public/line/oa:
     get:
       description: 'Public endpoint used by the LIFF linking page: returns the OA''s
@@ -7034,6 +7109,30 @@ paths:
       security:
       - TenantAuth: []
       summary: The signed-in tenant and the rooms they rent
+      tags:
+      - tenant-portal
+  /tenant/payments/{id}/receipt:
+    get:
+      parameters:
+      - description: Payment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_payment_domain.Receipt'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - TenantAuth: []
+      summary: A receipt for one of the tenant's own payments
       tags:
       - tenant-portal
   /tenant/repair-requests:

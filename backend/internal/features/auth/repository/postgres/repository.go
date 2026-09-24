@@ -47,3 +47,13 @@ func (r *Repository) RevokeRefreshToken(ctx context.Context, id uuid.UUID) error
 	_, err := r.db.Exec(ctx, `UPDATE refresh_tokens SET revoked_at = NOW() WHERE id = $1 AND revoked_at IS NULL`, id)
 	return err
 }
+
+// RevokeOtherRefreshTokens revokes every live refresh token of a user except
+// the one with keepHash (the device that is making the request).
+func (r *Repository) RevokeOtherRefreshTokens(ctx context.Context, userID uuid.UUID, keepHash string) error {
+	_, err := r.db.Exec(ctx, `
+		UPDATE refresh_tokens SET revoked_at = NOW()
+		WHERE user_id = $1 AND token_hash <> $2 AND revoked_at IS NULL
+	`, userID, keepHash)
+	return err
+}

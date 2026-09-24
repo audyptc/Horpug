@@ -69,7 +69,7 @@ func (r *Repository) Profile(ctx context.Context, tenantID uuid.UUID) (portaldom
 // room may still be owed on), newest period first, cancelled ones left out.
 func (r *Repository) Invoices(ctx context.Context, tenantID uuid.UUID, limit int) ([]portaldomain.Invoice, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT i.id, rm.room_number, d.name, i.period_year, i.period_month, i.due_date, i.total_amount::float8,
+		SELECT i.id, COALESCE(i.invoice_no, ''), rm.room_number, d.name, i.period_year, i.period_month, i.due_date, i.total_amount::float8,
 			GREATEST(i.total_amount - COALESCE((SELECT SUM(p.total_amount) FROM payments p WHERE p.invoice_id = i.id AND p.status = 'active'), 0), 0)::float8,
 			i.status
 		FROM invoices i
@@ -85,7 +85,7 @@ func (r *Repository) Invoices(ctx context.Context, tenantID uuid.UUID, limit int
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (portaldomain.Invoice, error) {
 		var inv portaldomain.Invoice
-		err := row.Scan(&inv.ID, &inv.RoomNumber, &inv.DormitoryName, &inv.PeriodYear, &inv.PeriodMonth, &inv.DueDate,
+		err := row.Scan(&inv.ID, &inv.InvoiceNo, &inv.RoomNumber, &inv.DormitoryName, &inv.PeriodYear, &inv.PeriodMonth, &inv.DueDate,
 			&inv.TotalAmount, &inv.Outstanding, &inv.Status)
 		if inv.Status == "paid" {
 			inv.Outstanding = 0

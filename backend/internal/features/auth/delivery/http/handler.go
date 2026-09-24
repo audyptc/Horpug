@@ -9,6 +9,7 @@ import (
 	authusecase "apihorpug/internal/features/auth/usecase"
 	"apihorpug/internal/http/apierror"
 	"apihorpug/internal/http/apiresponse"
+	"apihorpug/internal/http/middleware"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -26,6 +27,11 @@ type Handler struct {
 type loginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+type changePasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
 }
 
 type sessionResponse struct {
@@ -151,6 +157,50 @@ func (h *Handler) Logout(c fiber.Ctx) error {
 
 	h.clearRefreshCookie(c)
 	return apiresponse.Message(c, "logged out")
+}
+
+// ChangePassword godoc
+// @Summary Change the signed-in user's own password
+// @Description Requires the current password. Signs out every other device; this device stays signed in.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body changePasswordRequest true "Change password payload"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} apierror.Error
+// @Failure 401 {object} apierror.Error
+// @Router /auth/change-password [post]
+func (h *Handler) ChangePassword(c fiber.Ctx) error {
+	userID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("unauthorized")
+	}
+
+	var req changePasswordRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return apierror.BadRequest("invalid request body")
+	}
+	if req.CurrentPassword == "" || req.NewPassword == "" {
+		return apierror.BadRequest("current_password and new_password are required")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	err := h.usecase.ChangePassword(ctx, userID, req.CurrentPassword, req.NewPassword, c.Cookies(refreshCookieName), c.IP())
+	switch {
+	case err == nil:
+		return apiresponse.Message(c, "password changed")
+	case errors.Is(err, authdomain.ErrWrongPassword):
+		return apierror.BadRequest(err.Error()).WithSlug("wrong_password")
+	case errors.Is(err, authdomain.ErrWeakPassword):
+		return apierror.BadRequest(err.Error()).WithSlug("weak_password")
+	case errors.Is(err, authdomain.ErrSamePassword):
+		return apierror.BadRequest(err.Error()).WithSlug("same_password")
+	default:
+		return apierror.Internal("failed to change password")
+	}
 }
 
 func toSessionResponse(result authusecase.LoginResult) sessionResponse {

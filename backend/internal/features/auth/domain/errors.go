@@ -6,4 +6,7 @@ var (
 	ErrInvalidCredentials  = errors.New("invalid username or password")
 	ErrAccountInactive     = errors.New("account is inactive")
 	ErrRefreshTokenInvalid = errors.New("invalid or expired refresh token")
+	ErrWrongPassword       = errors.New("current password is incorrect")
+	ErrWeakPassword        = errors.New("new password must be at least 8 characters")
+	ErrSamePassword        = errors.New("new password must differ from the current one")
 )

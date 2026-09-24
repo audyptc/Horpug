@@ -15,7 +15,7 @@ import (
 // the same weekday each week instead of drifting with the hourly sweep.
 func (r *Repository) ListDueReminders(ctx context.Context) ([]invoicedomain.ReminderCandidate, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT i.id, d.id, d.name, d.promptpay_id, rm.room_number, t.line_user_id,
+		SELECT i.id, COALESCE(i.invoice_no, ''), d.id, d.name, d.promptpay_id, rm.room_number, t.line_user_id,
 			i.period_year, i.period_month, i.due_date, i.total_amount::float8,
 			COALESCE((SELECT SUM(p.total_amount) FROM payments p WHERE p.invoice_id = i.id AND p.status = 'active'), 0)::float8,
 			i.reminder_count
@@ -38,7 +38,7 @@ func (r *Repository) ListDueReminders(ctx context.Context) ([]invoicedomain.Remi
 	candidates := make([]invoicedomain.ReminderCandidate, 0)
 	for rows.Next() {
 		var c invoicedomain.ReminderCandidate
-		if err := rows.Scan(&c.InvoiceID, &c.DormitoryID, &c.DormitoryName, &c.PromptPayID, &c.RoomNumber, &c.TenantLineUserID,
+		if err := rows.Scan(&c.InvoiceID, &c.InvoiceNo, &c.DormitoryID, &c.DormitoryName, &c.PromptPayID, &c.RoomNumber, &c.TenantLineUserID,
 			&c.PeriodYear, &c.PeriodMonth, &c.DueDate, &c.TotalAmount, &c.PaidAmount, &c.ReminderCount); err != nil {
 			return nil, err
 		}

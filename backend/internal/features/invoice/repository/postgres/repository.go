@@ -27,7 +27,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 }
 
 const selectInvoiceColumns = `
-	i.id, i.contract_id, c.tenant_id, t.first_name, t.last_name, t.line_id, t.line_user_id,
+	i.id, COALESCE(i.invoice_no, ''), i.contract_id, c.tenant_id, t.first_name, t.last_name, t.line_id, t.line_user_id,
 	c.room_id, rm.room_number, rm.dormitory_id, d.name,
 	i.period_year, i.period_month, i.issue_date, i.due_date, i.total_amount, i.status, i.paid_at,
 	i.last_reminder_at, i.reminder_count, i.note,
@@ -91,8 +91,8 @@ func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filter
 	}
 	if filters.Search != "" {
 		conditions = append(conditions, fmt.Sprintf(
-			`((t.first_name || ' ' || t.last_name) ILIKE $%d OR rm.room_number ILIKE $%d OR d.name ILIKE $%d)`,
-			*argIdx, *argIdx, *argIdx,
+			`((t.first_name || ' ' || t.last_name) ILIKE $%d OR rm.room_number ILIKE $%d OR d.name ILIKE $%d OR i.invoice_no ILIKE $%d)`,
+			*argIdx, *argIdx, *argIdx, *argIdx,
 		))
 		*args = append(*args, sqlutil.ContainsPattern(filters.Search))
 		*argIdx++
@@ -225,12 +225,23 @@ func (r *Repository) Create(ctx context.Context, input invoiceusecase.CreateInpu
 	}
 	defer tx.Rollback(ctx)
 
+	var dormitoryID uuid.UUID
+	if err := tx.QueryRow(ctx, `SELECT dormitory_id FROM rooms WHERE id = $1`, roomID).Scan(&dormitoryID); err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+	seq, err := nextInvoiceSeq(ctx, tx, dormitoryID, input.PeriodYear)
+	if err != nil {
+		return invoicedomain.Invoice{}, err
+	}
+
 	id := uuid.New()
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO invoices (id, contract_id, period_year, period_month, issue_date, due_date, total_amount, status, note, created_by, updated_by)
-		VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $8, $9, $10)
+		INSERT INTO invoices (id, contract_id, period_year, period_month, issue_date, due_date, total_amount, status, note, created_by, updated_by,
+			dormitory_id, invoice_year, invoice_seq, invoice_no)
+		VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $8, $9, $10, $11, $3, $12, $13)
 	`, id, input.ContractID, input.PeriodYear, input.PeriodMonth, input.IssueDate, input.DueDate,
-		invoicedomain.InvoiceStatusUnpaid, input.Note, input.CreatedBy, input.CreatedBy); err != nil {
+		invoicedomain.InvoiceStatusUnpaid, input.Note, input.CreatedBy, input.CreatedBy,
+		dormitoryID, seq, FormatInvoiceNo(input.PeriodYear, seq)); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == "23505" {
@@ -282,6 +293,26 @@ func (r *Repository) Create(ctx context.Context, input invoiceusecase.CreateInpu
 	invoice.Items = items
 
 	return invoice, nil
+}
+
+// nextInvoiceSeq hands out the next invoice number for a dormitory and year.
+// The counter row stays locked until the transaction ends, so concurrent
+// creates (bulk generation) get distinct numbers, and a rolled-back create
+// (e.g. a duplicate period) gives its number back.
+func nextInvoiceSeq(ctx context.Context, tx pgx.Tx, dormitoryID uuid.UUID, year int) (int, error) {
+	var seq int
+	err := tx.QueryRow(ctx, `
+		INSERT INTO invoice_counters (dormitory_id, year, last_seq) VALUES ($1, $2, 1)
+		ON CONFLICT (dormitory_id, year) DO UPDATE SET last_seq = invoice_counters.last_seq + 1
+		RETURNING last_seq
+	`, dormitoryID, year).Scan(&seq)
+	return seq, err
+}
+
+// FormatInvoiceNo renders an invoice number, e.g. INV2026-0001. The sequence
+// is zero-padded to four digits and simply grows past 9999.
+func FormatInvoiceNo(year, seq int) string {
+	return fmt.Sprintf("INV%d-%04d", year, seq)
 }
 
 func insertInvoiceItem(ctx context.Context, tx pgx.Tx, invoiceID uuid.UUID, itemType invoicedomain.InvoiceItemType, description string, referenceID *uuid.UUID, amount float64) (float64, error) {
@@ -590,6 +621,7 @@ func scanInvoice(row pgx.Row) (invoicedomain.Invoice, error) {
 	var firstName, lastName string
 	if err := row.Scan(
 		&invoice.ID,
+		&invoice.InvoiceNo,
 		&invoice.ContractID,
 		&invoice.TenantID,
 		&firstName,

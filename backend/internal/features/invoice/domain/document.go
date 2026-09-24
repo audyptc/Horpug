@@ -48,3 +48,11 @@ type Document struct {
 	// account is set on the dormitory.
 	PromptPayPayload string `json:"promptpay_payload,omitempty"`
 }
+
+// QRInfo is what the public PromptPay QR image of an invoice needs.
+type QRInfo struct {
+	Status      InvoiceStatus
+	PromptPayID string
+	TotalAmount float64
+	PaidAmount  float64
+}

@@ -4,6 +4,7 @@ export type SlipStatus = 'pending' | 'approved' | 'rejected' | 'cancelled'
 export type ApiSlip = {
   id: string
   invoice_id: string
+  invoice_no: string
   tenant_id: string
   tenant_name: string
   room_number: string

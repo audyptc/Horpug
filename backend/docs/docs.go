@@ -640,6 +640,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/change-password": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Requires the current password. Signs out every other device; this device stays signed in.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Change the signed-in user's own password",
+                "parameters": [
+                    {
+                        "description": "Change password payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_auth_delivery_http.changePasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "consumes": [
@@ -5078,6 +5132,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/public/invoice-qr/{token}": {
+            "get": {
+                "description": "The link is sent in LINE overdue reminders; LINE downloads the image itself, so there is no session. The QR is for the amount still owed at request time.",
+                "produces": [
+                    "image/png"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "PromptPay QR image of an invoice (public, signed link)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Signed invoice QR token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/public/line/oa": {
             "get": {
                 "description": "Public endpoint used by the LIFF linking page: returns the OA's basic ID and the URL that adds it as a friend, so a tenant who linked their account but isn't a friend yet (and so can't be pushed to) can add it in one tap. The basic ID is public information — it's on the OA's own profile and QR code.",
@@ -7174,6 +7263,45 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/apihorpug_internal_features_tenantportal_domain.Profile"
+                        }
+                    }
+                }
+            }
+        },
+        "/tenant/payments/{id}/receipt": {
+            "get": {
+                "security": [
+                    {
+                        "TenantAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tenant-portal"
+                ],
+                "summary": "A receipt for one of the tenant's own payments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_payment_domain.Receipt"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
                         }
                     }
                 }
@@ -9414,6 +9542,9 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "invoice_no": {
+                    "type": "string"
+                },
                 "issue_date": {
                     "type": "string"
                 },
@@ -10113,6 +10244,9 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "invoice_no": {
+                    "type": "string"
+                },
                 "outstanding": {
                     "type": "number"
                 },
@@ -10155,6 +10289,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "invoice_id": {
+                    "type": "string"
+                },
+                "invoice_no": {
                     "type": "string"
                 },
                 "invoice_total": {
@@ -10805,6 +10942,9 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "invoice_no": {
+                    "type": "string"
+                },
                 "outstanding": {
                     "type": "number"
                 },
@@ -11156,6 +11296,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_auth_delivery_http.changePasswordRequest": {
+            "type": "object",
+            "properties": {
+                "current_password": {
+                    "type": "string"
+                },
+                "new_password": {
                     "type": "string"
                 }
             }

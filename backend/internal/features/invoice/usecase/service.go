@@ -50,6 +50,7 @@ var SortColumns = map[string]string{
 	"tenant_name":    "(t.first_name || ' ' || t.last_name)",
 	"room_number":    "rm.room_number",
 	"dormitory_name": "d.name",
+	"invoice_no":     "i.invoice_no",
 	"period":         "(i.period_year * 12 + i.period_month)",
 	"due_date":       "i.due_date",
 	"total_amount":   "i.total_amount",
@@ -307,6 +308,9 @@ func buildInvoiceLineMessage(invoice invoicedomain.Invoice) string {
 
 	b.WriteString("🧾 ใบแจ้งหนี้ค่าเช่าหอพัก\n")
 	b.WriteString(divider + "\n")
+	if invoice.InvoiceNo != "" {
+		fmt.Fprintf(&b, "🔖 เลขที่: %s\n", invoice.InvoiceNo)
+	}
 	if invoice.DormitoryName != "" {
 		fmt.Fprintf(&b, "🏢 หอพัก: %s\n", invoice.DormitoryName)
 	}

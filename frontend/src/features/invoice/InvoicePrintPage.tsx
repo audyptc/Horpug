@@ -63,7 +63,7 @@ export default function InvoicePrintPage() {
   const title = t('invoicePrintInvoiceTitle')
   useDocumentTitle(
     doc
-      ? `${title} ${doc.invoice.room_number ?? ''} ${formatPeriod(doc.invoice.period_year, doc.invoice.period_month)}`
+      ? `${title} ${doc.invoice.invoice_no} ${doc.invoice.room_number ?? ''} ${formatPeriod(doc.invoice.period_year, doc.invoice.period_month)}`
       : ''
   )
 
@@ -100,6 +100,9 @@ export default function InvoicePrintPage() {
           </div>
           <div className="flex flex-col gap-1 sm:text-right">
             <h2 className="text-lg font-semibold">{title}</h2>
+            <p className="text-sm">
+              {t('receiptPrintNo')} <span className="font-semibold">{invoice.invoice_no || '—'}</span>
+            </p>
             {isCancelled && <p className="text-sm font-semibold text-red-600">{t('invoiceStatusCancelled')}</p>}
             {isPaid && <p className="text-sm font-semibold text-green-700">{t('invoiceStatusPaid')}</p>}
             <p className="text-sm text-gray-600">

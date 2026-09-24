@@ -6,6 +6,7 @@ import (
 	"time"
 
 	invoicedomain "apihorpug/internal/features/invoice/domain"
+	paymentdomain "apihorpug/internal/features/payment/domain"
 	portaldomain "apihorpug/internal/features/tenantportal/domain"
 	portalusecase "apihorpug/internal/features/tenantportal/usecase"
 	"apihorpug/internal/http/apierror"
@@ -42,7 +43,8 @@ func portalError(err error, fallback string) error {
 		return apierror.Forbidden(err.Error()).WithSlug("tenant_not_linked")
 	case errors.Is(err, portaldomain.ErrRoomNotRented), errors.Is(err, portaldomain.ErrInvalidRepair):
 		return apierror.BadRequest(err.Error())
-	case errors.Is(err, portaldomain.ErrRepairNotFound), errors.Is(err, invoicedomain.ErrInvoiceNotFound):
+	case errors.Is(err, portaldomain.ErrRepairNotFound), errors.Is(err, invoicedomain.ErrInvoiceNotFound),
+		errors.Is(err, paymentdomain.ErrPaymentNotFound):
 		return apierror.NotFound("not found")
 	case errors.Is(err, portaldomain.ErrRepairNotPending):
 		return apierror.Conflict(err.Error()).WithSlug("repair_not_pending")
@@ -138,6 +140,30 @@ func (h *Handler) InvoiceDocument(c fiber.Ctx) error {
 		return portalError(err, "failed to load invoice")
 	}
 	return apiresponse.OK(c, doc)
+}
+
+// Receipt godoc
+// @Summary A receipt for one of the tenant's own payments
+// @Tags tenant-portal
+// @Produce json
+// @Param id path string true "Payment ID"
+// @Success 200 {object} paymentdomain.Receipt
+// @Failure 404 {object} apierror.Error
+// @Security TenantAuth
+// @Router /tenant/payments/{id}/receipt [get]
+func (h *Handler) Receipt(c fiber.Ctx) error {
+	tenantID, _ := middleware.TenantID(c)
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return apierror.BadRequest("invalid payment id")
+	}
+	ctx, cancel := withTimeout(c)
+	defer cancel()
+	receipt, err := h.usecase.Receipt(ctx, tenantID, id)
+	if err != nil {
+		return portalError(err, "failed to load receipt")
+	}
+	return apiresponse.OK(c, receipt)
 }
 
 // RepairRequests godoc

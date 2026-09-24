@@ -14,6 +14,7 @@ type ReceiptDormitory struct {
 // the invoice's active (not voided) payments.
 type ReceiptInvoice struct {
 	ID          uuid.UUID `json:"id"`
+	InvoiceNo   string    `json:"invoice_no"`
 	PeriodYear  int       `json:"period_year"`
 	PeriodMonth int       `json:"period_month"`
 	TotalAmount float64   `json:"total_amount"`

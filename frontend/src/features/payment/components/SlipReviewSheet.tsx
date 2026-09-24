@@ -126,7 +126,8 @@ function SlipCard({ slip, onDone }: SlipCardProps) {
             {slip.tenant_name} · {t('moveOutRoom')} {slip.room_number}
           </p>
           <p className="text-xs text-muted-foreground">
-            {slip.dormitory_name} · {t('portalPeriod')} {formatPeriod(slip.period_year, slip.period_month)} ·{' '}
+            {slip.dormitory_name} · {t('portalPeriod')} {formatPeriod(slip.period_year, slip.period_month)}
+            {slip.invoice_no && ` (${slip.invoice_no})`} ·{' '}
             {t('slipSentAt')} {new Date(slip.created_at).toLocaleString('th-TH')}
           </p>
         </div>

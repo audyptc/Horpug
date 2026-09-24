@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { Building2, ChevronLeft, Megaphone, Pin, Receipt, Wrench } from 'lucide-react'
+import { Building2, ChevronLeft, FileText, Megaphone, Pin, Printer, Receipt, Wrench } from 'lucide-react'
 import { extractErrorCode, extractErrorMessage } from '@/shared/api/client'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import type { ApiInvoiceDocument } from '@/features/invoice/types'
 import type { ApiSlip, SlipStatus } from '@/features/payment/slips'
+import { ReceiptDocument } from '@/features/payment/ReceiptDocument'
+import type { ApiReceipt } from '@/features/payment/types'
 import { formatPeriod } from '@/features/invoice/utils'
 import { tenantApi, setTenantToken } from './api'
 import type {
@@ -120,8 +122,8 @@ export default function TenantPortalPage() {
   )
 
   return (
-    <div className="min-h-screen bg-muted/40 pb-20 text-foreground">
-      <header className="sticky top-0 z-10 border-b border-border bg-background px-4 py-3">
+    <div className="min-h-screen bg-muted/40 pb-20 text-foreground print:bg-white print:pb-0">
+      <header className="sticky top-0 z-10 border-b border-border bg-background px-4 py-3 print:hidden">
         <div className="mx-auto flex max-w-md items-center gap-2">
           <span className="brand-mark" aria-hidden="true">
             <Building2 size={18} strokeWidth={2.4} />
@@ -139,7 +141,7 @@ export default function TenantPortalPage() {
         </div>
       </header>
 
-      <main className="mx-auto flex max-w-md flex-col gap-3 px-4 py-4">
+      <main className="mx-auto flex max-w-md flex-col gap-3 px-4 py-4 print:max-w-none print:p-0">
         {status.kind === 'loading' && <p className="metric-detail">{t('loading')}</p>}
         {status.kind === 'error' && <p className="resource-error">{status.message}</p>}
         {status.kind === 'ready' && tab === 'invoices' && <InvoicesTab formatDate={formatDate} />}
@@ -148,7 +150,7 @@ export default function TenantPortalPage() {
       </main>
 
       {status.kind === 'ready' && (
-        <nav className="fixed inset-x-0 bottom-0 border-t border-border bg-background" aria-label={t('portalNav')}>
+        <nav className="fixed inset-x-0 bottom-0 border-t border-border bg-background print:hidden" aria-label={t('portalNav')}>
           <div className="mx-auto grid max-w-md grid-cols-3">
             {(
               [
@@ -224,6 +226,7 @@ function InvoicesTab({ formatDate }: { formatDate: (value: string) => string }) 
                 {t('portalPeriod')} {formatPeriod(inv.period_year, inv.period_month)}
               </span>
               <span className="text-xs text-muted-foreground">
+                {inv.invoice_no && `${inv.invoice_no} · `}
                 {t('moveOutRoom')} {inv.room_number} · {t('invoiceFormDueDateLabel')} {formatDate(inv.due_date)}
               </span>
             </div>
@@ -241,7 +244,10 @@ function InvoicesTab({ formatDate }: { formatDate: (value: string) => string }) 
 function InvoiceDetail({ id, onBack, formatDate }: { id: string; onBack: () => void; formatDate: (v: string) => string }) {
   const { t } = useLanguage()
   const doc = useLoad<ApiInvoiceDocument>(`/tenant/invoices/${id}`)
+  const [receiptId, setReceiptId] = useState<string | null>(null)
   const payable = !!doc.data && doc.data.outstanding > 0 && ['unpaid', 'overdue'].includes(doc.data.invoice.status)
+
+  if (receiptId) return <PortalReceipt id={receiptId} onBack={() => setReceiptId(null)} />
 
   return (
     <section className="flex flex-col gap-3">
@@ -258,6 +264,7 @@ function InvoiceDetail({ id, onBack, formatDate }: { id: string; onBack: () => v
               {t('portalPeriod')} {formatPeriod(doc.data.invoice.period_year, doc.data.invoice.period_month)}
             </p>
             <p className="text-xs text-muted-foreground">
+              {doc.data.invoice.invoice_no && `${doc.data.invoice.invoice_no} · `}
               {doc.data.dormitory.name} · {t('moveOutRoom')} {doc.data.invoice.room_number} ·{' '}
               {t('invoiceFormDueDateLabel')} {formatDate(doc.data.invoice.due_date)}
             </p>
@@ -279,11 +286,18 @@ function InvoiceDetail({ id, onBack, formatDate }: { id: string; onBack: () => v
               <p className="font-medium">{t('invoicePrintPaymentsTitle')}</p>
               <ul className="text-xs text-muted-foreground">
                 {doc.data.payments.map((p) => (
-                  <li key={p.id} className="flex justify-between gap-2 py-0.5">
-                    <span>
-                      {p.receipt_no} · {formatDate(p.payment_date)}
-                    </span>
-                    <span className="tabular-nums">{money(p.total_amount)}</span>
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      onClick={() => setReceiptId(p.id)}
+                      className="flex w-full items-center justify-between gap-2 py-1.5 text-left"
+                    >
+                      <span className="flex items-center gap-1">
+                        <FileText size={14} className="text-primary" />
+                        <span className="text-primary underline">{p.receipt_no}</span> · {formatDate(p.payment_date)}
+                      </span>
+                      <span className="tabular-nums">{money(p.total_amount)}</span>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -309,6 +323,41 @@ function InvoiceDetail({ id, onBack, formatDate }: { id: string; onBack: () => v
         </div>
       )}
       {doc.data && <SlipSection invoiceId={id} outstanding={doc.data.outstanding} payable={payable} formatDate={formatDate} />}
+    </section>
+  )
+}
+
+// PortalReceipt shows the receipt for one of the tenant's payments. Printing
+// hides the portal around it; LINE's in-app browser may not print, so the
+// hint suggests a screenshot instead.
+function PortalReceipt({ id, onBack }: { id: string; onBack: () => void }) {
+  const { t } = useLanguage()
+  const receipt = useLoad<ApiReceipt>(`/tenant/payments/${id}/receipt`)
+
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2 print:hidden">
+        <Button variant="ghost" className="px-0" onClick={onBack}>
+          <ChevronLeft />
+          {t('portalBack')}
+        </Button>
+        {receipt.data && (
+          <Button variant="outline" onClick={() => window.print()}>
+            <Printer className="size-4" />
+            {t('invoicePrintAction')}
+          </Button>
+        )}
+      </div>
+      {receipt.loading && <p className="metric-detail">{t('loading')}</p>}
+      {receipt.error && <p className="resource-error">{receipt.error}</p>}
+      {receipt.data && (
+        <>
+          <div className="overflow-x-auto rounded-lg text-gray-900 print:overflow-visible">
+            <ReceiptDocument receipt={receipt.data} />
+          </div>
+          <p className="text-xs text-muted-foreground print:hidden">{t('portalReceiptHint')}</p>
+        </>
+      )}
     </section>
   )
 }

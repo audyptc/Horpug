@@ -40,6 +40,7 @@ var (
 type Slip struct {
 	ID            uuid.UUID  `json:"id"`
 	InvoiceID     uuid.UUID  `json:"invoice_id"`
+	InvoiceNo     string     `json:"invoice_no"`
 	TenantID      uuid.UUID  `json:"tenant_id"`
 	TenantName    string     `json:"tenant_name"`
 	RoomNumber    string     `json:"room_number"`

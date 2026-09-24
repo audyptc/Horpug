@@ -31,6 +31,7 @@ type fakePusher struct {
 	friends    map[string]bool
 	failPush   map[string]bool
 	pushed     map[string]string
+	images     map[string]string
 }
 
 func (f *fakePusher) Configured() bool { return f.configured }
@@ -44,6 +45,17 @@ func (f *fakePusher) PushMessage(_ context.Context, userID, text string) error {
 		return errors.New("line down")
 	}
 	f.pushed[userID] = text
+	return nil
+}
+
+func (f *fakePusher) PushTextWithImage(ctx context.Context, userID, text, imageURL string) error {
+	if err := f.PushMessage(ctx, userID, text); err != nil {
+		return err
+	}
+	if f.images == nil {
+		f.images = map[string]string{}
+	}
+	f.images[userID] = imageURL
 	return nil
 }
 
@@ -67,7 +79,7 @@ func TestSendOverdueReminders(t *testing.T) {
 		pushed:     map[string]string{},
 	}
 
-	SendOverdueReminders(context.Background(), repo, pusher, daytime)
+	SendOverdueReminders(context.Background(), repo, pusher, nil, daytime)
 
 	if repo.recorded[friend] != invoicedomain.ReminderSent {
 		t.Errorf("friend: recorded %q, want sent", repo.recorded[friend])
@@ -80,6 +92,54 @@ func TestSendOverdueReminders(t *testing.T) {
 	}
 	if _, ok := pusher.pushed["U-blocked"]; ok {
 		t.Error("pushed to a tenant who isn't a friend of the OA")
+	}
+}
+
+func TestSendOverdueRemindersQRImage(t *testing.T) {
+	withPP, noPP, paid := uuid.New(), uuid.New(), uuid.New()
+	repo := &fakeReminderRepo{
+		candidates: []invoicedomain.ReminderCandidate{
+			{InvoiceID: withPP, TenantLineUserID: "U-pp", PromptPayID: "0812345678", TotalAmount: 3000},
+			{InvoiceID: noPP, TenantLineUserID: "U-nopp", TotalAmount: 3000},
+			{InvoiceID: paid, TenantLineUserID: "U-paid", PromptPayID: "0812345678", TotalAmount: 3000, PaidAmount: 3000},
+		},
+		recorded: map[uuid.UUID]invoicedomain.ReminderOutcome{},
+	}
+	pusher := &fakePusher{
+		configured: true,
+		friends:    map[string]bool{"U-pp": true, "U-nopp": true, "U-paid": true},
+		pushed:     map[string]string{},
+	}
+	link := func(id uuid.UUID) string { return "https://example.com/qr/" + id.String() }
+
+	SendOverdueReminders(context.Background(), repo, pusher, link, daytime)
+
+	if got := pusher.images["U-pp"]; got != link(withPP) {
+		t.Errorf("with PromptPay: image %q, want %q", got, link(withPP))
+	}
+	for _, u := range []string{"U-nopp", "U-paid"} {
+		if _, ok := pusher.images[u]; ok {
+			t.Errorf("%s: sent a QR image, want text only", u)
+		}
+		if _, ok := pusher.pushed[u]; !ok {
+			t.Errorf("%s: text reminder not sent", u)
+		}
+	}
+}
+
+func TestNewQRLinker(t *testing.T) {
+	if NewQRLinker("http://localhost:5173", "s") != nil {
+		t.Error("plain HTTP must disable QR links (LINE needs HTTPS)")
+	}
+	if NewQRLinker("", "s") != nil {
+		t.Error("empty public URL must disable QR links")
+	}
+	link := NewQRLinker("https://horpug.example.com/", "s")
+	if link == nil {
+		t.Fatal("HTTPS public URL must enable QR links")
+	}
+	if got := link(uuid.New()); !strings.HasPrefix(got, "https://horpug.example.com/api/v1/public/invoice-qr/") {
+		t.Errorf("link %q", got)
 	}
 }
 
@@ -100,7 +160,7 @@ func TestSendOverdueRemindersSkips(t *testing.T) {
 				recorded:   map[uuid.UUID]invoicedomain.ReminderOutcome{},
 			}
 			pusher := &fakePusher{configured: tc.configured, friends: map[string]bool{"U1": true}, pushed: map[string]string{}}
-			SendOverdueReminders(context.Background(), repo, pusher, tc.now)
+			SendOverdueReminders(context.Background(), repo, pusher, nil, tc.now)
 			if len(pusher.pushed) != 0 || len(repo.recorded) != 0 {
 				t.Fatalf("sent %d, recorded %d; want nothing", len(pusher.pushed), len(repo.recorded))
 			}

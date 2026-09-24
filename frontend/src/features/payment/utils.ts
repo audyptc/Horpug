@@ -36,6 +36,13 @@ export function createPaymentItemRow(): PaymentItemFormRow {
   return { key: nextItemRowKey++, paymentMethod: 'cash', amount: '', referenceNo: '' }
 }
 
+// Total of the rows being entered, rounded to the satang so e.g. 0.1 + 0.2
+// shows as 0.3; blank or partly typed amounts count as zero.
+export function sumPaymentItems(items: Pick<PaymentItemFormRow, 'amount'>[]): number {
+  const total = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+  return Math.round(total * 100) / 100
+}
+
 export function toDateInputValue(value?: string): string {
   return value ? value.slice(0, 10) : ''
 }

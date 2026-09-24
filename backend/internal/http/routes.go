@@ -134,6 +134,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	invoiceRepo := invoicerepository.NewRepository(db)
 	invoiceService := invoiceusecase.New(invoiceRepo, lineClient, activityLogService)
 	invoiceHandler := invoicehttp.NewHandler(invoiceService)
+	invoiceQRHandler := invoicehttp.NewQRHandler(invoiceusecase.NewQRImages(invoiceRepo, secretKey))
 	paymentRepo := paymentrepository.NewRepository(db)
 	paymentService := paymentusecase.New(paymentRepo, activityLogService)
 	paymentHandler := paymenthttp.NewHandler(paymentService)
@@ -160,7 +161,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	moveOutHandler := moveouthttp.NewHandler(moveOutService)
 	reportHandler := reporthttp.NewHandler(reportusecase.New(reportrepository.NewRepository(db)))
 	slipHandler := sliphttp.NewHandler(slipusecase.New(sliprepository.NewRepository(db), files, paymentService, lineClient))
-	portalHandler := portalhttp.NewHandler(portalusecase.New(portalrepository.NewRepository(db), lineClient, invoiceService, secretKey))
+	portalHandler := portalhttp.NewHandler(portalusecase.New(portalrepository.NewRepository(db), lineClient, invoiceService, paymentService, secretKey))
 	dashboardRepo := dashboardrepository.NewRepository(db)
 	dashboardService := dashboardusecase.New(dashboardRepo)
 	dashboardHandler := dashboardhttp.NewHandler(dashboardService)
@@ -182,6 +183,8 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	publicGroup := app.Group("/api/v1/public")
 	publicGroup.Post("/tenants/:id/line/link", rateLimit(20, 10*time.Minute), tenantHandler.LinkLine)
 	publicGroup.Get("/line/oa", tenantHandler.LineOAInfo)
+	// PromptPay QR images linked from LINE reminders; LINE's servers fetch them.
+	publicGroup.Get("/invoice-qr/:token", rateLimit(120, time.Minute), invoiceQRHandler.Image)
 	publicGroup.Post("/tenant-portal/session", rateLimit(30, 10*time.Minute), portalHandler.StartSession)
 
 	// Tenant self-service pages opened from LINE. Registered before the staff
@@ -190,6 +193,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	tenantPortal.Get("/me", portalHandler.Profile)
 	tenantPortal.Get("/invoices", portalHandler.Invoices)
 	tenantPortal.Get("/invoices/:id", portalHandler.InvoiceDocument)
+	tenantPortal.Get("/payments/:id/receipt", portalHandler.Receipt)
 	tenantPortal.Get("/repair-requests", portalHandler.RepairRequests)
 	tenantPortal.Post("/repair-requests", rateLimit(10, time.Hour), portalHandler.CreateRepairRequest)
 	tenantPortal.Post("/repair-requests/:id/cancel", portalHandler.CancelRepairRequest)
@@ -204,6 +208,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	requirePermission := func(menuPath string, action permissiondomain.Action) fiber.Handler {
 		return middleware.RequirePermission(db, menuPath, action)
 	}
+
+	// Any signed-in user may change their own password; no menu permission.
+	api.Post("/auth/change-password", rateLimit(10, 15*time.Minute), authHandler.ChangePassword)
 
 	api.Get("/permissions", requirePermission("/permissions", permissiondomain.ActionRead), permissionHandler.List)
 	api.Post("/permissions", requirePermission("/permissions", permissiondomain.ActionCreate), permissionHandler.Create)

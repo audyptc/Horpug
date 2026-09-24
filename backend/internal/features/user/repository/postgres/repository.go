@@ -503,6 +503,22 @@ func (r *Repository) Update(ctx context.Context, id uuid.UUID, input userusecase
 	return r.loadUserByID(ctx, id)
 }
 
+// UpdatePassword sets a new password hash for a user changing their own
+// password; the audit columns point at the user themselves.
+func (r *Repository) UpdatePassword(ctx context.Context, id uuid.UUID, hashedPassword string) error {
+	result, err := r.db.Exec(ctx, `
+		UPDATE users SET password = $2, updated_by = $1, updated_at = NOW()
+		WHERE id = $1
+	`, id, hashedPassword)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return userdomain.ErrUserNotFound
+	}
+	return nil
+}
+
 func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 	result, err := r.db.Exec(ctx, `DELETE FROM users WHERE id = $1`, id)
 	if err != nil {

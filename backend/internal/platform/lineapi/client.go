@@ -179,25 +179,42 @@ func (c *Client) GetBotInfo(ctx context.Context) (string, string, error) {
 }
 
 type pushMessageRequest struct {
-	To       string            `json:"to"`
-	Messages []pushTextMessage `json:"messages"`
+	To       string        `json:"to"`
+	Messages []pushMessage `json:"messages"`
 }
 
-type pushTextMessage struct {
-	Type string `json:"type"`
-	Text string `json:"text"`
+// pushMessage is a text or image message; unused fields are left out.
+type pushMessage struct {
+	Type               string `json:"type"`
+	Text               string `json:"text,omitempty"`
+	OriginalContentURL string `json:"originalContentUrl,omitempty"`
+	PreviewImageURL    string `json:"previewImageUrl,omitempty"`
 }
 
 // PushMessage sends a single text message to the given LINE userId through
 // the Messaging API, using the channel's access token.
 func (c *Client) PushMessage(ctx context.Context, userID, text string) error {
+	return c.push(ctx, userID, []pushMessage{{Type: "text", Text: text}})
+}
+
+// PushTextWithImage sends a text message followed by an image in one push.
+// LINE downloads the image itself, so imageURL must be public HTTPS
+// (JPEG or PNG); the same URL is used for the preview.
+func (c *Client) PushTextWithImage(ctx context.Context, userID, text, imageURL string) error {
+	return c.push(ctx, userID, []pushMessage{
+		{Type: "text", Text: text},
+		{Type: "image", OriginalContentURL: imageURL, PreviewImageURL: imageURL},
+	})
+}
+
+func (c *Client) push(ctx context.Context, userID string, messages []pushMessage) error {
 	if !c.configured() {
 		return ErrNotConfigured
 	}
 
 	payload, err := json.Marshal(pushMessageRequest{
 		To:       userID,
-		Messages: []pushTextMessage{{Type: "text", Text: text}},
+		Messages: messages,
 	})
 	if err != nil {
 		return err

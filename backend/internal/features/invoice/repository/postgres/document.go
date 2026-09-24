@@ -2,10 +2,12 @@ package postgres
 
 import (
 	"context"
+	"errors"
 
 	invoicedomain "apihorpug/internal/features/invoice/domain"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 // GetDocument loads an invoice with its issuing dormitory and payments for
@@ -121,4 +123,24 @@ func (r *Repository) buildDocument(ctx context.Context, invoice invoicedomain.In
 	}
 
 	return doc, nil
+}
+
+// GetQRInfo loads an invoice's status, balance and PromptPay account for the
+// public QR image. There is no requester: the caller has already checked the
+// signed link.
+func (r *Repository) GetQRInfo(ctx context.Context, id uuid.UUID) (invoicedomain.QRInfo, error) {
+	var info invoicedomain.QRInfo
+	err := r.db.QueryRow(ctx, `
+		SELECT i.status, d.promptpay_id, i.total_amount::float8,
+			COALESCE((SELECT SUM(p.total_amount) FROM payments p WHERE p.invoice_id = i.id AND p.status = 'active'), 0)::float8
+		FROM invoices i
+		JOIN contracts c ON c.id = i.contract_id
+		JOIN rooms rm ON rm.id = c.room_id
+		JOIN dormitories d ON d.id = rm.dormitory_id
+		WHERE i.id = $1
+	`, id).Scan(&info.Status, &info.PromptPayID, &info.TotalAmount, &info.PaidAmount)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return invoicedomain.QRInfo{}, invoicedomain.ErrInvoiceNotFound
+	}
+	return info, err
 }

@@ -15,7 +15,7 @@ import {
 import type { ApiInvoice } from '@/features/invoice/types'
 import { InvoiceSearchSelect } from '@/features/invoice/components/InvoiceSearchSelect'
 import type { PaymentMethod } from '../types'
-import { PAYMENT_METHODS, type PaymentItemFormRow } from '../utils'
+import { PAYMENT_METHODS, sumPaymentItems, type PaymentItemFormRow } from '../utils'
 
 const paymentMethodLabelKeys: Record<PaymentMethod, TranslationKey> = {
   cash: 'paymentMethodCash',
@@ -66,10 +66,7 @@ export function PaymentFormSheet({
 }: PaymentFormSheetProps) {
   const { t } = useLanguage()
 
-  const total = useMemo(
-    () => items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0),
-    [items]
-  )
+  const total = useMemo(() => sumPaymentItems(items), [items])
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

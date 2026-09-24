@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	invoicedomain "apihorpug/internal/features/invoice/domain"
+	paymentdomain "apihorpug/internal/features/payment/domain"
 	portaldomain "apihorpug/internal/features/tenantportal/domain"
 	platformjwt "apihorpug/internal/platform/jwt"
 
@@ -41,15 +42,22 @@ type InvoiceDocuments interface {
 	GetDocumentForTenant(ctx context.Context, id, tenantID uuid.UUID) (invoicedomain.Document, error)
 }
 
+// Receipts renders a receipt for one of the tenant's own payments (see the
+// payment feature).
+type Receipts interface {
+	GetReceiptForTenant(ctx context.Context, id, tenantID uuid.UUID) (paymentdomain.Receipt, error)
+}
+
 type Service struct {
 	repo      Repository
 	line      LineVerifier
 	documents InvoiceDocuments
+	receipts  Receipts
 	secret    string
 }
 
-func New(repo Repository, line LineVerifier, documents InvoiceDocuments, secret string) *Service {
-	return &Service{repo: repo, line: line, documents: documents, secret: secret}
+func New(repo Repository, line LineVerifier, documents InvoiceDocuments, receipts Receipts, secret string) *Service {
+	return &Service{repo: repo, line: line, documents: documents, receipts: receipts, secret: secret}
 }
 
 // StartSession signs a tenant in from the LIFF page: LINE vouches for who
@@ -89,6 +97,10 @@ func (s *Service) Invoices(ctx context.Context, tenantID uuid.UUID) ([]portaldom
 
 func (s *Service) InvoiceDocument(ctx context.Context, tenantID, invoiceID uuid.UUID) (invoicedomain.Document, error) {
 	return s.documents.GetDocumentForTenant(ctx, invoiceID, tenantID)
+}
+
+func (s *Service) Receipt(ctx context.Context, tenantID, paymentID uuid.UUID) (paymentdomain.Receipt, error) {
+	return s.receipts.GetReceiptForTenant(ctx, paymentID, tenantID)
 }
 
 func (s *Service) RepairRequests(ctx context.Context, tenantID uuid.UUID) ([]portaldomain.RepairRequest, error) {

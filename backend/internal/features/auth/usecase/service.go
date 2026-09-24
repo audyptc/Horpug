@@ -24,13 +24,18 @@ import (
 type UserRepository interface {
 	FindByLogin(ctx context.Context, login string) (userdomain.User, error)
 	GetByID(ctx context.Context, id uuid.UUID) (userdomain.User, error)
+	UpdatePassword(ctx context.Context, id uuid.UUID, hashedPassword string) error
 }
 
 type TokenRepository interface {
 	SaveRefreshToken(ctx context.Context, token authdomain.RefreshToken) error
 	FindRefreshToken(ctx context.Context, tokenHash string) (authdomain.RefreshToken, error)
 	RevokeRefreshToken(ctx context.Context, id uuid.UUID) error
+	RevokeOtherRefreshTokens(ctx context.Context, userID uuid.UUID, keepHash string) error
 }
+
+// MinPasswordLength is enforced when users change their own password.
+const MinPasswordLength = 8
 
 // ActivityLogger records login/logout events for the audit trail. Failures to
 // record are logged but never block the auth flow itself.
@@ -154,6 +159,45 @@ func (s *Service) Logout(ctx context.Context, rawToken, ipAddress string) error 
 	}
 
 	s.recordActivity(ctx, &stored.UserID, "LOGOUT", "User logged out", ipAddress)
+	return nil
+}
+
+// ChangePassword lets a signed-in user replace their own password after
+// proving they know the current one. Every other device is signed out; the
+// device holding currentRefreshToken keeps its session.
+func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword, currentRefreshToken, ipAddress string) error {
+	if len([]rune(newPassword)) < MinPasswordLength || strings.TrimSpace(newPassword) == "" {
+		return authdomain.ErrWeakPassword
+	}
+
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(currentPassword)) != nil {
+		return authdomain.ErrWrongPassword
+	}
+	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(newPassword)) == nil {
+		return authdomain.ErrSamePassword
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	if err := s.userRepo.UpdatePassword(ctx, userID, string(hashed)); err != nil {
+		return err
+	}
+
+	keepHash := ""
+	if token := strings.TrimSpace(currentRefreshToken); token != "" {
+		keepHash = hashToken(token)
+	}
+	if err := s.tokenRepo.RevokeOtherRefreshTokens(ctx, userID, keepHash); err != nil {
+		return err
+	}
+
+	s.recordActivity(ctx, &userID, "CHANGE_PASSWORD", "User changed their password", ipAddress)
 	return nil
 }
 

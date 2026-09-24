@@ -304,6 +304,7 @@ export function InvoiceListCard({
                         <TableCell className="text-muted-foreground">{invoice.dormitory_name || '—'}</TableCell>
                         <TableCell className="text-muted-foreground">
                           {formatPeriod(invoice.period_year, invoice.period_month)}
+                          {invoice.invoice_no && <div className="text-xs">{invoice.invoice_no}</div>}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {toDateInputValue(invoice.due_date)}

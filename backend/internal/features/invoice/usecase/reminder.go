@@ -38,14 +38,22 @@ type InvoiceJobsRepository interface {
 // ReminderPusher delivers reminders through the dormitory's LINE OA.
 type ReminderPusher interface {
 	LinePusher
+	PushTextWithImage(ctx context.Context, lineUserID, text, imageURL string) error
 	Configured() bool
 }
+
+// QRLinker builds the public PromptPay QR image URL for an invoice (see
+// NewQRLinker); nil when there is no public HTTPS address to link to.
+type QRLinker func(invoiceID uuid.UUID) string
 
 // SendOverdueReminders pushes the weekly LINE reminder for every overdue
 // invoice that is due one. A tenant who can't be reached (not a friend of the
 // OA, or blocked it) is recorded and retried a week later; a push that fails
 // for any other reason (network, LINE outage) is left for the next sweep.
-func SendOverdueReminders(ctx context.Context, repo ReminderRepository, pusher ReminderPusher, now time.Time) {
+//
+// When qrLink is set and the dormitory has a PromptPay account, the PromptPay
+// QR image is sent along with the text.
+func SendOverdueReminders(ctx context.Context, repo ReminderRepository, pusher ReminderPusher, qrLink QRLinker, now time.Time) {
 	if pusher == nil || !pusher.Configured() {
 		return
 	}
@@ -77,7 +85,17 @@ func SendOverdueReminders(ctx context.Context, repo ReminderRepository, pusher R
 			continue
 		}
 
-		if err := pusher.PushMessage(ctx, c.TenantLineUserID, buildReminderLineMessage(c, now)); err != nil {
+		text := buildReminderLineMessage(c, now)
+		var imageURL string
+		if qrLink != nil && c.PromptPayID != "" && c.TotalAmount > c.PaidAmount {
+			imageURL = qrLink(c.InvoiceID)
+		}
+		if imageURL != "" {
+			err = pusher.PushTextWithImage(ctx, c.TenantLineUserID, text, imageURL)
+		} else {
+			err = pusher.PushMessage(ctx, c.TenantLineUserID, text)
+		}
+		if err != nil {
 			log.Printf("overdue reminder push failed (invoice=%s): %v", c.InvoiceID, err)
 			continue
 		}
@@ -109,6 +127,9 @@ func buildReminderLineMessage(c invoicedomain.ReminderCandidate, now time.Time) 
 	var b strings.Builder
 	b.WriteString("⚠️ แจ้งเตือนค่าเช่าค้างชำระ\n")
 	b.WriteString(divider + "\n")
+	if c.InvoiceNo != "" {
+		fmt.Fprintf(&b, "🧾 เลขที่: %s\n", c.InvoiceNo)
+	}
 	if c.DormitoryName != "" {
 		fmt.Fprintf(&b, "🏢 หอพัก: %s\n", c.DormitoryName)
 	}
@@ -146,13 +167,13 @@ func formatPromptPayID(id string) string {
 // RunInvoiceJobs runs the hourly invoice housekeeping until ctx is cancelled:
 // it marks overdue invoices, then sends the weekly LINE reminders for them.
 // It runs once at start and then every interval.
-func RunInvoiceJobs(ctx context.Context, repo InvoiceJobsRepository, pusher ReminderPusher, interval time.Duration) {
+func RunInvoiceJobs(ctx context.Context, repo InvoiceJobsRepository, pusher ReminderPusher, qrLink QRLinker, interval time.Duration) {
 	run := func() {
 		jobCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 		defer cancel()
 
 		sweepOverdue(jobCtx, repo)
-		SendOverdueReminders(jobCtx, repo, pusher, time.Now())
+		SendOverdueReminders(jobCtx, repo, pusher, qrLink, time.Now())
 	}
 
 	run()

@@ -61,6 +61,7 @@ export type ApiGenerationResult = {
 
 export type ApiInvoice = {
   id: string
+  invoice_no: string
   contract_id: string
   tenant_id?: string
   tenant_name?: string

@@ -21,7 +21,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 }
 
 const selectSlip = `
-	SELECT s.id, s.invoice_id, s.tenant_id, t.first_name || ' ' || t.last_name, rm.room_number, d.id, d.name,
+	SELECT s.id, s.invoice_id, COALESCE(i.invoice_no, ''), s.tenant_id, t.first_name || ' ' || t.last_name, rm.room_number, d.id, d.name,
 		i.period_year, i.period_month, i.total_amount::float8,
 		GREATEST(i.total_amount - COALESCE((SELECT SUM(p.total_amount) FROM payments p WHERE p.invoice_id = i.id AND p.status = 'active'), 0), 0)::float8,
 		s.amount::float8, s.transfer_date, s.note, s.file_mime, s.file_size, s.status, s.reject_reason,
@@ -36,7 +36,7 @@ const selectSlip = `
 
 func scanSlip(row pgx.CollectableRow) (slipdomain.Slip, error) {
 	var s slipdomain.Slip
-	err := row.Scan(&s.ID, &s.InvoiceID, &s.TenantID, &s.TenantName, &s.RoomNumber, &s.DormitoryID, &s.DormitoryName,
+	err := row.Scan(&s.ID, &s.InvoiceID, &s.InvoiceNo, &s.TenantID, &s.TenantName, &s.RoomNumber, &s.DormitoryID, &s.DormitoryName,
 		&s.PeriodYear, &s.PeriodMonth, &s.InvoiceTotal, &s.Outstanding,
 		&s.Amount, &s.TransferDate, &s.Note, &s.FileMime, &s.FileSize, &s.Status, &s.RejectReason,
 		&s.PaymentID, &s.ReceiptNo, &s.ReviewedAt, &s.CreatedAt, &s.FileKey, &s.TenantLineUserID)

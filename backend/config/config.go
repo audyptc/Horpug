@@ -28,6 +28,7 @@ type Config struct {
 	LineChannelAccessToken string
 	LineChannelID          string
 	UploadDir              string
+	PublicURL              string
 }
 
 func Load() Config {
@@ -74,6 +75,11 @@ func Load() Config {
 		// UploadDir is where uploaded files (e.g. documents) are stored. In
 		// Docker it is a mounted volume so files survive container rebuilds.
 		UploadDir: getEnv("UPLOAD_DIR", "./uploads"),
+
+		// PublicURL is the site's public address, e.g. https://horpug.example.com.
+		// LINE downloads images from public HTTPS URLs only, so the PromptPay
+		// QR image in overdue reminders is sent only when this is https://.
+		PublicURL: getEnv("APP_PUBLIC_URL", ""),
 	}
 }
 
