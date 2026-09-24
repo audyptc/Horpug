@@ -991,6 +991,65 @@ definitions:
       total_amount:
         type: number
     type: object
+  apihorpug_internal_features_paymentslip_domain.Slip:
+    properties:
+      amount:
+        type: number
+      created_at:
+        type: string
+      dormitory_id:
+        type: string
+      dormitory_name:
+        type: string
+      file_mime:
+        type: string
+      file_size:
+        type: integer
+      id:
+        type: string
+      invoice_id:
+        type: string
+      invoice_total:
+        type: number
+      note:
+        type: string
+      outstanding:
+        type: number
+      payment_id:
+        type: string
+      period_month:
+        type: integer
+      period_year:
+        type: integer
+      receipt_no:
+        type: string
+      reject_reason:
+        type: string
+      reviewed_at:
+        type: string
+      room_number:
+        type: string
+      status:
+        $ref: '#/definitions/apihorpug_internal_features_paymentslip_domain.Status'
+      tenant_id:
+        type: string
+      tenant_name:
+        type: string
+      transfer_date:
+        type: string
+    type: object
+  apihorpug_internal_features_paymentslip_domain.Status:
+    enum:
+    - pending
+    - approved
+    - rejected
+    - cancelled
+    type: string
+    x-enum-varnames:
+    - StatusPending
+    - StatusApproved
+    - StatusRejected
+    - StatusCancelled
   apihorpug_internal_features_permission_domain.Permission:
     properties:
       created_at:
@@ -1063,6 +1122,102 @@ definitions:
     - RepairStatusInProgress
     - RepairStatusCompleted
     - RepairStatusCancelled
+  apihorpug_internal_features_report_domain.Amount:
+    properties:
+      amount:
+        type: number
+      key:
+        type: string
+    type: object
+  apihorpug_internal_features_report_domain.Arrears:
+    properties:
+      amount:
+        type: number
+      count:
+        type: integer
+    type: object
+  apihorpug_internal_features_report_domain.BillingSummary:
+    properties:
+      billed:
+        type: number
+      by_item_type:
+        items:
+          $ref: '#/definitions/apihorpug_internal_features_report_domain.Amount'
+        type: array
+      collected:
+        type: number
+      invoice_count:
+        type: integer
+      outstanding:
+        type: number
+    type: object
+  apihorpug_internal_features_report_domain.DormitoryRow:
+    properties:
+      billed:
+        type: number
+      expenses:
+        type: number
+      id:
+        type: string
+      income:
+        type: number
+      name:
+        type: string
+      net:
+        type: number
+      outstanding:
+        type: number
+    type: object
+  apihorpug_internal_features_report_domain.ExpenseSummary:
+    properties:
+      by_category:
+        items:
+          $ref: '#/definitions/apihorpug_internal_features_report_domain.Amount'
+        type: array
+      total:
+        type: number
+    type: object
+  apihorpug_internal_features_report_domain.IncomeSummary:
+    properties:
+      by_method:
+        items:
+          $ref: '#/definitions/apihorpug_internal_features_report_domain.Amount'
+        type: array
+      count:
+        type: integer
+      total:
+        type: number
+    type: object
+  apihorpug_internal_features_report_domain.MonthlyReport:
+    properties:
+      arrears:
+        $ref: '#/definitions/apihorpug_internal_features_report_domain.Arrears'
+      billing:
+        $ref: '#/definitions/apihorpug_internal_features_report_domain.BillingSummary'
+      dormitories:
+        items:
+          $ref: '#/definitions/apihorpug_internal_features_report_domain.DormitoryRow'
+        type: array
+      expenses:
+        $ref: '#/definitions/apihorpug_internal_features_report_domain.ExpenseSummary'
+      income:
+        $ref: '#/definitions/apihorpug_internal_features_report_domain.IncomeSummary'
+      month:
+        type: integer
+      net:
+        type: number
+      occupancy:
+        $ref: '#/definitions/apihorpug_internal_features_report_domain.Occupancy'
+      year:
+        type: integer
+    type: object
+  apihorpug_internal_features_report_domain.Occupancy:
+    properties:
+      occupied:
+        type: integer
+      rooms:
+        type: integer
+    type: object
   apihorpug_internal_features_role_domain.Role:
     properties:
       created_at:
@@ -1260,6 +1415,102 @@ definitions:
         type: boolean
       linked:
         type: boolean
+    type: object
+  apihorpug_internal_features_tenantportal_domain.Announcement:
+    properties:
+      category:
+        type: string
+      content:
+        type: string
+      dormitory_name:
+        type: string
+      id:
+        type: string
+      is_pinned:
+        type: boolean
+      published_date:
+        type: string
+      title:
+        type: string
+    type: object
+  apihorpug_internal_features_tenantportal_domain.Invoice:
+    properties:
+      dormitory_name:
+        type: string
+      due_date:
+        type: string
+      id:
+        type: string
+      outstanding:
+        type: number
+      period_month:
+        type: integer
+      period_year:
+        type: integer
+      room_number:
+        type: string
+      status:
+        type: string
+      total_amount:
+        type: number
+    type: object
+  apihorpug_internal_features_tenantportal_domain.Profile:
+    properties:
+      first_name:
+        type: string
+      last_name:
+        type: string
+      rooms:
+        items:
+          $ref: '#/definitions/apihorpug_internal_features_tenantportal_domain.Room'
+        type: array
+      tenant_id:
+        type: string
+    type: object
+  apihorpug_internal_features_tenantportal_domain.RepairRequest:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      reported_date:
+        type: string
+      room_number:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  apihorpug_internal_features_tenantportal_domain.Room:
+    properties:
+      contract_id:
+        type: string
+      dormitory_id:
+        type: string
+      dormitory_name:
+        type: string
+      dormitory_phone:
+        type: string
+      rent_price:
+        type: number
+      room_id:
+        type: string
+      room_number:
+        type: string
+      start_date:
+        type: string
+    type: object
+  apihorpug_internal_features_tenantportal_domain.Session:
+    properties:
+      access_token:
+        type: string
+      expires_at:
+        type: string
+      profile:
+        $ref: '#/definitions/apihorpug_internal_features_tenantportal_domain.Profile'
     type: object
   apihorpug_internal_features_user_domain.User:
     properties:
@@ -1792,6 +2043,20 @@ definitions:
       reason:
         type: string
     type: object
+  internal_features_paymentslip_delivery_http.approveRequest:
+    properties:
+      amount:
+        type: number
+      payment_date:
+        type: string
+      reference_no:
+        type: string
+    type: object
+  internal_features_paymentslip_delivery_http.rejectRequest:
+    properties:
+      reason:
+        type: string
+    type: object
   internal_features_permission_delivery_http.createPermissionRequest:
     properties:
       description:
@@ -1973,6 +2238,20 @@ definitions:
       note:
         type: string
       phone:
+        type: string
+    type: object
+  internal_features_tenantportal_delivery_http.repairRequest:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      room_id:
+        type: string
+    type: object
+  internal_features_tenantportal_delivery_http.sessionRequest:
+    properties:
+      id_token:
         type: string
     type: object
   internal_features_user_delivery_http.createUserRequest:
@@ -4911,6 +5190,125 @@ paths:
       summary: Update a parking registration
       tags:
       - parking
+  /payment-slips:
+    get:
+      description: Slips in the dormitories the requester manages with the given status
+        (default pending, oldest first).
+      parameters:
+      - description: pending, approved, rejected or cancelled
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/apihorpug_internal_features_paymentslip_domain.Slip'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Transfer slips sent by tenants
+      tags:
+      - payment-slips
+  /payment-slips/{id}/approve:
+    post:
+      consumes:
+      - application/json
+      description: Records the payment (with its receipt number) for the slip's invoice
+        and notifies the tenant on LINE. amount and payment_date default to the slip's
+        own.
+      parameters:
+      - description: Slip ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Corrections
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/internal_features_paymentslip_delivery_http.approveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_paymentslip_domain.Slip'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Approve a slip and record it as a transfer payment
+      tags:
+      - payment-slips
+  /payment-slips/{id}/image:
+    get:
+      parameters:
+      - description: Slip ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - image/jpeg
+      - image/png
+      - image/webp
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: The slip image
+      tags:
+      - payment-slips
+  /payment-slips/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Slip ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reason shown to the tenant
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_paymentslip_delivery_http.rejectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_paymentslip_domain.Slip'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Reject a slip with a reason
+      tags:
+      - payment-slips
   /payments:
     get:
       description: Returns every payment for roles with full dormitory access, otherwise
@@ -5287,6 +5685,37 @@ paths:
       summary: Get the dormitory's LINE Official Account details
       tags:
       - tenants
+  /public/tenant-portal/session:
+    post:
+      consumes:
+      - application/json
+      description: Exchanges a LIFF id token for a short-lived tenant token. The LINE
+        account must be linked to an active tenant.
+      parameters:
+      - description: LIFF id token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_tenantportal_delivery_http.sessionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_tenantportal_domain.Session'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      summary: Sign a tenant in from the LIFF page
+      tags:
+      - tenant-portal
   /public/tenants/{id}/line/link:
     post:
       consumes:
@@ -5554,6 +5983,78 @@ paths:
       summary: Update a repair request
       tags:
       - repair-requests
+  /reports/monthly:
+    get:
+      description: Income received in the month (by payment method), the month's invoices
+        (billed, collected, outstanding, by item type), expenses by category, net
+        income, arrears across all periods, current occupancy, and a per-dormitory
+        breakdown, over the dormitories the requester manages or one dormitory.
+      parameters:
+      - description: Year (AD)
+        in: query
+        name: year
+        required: true
+        type: integer
+      - description: Month (1-12)
+        in: query
+        name: month
+        required: true
+        type: integer
+      - description: Limit to one dormitory
+        in: query
+        name: dormitory_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_report_domain.MonthlyReport'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Monthly financial report
+      tags:
+      - reports
+  /reports/monthly/export:
+    get:
+      description: The monthly summary plus sheets listing the month's payments (voided
+        ones marked), the period's invoices, and the month's expenses.
+      parameters:
+      - description: Year (AD)
+        in: query
+        name: year
+        required: true
+        type: integer
+      - description: Month (1-12)
+        in: query
+        name: month
+        required: true
+        type: integer
+      - description: Limit to one dormitory
+        in: query
+        name: dormitory_id
+        type: string
+      produces:
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Download the monthly report as an Excel workbook
+      tags:
+      - reports
   /roles:
     get:
       parameters:
@@ -6412,6 +6913,223 @@ paths:
       summary: List active rooms
       tags:
       - rooms
+  /tenant/announcements:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/apihorpug_internal_features_tenantportal_domain.Announcement'
+            type: array
+      security:
+      - TenantAuth: []
+      summary: Announcements of the dormitories the tenant lives in
+      tags:
+      - tenant-portal
+  /tenant/invoices:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/apihorpug_internal_features_tenantportal_domain.Invoice'
+            type: array
+      security:
+      - TenantAuth: []
+      summary: The signed-in tenant's invoices
+      tags:
+      - tenant-portal
+  /tenant/invoices/{id}:
+    get:
+      parameters:
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_invoice_domain.Document'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - TenantAuth: []
+      summary: One of the tenant's invoices with its payments and PromptPay QR
+      tags:
+      - tenant-portal
+  /tenant/invoices/{id}/slips:
+    get:
+      parameters:
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/apihorpug_internal_features_paymentslip_domain.Slip'
+            type: array
+      security:
+      - TenantAuth: []
+      summary: Slips the tenant sent for one invoice
+      tags:
+      - tenant-portal
+    post:
+      consumes:
+      - multipart/form-data
+      description: 'Multipart form: file (JPG, PNG or WEBP, up to 5 MB), amount, transfer_date
+        (YYYY-MM-DD), note. The slip waits for staff review.'
+      parameters:
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_paymentslip_domain.Slip'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - TenantAuth: []
+      summary: Send a transfer slip for one of the tenant's invoices
+      tags:
+      - tenant-portal
+  /tenant/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_tenantportal_domain.Profile'
+      security:
+      - TenantAuth: []
+      summary: The signed-in tenant and the rooms they rent
+      tags:
+      - tenant-portal
+  /tenant/repair-requests:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/apihorpug_internal_features_tenantportal_domain.RepairRequest'
+            type: array
+      security:
+      - TenantAuth: []
+      summary: Repairs the signed-in tenant reported
+      tags:
+      - tenant-portal
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Room, category and description
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_tenantportal_delivery_http.repairRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_tenantportal_domain.RepairRequest'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - TenantAuth: []
+      summary: Report a repair for a room the tenant rents
+      tags:
+      - tenant-portal
+  /tenant/repair-requests/{id}/cancel:
+    post:
+      parameters:
+      - description: Repair request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_tenantportal_domain.RepairRequest'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - TenantAuth: []
+      summary: Withdraw a pending repair request
+      tags:
+      - tenant-portal
+  /tenant/slips/{id}/cancel:
+    post:
+      parameters:
+      - description: Slip ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_paymentslip_domain.Slip'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - TenantAuth: []
+      summary: Withdraw a slip that hasn't been reviewed yet
+      tags:
+      - tenant-portal
   /tenants:
     get:
       parameters:
@@ -7300,6 +8018,12 @@ paths:
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and the JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+  TenantAuth:
+    description: 'Tenant self-service token from /public/tenant-portal/session: "Bearer"
+      followed by the token.'
     in: header
     name: Authorization
     type: apiKey

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	reportdomain "apihorpug/internal/features/report/domain"
 	reportusecase "apihorpug/internal/features/report/usecase"
 	"apihorpug/internal/http/apierror"
 	"apihorpug/internal/http/apiresponse"
@@ -81,8 +82,8 @@ func (h *Handler) Monthly(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 15*time.Second)
 	defer cancel()
 
-	rep, err := h.usecase.Monthly(ctx, p.requesterID, p.dormitoryID, p.year, p.month)
-	if err != nil {
+	var rep reportdomain.MonthlyReport
+	if rep, err = h.usecase.Monthly(ctx, p.requesterID, p.dormitoryID, p.year, p.month); err != nil {
 		return reportError(err, "failed to build report")
 	}
 	return apiresponse.OK(c, rep)
