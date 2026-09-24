@@ -15,6 +15,7 @@ import (
 	"apihorpug/internal/http"
 	"apihorpug/internal/platform/database"
 	"apihorpug/internal/platform/filestore"
+	"apihorpug/internal/platform/lineapi"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/recover"
@@ -94,7 +95,9 @@ func main() {
 
 	// Hourly is plenty for a date-based status, and catches the day change
 	// soon after midnight even though the server may have started at any hour.
-	go invoiceusecase.RunOverdueSweeper(ctx, invoicerepository.NewRepository(db), time.Hour)
+	// The same run sends the weekly LINE reminders for overdue invoices.
+	go invoiceusecase.RunInvoiceJobs(ctx, invoicerepository.NewRepository(db),
+		lineapi.New(cfg.LineChannelAccessToken, cfg.LineChannelID), time.Hour)
 
 	log.Printf("server running on :%s", cfg.AppPort)
 	if err := app.Listen(":"+cfg.AppPort, fiber.ListenConfig{

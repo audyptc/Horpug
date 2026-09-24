@@ -47,6 +47,12 @@ func (c *Client) configured() bool {
 	return c.channelAccessToken != "" && c.channelID != ""
 }
 
+// Configured reports whether LINE credentials are set, so background jobs can
+// skip LINE work entirely (e.g. in local development) instead of failing.
+func (c *Client) Configured() bool {
+	return c.configured()
+}
+
 type verifyIDTokenResponse struct {
 	Sub   string `json:"sub"`
 	Error string `json:"error"`

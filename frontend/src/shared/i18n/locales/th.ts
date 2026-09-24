@@ -387,6 +387,7 @@ const th: Record<TranslationKey, string> = {
   invoicePrintPromptPayAmount: 'ยอดชำระ',
   invoicePrintBaht: 'บาท',
   invoicePrintReceivedBy: 'ผู้รับเงิน',
+  invoiceReminderSent: 'เตือนทาง LINE แล้ว {count} ครั้ง (ล่าสุด {date})',
   invoiceCreate: 'สร้างใบแจ้งหนี้',
   invoiceEdit: 'จัดการใบแจ้งหนี้',
   invoiceSendLine: 'ส่งใบแจ้งหนี้ผ่าน LINE OA',
@@ -1008,6 +1009,9 @@ const th: Record<TranslationKey, string> = {
   dormitorySaving: 'กำลังบันทึก...',
   dormitoryFormNameLabel: 'ชื่อ',
   dormitoryFormAddressLabel: 'ที่อยู่',
+  dormitoryFormOverdueReminderLabel: 'แจ้งเตือนค้างชำระทาง LINE ทุกสัปดาห์',
+  dormitoryFormOverdueReminderHint:
+    'ส่งข้อความเตือนผู้เช่าที่ผูก LINE แล้ว ในวันที่บิลเลยกำหนด และซ้ำทุก 7 วันจนกว่าจะชำระ (ช่วง 09:00–20:00 น.) แต่ละข้อความนับเป็นโควตาข้อความของ LINE OA',
   dormitoryFormPromptPayLabel: 'พร้อมเพย์ (สำหรับ QR ในใบแจ้งหนี้)',
   dormitoryFormPromptPayPlaceholder: 'เช่น 0812345678',
   dormitoryFormPromptPayHint:

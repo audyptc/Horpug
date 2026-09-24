@@ -29,6 +29,8 @@ type DormitoryFormSheetProps = {
   onDescriptionChange: (description: string) => void
   isActive: boolean
   onIsActiveChange: (isActive: boolean) => void
+  overdueReminderEnabled: boolean
+  onOverdueReminderEnabledChange: (enabled: boolean) => void
   managers: FormManager[]
   onAddManager: (user: ApiUser) => void
   onRemoveManager: (userId: string) => void
@@ -53,6 +55,8 @@ export function DormitoryFormSheet({
   onDescriptionChange,
   isActive,
   onIsActiveChange,
+  overdueReminderEnabled,
+  onOverdueReminderEnabledChange,
   managers,
   onAddManager,
   onRemoveManager,
@@ -136,6 +140,21 @@ export function DormitoryFormSheet({
                 onChange={(event) => onIsActiveChange(event.target.checked)}
               />
               {t('dormitoryFormActiveLabel')}
+            </label>
+
+            <label className="flex items-start gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 accent-primary"
+                checked={overdueReminderEnabled}
+                onChange={(event) => onOverdueReminderEnabledChange(event.target.checked)}
+              />
+              <span className="flex flex-col gap-0.5">
+                {t('dormitoryFormOverdueReminderLabel')}
+                <span className="text-xs font-normal text-muted-foreground">
+                  {t('dormitoryFormOverdueReminderHint')}
+                </span>
+              </span>
             </label>
 
             <div className="flex flex-col gap-1.5 text-sm font-medium">

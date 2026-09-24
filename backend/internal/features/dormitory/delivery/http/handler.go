@@ -23,23 +23,26 @@ type Handler struct {
 }
 
 type createDormitoryRequest struct {
-	Name        string      `json:"name"`
-	Address     string      `json:"address"`
-	Phone       string      `json:"phone"`
-	PromptPayID string      `json:"promptpay_id"`
-	Description string      `json:"description"`
-	IsActive    *bool       `json:"is_active"`
-	ManagerIDs  []uuid.UUID `json:"manager_ids"`
+	Name        string `json:"name"`
+	Address     string `json:"address"`
+	Phone       string `json:"phone"`
+	PromptPayID string `json:"promptpay_id"`
+	// Defaults to on when omitted.
+	OverdueReminderEnabled *bool       `json:"overdue_reminder_enabled"`
+	Description            string      `json:"description"`
+	IsActive               *bool       `json:"is_active"`
+	ManagerIDs             []uuid.UUID `json:"manager_ids"`
 }
 
 type updateDormitoryRequest struct {
-	Name        *string      `json:"name"`
-	Address     *string      `json:"address"`
-	Phone       *string      `json:"phone"`
-	PromptPayID *string      `json:"promptpay_id"`
-	Description *string      `json:"description"`
-	IsActive    *bool        `json:"is_active"`
-	ManagerIDs  *[]uuid.UUID `json:"manager_ids"`
+	Name                   *string      `json:"name"`
+	Address                *string      `json:"address"`
+	Phone                  *string      `json:"phone"`
+	PromptPayID            *string      `json:"promptpay_id"`
+	OverdueReminderEnabled *bool        `json:"overdue_reminder_enabled"`
+	Description            *string      `json:"description"`
+	IsActive               *bool        `json:"is_active"`
+	ManagerIDs             *[]uuid.UUID `json:"manager_ids"`
 }
 
 func NewHandler(usecase *dormusecase.Service) *Handler {
@@ -321,14 +324,15 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	defer cancel()
 
 	dormitory, err := h.usecase.Create(ctx, dormusecase.CreateInput{
-		Name:        strings.TrimSpace(req.Name),
-		Address:     req.Address,
-		Phone:       req.Phone,
-		PromptPayID: req.PromptPayID,
-		Description: req.Description,
-		IsActive:    isActive,
-		ManagerIDs:  req.ManagerIDs,
-		CreatedBy:   &requesterID,
+		Name:                   strings.TrimSpace(req.Name),
+		Address:                req.Address,
+		Phone:                  req.Phone,
+		PromptPayID:            req.PromptPayID,
+		Description:            req.Description,
+		IsActive:               isActive,
+		OverdueReminderEnabled: req.OverdueReminderEnabled == nil || *req.OverdueReminderEnabled,
+		ManagerIDs:             req.ManagerIDs,
+		CreatedBy:              &requesterID,
 	}, c.IP())
 	if err != nil {
 		if errors.Is(err, dormdomain.ErrRequiredDormitoryData) {
@@ -379,14 +383,15 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	defer cancel()
 
 	dormitory, err := h.usecase.Update(ctx, id, requesterID, dormusecase.UpdateInput{
-		Name:        req.Name,
-		Address:     req.Address,
-		Phone:       req.Phone,
-		PromptPayID: req.PromptPayID,
-		Description: req.Description,
-		IsActive:    req.IsActive,
-		ManagerIDs:  req.ManagerIDs,
-		UpdatedBy:   &requesterID,
+		Name:                   req.Name,
+		Address:                req.Address,
+		Phone:                  req.Phone,
+		PromptPayID:            req.PromptPayID,
+		Description:            req.Description,
+		IsActive:               req.IsActive,
+		OverdueReminderEnabled: req.OverdueReminderEnabled,
+		ManagerIDs:             req.ManagerIDs,
+		UpdatedBy:              &requesterID,
 	}, c.IP())
 	if err != nil {
 		if errors.Is(err, dormdomain.ErrDormitoryNotFound) {

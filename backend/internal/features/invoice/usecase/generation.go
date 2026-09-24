@@ -135,33 +135,18 @@ type OverdueMarker interface {
 	MarkOverdue(ctx context.Context) (markedOverdue, revertedUnpaid int64, err error)
 }
 
-// RunOverdueSweeper marks overdue invoices once at start and then every
-// interval until ctx is cancelled. Without it an invoice stays "unpaid" past
-// its due date unless someone changes it by hand.
-func RunOverdueSweeper(ctx context.Context, marker OverdueMarker, interval time.Duration) {
-	sweep := func() {
-		sweepCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-		defer cancel()
+// sweepOverdue marks overdue invoices once (see RunInvoiceJobs). Without it an
+// invoice stays "unpaid" past its due date unless someone changes it by hand.
+func sweepOverdue(ctx context.Context, marker OverdueMarker) {
+	sweepCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
-		overdue, reverted, err := marker.MarkOverdue(sweepCtx)
-		if err != nil {
-			log.Printf("overdue invoice sweep failed: %v", err)
-			return
-		}
-		if overdue > 0 || reverted > 0 {
-			log.Printf("overdue invoice sweep: %d marked overdue, %d back to unpaid", overdue, reverted)
-		}
+	overdue, reverted, err := marker.MarkOverdue(sweepCtx)
+	if err != nil {
+		log.Printf("overdue invoice sweep failed: %v", err)
+		return
 	}
-
-	sweep()
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			sweep()
-		}
+	if overdue > 0 || reverted > 0 {
+		log.Printf("overdue invoice sweep: %d marked overdue, %d back to unpaid", overdue, reverted)
 	}
 }

@@ -480,6 +480,19 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		`ALTER TABLE room_types ADD COLUMN IF NOT EXISTS price NUMERIC(10,2) NOT NULL DEFAULT 0`,
 
 		`ALTER TABLE dormitories ADD COLUMN IF NOT EXISTS promptpay_id VARCHAR(20) NOT NULL DEFAULT ''`,
+		`ALTER TABLE dormitories ADD COLUMN IF NOT EXISTS overdue_reminder_enabled BOOLEAN NOT NULL DEFAULT TRUE`,
+		// Weekly LINE reminders for overdue invoices: when the last one went
+		// out, how many were delivered, and a log of every attempt.
+		`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS last_reminder_at TIMESTAMPTZ`,
+		`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS reminder_count INTEGER NOT NULL DEFAULT 0`,
+		`CREATE TABLE IF NOT EXISTS invoice_reminders (
+			id UUID PRIMARY KEY,
+			invoice_id UUID NOT NULL,
+			outcome VARCHAR(20) NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			CONSTRAINT invoice_reminders_invoice_fkey FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_invoice_reminders_invoice_id ON invoice_reminders(invoice_id)`,
 		`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS line_id VARCHAR(100) DEFAULT ''`,
 		`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS line_user_id VARCHAR(64) DEFAULT ''`,
 		`UPDATE tenants SET line_user_id = '' WHERE line_user_id IS NULL`,

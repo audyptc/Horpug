@@ -125,7 +125,7 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, filters do
 	conditions := r.buildScope(full, roleID, requesterID, filters, &argIdx, &args)
 
 	query := `
-		SELECT DISTINCT d.id, d.name, d.address, d.phone, d.promptpay_id, d.description, d.is_active, d.created_by, d.updated_by, d.created_at, d.updated_at
+		SELECT DISTINCT d.id, d.name, d.address, d.phone, d.promptpay_id, d.overdue_reminder_enabled, d.description, d.is_active, d.created_by, d.updated_by, d.created_at, d.updated_at
 		FROM dormitories d
 	`
 	if len(conditions) > 0 {
@@ -149,6 +149,7 @@ func (r *Repository) List(ctx context.Context, requesterID uuid.UUID, filters do
 			&dormitory.Address,
 			&dormitory.Phone,
 			&dormitory.PromptPayID,
+			&dormitory.OverdueReminderEnabled,
 			&dormitory.Description,
 			&dormitory.IsActive,
 			&dormitory.CreatedBy,
@@ -181,7 +182,7 @@ func (r *Repository) ListActive(ctx context.Context, requesterID uuid.UUID, sear
 	}
 
 	query := `
-		SELECT DISTINCT d.id, d.name, d.address, d.phone, d.promptpay_id, d.description, d.is_active, d.created_by, d.updated_by, d.created_at, d.updated_at
+		SELECT DISTINCT d.id, d.name, d.address, d.phone, d.promptpay_id, d.overdue_reminder_enabled, d.description, d.is_active, d.created_by, d.updated_by, d.created_at, d.updated_at
 		FROM dormitories d
 		WHERE d.is_active = true
 	`
@@ -221,6 +222,7 @@ func (r *Repository) ListActive(ctx context.Context, requesterID uuid.UUID, sear
 			&dormitory.Address,
 			&dormitory.Phone,
 			&dormitory.PromptPayID,
+			&dormitory.OverdueReminderEnabled,
 			&dormitory.Description,
 			&dormitory.IsActive,
 			&dormitory.CreatedBy,
@@ -256,15 +258,16 @@ func (r *Repository) GetByID(ctx context.Context, id, requesterID uuid.UUID) (do
 
 func (r *Repository) Create(ctx context.Context, input dormusecase.CreateInput) (dormdomain.Dormitory, error) {
 	dormitory := dormdomain.Dormitory{
-		ID:          uuid.New(),
-		Name:        input.Name,
-		Address:     input.Address,
-		Phone:       input.Phone,
-		PromptPayID: input.PromptPayID,
-		Description: input.Description,
-		IsActive:    input.IsActive,
-		CreatedBy:   input.CreatedBy,
-		UpdatedBy:   input.CreatedBy,
+		ID:                     uuid.New(),
+		Name:                   input.Name,
+		Address:                input.Address,
+		Phone:                  input.Phone,
+		PromptPayID:            input.PromptPayID,
+		Description:            input.Description,
+		OverdueReminderEnabled: input.OverdueReminderEnabled,
+		IsActive:               input.IsActive,
+		CreatedBy:              input.CreatedBy,
+		UpdatedBy:              input.CreatedBy,
 	}
 
 	managerIDs := input.ManagerIDs
@@ -288,10 +291,10 @@ func (r *Repository) Create(ctx context.Context, input dormusecase.CreateInput) 
 	defer tx.Rollback(ctx)
 
 	err = tx.QueryRow(ctx, `
-		INSERT INTO dormitories (id, name, address, phone, promptpay_id, description, is_active, created_by, updated_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO dormitories (id, name, address, phone, promptpay_id, overdue_reminder_enabled, description, is_active, created_by, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING created_at, updated_at
-	`, dormitory.ID, dormitory.Name, dormitory.Address, dormitory.Phone, dormitory.PromptPayID, dormitory.Description, dormitory.IsActive, dormitory.CreatedBy, dormitory.UpdatedBy).
+	`, dormitory.ID, dormitory.Name, dormitory.Address, dormitory.Phone, dormitory.PromptPayID, dormitory.OverdueReminderEnabled, dormitory.Description, dormitory.IsActive, dormitory.CreatedBy, dormitory.UpdatedBy).
 		Scan(&dormitory.CreatedAt, &dormitory.UpdatedAt)
 	if err == nil {
 		err = r.replaceManagers(ctx, tx, dormitory.ID, managerIDs)
@@ -340,6 +343,11 @@ func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, inpu
 	if input.PromptPayID != nil {
 		setClauses = append(setClauses, fmt.Sprintf("promptpay_id = $%d", argIdx))
 		args = append(args, *input.PromptPayID)
+		argIdx++
+	}
+	if input.OverdueReminderEnabled != nil {
+		setClauses = append(setClauses, fmt.Sprintf("overdue_reminder_enabled = $%d", argIdx))
+		args = append(args, *input.OverdueReminderEnabled)
 		argIdx++
 	}
 	if input.Description != nil {
@@ -413,7 +421,7 @@ func (r *Repository) CountRooms(ctx context.Context, id uuid.UUID) (int64, error
 func (r *Repository) loadDormitoryByID(ctx context.Context, id uuid.UUID) (dormdomain.Dormitory, error) {
 	var dormitory dormdomain.Dormitory
 	err := r.db.QueryRow(ctx, `
-		SELECT id, name, address, phone, promptpay_id, description, is_active, created_by, updated_by, created_at, updated_at
+		SELECT id, name, address, phone, promptpay_id, overdue_reminder_enabled, description, is_active, created_by, updated_by, created_at, updated_at
 		FROM dormitories
 		WHERE id = $1
 	`, id).Scan(
@@ -422,6 +430,7 @@ func (r *Repository) loadDormitoryByID(ctx context.Context, id uuid.UUID) (dormd
 		&dormitory.Address,
 		&dormitory.Phone,
 		&dormitory.PromptPayID,
+		&dormitory.OverdueReminderEnabled,
 		&dormitory.Description,
 		&dormitory.IsActive,
 		&dormitory.CreatedBy,

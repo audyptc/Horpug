@@ -60,6 +60,8 @@ type Invoice struct {
 	TotalAmount      float64       `json:"total_amount"`
 	Status           InvoiceStatus `json:"status"`
 	PaidAt           *time.Time    `json:"paid_at,omitempty"`
+	LastReminderAt   *time.Time    `json:"last_reminder_at,omitempty"`
+	ReminderCount    int           `json:"reminder_count"`
 	Note             string        `json:"note"`
 	Items            []InvoiceItem `json:"items,omitempty"`
 	CreatedBy        *uuid.UUID    `json:"created_by,omitempty"`

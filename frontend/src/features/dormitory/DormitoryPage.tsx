@@ -48,6 +48,7 @@ export default function DormitoryPage() {
   const [formPromptPayId, setFormPromptPayId] = useState('')
   const [formDescription, setFormDescription] = useState('')
   const [formIsActive, setFormIsActive] = useState(true)
+  const [formOverdueReminder, setFormOverdueReminder] = useState(true)
   const [formManagers, setFormManagers] = useState<FormManager[]>([])
   const [formSaving, setFormSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -134,6 +135,7 @@ export default function DormitoryPage() {
     setFormPromptPayId('')
     setFormDescription('')
     setFormIsActive(true)
+    setFormOverdueReminder(true)
     setFormManagers([])
     setFormError(null)
     setFormOpen(true)
@@ -147,6 +149,7 @@ export default function DormitoryPage() {
     setFormPromptPayId(dormitory.promptpay_id ?? '')
     setFormDescription(dormitory.description)
     setFormIsActive(dormitory.is_active)
+    setFormOverdueReminder(dormitory.overdue_reminder_enabled ?? true)
     setFormManagers(
       (dormitory.managers ?? []).map((manager) => ({
         id: manager.user_id,
@@ -177,6 +180,7 @@ export default function DormitoryPage() {
       promptpay_id: formPromptPayId,
       description: formDescription,
       is_active: formIsActive,
+      overdue_reminder_enabled: formOverdueReminder,
       manager_ids: formManagers.map((manager) => manager.id),
     }
 
@@ -328,6 +332,8 @@ export default function DormitoryPage() {
         onDescriptionChange={setFormDescription}
         isActive={formIsActive}
         onIsActiveChange={setFormIsActive}
+        overdueReminderEnabled={formOverdueReminder}
+        onOverdueReminderEnabledChange={setFormOverdueReminder}
         managers={formManagers}
         onAddManager={(user: ApiUser) =>
           setFormManagers((prev) =>

@@ -77,6 +77,8 @@ export type ApiInvoice = {
   total_amount: number
   status: InvoiceStatus
   paid_at?: string
+  last_reminder_at?: string
+  reminder_count: number
   note: string
   items?: ApiInvoiceItem[]
   created_at: string

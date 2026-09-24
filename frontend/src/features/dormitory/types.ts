@@ -11,6 +11,7 @@ export type ApiDormitory = {
   address: string
   phone: string
   promptpay_id: string
+  overdue_reminder_enabled: boolean
   description: string
   is_active: boolean
   managers?: ApiDormitoryManager[]

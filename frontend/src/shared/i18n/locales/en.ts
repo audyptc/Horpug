@@ -385,6 +385,7 @@ const en = {
   invoicePrintPromptPayAmount: 'Amount',
   invoicePrintBaht: 'THB',
   invoicePrintReceivedBy: 'Received by',
+  invoiceReminderSent: 'LINE reminders: {count} (last {date})',
   invoiceCreate: 'Create invoice',
   invoiceEdit: 'Manage invoice',
   invoiceSendLine: 'Send invoice via LINE OA',
@@ -1008,6 +1009,9 @@ const en = {
   dormitorySaving: 'Saving...',
   dormitoryFormNameLabel: 'Name',
   dormitoryFormAddressLabel: 'Address',
+  dormitoryFormOverdueReminderLabel: 'Weekly LINE reminders for overdue invoices',
+  dormitoryFormOverdueReminderHint:
+    'Messages tenants with a linked LINE account when an invoice becomes overdue, then every 7 days until paid (09:00–20:00). Each message counts against the LINE OA message quota.',
   dormitoryFormPromptPayLabel: 'PromptPay (for the QR on invoices)',
   dormitoryFormPromptPayPlaceholder: 'e.g. 0812345678',
   dormitoryFormPromptPayHint:

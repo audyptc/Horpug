@@ -15,25 +15,27 @@ import (
 )
 
 type CreateInput struct {
-	Name        string
-	Address     string
-	Phone       string
-	PromptPayID string
-	Description string
-	IsActive    bool
-	ManagerIDs  []uuid.UUID
-	CreatedBy   *uuid.UUID
+	Name                   string
+	Address                string
+	Phone                  string
+	PromptPayID            string
+	Description            string
+	OverdueReminderEnabled bool
+	IsActive               bool
+	ManagerIDs             []uuid.UUID
+	CreatedBy              *uuid.UUID
 }
 
 type UpdateInput struct {
-	Name        *string
-	Address     *string
-	Phone       *string
-	PromptPayID *string
-	Description *string
-	IsActive    *bool
-	ManagerIDs  *[]uuid.UUID
-	UpdatedBy   *uuid.UUID
+	Name                   *string
+	Address                *string
+	Phone                  *string
+	PromptPayID            *string
+	Description            *string
+	OverdueReminderEnabled *bool
+	IsActive               *bool
+	ManagerIDs             *[]uuid.UUID
+	UpdatedBy              *uuid.UUID
 }
 
 type DeletionCheck struct {

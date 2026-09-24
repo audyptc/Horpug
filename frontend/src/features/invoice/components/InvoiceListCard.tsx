@@ -312,9 +312,18 @@ export function InvoiceListCard({
                           {invoice.total_amount.toLocaleString()}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={invoiceStatusBadgeVariant[invoice.status]}>
-                            {t(invoiceStatusLabelKeys[invoice.status])}
-                          </Badge>
+                          <div className="flex flex-col items-start gap-1">
+                            <Badge variant={invoiceStatusBadgeVariant[invoice.status]}>
+                              {t(invoiceStatusLabelKeys[invoice.status])}
+                            </Badge>
+                            {invoice.reminder_count > 0 && invoice.last_reminder_at && (
+                              <span className="text-xs text-muted-foreground">
+                                {t('invoiceReminderSent')
+                                  .replace('{count}', String(invoice.reminder_count))
+                                  .replace('{date}', toDateInputValue(invoice.last_reminder_at))}
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
                           {/* Never wrap: a squeezed actions column would stack
