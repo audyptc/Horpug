@@ -91,6 +91,7 @@ type Repository interface {
 	Delete(ctx context.Context, id, requesterID uuid.UUID) error
 	AddItem(ctx context.Context, invoiceID, requesterID uuid.UUID, input AddItemInput) (invoicedomain.Invoice, error)
 	RemoveItem(ctx context.Context, invoiceID, itemID, requesterID uuid.UUID) (invoicedomain.Invoice, error)
+	GenerationRepository
 }
 
 // LinePusher sends a text message to a tenant's linked LINE account through

@@ -39,7 +39,7 @@ type MonthPickerFieldProps = {
   placeholder: string
 }
 
-function MonthPickerField({ value, onChange, placeholder }: MonthPickerFieldProps) {
+export function MonthPickerField({ value, onChange, placeholder }: MonthPickerFieldProps) {
   const { t, language } = useLanguage()
   const [open, setOpen] = useState(false)
   const parsed = parsePeriodInputValue(value)
@@ -146,7 +146,7 @@ type FormSectionProps = {
   children: ReactNode
 }
 
-function FormSection({ title, children }: FormSectionProps) {
+export function FormSection({ title, children }: FormSectionProps) {
   return (
     <div className="flex flex-col gap-3">
       {title && <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>}

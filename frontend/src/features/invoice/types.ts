@@ -12,6 +12,31 @@ export type ApiInvoiceItem = {
   created_at: string
 }
 
+export type ApiGenerationCandidate = {
+  contract_id: string
+  tenant_name: string
+  room_id: string
+  room_number: string
+  rent_price: number
+  end_date?: string
+  already_invoiced: boolean
+  has_electricity: boolean
+  has_water: boolean
+  ended_before_period: boolean
+}
+
+export type ApiGenerationResult = {
+  created: {
+    invoice_id: string
+    contract_id: string
+    tenant_name: string
+    room_number: string
+    total_amount: number
+  }[]
+  skipped: number
+  failed: { contract_id: string; tenant_name: string; room_number: string; error: string }[]
+}
+
 export type ApiInvoice = {
   id: string
   contract_id: string

@@ -82,6 +82,7 @@ type InvoiceListCardProps = {
   onLastPage: () => void
   deletingInvoiceId: string | null
   onCreateInvoice: () => void
+  onGenerateInvoices: () => void
   onEditInvoice: (invoice: ApiInvoice) => void
   onDeleteInvoice: (invoice: ApiInvoice) => void
   sendingLineInvoiceId: string | null
@@ -117,6 +118,7 @@ export function InvoiceListCard({
   onLastPage,
   deletingInvoiceId,
   onCreateInvoice,
+  onGenerateInvoices,
   onEditInvoice,
   onDeleteInvoice,
   sendingLineInvoiceId,
@@ -158,9 +160,14 @@ export function InvoiceListCard({
         <div>
           <CardTitle>{t('menuInvoices')}</CardTitle>
         </div>
-        <Button onClick={onCreateInvoice} disabled={isLoading}>
-          {t('invoiceCreate')}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={onGenerateInvoices} disabled={isLoading}>
+            {t('invoiceGenerate')}
+          </Button>
+          <Button onClick={onCreateInvoice} disabled={isLoading}>
+            {t('invoiceCreate')}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {loadError && <p className="resource-error">{loadError}</p>}

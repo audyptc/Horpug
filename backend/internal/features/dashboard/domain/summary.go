@@ -26,8 +26,9 @@ type InvoiceStats struct {
 	OutstandingCount  int64   `json:"outstanding_count"`
 	OutstandingAmount float64 `json:"outstanding_amount"`
 	// Overdue is the part of the outstanding total that is past its due date.
-	// The stored status is only ever changed by hand, so this is judged from
-	// the due date rather than trusting an "overdue" flag that nothing sets.
+	// Judged from the due date rather than the stored status, which the
+	// hourly sweeper (invoice usecase RunOverdueSweeper) can lag by up to an
+	// hour.
 	OverdueCount  int64   `json:"overdue_count"`
 	OverdueAmount float64 `json:"overdue_amount"`
 }

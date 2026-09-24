@@ -10,6 +10,8 @@ var (
 	ErrInvalidInvoiceStatus = errors.New("invalid invoice status")
 	ErrContractNotFound     = errors.New("contract not found")
 	ErrInvoiceExists        = errors.New("an invoice for this contract and period already exists")
+	ErrDormitoryNotFound    = errors.New("dormitory not found")
+	ErrRequiredGenerateData = errors.New("dormitory_id, period_year, period_month, issue_date and due_date are required")
 
 	ErrRequiredInvoiceItemData  = errors.New("description and amount are required")
 	ErrInvalidInvoiceItemAmount = errors.New("amount must be greater than zero")

@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"apihorpug/config"
+	invoicerepository "apihorpug/internal/features/invoice/repository/postgres"
+	invoiceusecase "apihorpug/internal/features/invoice/usecase"
 	menurepository "apihorpug/internal/features/menu/repository/postgres"
 	"apihorpug/internal/http"
 	"apihorpug/internal/platform/database"
@@ -89,6 +91,10 @@ func main() {
 	// connections and let in-flight requests finish before exiting.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	// Hourly is plenty for a date-based status, and catches the day change
+	// soon after midnight even though the server may have started at any hour.
+	go invoiceusecase.RunOverdueSweeper(ctx, invoicerepository.NewRepository(db), time.Hour)
 
 	log.Printf("server running on :%s", cfg.AppPort)
 	if err := app.Listen(":"+cfg.AppPort, fiber.ListenConfig{

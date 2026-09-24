@@ -9,6 +9,7 @@ import type { ApiMeter } from '@/features/meter/types'
 import type { ApiWaterMeter } from '@/features/watermeter/types'
 import { InvoiceListCard } from './components/InvoiceListCard'
 import { InvoiceFormSheet } from './components/InvoiceFormSheet'
+import { InvoiceGenerateSheet } from './components/InvoiceGenerateSheet'
 import type { ApiInvoice, InvoiceStatus } from './types'
 import {
   INVOICE_PAGE_SIZE_OPTIONS,
@@ -49,6 +50,9 @@ export default function InvoicePage() {
   const [refreshToken, setRefreshToken] = useState(0)
 
   const [formOpen, setFormOpen] = useState(false)
+  const [generateOpen, setGenerateOpen] = useState(false)
+  // Bumped on each open to remount the generate sheet with fresh state.
+  const [generateSheetKey, setGenerateSheetKey] = useState(0)
   const [formInvoiceId, setFormInvoiceId] = useState<string | null>(null)
   const [formInvoiceDetail, setFormInvoiceDetail] = useState<ApiInvoice | null>(null)
   const [formDetailLoading, setFormDetailLoading] = useState(false)
@@ -494,6 +498,10 @@ export default function InvoicePage() {
         onLastPage={() => setPage(totalPages)}
         deletingInvoiceId={deletingInvoiceId}
         onCreateInvoice={openCreateForm}
+        onGenerateInvoices={() => {
+          setGenerateSheetKey((value) => value + 1)
+          setGenerateOpen(true)
+        }}
         onEditInvoice={openEditForm}
         onDeleteInvoice={setConfirmDeleteInvoice}
         sendingLineInvoiceId={sendingLineInvoiceId}
@@ -519,6 +527,13 @@ export default function InvoicePage() {
         title={lineSendResult?.title ?? ''}
         description={lineSendResult?.description ?? ''}
         actionLabel={t('acknowledge')}
+      />
+
+      <InvoiceGenerateSheet
+        key={generateSheetKey}
+        open={generateOpen}
+        onOpenChange={setGenerateOpen}
+        onGenerated={() => setRefreshToken((value) => value + 1)}
       />
 
       <InvoiceFormSheet
