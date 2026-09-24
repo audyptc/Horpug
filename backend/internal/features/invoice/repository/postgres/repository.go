@@ -302,6 +302,8 @@ func (r *Repository) appendMeterItems(ctx context.Context, tx pgx.Tx, invoiceID,
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT id, total_amount FROM %s
 		WHERE room_id = $1 AND reading_date >= $2 AND reading_date < $3
+		AND NOT EXISTS (SELECT 1 FROM invoice_items ii WHERE ii.reference_id = %[1]s.id)
+		AND NOT EXISTS (SELECT 1 FROM move_out_items mi WHERE mi.reference_id = %[1]s.id)
 		ORDER BY reading_date ASC
 	`, table), roomID, periodStart, periodEnd)
 	if err != nil {

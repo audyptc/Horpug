@@ -36,6 +36,9 @@ import (
 	meterhttp "apihorpug/internal/features/meter/delivery/http"
 	meterrepository "apihorpug/internal/features/meter/repository/postgres"
 	meterusecase "apihorpug/internal/features/meter/usecase"
+	moveouthttp "apihorpug/internal/features/moveout/delivery/http"
+	moveoutrepository "apihorpug/internal/features/moveout/repository/postgres"
+	moveoutusecase "apihorpug/internal/features/moveout/usecase"
 	parcelhttp "apihorpug/internal/features/parcel/delivery/http"
 	parcelrepository "apihorpug/internal/features/parcel/repository/postgres"
 	parcelusecase "apihorpug/internal/features/parcel/usecase"
@@ -143,6 +146,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	documentRepo := documentrepository.NewRepository(db)
 	documentService := documentusecase.New(documentRepo, files, activityLogService)
 	documentHandler := documenthttp.NewHandler(documentService)
+	moveOutRepo := moveoutrepository.NewRepository(db)
+	moveOutService := moveoutusecase.New(moveOutRepo, activityLogService)
+	moveOutHandler := moveouthttp.NewHandler(moveOutService)
 	dashboardRepo := dashboardrepository.NewRepository(db)
 	dashboardService := dashboardusecase.New(dashboardRepo)
 	dashboardHandler := dashboardhttp.NewHandler(dashboardService)
@@ -206,6 +212,10 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Post("/dormitories", requirePermission("/dormitories", permissiondomain.ActionCreate), dormitoryHandler.Create)
 	api.Put("/dormitories/:id", requirePermission("/dormitories", permissiondomain.ActionUpdate), dormitoryHandler.Update)
 	api.Delete("/dormitories/:id", requirePermission("/dormitories", permissiondomain.ActionDelete), dormitoryHandler.Delete)
+	// The move-out preview also returns these, so contract staff without
+	// dormitory access still get them there.
+	api.Get("/dormitories/:id/deduction-presets", requirePermission("/dormitories", permissiondomain.ActionRead), moveOutHandler.ListPresets)
+	api.Put("/dormitories/:id/deduction-presets", requirePermission("/dormitories", permissiondomain.ActionUpdate), moveOutHandler.ReplacePresets)
 
 	api.Get("/room-types", requirePermission("/room-types", permissiondomain.ActionRead), roomTypeHandler.List)
 	api.Get("/room-types/active", requirePermission("/room-types", permissiondomain.ActionRead), roomTypeHandler.ListActive)
@@ -238,6 +248,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Post("/contracts", requirePermission("/contracts", permissiondomain.ActionCreate), contractHandler.Create)
 	api.Put("/contracts/:id", requirePermission("/contracts", permissiondomain.ActionUpdate), contractHandler.Update)
 	api.Delete("/contracts/:id", requirePermission("/contracts", permissiondomain.ActionDelete), contractHandler.Delete)
+	api.Post("/contracts/:id/move-out/preview", requirePermission("/contracts", permissiondomain.ActionUpdate), moveOutHandler.Preview)
+	api.Post("/contracts/:id/move-out", requirePermission("/contracts", permissiondomain.ActionUpdate), moveOutHandler.Confirm)
+	api.Get("/move-outs/:id", requirePermission("/contracts", permissiondomain.ActionRead), moveOutHandler.Get)
 
 	api.Get("/meters", requirePermission("/meters", permissiondomain.ActionRead), meterHandler.List)
 	api.Get("/meters/:id", requirePermission("/meters", permissiondomain.ActionRead), meterHandler.Get)

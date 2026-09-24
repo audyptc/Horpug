@@ -28,7 +28,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 const selectContractColumns = `
 	c.id, c.tenant_id, t.first_name, t.last_name,
 	c.room_id, rm.room_number, rm.dormitory_id, d.name,
-	c.start_date, c.end_date, c.rent_price, c.deposit, c.num_occupants, c.status, c.note,
+	c.start_date, c.end_date, c.rent_price, c.deposit, c.num_occupants, c.status, mo.id, c.note,
 	c.created_by, c.updated_by, c.created_at, c.updated_at
 `
 
@@ -37,6 +37,7 @@ const contractFromJoins = `
 	JOIN tenants t ON t.id = c.tenant_id
 	JOIN rooms rm ON rm.id = c.room_id
 	JOIN dormitories d ON d.id = rm.dormitory_id
+	LEFT JOIN move_outs mo ON mo.contract_id = c.id
 `
 
 func (r *Repository) buildScope(full bool, roleID, requesterID uuid.UUID, filters contractusecase.ListFilters, argIdx *int, args *[]any) []string {
@@ -321,6 +322,7 @@ func scanContract(row pgx.Row) (contractdomain.Contract, error) {
 		&contract.Deposit,
 		&contract.NumOccupants,
 		&contract.Status,
+		&contract.MoveOutID,
 		&contract.Note,
 		&contract.CreatedBy,
 		&contract.UpdatedBy,

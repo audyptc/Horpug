@@ -42,7 +42,8 @@ var FilterColumns = map[string]string{
 // IsBilledExpr reports whether a reading has already been charged on an
 // invoice. It's derived rather than stored, so filtering and sorting on it
 // have to repeat the subquery the listing selects.
-const IsBilledExpr = `EXISTS (SELECT 1 FROM invoice_items ii WHERE ii.reference_id = em.id AND ii.item_type = 'electricity')`
+// A reading settled at move-out (move_out_items) counts as billed too.
+const IsBilledExpr = `(EXISTS (SELECT 1 FROM invoice_items ii WHERE ii.reference_id = em.id AND ii.item_type = 'electricity') OR EXISTS (SELECT 1 FROM move_out_items mi WHERE mi.reference_id = em.id))`
 
 // SortColumns maps the sort keys the API accepts onto the expressions they
 // order by. A column name can't be passed to Postgres as a bind parameter, so

@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import axios from 'axios'
 import { api, extractErrorCode, extractErrorMessage, type ApiPage } from '@/shared/api/client'
+import type { ApiDeductionPreset } from '@/features/moveout/types'
+import { isCompletePreset, type PresetRow } from '@/features/moveout/utils'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { InformationDialog } from '@/shared/components/information-dialog'
@@ -49,6 +51,8 @@ export default function DormitoryPage() {
   const [formDescription, setFormDescription] = useState('')
   const [formIsActive, setFormIsActive] = useState(true)
   const [formOverdueReminder, setFormOverdueReminder] = useState(true)
+  const [formPresets, setFormPresets] = useState<PresetRow[]>([])
+  const [formPresetsLoading, setFormPresetsLoading] = useState(false)
   const [formManagers, setFormManagers] = useState<FormManager[]>([])
   const [formSaving, setFormSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -136,6 +140,8 @@ export default function DormitoryPage() {
     setFormDescription('')
     setFormIsActive(true)
     setFormOverdueReminder(true)
+    setFormPresets([])
+    setFormPresetsLoading(false)
     setFormManagers([])
     setFormError(null)
     setFormOpen(true)
@@ -150,6 +156,15 @@ export default function DormitoryPage() {
     setFormDescription(dormitory.description)
     setFormIsActive(dormitory.is_active)
     setFormOverdueReminder(dormitory.overdue_reminder_enabled ?? true)
+    setFormPresets([])
+    setFormPresetsLoading(true)
+    api
+      .get<ApiDeductionPreset[]>(`/dormitories/${dormitory.id}/deduction-presets`)
+      .then(({ data }) =>
+        setFormPresets(data.map((preset, index) => ({ key: index + 1, name: preset.name, amount: String(preset.amount) })))
+      )
+      .catch(() => setFormPresets([]))
+      .finally(() => setFormPresetsLoading(false))
     setFormManagers(
       (dormitory.managers ?? []).map((manager) => ({
         id: manager.user_id,
@@ -170,6 +185,11 @@ export default function DormitoryPage() {
       return
     }
 
+    if (!formPresets.every(isCompletePreset)) {
+      setFormError(t('dormitoryFormPresetsIncomplete'))
+      return
+    }
+
     setFormSaving(true)
     setFormError(null)
 
@@ -185,10 +205,18 @@ export default function DormitoryPage() {
     }
 
     try {
-      if (formDormitoryId === null) {
-        await api.post<ApiDormitory>('/dormitories', payload)
+      let dormitoryId = formDormitoryId
+      if (dormitoryId === null) {
+        const { data } = await api.post<ApiDormitory>('/dormitories', payload)
+        dormitoryId = data.id
       } else {
-        await api.put<ApiDormitory>(`/dormitories/${formDormitoryId}`, payload)
+        await api.put<ApiDormitory>(`/dormitories/${dormitoryId}`, payload)
+      }
+      // Presets are skipped while still loading, so a slow fetch can't wipe them.
+      if (!formPresetsLoading) {
+        await api.put(`/dormitories/${dormitoryId}/deduction-presets`, {
+          presets: formPresets.map((row) => ({ name: row.name.trim(), amount: Number(row.amount) })),
+        })
       }
       refresh()
       setFormOpen(false)
@@ -334,6 +362,9 @@ export default function DormitoryPage() {
         onIsActiveChange={setFormIsActive}
         overdueReminderEnabled={formOverdueReminder}
         onOverdueReminderEnabledChange={setFormOverdueReminder}
+        presets={formPresets}
+        onPresetsChange={setFormPresets}
+        presetsLoading={formPresetsLoading}
         managers={formManagers}
         onAddManager={(user: ApiUser) =>
           setFormManagers((prev) =>

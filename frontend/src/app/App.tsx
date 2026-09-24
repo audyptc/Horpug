@@ -17,6 +17,7 @@ import InvoicePage from '@/features/invoice/InvoicePage'
 import InvoicePrintPage from '@/features/invoice/InvoicePrintPage'
 import PaymentPage from '@/features/payment/PaymentPage'
 import ReceiptPrintPage from '@/features/payment/ReceiptPrintPage'
+import MoveOutPrintPage from '@/features/moveout/MoveOutPrintPage'
 import ExpensePage from '@/features/expense/ExpensePage'
 import AnnouncementPage from '@/features/announcement/AnnouncementPage'
 import RepairRequestPage from '@/features/repairrequest/RepairRequestPage'
@@ -39,6 +40,7 @@ function App() {
           {/* Outside AdminLayout so it prints as a bare page. */}
           <Route path="/invoices/:id/print" element={<InvoicePrintPage />} />
           <Route path="/payments/:id/receipt" element={<ReceiptPrintPage />} />
+          <Route path="/move-outs/:id/print" element={<MoveOutPrintPage />} />
           <Route
             path="/dashboard"
             element={

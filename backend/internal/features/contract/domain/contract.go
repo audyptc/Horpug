@@ -36,6 +36,7 @@ type Contract struct {
 	Deposit       float64        `json:"deposit"`
 	NumOccupants  int            `json:"num_occupants"`
 	Status        ContractStatus `json:"status"`
+	MoveOutID     *uuid.UUID     `json:"move_out_id,omitempty"`
 	Note          string         `json:"note"`
 	CreatedBy     *uuid.UUID     `json:"created_by,omitempty"`
 	UpdatedBy     *uuid.UUID     `json:"updated_by,omitempty"`

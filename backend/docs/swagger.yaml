@@ -85,6 +85,8 @@ definitions:
         type: string
       id:
         type: string
+      move_out_id:
+        type: string
       note:
         type: string
       num_occupants:
@@ -287,6 +289,11 @@ definitions:
         type: array
       name:
         type: string
+      overdue_reminder_enabled:
+        description: |-
+          OverdueReminderEnabled turns the weekly LINE reminder for overdue
+          invoices on or off for this dormitory.
+        type: boolean
       phone:
         type: string
       promptpay_id:
@@ -504,6 +511,8 @@ definitions:
         items:
           $ref: '#/definitions/apihorpug_internal_features_invoice_domain.InvoiceItem'
         type: array
+      last_reminder_at:
+        type: string
       note:
         type: string
       paid_at:
@@ -511,6 +520,8 @@ definitions:
       period_month:
         type: integer
       period_year:
+        type: integer
+      reminder_count:
         type: integer
       room_id:
         type: string
@@ -639,6 +650,147 @@ definitions:
         type: string
       updated_by:
         type: string
+    type: object
+  apihorpug_internal_features_moveout_domain.DepositPayment:
+    properties:
+      amount:
+        type: number
+      invoice_id:
+        type: string
+      payment_id:
+        type: string
+      receipt_no:
+        type: string
+    type: object
+  apihorpug_internal_features_moveout_domain.Item:
+    properties:
+      amount:
+        type: number
+      description:
+        type: string
+      item_type:
+        $ref: '#/definitions/apihorpug_internal_features_moveout_domain.ItemType'
+      reference_id:
+        type: string
+    type: object
+  apihorpug_internal_features_moveout_domain.ItemType:
+    enum:
+    - invoice
+    - rent
+    - rent_credit
+    - electricity
+    - water
+    - other
+    type: string
+    x-enum-varnames:
+    - ItemInvoice
+    - ItemRent
+    - ItemRentCredit
+    - ItemElectricity
+    - ItemWater
+    - ItemOther
+  apihorpug_internal_features_moveout_domain.MoveOut:
+    properties:
+      amount_due:
+        type: number
+      contract_id:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      days_in_month:
+        type: integer
+      days_stayed:
+        type: integer
+      deposit:
+        type: number
+      deposit_payments:
+        items:
+          $ref: '#/definitions/apihorpug_internal_features_moveout_domain.DepositPayment'
+        type: array
+      dormitory_address:
+        type: string
+      dormitory_id:
+        type: string
+      dormitory_name:
+        type: string
+      dormitory_phone:
+        type: string
+      id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/apihorpug_internal_features_moveout_domain.Item'
+        type: array
+      move_out_date:
+        type: string
+      note:
+        type: string
+      refund_amount:
+        type: number
+      rent_price:
+        type: number
+      room_id:
+        type: string
+      room_number:
+        type: string
+      start_date:
+        type: string
+      tenant_name:
+        type: string
+      total_deductions:
+        type: number
+    type: object
+  apihorpug_internal_features_moveout_domain.Preset:
+    properties:
+      amount:
+        type: number
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  apihorpug_internal_features_moveout_domain.Preview:
+    properties:
+      amount_due:
+        type: number
+      contract_id:
+        type: string
+      days_in_month:
+        type: integer
+      days_stayed:
+        type: integer
+      deposit:
+        type: number
+      dormitory_id:
+        type: string
+      dormitory_name:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/apihorpug_internal_features_moveout_domain.Item'
+        type: array
+      move_out_date:
+        type: string
+      presets:
+        items:
+          $ref: '#/definitions/apihorpug_internal_features_moveout_domain.Preset'
+        type: array
+      refund_amount:
+        type: number
+      rent_price:
+        type: number
+      room_id:
+        type: string
+      room_number:
+        type: string
+      start_date:
+        type: string
+      tenant_name:
+        type: string
+      total_deductions:
+        type: number
     type: object
   apihorpug_internal_features_parcel_domain.Parcel:
     properties:
@@ -788,12 +940,14 @@ definitions:
     - transfer
     - credit_card
     - other
+    - deposit
     type: string
     x-enum-varnames:
     - PaymentMethodCash
     - PaymentMethodTransfer
     - PaymentMethodCreditCard
     - PaymentMethodOther
+    - PaymentMethodDeposit
   apihorpug_internal_features_payment_domain.PaymentStatus:
     enum:
     - active
@@ -1373,6 +1527,9 @@ definitions:
         type: array
       name:
         type: string
+      overdue_reminder_enabled:
+        description: Defaults to on when omitted.
+        type: boolean
       phone:
         type: string
       promptpay_id:
@@ -1392,6 +1549,8 @@ definitions:
         type: array
       name:
         type: string
+      overdue_reminder_enabled:
+        type: boolean
       phone:
         type: string
       promptpay_id:
@@ -1506,6 +1665,38 @@ definitions:
         type: number
       reading_date:
         type: string
+    type: object
+  internal_features_moveout_delivery_http.deductionRequest:
+    properties:
+      amount:
+        type: number
+      description:
+        type: string
+    type: object
+  internal_features_moveout_delivery_http.moveOutRequest:
+    properties:
+      deductions:
+        items:
+          $ref: '#/definitions/internal_features_moveout_delivery_http.deductionRequest'
+        type: array
+      move_out_date:
+        type: string
+      note:
+        type: string
+    type: object
+  internal_features_moveout_delivery_http.presetRequest:
+    properties:
+      amount:
+        type: number
+      name:
+        type: string
+    type: object
+  internal_features_moveout_delivery_http.replacePresetsRequest:
+    properties:
+      presets:
+        items:
+          $ref: '#/definitions/internal_features_moveout_delivery_http.presetRequest'
+        type: array
     type: object
   internal_features_parcel_delivery_http.createParcelRequest:
     properties:
@@ -2546,6 +2737,95 @@ paths:
       summary: Update a contract
       tags:
       - contracts
+  /contracts/{id}/move-out:
+    post:
+      consumes:
+      - application/json
+      description: 'Settles the move-out: records the settlement, pays the contract''s
+        unpaid invoices from the deposit (oldest first, each as a "deposit" payment
+        with its own receipt number), terminates the contract and frees the room.
+        Cannot be undone.'
+      parameters:
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Move-out date, note and deductions
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_moveout_delivery_http.moveOutRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_moveout_domain.MoveOut'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Confirm a contract's move-out
+      tags:
+      - move-outs
+  /contracts/{id}/move-out/preview:
+    post:
+      consumes:
+      - application/json
+      description: 'Works out the deposit reckoning for moving out on move_out_date
+        with the given deductions, without saving anything: unpaid invoice balances,
+        rent for the days stayed in the move-out month (or a credit if that month
+        was invoiced in full), unbilled meter readings, and the deductions; then the
+        refund or the amount still due.'
+      parameters:
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Move-out date and deductions
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_moveout_delivery_http.moveOutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_moveout_domain.Preview'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Preview a contract's move-out settlement
+      tags:
+      - move-outs
   /dashboard/summary:
     get:
       description: Returns headline counts over the dormitories the caller manages
@@ -3026,6 +3306,69 @@ paths:
       summary: Update a dormitory
       tags:
       - dormitories
+  /dormitories/{id}/deduction-presets:
+    get:
+      parameters:
+      - description: Dormitory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/apihorpug_internal_features_moveout_domain.Preset'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List a dormitory's ready-made move-out deductions
+      tags:
+      - move-outs
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dormitory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: The full list, in display order
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_moveout_delivery_http.replacePresetsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/apihorpug_internal_features_moveout_domain.Preset'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Replace a dormitory's ready-made move-out deductions
+      tags:
+      - move-outs
   /dormitories/{id}/deletion-check:
     get:
       parameters:
@@ -4116,6 +4459,30 @@ paths:
       summary: Update a meter reading
       tags:
       - meters
+  /move-outs/{id}:
+    get:
+      parameters:
+      - description: Move-out ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_moveout_domain.MoveOut'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get a confirmed move-out
+      tags:
+      - move-outs
   /parcels:
     get:
       description: Returns parcel records for roles with full dormitory access, otherwise

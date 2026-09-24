@@ -359,6 +359,7 @@ func (r *Repository) isBilled(ctx context.Context, id uuid.UUID) (bool, error) {
 	var billed bool
 	err := r.db.QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM invoice_items WHERE reference_id = $1 AND item_type = 'electricity')
+			OR EXISTS (SELECT 1 FROM move_out_items WHERE reference_id = $1)
 	`, id).Scan(&billed)
 	if err != nil {
 		return false, err

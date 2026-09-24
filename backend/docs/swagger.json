@@ -1067,6 +1067,134 @@
                 }
             }
         },
+        "/contracts/{id}/move-out": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Settles the move-out: records the settlement, pays the contract's unpaid invoices from the deposit (oldest first, each as a \"deposit\" payment with its own receipt number), terminates the contract and frees the room. Cannot be undone.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "move-outs"
+                ],
+                "summary": "Confirm a contract's move-out",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Contract ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Move-out date, note and deductions",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_moveout_delivery_http.moveOutRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_moveout_domain.MoveOut"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/contracts/{id}/move-out/preview": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Works out the deposit reckoning for moving out on move_out_date with the given deductions, without saving anything: unpaid invoice balances, rent for the days stayed in the move-out month (or a credit if that month was invoiced in full), unbilled meter readings, and the deductions; then the refund or the amount still due.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "move-outs"
+                ],
+                "summary": "Preview a contract's move-out settlement",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Contract ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Move-out date and deductions",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_moveout_delivery_http.moveOutRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_moveout_domain.Preview"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/dashboard/summary": {
             "get": {
                 "security": [
@@ -1852,6 +1980,106 @@
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/dormitories/{id}/deduction-presets": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "move-outs"
+                ],
+                "summary": "List a dormitory's ready-made move-out deductions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dormitory ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/apihorpug_internal_features_moveout_domain.Preset"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "move-outs"
+                ],
+                "summary": "Replace a dormitory's ready-made move-out deductions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dormitory ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The full list, in display order",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_moveout_delivery_http.replacePresetsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/apihorpug_internal_features_moveout_domain.Preset"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
                         }
@@ -3439,6 +3667,45 @@
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/move-outs/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "move-outs"
+                ],
+                "summary": "Get a confirmed move-out",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Move-out ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_moveout_domain.MoveOut"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
                         }
@@ -7850,6 +8117,9 @@
                 "id": {
                     "type": "string"
                 },
+                "move_out_id": {
+                    "type": "string"
+                },
                 "note": {
                     "type": "string"
                 },
@@ -8139,6 +8409,10 @@
                 },
                 "name": {
                     "type": "string"
+                },
+                "overdue_reminder_enabled": {
+                    "description": "OverdueReminderEnabled turns the weekly LINE reminder for overdue\ninvoices on or off for this dormitory.",
+                    "type": "boolean"
                 },
                 "phone": {
                     "type": "string"
@@ -8452,6 +8726,9 @@
                         "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.InvoiceItem"
                     }
                 },
+                "last_reminder_at": {
+                    "type": "string"
+                },
                 "note": {
                     "type": "string"
                 },
@@ -8462,6 +8739,9 @@
                     "type": "integer"
                 },
                 "period_year": {
+                    "type": "integer"
+                },
+                "reminder_count": {
                     "type": "integer"
                 },
                 "room_id": {
@@ -8648,6 +8928,215 @@
                 },
                 "updated_by": {
                     "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_moveout_domain.DepositPayment": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "invoice_id": {
+                    "type": "string"
+                },
+                "payment_id": {
+                    "type": "string"
+                },
+                "receipt_no": {
+                    "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_moveout_domain.Item": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "item_type": {
+                    "$ref": "#/definitions/apihorpug_internal_features_moveout_domain.ItemType"
+                },
+                "reference_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_moveout_domain.ItemType": {
+            "type": "string",
+            "enum": [
+                "invoice",
+                "rent",
+                "rent_credit",
+                "electricity",
+                "water",
+                "other"
+            ],
+            "x-enum-varnames": [
+                "ItemInvoice",
+                "ItemRent",
+                "ItemRentCredit",
+                "ItemElectricity",
+                "ItemWater",
+                "ItemOther"
+            ]
+        },
+        "apihorpug_internal_features_moveout_domain.MoveOut": {
+            "type": "object",
+            "properties": {
+                "amount_due": {
+                    "type": "number"
+                },
+                "contract_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "days_in_month": {
+                    "type": "integer"
+                },
+                "days_stayed": {
+                    "type": "integer"
+                },
+                "deposit": {
+                    "type": "number"
+                },
+                "deposit_payments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/apihorpug_internal_features_moveout_domain.DepositPayment"
+                    }
+                },
+                "dormitory_address": {
+                    "type": "string"
+                },
+                "dormitory_id": {
+                    "type": "string"
+                },
+                "dormitory_name": {
+                    "type": "string"
+                },
+                "dormitory_phone": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/apihorpug_internal_features_moveout_domain.Item"
+                    }
+                },
+                "move_out_date": {
+                    "type": "string"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "refund_amount": {
+                    "type": "number"
+                },
+                "rent_price": {
+                    "type": "number"
+                },
+                "room_id": {
+                    "type": "string"
+                },
+                "room_number": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "tenant_name": {
+                    "type": "string"
+                },
+                "total_deductions": {
+                    "type": "number"
+                }
+            }
+        },
+        "apihorpug_internal_features_moveout_domain.Preset": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_moveout_domain.Preview": {
+            "type": "object",
+            "properties": {
+                "amount_due": {
+                    "type": "number"
+                },
+                "contract_id": {
+                    "type": "string"
+                },
+                "days_in_month": {
+                    "type": "integer"
+                },
+                "days_stayed": {
+                    "type": "integer"
+                },
+                "deposit": {
+                    "type": "number"
+                },
+                "dormitory_id": {
+                    "type": "string"
+                },
+                "dormitory_name": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/apihorpug_internal_features_moveout_domain.Item"
+                    }
+                },
+                "move_out_date": {
+                    "type": "string"
+                },
+                "presets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/apihorpug_internal_features_moveout_domain.Preset"
+                    }
+                },
+                "refund_amount": {
+                    "type": "number"
+                },
+                "rent_price": {
+                    "type": "number"
+                },
+                "room_id": {
+                    "type": "string"
+                },
+                "room_number": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "tenant_name": {
+                    "type": "string"
+                },
+                "total_deductions": {
+                    "type": "number"
                 }
             }
         },
@@ -8868,13 +9357,15 @@
                 "cash",
                 "transfer",
                 "credit_card",
-                "other"
+                "other",
+                "deposit"
             ],
             "x-enum-varnames": [
                 "PaymentMethodCash",
                 "PaymentMethodTransfer",
                 "PaymentMethodCreditCard",
-                "PaymentMethodOther"
+                "PaymentMethodOther",
+                "PaymentMethodDeposit"
             ]
         },
         "apihorpug_internal_features_payment_domain.PaymentStatus": {
@@ -9745,6 +10236,10 @@
                 "name": {
                     "type": "string"
                 },
+                "overdue_reminder_enabled": {
+                    "description": "Defaults to on when omitted.",
+                    "type": "boolean"
+                },
                 "phone": {
                     "type": "string"
                 },
@@ -9773,6 +10268,9 @@
                 },
                 "name": {
                     "type": "string"
+                },
+                "overdue_reminder_enabled": {
+                    "type": "boolean"
                 },
                 "phone": {
                     "type": "string"
@@ -9948,6 +10446,56 @@
                 },
                 "reading_date": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_features_moveout_delivery_http.deductionRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_moveout_delivery_http.moveOutRequest": {
+            "type": "object",
+            "properties": {
+                "deductions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_features_moveout_delivery_http.deductionRequest"
+                    }
+                },
+                "move_out_date": {
+                    "type": "string"
+                },
+                "note": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_moveout_delivery_http.presetRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_moveout_delivery_http.replacePresetsRequest": {
+            "type": "object",
+            "properties": {
+                "presets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_features_moveout_delivery_http.presetRequest"
+                    }
                 }
             }
         },

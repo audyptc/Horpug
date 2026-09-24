@@ -21,6 +21,7 @@ const paymentMethodLabelKeys: Record<string, TranslationKey> = {
   transfer: 'paymentMethodTransfer',
   credit_card: 'paymentMethodCreditCard',
   other: 'paymentMethodOther',
+  deposit: 'paymentMethodDeposit',
 }
 
 function formatMoney(value: number): string {

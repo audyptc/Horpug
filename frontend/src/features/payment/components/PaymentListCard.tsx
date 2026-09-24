@@ -34,6 +34,7 @@ const paymentMethodLabelKeys: Record<PaymentMethod, TranslationKey> = {
   transfer: 'paymentMethodTransfer',
   credit_card: 'paymentMethodCreditCard',
   other: 'paymentMethodOther',
+  deposit: 'paymentMethodDeposit',
 }
 
 const paymentMethodBadgeVariant: Record<PaymentMethod, 'default' | 'outline' | 'destructive' | 'secondary'> = {
@@ -41,6 +42,7 @@ const paymentMethodBadgeVariant: Record<PaymentMethod, 'default' | 'outline' | '
   transfer: 'default',
   credit_card: 'outline',
   other: 'outline',
+  deposit: 'secondary',
 }
 
 const SORTABLE_COLUMNS: { key: PaymentSortKey; labelKey: TranslationKey }[] = [

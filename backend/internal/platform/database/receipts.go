@@ -62,6 +62,9 @@ func migrateReceiptNumbers(ctx context.Context, db *pgxpool.Pool) error {
 
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_payments_receipt ON payments(dormitory_id, receipt_year, receipt_seq)`,
 		`CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status)`,
+		// "deposit": invoices settled from the deposit at move-out.
+		`ALTER TABLE payment_items DROP CONSTRAINT IF EXISTS chk_payment_items_method`,
+		`ALTER TABLE payment_items ADD CONSTRAINT chk_payment_items_method CHECK (payment_method IN ('cash', 'transfer', 'credit_card', 'other', 'deposit'))`,
 		`DO $$
 		BEGIN
 			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'payments_dormitory_fkey') THEN

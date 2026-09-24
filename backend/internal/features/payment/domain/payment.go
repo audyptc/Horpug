@@ -13,11 +13,14 @@ const (
 	PaymentMethodTransfer   PaymentMethod = "transfer"
 	PaymentMethodCreditCard PaymentMethod = "credit_card"
 	PaymentMethodOther      PaymentMethod = "other"
+	// PaymentMethodDeposit settles an invoice from the tenant's deposit at
+	// move-out.
+	PaymentMethodDeposit PaymentMethod = "deposit"
 )
 
 func (m PaymentMethod) Valid() bool {
 	switch m {
-	case PaymentMethodCash, PaymentMethodTransfer, PaymentMethodCreditCard, PaymentMethodOther:
+	case PaymentMethodCash, PaymentMethodTransfer, PaymentMethodCreditCard, PaymentMethodOther, PaymentMethodDeposit:
 		return true
 	}
 	return false

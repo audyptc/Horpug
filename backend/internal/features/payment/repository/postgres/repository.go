@@ -619,6 +619,17 @@ func nextReceiptSeq(ctx context.Context, tx pgx.Tx, dormitoryID uuid.UUID, year 
 	return seq, err
 }
 
+// AllocateReceipt hands out the next receipt number for a payment recorded
+// inside tx, for callers outside this package that create payments in their
+// own transaction (e.g. settling invoices from a deposit at move-out).
+func AllocateReceipt(ctx context.Context, tx pgx.Tx, dormitoryID uuid.UUID, year int) (seq int, receiptNo string, err error) {
+	seq, err = nextReceiptSeq(ctx, tx, dormitoryID, year)
+	if err != nil {
+		return 0, "", err
+	}
+	return seq, FormatReceiptNo(year, seq), nil
+}
+
 // FormatReceiptNo renders a receipt number, e.g. RC2026-0001. The sequence is
 // zero-padded to four digits and simply grows past 9999.
 func FormatReceiptNo(year, seq int) string {

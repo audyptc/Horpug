@@ -12,6 +12,8 @@ import {
 } from '@/shared/components/ui/sheet'
 import type { ApiUser, FormManager } from '../types'
 import { ManagerSearchSelect } from './ManagerSearchSelect'
+import { DeductionPresetsEditor } from '@/features/moveout/DeductionPresetsEditor'
+import type { PresetRow } from '@/features/moveout/utils'
 
 type DormitoryFormSheetProps = {
   open: boolean
@@ -31,6 +33,9 @@ type DormitoryFormSheetProps = {
   onIsActiveChange: (isActive: boolean) => void
   overdueReminderEnabled: boolean
   onOverdueReminderEnabledChange: (enabled: boolean) => void
+  presets: PresetRow[]
+  onPresetsChange: (rows: PresetRow[]) => void
+  presetsLoading: boolean
   managers: FormManager[]
   onAddManager: (user: ApiUser) => void
   onRemoveManager: (userId: string) => void
@@ -57,6 +62,9 @@ export function DormitoryFormSheet({
   onIsActiveChange,
   overdueReminderEnabled,
   onOverdueReminderEnabledChange,
+  presets,
+  onPresetsChange,
+  presetsLoading,
   managers,
   onAddManager,
   onRemoveManager,
@@ -156,6 +164,8 @@ export function DormitoryFormSheet({
                 </span>
               </span>
             </label>
+
+            <DeductionPresetsEditor rows={presets} onChange={onPresetsChange} loading={presetsLoading} />
 
             <div className="flex flex-col gap-1.5 text-sm font-medium">
               {t('dormitoryFormManagersLabel')}

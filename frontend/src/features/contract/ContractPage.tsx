@@ -6,6 +6,7 @@ import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import type { ApiTenant } from '@/features/tenant/types'
 import { ContractListCard } from './components/ContractListCard'
 import { ContractFormSheet } from './components/ContractFormSheet'
+import { MoveOutSheet } from '@/features/moveout/MoveOutSheet'
 import type { ApiContract, ContractStatus } from './types'
 import {
   CONTRACT_PAGE_SIZE_OPTIONS,
@@ -41,6 +42,7 @@ export default function ContractPage() {
   // Bumped by mutations so the list refetches; the server owns the ordering
   // and page boundaries now, so patching rows locally would misplace them.
   const [refreshToken, setRefreshToken] = useState(0)
+  const [moveOutContract, setMoveOutContract] = useState<ApiContract | null>(null)
 
   const [formOpen, setFormOpen] = useState(false)
   const [formContractId, setFormContractId] = useState<string | null>(null)
@@ -305,7 +307,22 @@ export default function ContractPage() {
         onCreateContract={openCreateForm}
         onEditContract={openEditForm}
         onDeleteContract={setConfirmDeleteContract}
+        onMoveOutContract={setMoveOutContract}
       />
+
+      {moveOutContract && (
+        <MoveOutSheet
+          key={moveOutContract.id}
+          open
+          onOpenChange={(open) => !open && setMoveOutContract(null)}
+          contract={moveOutContract}
+          onMovedOut={(moveOut) => {
+            setMoveOutContract(null)
+            refresh()
+            window.open(`/move-outs/${moveOut.id}/print`, '_blank', 'noopener')
+          }}
+        />
+      )}
 
       <ConfirmDialog
         open={confirmDeleteContract !== null}

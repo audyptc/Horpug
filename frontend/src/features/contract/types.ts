@@ -14,6 +14,7 @@ export type ApiContract = {
   deposit: number
   num_occupants: number
   status: ContractStatus
+  move_out_id?: string
   note: string
   created_at: string
   updated_at: string

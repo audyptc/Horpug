@@ -1,4 +1,17 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, X } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  LogOut,
+  Pencil,
+  Printer,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
@@ -70,6 +83,7 @@ type ContractListCardProps = {
   onCreateContract: () => void
   onEditContract: (contract: ApiContract) => void
   onDeleteContract: (contract: ApiContract) => void
+  onMoveOutContract: (contract: ApiContract) => void
 }
 
 export function ContractListCard({
@@ -102,6 +116,7 @@ export function ContractListCard({
   onCreateContract,
   onEditContract,
   onDeleteContract,
+  onMoveOutContract,
 }: ContractListCardProps) {
   const { t } = useLanguage()
 
@@ -295,6 +310,30 @@ export function ContractListCard({
                               the buttons and blow up every row's height. The
                               table scrolls horizontally instead. */}
                           <div className="flex flex-nowrap justify-end gap-2">
+                            {contract.status === 'active' && (
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                title={t('moveOutAction')}
+                                aria-label={t('moveOutAction')}
+                                onClick={() => onMoveOutContract(contract)}
+                              >
+                                <LogOut />
+                              </Button>
+                            )}
+                            {contract.move_out_id && (
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                title={t('moveOutPrintAction')}
+                                aria-label={t('moveOutPrintAction')}
+                                onClick={() => window.open(`/move-outs/${contract.move_out_id}/print`, '_blank', 'noopener')}
+                              >
+                                <Printer />
+                              </Button>
+                            )}
                             <Button
                               type="button"
                               size="icon"

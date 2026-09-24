@@ -1,4 +1,6 @@
-export type PaymentMethod = 'cash' | 'transfer' | 'credit_card' | 'other'
+// 'deposit' is only ever set by a move-out (paid from the deposit); it isn't
+// offered when recording a payment.
+export type PaymentMethod = 'cash' | 'transfer' | 'credit_card' | 'other' | 'deposit'
 
 export type ApiPaymentItem = {
   id: string

@@ -22,6 +22,7 @@ const paymentMethodLabelKeys: Record<PaymentMethod, TranslationKey> = {
   transfer: 'paymentMethodTransfer',
   credit_card: 'paymentMethodCreditCard',
   other: 'paymentMethodOther',
+  deposit: 'paymentMethodDeposit',
 }
 
 type PaymentFormSheetProps = {
