@@ -80,6 +80,8 @@ type PaymentListCardProps = {
   onLastPage: () => void
   deletingPaymentId: string | null
   onCreatePayment: () => void
+  pendingSlipCount: number
+  onReviewSlips: () => void
   onEditPayment: (payment: ApiPayment) => void
   onVoidPayment: (payment: ApiPayment) => void
 }
@@ -112,6 +114,8 @@ export function PaymentListCard({
   onLastPage,
   deletingPaymentId,
   onCreatePayment,
+  pendingSlipCount,
+  onReviewSlips,
   onEditPayment,
   onVoidPayment,
 }: PaymentListCardProps) {
@@ -153,9 +157,19 @@ export function PaymentListCard({
         <div>
           <CardTitle>{t('menuPayments')}</CardTitle>
         </div>
-        <Button onClick={onCreatePayment} disabled={isLoading}>
-          {t('paymentCreate')}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant={pendingSlipCount > 0 ? 'default' : 'outline'} onClick={onReviewSlips}>
+            {t('slipReviewButton')}
+            {pendingSlipCount > 0 && (
+              <Badge variant="secondary" className="ml-1 tabular-nums">
+                {pendingSlipCount}
+              </Badge>
+            )}
+          </Button>
+          <Button variant={pendingSlipCount > 0 ? 'outline' : 'default'} onClick={onCreatePayment} disabled={isLoading}>
+            {t('paymentCreate')}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {loadError && <p className="resource-error">{loadError}</p>}

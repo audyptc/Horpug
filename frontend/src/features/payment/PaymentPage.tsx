@@ -7,6 +7,8 @@ import type { ApiInvoice } from '@/features/invoice/types'
 import { formatInvoiceLabel } from '@/features/invoice/utils'
 import { PaymentListCard } from './components/PaymentListCard'
 import { PaymentFormSheet } from './components/PaymentFormSheet'
+import { SlipReviewSheet } from './components/SlipReviewSheet'
+import type { ApiSlip } from './slips'
 import type { ApiPayment } from './types'
 import {
   PAYMENT_PAGE_SIZE_OPTIONS,
@@ -44,6 +46,21 @@ export default function PaymentPage() {
   // Bumped by mutations so the list refetches; the server owns the ordering
   // and page boundaries now, so patching rows locally would misplace them.
   const [refreshToken, setRefreshToken] = useState(0)
+  const [slipSheetOpen, setSlipSheetOpen] = useState(false)
+  const [pendingSlipCount, setPendingSlipCount] = useState(0)
+
+  // Pending slips drive the badge on the review button; refetched with the
+  // payment list, since approving a slip adds a payment.
+  useEffect(() => {
+    const controller = new AbortController()
+    api
+      .get<ApiSlip[]>('/payment-slips', { params: { status: 'pending' }, signal: controller.signal })
+      .then(({ data }) => setPendingSlipCount(data.length))
+      .catch(() => {
+        // The badge is a hint; the list itself reports errors when opened.
+      })
+    return () => controller.abort()
+  }, [refreshToken])
 
   const [formOpen, setFormOpen] = useState(false)
   // Set while editing an existing payment; null means the form is recording a new one.
@@ -257,7 +274,11 @@ export default function PaymentPage() {
         <p>{t('menuPaymentsDescription')}</p>
       </section>
 
+      <SlipReviewSheet open={slipSheetOpen} onOpenChange={setSlipSheetOpen} onReviewed={refresh} />
+
       <PaymentListCard
+        pendingSlipCount={pendingSlipCount}
+        onReviewSlips={() => setSlipSheetOpen(true)}
         isLoading={isLoading}
         loadError={loadError}
         deleteError={deleteError}

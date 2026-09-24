@@ -711,6 +711,10 @@ func AutoMigrate(db *pgxpool.Pool) error {
 		return err
 	}
 
+	if err := migratePaymentSlips(ctx, db); err != nil {
+		return err
+	}
+
 	// Speeds up the "has this meter reading been billed yet" lookup
 	// (electricity_meters/water_meters joined against invoice_items by
 	// reference_id) used when listing meter readings.

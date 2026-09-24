@@ -6,6 +6,7 @@ import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import type { ApiInvoiceDocument } from '@/features/invoice/types'
+import type { ApiSlip, SlipStatus } from '@/features/payment/slips'
 import { formatPeriod } from '@/features/invoice/utils'
 import { tenantApi, setTenantToken } from './api'
 import type {
@@ -46,6 +47,17 @@ const repairStatusKeys: Record<RepairStatus, TranslationKey> = {
   cancelled: 'repairStatusCancelled',
 }
 const REPAIR_CATEGORIES = Object.keys(repairCategoryKeys) as RepairCategory[]
+const slipStatusKeys: Record<SlipStatus, TranslationKey> = {
+  pending: 'slipStatusPending',
+  approved: 'slipStatusApproved',
+  rejected: 'slipStatusRejected',
+  cancelled: 'slipStatusCancelled',
+}
+
+function todayInput(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
 
 function money(value: number): string {
   return value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -229,6 +241,7 @@ function InvoicesTab({ formatDate }: { formatDate: (value: string) => string }) 
 function InvoiceDetail({ id, onBack, formatDate }: { id: string; onBack: () => void; formatDate: (v: string) => string }) {
   const { t } = useLanguage()
   const doc = useLoad<ApiInvoiceDocument>(`/tenant/invoices/${id}`)
+  const payable = !!doc.data && doc.data.outstanding > 0 && ['unpaid', 'overdue'].includes(doc.data.invoice.status)
 
   return (
     <section className="flex flex-col gap-3">
@@ -295,7 +308,190 @@ function InvoiceDetail({ id, onBack, formatDate }: { id: string; onBack: () => v
           )}
         </div>
       )}
+      {doc.data && <SlipSection invoiceId={id} outstanding={doc.data.outstanding} payable={payable} formatDate={formatDate} />}
     </section>
+  )
+}
+
+// SlipSection lets the tenant send the transfer slip for this bill and follow
+// what happened to slips they sent. Staff approve or reject them; approval
+// records the payment and the tenant gets a LINE message either way.
+function SlipSection({
+  invoiceId,
+  outstanding,
+  payable,
+  formatDate,
+}: {
+  invoiceId: string
+  outstanding: number
+  payable: boolean
+  formatDate: (v: string) => string
+}) {
+  const { t } = useLanguage()
+  const slips = useLoad<ApiSlip[]>(`/tenant/invoices/${invoiceId}/slips`)
+  const [file, setFile] = useState<File | null>(null)
+  const [amount, setAmount] = useState(outstanding > 0 ? String(outstanding) : '')
+  const [transferDate, setTransferDate] = useState(todayInput)
+  const [note, setNote] = useState('')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [sent, setSent] = useState(false)
+  const [formKey, setFormKey] = useState(0)
+
+  const hasPending = (slips.data ?? []).some((s) => s.status === 'pending')
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const value = Number(amount)
+    if (!file) {
+      setError(t('slipChooseImage'))
+      return
+    }
+    if (!Number.isFinite(value) || value <= 0 || value > outstanding + 0.005) {
+      setError(t('slipAmountInvalid'))
+      return
+    }
+    const form = new FormData()
+    form.append('file', file)
+    form.append('amount', String(value))
+    form.append('transfer_date', transferDate)
+    form.append('note', note.trim())
+    setSending(true)
+    setError(null)
+    try {
+      await tenantApi.post(`/tenant/invoices/${invoiceId}/slips`, form)
+      setSent(true)
+      setFile(null)
+      setNote('')
+      setFormKey((k) => k + 1)
+      slips.reload()
+    } catch (err) {
+      const code = extractErrorCode(err)
+      setError(
+        code === 'unsupported_file_type'
+          ? t('slipUnsupportedImage')
+          : code === 'file_too_large'
+            ? t('slipImageTooLarge')
+            : code === 'invalid_amount'
+              ? t('slipAmountInvalid')
+              : extractErrorMessage(err, t('slipSendError'))
+      )
+    } finally {
+      setSending(false)
+    }
+  }
+
+  async function cancel(slipId: string) {
+    try {
+      await tenantApi.post(`/tenant/slips/${slipId}/cancel`)
+      slips.reload()
+    } catch (err) {
+      setError(extractErrorMessage(err, t('slipSendError')))
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {payable && (
+        <form key={formKey} className="flex flex-col gap-3 rounded-lg border border-border bg-background p-4" onSubmit={submit}>
+          <div>
+            <p className="font-semibold">{t('slipSendTitle')}</p>
+            <p className="text-xs text-muted-foreground">{t('slipSendHint')}</p>
+          </div>
+          {hasPending && <p className="rounded-md bg-muted px-3 py-2 text-xs">{t('slipPendingNotice')}</p>}
+          <label className="flex flex-col gap-1 text-sm font-medium" htmlFor="slip-file">
+            {t('slipImageLabel')}
+            <input
+              id="slip-file"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="text-sm font-normal"
+              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="flex flex-col gap-1 text-sm font-medium" htmlFor="slip-amount">
+              {t('slipAmountLabel')}
+              <input
+                id="slip-amount"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                className="h-10 rounded-md border border-input bg-transparent px-3 text-right text-sm font-normal"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium" htmlFor="slip-date">
+              {t('slipTransferDate')}
+              <input
+                id="slip-date"
+                type="date"
+                max={todayInput()}
+                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm font-normal"
+                value={transferDate}
+                onChange={(event) => setTransferDate(event.target.value)}
+              />
+            </label>
+          </div>
+          <label className="flex flex-col gap-1 text-sm font-medium" htmlFor="slip-note">
+            {t('slipNoteLabel')}
+            <input
+              id="slip-note"
+              maxLength={255}
+              className="h-10 rounded-md border border-input bg-transparent px-3 text-sm font-normal"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+            />
+          </label>
+          {error && <p className="resource-error">{error}</p>}
+          {sent && !error && <p className="text-sm text-primary">{t('slipSent')}</p>}
+          <Button type="submit" disabled={sending}>
+            {sending ? t('portalSending') : t('slipSendButton')}
+          </Button>
+        </form>
+      )}
+
+      {slips.data && slips.data.length > 0 && (
+        <div className="rounded-lg border border-border bg-background p-4 text-sm">
+          <p className="mb-2 font-medium">{t('slipHistoryTitle')}</p>
+          <ul className="flex flex-col divide-y divide-border">
+            {slips.data.map((s) => (
+              <li key={s.id} className="flex flex-col gap-1 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="tabular-nums">
+                    {money(s.amount)} · {formatDate(s.transfer_date)}
+                  </span>
+                  <Badge
+                    variant={
+                      s.status === 'approved' ? 'success' : s.status === 'rejected' ? 'destructive' : s.status === 'pending' ? 'secondary' : 'outline'
+                    }
+                  >
+                    {t(slipStatusKeys[s.status])}
+                  </Badge>
+                </div>
+                {s.status === 'approved' && s.receipt_no && (
+                  <span className="text-xs text-muted-foreground">
+                    {t('slipReceipt')} {s.receipt_no}
+                  </span>
+                )}
+                {s.status === 'rejected' && s.reject_reason && (
+                  <span className="text-xs text-muted-foreground">
+                    {t('slipRejectReason')}: {s.reject_reason}
+                  </span>
+                )}
+                {s.status === 'pending' && (
+                  <Button size="sm" variant="ghost" className="self-end" onClick={() => cancel(s.id)}>
+                    {t('slipCancel')}
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   )
 }
 

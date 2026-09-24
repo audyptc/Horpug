@@ -48,6 +48,9 @@ import (
 	paymenthttp "apihorpug/internal/features/payment/delivery/http"
 	paymentrepository "apihorpug/internal/features/payment/repository/postgres"
 	paymentusecase "apihorpug/internal/features/payment/usecase"
+	sliphttp "apihorpug/internal/features/paymentslip/delivery/http"
+	sliprepository "apihorpug/internal/features/paymentslip/repository/postgres"
+	slipusecase "apihorpug/internal/features/paymentslip/usecase"
 	permissionhttp "apihorpug/internal/features/permission/delivery/http"
 	permissiondomain "apihorpug/internal/features/permission/domain"
 	permissionrepository "apihorpug/internal/features/permission/repository/postgres"
@@ -156,6 +159,7 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	moveOutService := moveoutusecase.New(moveOutRepo, activityLogService)
 	moveOutHandler := moveouthttp.NewHandler(moveOutService)
 	reportHandler := reporthttp.NewHandler(reportusecase.New(reportrepository.NewRepository(db)))
+	slipHandler := sliphttp.NewHandler(slipusecase.New(sliprepository.NewRepository(db), files, paymentService, lineClient))
 	portalHandler := portalhttp.NewHandler(portalusecase.New(portalrepository.NewRepository(db), lineClient, invoiceService, secretKey))
 	dashboardRepo := dashboardrepository.NewRepository(db)
 	dashboardService := dashboardusecase.New(dashboardRepo)
@@ -190,6 +194,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	tenantPortal.Post("/repair-requests", rateLimit(10, time.Hour), portalHandler.CreateRepairRequest)
 	tenantPortal.Post("/repair-requests/:id/cancel", portalHandler.CancelRepairRequest)
 	tenantPortal.Get("/announcements", portalHandler.Announcements)
+	tenantPortal.Get("/invoices/:id/slips", slipHandler.TenantList)
+	tenantPortal.Post("/invoices/:id/slips", rateLimit(10, time.Hour), slipHandler.Submit)
+	tenantPortal.Post("/slips/:id/cancel", slipHandler.TenantCancel)
 
 	api := app.Group("/api/v1")
 	api.Use(middleware.RequireAuth(secretKey))
@@ -302,6 +309,10 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Get("/payments/:id", requirePermission("/payments", permissiondomain.ActionRead), paymentHandler.Get)
 	api.Post("/payments", requirePermission("/payments", permissiondomain.ActionCreate), paymentHandler.Create)
 	api.Put("/payments/:id", requirePermission("/payments", permissiondomain.ActionUpdate), paymentHandler.Update)
+	api.Get("/payment-slips", requirePermission("/payments", permissiondomain.ActionRead), slipHandler.List)
+	api.Get("/payment-slips/:id/image", requirePermission("/payments", permissiondomain.ActionRead), slipHandler.Image)
+	api.Post("/payment-slips/:id/approve", requirePermission("/payments", permissiondomain.ActionCreate), slipHandler.Approve)
+	api.Post("/payment-slips/:id/reject", requirePermission("/payments", permissiondomain.ActionUpdate), slipHandler.Reject)
 	api.Get("/payments/:id/receipt", requirePermission("/payments", permissiondomain.ActionRead), paymentHandler.Receipt)
 	// Payments carry receipt numbers, so they are voided, never deleted.
 	api.Post("/payments/:id/void", requirePermission("/payments", permissiondomain.ActionDelete), paymentHandler.Void)

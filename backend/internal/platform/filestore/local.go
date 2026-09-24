@@ -4,6 +4,7 @@
 package filestore
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -63,6 +64,11 @@ func (s *Local) Save(folder, ext string, r io.Reader) (string, error) {
 	}
 
 	return key, nil
+}
+
+// SaveBytes is Save for data already in memory.
+func (s *Local) SaveBytes(folder, ext string, data []byte) (string, error) {
+	return s.Save(folder, ext, bytes.NewReader(data))
 }
 
 func (s *Local) Read(key string) ([]byte, error) {
