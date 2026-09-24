@@ -19,6 +19,7 @@ const errorKeys: Record<string, TranslationKey> = {
   weak_password: 'changePasswordErrorWeak',
   same_password: 'changePasswordErrorSame',
   too_many_requests: 'changePasswordErrorTooMany',
+  protected_account: 'changePasswordProtectedDescription',
 }
 
 type ChangePasswordSheetProps = {

@@ -174,6 +174,9 @@ func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, currentP
 	if err != nil {
 		return err
 	}
+	if user.IsProtected {
+		return authdomain.ErrProtectedAccount
+	}
 	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(currentPassword)) != nil {
 		return authdomain.ErrWrongPassword
 	}

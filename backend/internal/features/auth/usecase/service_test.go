@@ -81,6 +81,21 @@ func TestChangePasswordRejects(t *testing.T) {
 	}
 }
 
+// The seeded admin's password is re-applied from ADMIN_PASSWORD on every
+// startup, so changing it here would silently revert; it is refused instead.
+func TestChangePasswordRefusesProtectedAccount(t *testing.T) {
+	svc, users, tokens := newChangePasswordFixture(t)
+	users.user.IsProtected = true
+
+	err := svc.ChangePassword(context.Background(), users.user.ID, "old-password", "new-password", "rt", "")
+	if !errors.Is(err, authdomain.ErrProtectedAccount) {
+		t.Fatalf("got %v, want ErrProtectedAccount", err)
+	}
+	if users.newPassword != "" || tokens.revokedOthersKeep != nil {
+		t.Fatal("nothing should change for a protected account")
+	}
+}
+
 func TestChangePasswordKeepsCurrentDevice(t *testing.T) {
 	svc, users, tokens := newChangePasswordFixture(t)
 	if err := svc.ChangePassword(context.Background(), users.user.ID, "old-password", "new-password", "my-refresh", ""); err != nil {

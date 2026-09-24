@@ -12,6 +12,9 @@ export type SessionUser = {
   role_id: string
   role?: Role
   is_active: boolean
+  // The seeded admin: its password comes from the ADMIN_PASSWORD setting and
+  // can't be changed from the app.
+  is_protected?: boolean
 }
 
 export type Session = {

@@ -11,6 +11,9 @@ const en = {
   accountMenu: 'Account menu',
   myAccount: 'My Account',
   signOut: 'Sign out',
+  changePasswordProtectedTitle: "This account's password can't be changed here",
+  changePasswordProtectedDescription:
+    "The main admin account's password comes from the ADMIN_PASSWORD setting and is re-applied every time the system starts. To change it, update the ADMIN_PASSWORD secret in GitHub and deploy again.",
   changePasswordMenu: 'Change password',
   changePasswordTitle: 'Change password',
   changePasswordDescription:

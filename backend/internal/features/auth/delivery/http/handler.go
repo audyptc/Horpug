@@ -198,6 +198,8 @@ func (h *Handler) ChangePassword(c fiber.Ctx) error {
 		return apierror.BadRequest(err.Error()).WithSlug("weak_password")
 	case errors.Is(err, authdomain.ErrSamePassword):
 		return apierror.BadRequest(err.Error()).WithSlug("same_password")
+	case errors.Is(err, authdomain.ErrProtectedAccount):
+		return apierror.Forbidden(err.Error()).WithSlug("protected_account")
 	default:
 		return apierror.Internal("failed to change password")
 	}

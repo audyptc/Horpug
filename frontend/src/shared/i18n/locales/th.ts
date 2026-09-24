@@ -13,6 +13,9 @@ const th: Record<TranslationKey, string> = {
   accountMenu: 'เมนูบัญชี',
   myAccount: 'บัญชีของฉัน',
   signOut: 'ออกจากระบบ',
+  changePasswordProtectedTitle: 'เปลี่ยนรหัสผ่านบัญชีนี้ในแอปไม่ได้',
+  changePasswordProtectedDescription:
+    'รหัสผ่านของบัญชีผู้ดูแลหลักกำหนดจากค่า ADMIN_PASSWORD และระบบจะตั้งค่ากลับทุกครั้งที่เริ่มทำงาน หากต้องการเปลี่ยน ให้แก้ secret ADMIN_PASSWORD ใน GitHub แล้ว deploy ใหม่',
   changePasswordMenu: 'เปลี่ยนรหัสผ่าน',
   changePasswordTitle: 'เปลี่ยนรหัสผ่าน',
   changePasswordDescription:

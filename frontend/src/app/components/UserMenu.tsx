@@ -21,6 +21,10 @@ export function UserMenu() {
   const navigate = useNavigate()
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const [changedNoticeOpen, setChangedNoticeOpen] = useState(false)
+  const [protectedNoticeOpen, setProtectedNoticeOpen] = useState(false)
+  // The seeded admin's password is re-applied from ADMIN_PASSWORD on every
+  // startup, so it is changed there, not here.
+  const isProtected = session?.user.is_protected === true
 
   const handleSignOut = async () => {
     await logout()
@@ -42,7 +46,7 @@ export function UserMenu() {
             {session?.user.role?.name && <p className="account-role">{session.user.role.name}</p>}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => setChangePasswordOpen(true)}>
+          <DropdownMenuItem onSelect={() => (isProtected ? setProtectedNoticeOpen(true) : setChangePasswordOpen(true))}>
             {t('changePasswordMenu')}
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={handleSignOut}>{t('signOut')}</DropdownMenuItem>
@@ -52,6 +56,13 @@ export function UserMenu() {
         open={changePasswordOpen}
         onOpenChange={setChangePasswordOpen}
         onChanged={() => setChangedNoticeOpen(true)}
+      />
+      <InformationDialog
+        open={protectedNoticeOpen}
+        onOpenChange={setProtectedNoticeOpen}
+        title={t('changePasswordProtectedTitle')}
+        description={t('changePasswordProtectedDescription')}
+        actionLabel={t('changePasswordDoneAction')}
       />
       <InformationDialog
         open={changedNoticeOpen}
