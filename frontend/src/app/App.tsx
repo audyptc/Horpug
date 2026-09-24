@@ -19,6 +19,7 @@ import PaymentPage from '@/features/payment/PaymentPage'
 import ReceiptPrintPage from '@/features/payment/ReceiptPrintPage'
 import MoveOutPrintPage from '@/features/moveout/MoveOutPrintPage'
 import ExpensePage from '@/features/expense/ExpensePage'
+import ReportPage from '@/features/report/ReportPage'
 import AnnouncementPage from '@/features/announcement/AnnouncementPage'
 import RepairRequestPage from '@/features/repairrequest/RepairRequestPage'
 import ParkingPage from '@/features/parking/ParkingPage'
@@ -26,7 +27,7 @@ import ParcelPage from '@/features/parcel/ParcelPage'
 import DocumentPage from '@/features/document/DocumentPage'
 import UserPage from '@/features/user/UserPage'
 import ActivityLogPage from '@/features/activitylog/ActivityLogPage'
-import LineLinkPage from '@/features/line/LineLinkPage'
+import LiffEntryPage from '@/features/line/LiffEntryPage'
 import { menuMeta } from '@/features/menu/menus'
 
 function App() {
@@ -34,7 +35,8 @@ function App() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/liff/link-tenant" element={<LineLinkPage />} />
+        {/* The LIFF endpoint: tenant LINE linking, or the tenant self-service pages. */}
+        <Route path="/liff/link-tenant" element={<LiffEntryPage />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route element={<ProtectedRoute />}>
           {/* Outside AdminLayout so it prints as a bare page. */}
@@ -126,6 +128,14 @@ function App() {
             element={
               <AdminLayout>
                 <PaymentPage />
+              </AdminLayout>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <AdminLayout>
+                <ReportPage />
               </AdminLayout>
             }
           />

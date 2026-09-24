@@ -34,6 +34,7 @@ func SeedMenus(db *pgxpool.Pool) error {
 		{Name: "Repair Requests", Path: "/repair-requests", Description: "Tenant and staff-reported room maintenance issues", IsActive: true},
 		{Name: "Parking", Path: "/parking", Description: "Tenant vehicle parking registrations", IsActive: true},
 		{Name: "Parcels", Path: "/parcels", Description: "Tenant parcel and package receiving records", IsActive: true},
+		{Name: "Reports", Path: "/reports", Description: "Monthly income, billing and expense reports", IsActive: true},
 		{Name: "Activity Logs", Path: "/activity-logs", Description: "Activity log records", IsActive: true},
 		{Name: "Announcements", Path: "/announcements", Description: "Dormitory announcements posted to tenants", IsActive: true},
 		{Name: "Documents", Path: "/documents", Description: "Dormitory document and file attachment records", IsActive: true},

@@ -29,6 +29,10 @@ import (
 // @in header
 // @name Authorization
 // @description Type "Bearer" followed by a space and the JWT token.
+// @securityDefinitions.apikey TenantAuth
+// @in header
+// @name Authorization
+// @description Tenant self-service token from /public/tenant-portal/session: "Bearer" followed by the token.
 func main() {
 	cfg := config.Load()
 	if err := cfg.Validate(); err != nil {

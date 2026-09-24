@@ -14,6 +14,7 @@ import (
 // DocumentRepository is the part of the repository the printable document needs.
 type DocumentRepository interface {
 	GetDocument(ctx context.Context, id, requesterID uuid.UUID) (invoicedomain.Document, error)
+	GetDocumentForTenant(ctx context.Context, id, tenantID uuid.UUID) (invoicedomain.Document, error)
 }
 
 // GetDocument returns the invoice as a printable invoice/receipt, adding the
@@ -23,7 +24,21 @@ func (s *Service) GetDocument(ctx context.Context, id, requesterID uuid.UUID) (i
 	if err != nil {
 		return invoicedomain.Document{}, err
 	}
+	return finishDocument(doc), nil
+}
 
+// GetDocumentForTenant is GetDocument for the tenant self-service pages,
+// limited to the tenant's own invoices.
+func (s *Service) GetDocumentForTenant(ctx context.Context, id, tenantID uuid.UUID) (invoicedomain.Document, error) {
+	doc, err := s.repo.GetDocumentForTenant(ctx, id, tenantID)
+	if err != nil {
+		return invoicedomain.Document{}, err
+	}
+	return finishDocument(doc), nil
+}
+
+// finishDocument works out the outstanding amount and the PromptPay payload.
+func finishDocument(doc invoicedomain.Document) invoicedomain.Document {
 	// Amounts are NUMERIC(10,2) read into float64; round so float noise never
 	// shows up as a satang owed.
 	doc.Outstanding = math.Max(0, math.Round((doc.Invoice.TotalAmount-doc.PaidAmount)*100)/100)
@@ -40,5 +55,5 @@ func (s *Service) GetDocument(ctx context.Context, id, requesterID uuid.UUID) (i
 		}
 	}
 
-	return doc, nil
+	return doc
 }

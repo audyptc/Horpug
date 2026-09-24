@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  BarChart3,
   BedDouble,
   Building2,
   Car,
@@ -144,6 +145,12 @@ export const menuMeta: Record<string, MenuMeta> = {
     labelKey: 'menuUsers',
     descriptionKey: 'menuUsersDescription',
     group: 'access',
+  },
+  '/reports': {
+    icon: BarChart3,
+    labelKey: 'menuReports',
+    descriptionKey: 'menuReportsDescription',
+    group: 'reports',
   },
   '/activity-logs': {
     icon: History,

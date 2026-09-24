@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	localsTenantID = "tenant_id"
 	localsUserID   = "user_id"
 	localsRoleID   = "role_id"
 	localsUsername = "username"
@@ -40,6 +41,29 @@ func RequireAuth(secret string) fiber.Handler {
 
 		return c.Next()
 	}
+}
+
+// RequireTenant admits only tenant tokens from the LIFF self-service pages
+// (see platformjwt.GenerateTenant); staff tokens are rejected, and tenant
+// tokens are in turn rejected by RequireAuth.
+func RequireTenant(secret string) fiber.Handler {
+	return func(c fiber.Ctx) error {
+		header := c.Get(fiber.HeaderAuthorization)
+		if !strings.HasPrefix(header, "Bearer ") {
+			return apierror.Unauthorized("missing or invalid authorization header")
+		}
+		claims, err := platformjwt.ParseTenant(secret, strings.TrimPrefix(header, "Bearer "))
+		if err != nil {
+			return apierror.Unauthorized("invalid or expired token")
+		}
+		c.Locals(localsTenantID, claims.TenantID)
+		return c.Next()
+	}
+}
+
+func TenantID(c fiber.Ctx) (uuid.UUID, bool) {
+	id, ok := c.Locals(localsTenantID).(uuid.UUID)
+	return id, ok
 }
 
 func RequirePermission(db *pgxpool.Pool, menuPath string, action permissiondomain.Action) fiber.Handler {

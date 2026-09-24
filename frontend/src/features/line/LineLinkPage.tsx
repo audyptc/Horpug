@@ -2,34 +2,9 @@ import { useEffect, useState } from 'react'
 import { Building2 } from 'lucide-react'
 import { api, extractErrorCode, extractErrorMessage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
+import { PENDING_TENANT_ID_KEY, readTenantIdFromLineRedirect } from './liffParams'
 
 type Status = 'loading' | 'linking' | 'success' | 'success-needs-friend' | 'error'
-
-const PENDING_TENANT_ID_KEY = 'liff_pending_tenant_id'
-
-function readTenantIdFromLineRedirect(): string | null {
-  const url = new URL(window.location.href)
-  const directTenantId = url.searchParams.get('tenant_id')
-  if (directTenantId) return directTenantId
-
-  const encodedState = url.searchParams.get('liff.state')
-  if (encodedState) {
-    try {
-      const decoded = decodeURIComponent(encodedState)
-      const stateParams = new URLSearchParams(decoded)
-      const stateTenantId = stateParams.get('tenant_id')
-      if (stateTenantId) return stateTenantId
-    } catch {
-      // Ignore malformed state and fall through to the generic error below.
-    }
-  }
-
-  const hashState = new URLSearchParams(url.hash.replace(/^#/, ''))
-  const hashTenantId = hashState.get('tenant_id')
-  if (hashTenantId) return hashTenantId
-
-  return null
-}
 
 // Public page a tenant opens from inside the LINE app (via their personal
 // linking link, e.g. https://liff.line.me/{LIFF_ID}?tenant_id=...). It logs

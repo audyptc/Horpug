@@ -16,7 +16,40 @@ func (r *Repository) GetDocument(ctx context.Context, id, requesterID uuid.UUID)
 	if err != nil {
 		return invoicedomain.Document{}, err
 	}
+	return r.buildDocument(ctx, invoice)
+}
 
+// GetDocumentForTenant loads the document for the tenant self-service pages:
+// only an invoice on one of the tenant's own contracts, cancelled ones
+// excluded. Anything else surfaces as ErrInvoiceNotFound.
+func (r *Repository) GetDocumentForTenant(ctx context.Context, id, tenantID uuid.UUID) (invoicedomain.Document, error) {
+	var owned bool
+	if err := r.db.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM invoices i JOIN contracts c ON c.id = i.contract_id
+			WHERE i.id = $1 AND c.tenant_id = $2 AND i.status <> 'cancelled'
+		)
+	`, id, tenantID).Scan(&owned); err != nil {
+		return invoicedomain.Document{}, err
+	}
+	if !owned {
+		return invoicedomain.Document{}, invoicedomain.ErrInvoiceNotFound
+	}
+
+	invoice, err := r.loadInvoiceByID(ctx, id)
+	if err != nil {
+		return invoicedomain.Document{}, err
+	}
+	if invoice.Items, err = r.loadInvoiceItems(ctx, id); err != nil {
+		return invoicedomain.Document{}, err
+	}
+	return r.buildDocument(ctx, invoice)
+}
+
+// buildDocument adds the issuing dormitory and the active payments to an
+// invoice the caller has already been allowed to see.
+func (r *Repository) buildDocument(ctx context.Context, invoice invoicedomain.Invoice) (invoicedomain.Document, error) {
+	id := invoice.ID
 	doc := invoicedomain.Document{Invoice: invoice, Payments: make([]invoicedomain.DocumentPayment, 0)}
 	if err := r.db.QueryRow(ctx, `
 		SELECT d.id, d.name, COALESCE(d.address, ''), COALESCE(d.phone, ''), d.promptpay_id

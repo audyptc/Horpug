@@ -55,6 +55,9 @@ import (
 	repairrequesthttp "apihorpug/internal/features/repairrequest/delivery/http"
 	repairrequestrepository "apihorpug/internal/features/repairrequest/repository/postgres"
 	repairrequestusecase "apihorpug/internal/features/repairrequest/usecase"
+	reporthttp "apihorpug/internal/features/report/delivery/http"
+	reportrepository "apihorpug/internal/features/report/repository/postgres"
+	reportusecase "apihorpug/internal/features/report/usecase"
 	rolehttp "apihorpug/internal/features/role/delivery/http"
 	rolerepository "apihorpug/internal/features/role/repository/postgres"
 	roleusecase "apihorpug/internal/features/role/usecase"
@@ -67,6 +70,9 @@ import (
 	tenanthttp "apihorpug/internal/features/tenant/delivery/http"
 	tenantrepository "apihorpug/internal/features/tenant/repository/postgres"
 	tenantusecase "apihorpug/internal/features/tenant/usecase"
+	portalhttp "apihorpug/internal/features/tenantportal/delivery/http"
+	portalrepository "apihorpug/internal/features/tenantportal/repository/postgres"
+	portalusecase "apihorpug/internal/features/tenantportal/usecase"
 	userhttp "apihorpug/internal/features/user/delivery/http"
 	userrepository "apihorpug/internal/features/user/repository/postgres"
 	userusecase "apihorpug/internal/features/user/usecase"
@@ -149,6 +155,8 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	moveOutRepo := moveoutrepository.NewRepository(db)
 	moveOutService := moveoutusecase.New(moveOutRepo, activityLogService)
 	moveOutHandler := moveouthttp.NewHandler(moveOutService)
+	reportHandler := reporthttp.NewHandler(reportusecase.New(reportrepository.NewRepository(db)))
+	portalHandler := portalhttp.NewHandler(portalusecase.New(portalrepository.NewRepository(db), lineClient, invoiceService, secretKey))
 	dashboardRepo := dashboardrepository.NewRepository(db)
 	dashboardService := dashboardusecase.New(dashboardRepo)
 	dashboardHandler := dashboardhttp.NewHandler(dashboardService)
@@ -170,6 +178,18 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	publicGroup := app.Group("/api/v1/public")
 	publicGroup.Post("/tenants/:id/line/link", rateLimit(20, 10*time.Minute), tenantHandler.LinkLine)
 	publicGroup.Get("/line/oa", tenantHandler.LineOAInfo)
+	publicGroup.Post("/tenant-portal/session", rateLimit(30, 10*time.Minute), portalHandler.StartSession)
+
+	// Tenant self-service pages opened from LINE. Registered before the staff
+	// auth below, which would otherwise reject their tenant tokens.
+	tenantPortal := app.Group("/api/v1/tenant", middleware.RequireTenant(secretKey))
+	tenantPortal.Get("/me", portalHandler.Profile)
+	tenantPortal.Get("/invoices", portalHandler.Invoices)
+	tenantPortal.Get("/invoices/:id", portalHandler.InvoiceDocument)
+	tenantPortal.Get("/repair-requests", portalHandler.RepairRequests)
+	tenantPortal.Post("/repair-requests", rateLimit(10, time.Hour), portalHandler.CreateRepairRequest)
+	tenantPortal.Post("/repair-requests/:id/cancel", portalHandler.CancelRepairRequest)
+	tenantPortal.Get("/announcements", portalHandler.Announcements)
 
 	api := app.Group("/api/v1")
 	api.Use(middleware.RequireAuth(secretKey))
@@ -309,6 +329,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Post("/parcels", requirePermission("/parcels", permissiondomain.ActionCreate), parcelHandler.Create)
 	api.Put("/parcels/:id", requirePermission("/parcels", permissiondomain.ActionUpdate), parcelHandler.Update)
 	api.Delete("/parcels/:id", requirePermission("/parcels", permissiondomain.ActionDelete), parcelHandler.Delete)
+
+	api.Get("/reports/monthly", requirePermission("/reports", permissiondomain.ActionRead), reportHandler.Monthly)
+	api.Get("/reports/monthly/export", requirePermission("/reports", permissiondomain.ActionRead), reportHandler.Export)
 
 	api.Get("/activity-logs", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.List)
 	api.Get("/activity-logs/:id", requirePermission("/activity-logs", permissiondomain.ActionRead), activityLogHandler.Get)
