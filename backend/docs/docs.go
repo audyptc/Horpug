@@ -2728,6 +2728,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/invoices/{id}/document": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the invoice with its items, the issuing dormitory, recorded payments, the paid and outstanding amounts, and (while money is owed and the dormitory has a PromptPay ID) a PromptPay QR payload for the outstanding amount.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Get an invoice as a printable invoice/receipt",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.Document"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/invoices/{id}/items": {
             "post": {
                 "security": [
@@ -4344,21 +4396,23 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
-            "delete": {
+            }
+        },
+        "/payments/{id}/receipt": {
+            "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Deletes a payment (and its items) and re-evaluates the invoice's paid status accordingly.",
+                "description": "Returns the payment with its receipt number and method lines, the issuing dormitory, and the invoice it pays with the amount paid so far (active payments only) and what remains.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "payments"
                 ],
-                "summary": "Delete a payment",
+                "summary": "Get a payment as a printable receipt",
                 "parameters": [
                     {
                         "type": "string",
@@ -4366,6 +4420,69 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_payment_domain.Receipt"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/{id}/void": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Payments are never deleted, since each carries a receipt number. Voiding keeps the payment and its number on record with the reason, stops it counting towards the invoice, and re-evaluates the invoice's paid status.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Void (cancel) a payment's receipt",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reason for voiding",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_payment_delivery_http.voidPaymentRequest"
+                        }
                     }
                 ],
                 "responses": {
@@ -4386,6 +4503,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
                         }
@@ -8027,6 +8150,9 @@ const docTemplate = `{
                 "phone": {
                     "type": "string"
                 },
+                "promptpay_id": {
+                    "type": "string"
+                },
                 "updated_at": {
                     "type": "string"
                 },
@@ -8117,6 +8243,93 @@ const docTemplate = `{
                 "ExpenseCategorySupplies",
                 "ExpenseCategoryOther"
             ]
+        },
+        "apihorpug_internal_features_invoice_domain.Document": {
+            "type": "object",
+            "properties": {
+                "dormitory": {
+                    "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.DocumentDormitory"
+                },
+                "invoice": {
+                    "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.Invoice"
+                },
+                "outstanding": {
+                    "type": "number"
+                },
+                "paid_amount": {
+                    "type": "number"
+                },
+                "payments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.DocumentPayment"
+                    }
+                },
+                "promptpay_payload": {
+                    "description": "PromptPayPayload is the EMVCo string to render as a QR code; empty\nwhen nothing is owed, the invoice is cancelled, or no PromptPay\naccount is set on the dormitory.",
+                    "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_invoice_domain.DocumentDormitory": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "promptpay_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_invoice_domain.DocumentPayment": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.DocumentPaymentItem"
+                    }
+                },
+                "note": {
+                    "type": "string"
+                },
+                "payment_date": {
+                    "type": "string"
+                },
+                "receipt_no": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
+                }
+            }
+        },
+        "apihorpug_internal_features_invoice_domain.DocumentPaymentItem": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "payment_method": {
+                    "type": "string"
+                },
+                "reference_no": {
+                    "type": "string"
+                }
+            }
         },
         "apihorpug_internal_features_invoice_domain.GeneratedInvoice": {
             "type": "object",
@@ -8604,11 +8817,17 @@ const docTemplate = `{
                 "payment_date": {
                     "type": "string"
                 },
+                "receipt_no": {
+                    "type": "string"
+                },
                 "room_id": {
                     "type": "string"
                 },
                 "room_number": {
                     "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/apihorpug_internal_features_payment_domain.PaymentStatus"
                 },
                 "tenant_id": {
                     "type": "string"
@@ -8618,6 +8837,12 @@ const docTemplate = `{
                 },
                 "total_amount": {
                     "type": "number"
+                },
+                "void_reason": {
+                    "type": "string"
+                },
+                "voided_at": {
+                    "type": "string"
                 }
             }
         },
@@ -8658,6 +8883,71 @@ const docTemplate = `{
                 "PaymentMethodCreditCard",
                 "PaymentMethodOther"
             ]
+        },
+        "apihorpug_internal_features_payment_domain.PaymentStatus": {
+            "type": "string",
+            "enum": [
+                "active",
+                "voided"
+            ],
+            "x-enum-varnames": [
+                "PaymentStatusActive",
+                "PaymentStatusVoided"
+            ]
+        },
+        "apihorpug_internal_features_payment_domain.Receipt": {
+            "type": "object",
+            "properties": {
+                "dormitory": {
+                    "$ref": "#/definitions/apihorpug_internal_features_payment_domain.ReceiptDormitory"
+                },
+                "invoice": {
+                    "$ref": "#/definitions/apihorpug_internal_features_payment_domain.ReceiptInvoice"
+                },
+                "payment": {
+                    "$ref": "#/definitions/apihorpug_internal_features_payment_domain.Payment"
+                }
+            }
+        },
+        "apihorpug_internal_features_payment_domain.ReceiptDormitory": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_payment_domain.ReceiptInvoice": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "outstanding": {
+                    "type": "number"
+                },
+                "paid_amount": {
+                    "type": "number"
+                },
+                "period_month": {
+                    "type": "integer"
+                },
+                "period_year": {
+                    "type": "integer"
+                },
+                "total_amount": {
+                    "type": "number"
+                }
+            }
         },
         "apihorpug_internal_features_permission_domain.Permission": {
             "type": "object",
@@ -9464,6 +9754,9 @@ const docTemplate = `{
                 },
                 "phone": {
                     "type": "string"
+                },
+                "promptpay_id": {
+                    "type": "string"
                 }
             }
         },
@@ -9489,6 +9782,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "phone": {
+                    "type": "string"
+                },
+                "promptpay_id": {
                     "type": "string"
                 }
             }
@@ -9795,6 +10091,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "payment_date": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_features_payment_delivery_http.voidPaymentRequest": {
+            "type": "object",
+            "properties": {
+                "reason": {
                     "type": "string"
                 }
             }
