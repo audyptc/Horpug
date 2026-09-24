@@ -10,6 +10,7 @@ export type ApiDormitory = {
   name: string
   address: string
   phone: string
+  promptpay_id: string
   description: string
   is_active: boolean
   managers?: ApiDormitoryManager[]

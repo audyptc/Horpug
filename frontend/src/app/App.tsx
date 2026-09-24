@@ -14,6 +14,7 @@ import ContractPage from '@/features/contract/ContractPage'
 import MeterPage from '@/features/meter/MeterPage'
 import WaterMeterPage from '@/features/watermeter/WaterMeterPage'
 import InvoicePage from '@/features/invoice/InvoicePage'
+import InvoicePrintPage from '@/features/invoice/InvoicePrintPage'
 import PaymentPage from '@/features/payment/PaymentPage'
 import ExpensePage from '@/features/expense/ExpensePage'
 import AnnouncementPage from '@/features/announcement/AnnouncementPage'
@@ -34,6 +35,8 @@ function App() {
         <Route path="/liff/link-tenant" element={<LineLinkPage />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route element={<ProtectedRoute />}>
+          {/* Outside AdminLayout so it prints as a bare page. */}
+          <Route path="/invoices/:id/print" element={<InvoicePrintPage />} />
           <Route
             path="/dashboard"
             element={

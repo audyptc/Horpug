@@ -26,6 +26,7 @@ type createDormitoryRequest struct {
 	Name        string      `json:"name"`
 	Address     string      `json:"address"`
 	Phone       string      `json:"phone"`
+	PromptPayID string      `json:"promptpay_id"`
 	Description string      `json:"description"`
 	IsActive    *bool       `json:"is_active"`
 	ManagerIDs  []uuid.UUID `json:"manager_ids"`
@@ -35,6 +36,7 @@ type updateDormitoryRequest struct {
 	Name        *string      `json:"name"`
 	Address     *string      `json:"address"`
 	Phone       *string      `json:"phone"`
+	PromptPayID *string      `json:"promptpay_id"`
 	Description *string      `json:"description"`
 	IsActive    *bool        `json:"is_active"`
 	ManagerIDs  *[]uuid.UUID `json:"manager_ids"`
@@ -322,6 +324,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		Name:        strings.TrimSpace(req.Name),
 		Address:     req.Address,
 		Phone:       req.Phone,
+		PromptPayID: req.PromptPayID,
 		Description: req.Description,
 		IsActive:    isActive,
 		ManagerIDs:  req.ManagerIDs,
@@ -330,6 +333,9 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	if err != nil {
 		if errors.Is(err, dormdomain.ErrRequiredDormitoryData) {
 			return apierror.BadRequest("name is required")
+		}
+		if errors.Is(err, dormdomain.ErrInvalidPromptPayID) {
+			return apierror.BadRequest(dormdomain.ErrInvalidPromptPayID.Error()).WithSlug("invalid_promptpay_id")
 		}
 		if errors.Is(err, dormdomain.ErrManagerNotFound) {
 			return apierror.BadRequest("one or more users not found")
@@ -376,6 +382,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		Name:        req.Name,
 		Address:     req.Address,
 		Phone:       req.Phone,
+		PromptPayID: req.PromptPayID,
 		Description: req.Description,
 		IsActive:    req.IsActive,
 		ManagerIDs:  req.ManagerIDs,
@@ -387,6 +394,9 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		}
 		if errors.Is(err, dormdomain.ErrRequiredDormitoryData) {
 			return apierror.BadRequest("name cannot be empty")
+		}
+		if errors.Is(err, dormdomain.ErrInvalidPromptPayID) {
+			return apierror.BadRequest(dormdomain.ErrInvalidPromptPayID.Error()).WithSlug("invalid_promptpay_id")
 		}
 		if errors.Is(err, dormdomain.ErrManagerNotFound) {
 			return apierror.BadRequest("one or more users not found")

@@ -1443,6 +1443,64 @@ const docTemplate = `{
                 }
             }
         },
+        "/documents/{id}/file": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the bytes of a file uploaded for the document. Requires access to the document's dormitory; documents that only link to an external file have nothing stored and return 404.",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "documents"
+                ],
+                "summary": "Download a document's stored file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Document ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/dormitories": {
             "get": {
                 "security": [
@@ -2360,6 +2418,132 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/invoices/generate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates the period's invoice (rent plus the period's meter readings) for each active contract in the dormitory that has none yet, or only for contract_ids when given. Each invoice is created independently: the response lists those created, the number skipped as already invoiced, and any that failed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Generate a period's invoices for a dormitory in one go",
+                "parameters": [
+                    {
+                        "description": "Generation payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_features_invoice_delivery_http.generateInvoicesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.GenerationResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/invoices/generate/preview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists the dormitory's active contracts that had started by the end of the period, flagging those already invoiced for it, those missing an electricity or water reading in the period, and those whose end date has passed.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Preview bulk invoice generation for a dormitory and period",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dormitory ID",
+                        "name": "dormitory_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Billing year",
+                        "name": "period_year",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Billing month (1-12)",
+                        "name": "period_month",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.GenerationCandidate"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/apihorpug_internal_http_apierror.Error"
                         }
@@ -7638,7 +7822,7 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "overdue_count": {
-                    "description": "Overdue is the part of the outstanding total that is past its due date.\nThe stored status is only ever changed by hand, so this is judged from\nthe due date rather than trusting an \"overdue\" flag that nothing sets.",
+                    "description": "Overdue is the part of the outstanding total that is past its due date.\nJudged from the due date rather than the stored status, which the\nhourly sweeper (invoice usecase RunOverdueSweeper) can lag by up to an\nhour.",
                     "type": "integer"
                 }
             }
@@ -7748,8 +7932,20 @@ const docTemplate = `{
                 "dormitory_name": {
                     "type": "string"
                 },
+                "file_mime": {
+                    "type": "string"
+                },
+                "file_name": {
+                    "type": "string"
+                },
+                "file_size": {
+                    "type": "integer"
+                },
                 "file_url": {
                     "type": "string"
+                },
+                "has_file": {
+                    "type": "boolean"
                 },
                 "id": {
                     "type": "string"
@@ -7921,6 +8117,101 @@ const docTemplate = `{
                 "ExpenseCategorySupplies",
                 "ExpenseCategoryOther"
             ]
+        },
+        "apihorpug_internal_features_invoice_domain.GeneratedInvoice": {
+            "type": "object",
+            "properties": {
+                "contract_id": {
+                    "type": "string"
+                },
+                "invoice_id": {
+                    "type": "string"
+                },
+                "room_number": {
+                    "type": "string"
+                },
+                "tenant_name": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
+                }
+            }
+        },
+        "apihorpug_internal_features_invoice_domain.GenerationCandidate": {
+            "type": "object",
+            "properties": {
+                "already_invoiced": {
+                    "description": "AlreadyInvoiced means the period is billed already; generation skips it.",
+                    "type": "boolean"
+                },
+                "contract_id": {
+                    "type": "string"
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "ended_before_period": {
+                    "description": "EndedBeforePeriod flags a contract still active although its end date\nis before the period starts (the tenant stayed on without renewal).",
+                    "type": "boolean"
+                },
+                "has_electricity": {
+                    "description": "HasElectricity/HasWater report whether a reading exists in the period.\nInvoices pull meter charges from the period's readings, so a missing\none bills that room without the charge.",
+                    "type": "boolean"
+                },
+                "has_water": {
+                    "type": "boolean"
+                },
+                "rent_price": {
+                    "type": "number"
+                },
+                "room_id": {
+                    "type": "string"
+                },
+                "room_number": {
+                    "type": "string"
+                },
+                "tenant_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_invoice_domain.GenerationFailure": {
+            "type": "object",
+            "properties": {
+                "contract_id": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "room_number": {
+                    "type": "string"
+                },
+                "tenant_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "apihorpug_internal_features_invoice_domain.GenerationResult": {
+            "type": "object",
+            "properties": {
+                "created": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.GeneratedInvoice"
+                    }
+                },
+                "failed": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/apihorpug_internal_features_invoice_domain.GenerationFailure"
+                    }
+                },
+                "skipped": {
+                    "type": "integer"
+                }
+            }
         },
         "apihorpug_internal_features_invoice_domain.Invoice": {
             "type": "object",
@@ -9254,6 +9545,35 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "contract_id": {
+                    "type": "string"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "issue_date": {
+                    "type": "string"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "period_month": {
+                    "type": "integer"
+                },
+                "period_year": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_features_invoice_delivery_http.generateInvoicesRequest": {
+            "type": "object",
+            "properties": {
+                "contract_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "dormitory_id": {
                     "type": "string"
                 },
                 "due_date": {

@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import axios from 'axios'
-import { api, extractErrorMessage, type ApiPage } from '@/shared/api/client'
+import { api, extractErrorCode, extractErrorMessage, type ApiPage } from '@/shared/api/client'
 import { useLanguage } from '@/shared/i18n/language'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { InformationDialog } from '@/shared/components/information-dialog'
@@ -45,6 +45,7 @@ export default function DormitoryPage() {
   const [formName, setFormName] = useState('')
   const [formAddress, setFormAddress] = useState('')
   const [formPhone, setFormPhone] = useState('')
+  const [formPromptPayId, setFormPromptPayId] = useState('')
   const [formDescription, setFormDescription] = useState('')
   const [formIsActive, setFormIsActive] = useState(true)
   const [formManagers, setFormManagers] = useState<FormManager[]>([])
@@ -130,6 +131,7 @@ export default function DormitoryPage() {
     setFormName('')
     setFormAddress('')
     setFormPhone('')
+    setFormPromptPayId('')
     setFormDescription('')
     setFormIsActive(true)
     setFormManagers([])
@@ -142,6 +144,7 @@ export default function DormitoryPage() {
     setFormName(dormitory.name)
     setFormAddress(dormitory.address)
     setFormPhone(dormitory.phone)
+    setFormPromptPayId(dormitory.promptpay_id ?? '')
     setFormDescription(dormitory.description)
     setFormIsActive(dormitory.is_active)
     setFormManagers(
@@ -171,6 +174,7 @@ export default function DormitoryPage() {
       name,
       address: formAddress,
       phone: formPhone,
+      promptpay_id: formPromptPayId,
       description: formDescription,
       is_active: formIsActive,
       manager_ids: formManagers.map((manager) => manager.id),
@@ -186,7 +190,11 @@ export default function DormitoryPage() {
       setFormOpen(false)
     } catch (err) {
       const fallback = formDormitoryId === null ? t('dormitoryCreateError') : t('dormitoryUpdateError')
-      setFormError(extractErrorMessage(err, fallback))
+      setFormError(
+        extractErrorCode(err) === 'invalid_promptpay_id'
+          ? t('dormitoryPromptPayInvalid')
+          : extractErrorMessage(err, fallback)
+      )
     } finally {
       setFormSaving(false)
     }
@@ -314,6 +322,8 @@ export default function DormitoryPage() {
         onAddressChange={setFormAddress}
         phone={formPhone}
         onPhoneChange={setFormPhone}
+        promptPayId={formPromptPayId}
+        onPromptPayIdChange={setFormPromptPayId}
         description={formDescription}
         onDescriptionChange={setFormDescription}
         isActive={formIsActive}

@@ -151,8 +151,9 @@ definitions:
       overdue_count:
         description: |-
           Overdue is the part of the outstanding total that is past its due date.
-          The stored status is only ever changed by hand, so this is judged from
-          the due date rather than trusting an "overdue" flag that nothing sets.
+          Judged from the due date rather than the stored status, which the
+          hourly sweeper (invoice usecase RunOverdueSweeper) can lag by up to an
+          hour.
         type: integer
     type: object
   apihorpug_internal_features_dashboard_domain.PaymentStats:
@@ -223,8 +224,16 @@ definitions:
         type: string
       dormitory_name:
         type: string
+      file_mime:
+        type: string
+      file_name:
+        type: string
+      file_size:
+        type: integer
       file_url:
         type: string
+      has_file:
+        type: boolean
       id:
         type: string
       name:
@@ -342,6 +351,75 @@ definitions:
     - ExpenseCategorySalary
     - ExpenseCategorySupplies
     - ExpenseCategoryOther
+  apihorpug_internal_features_invoice_domain.GeneratedInvoice:
+    properties:
+      contract_id:
+        type: string
+      invoice_id:
+        type: string
+      room_number:
+        type: string
+      tenant_name:
+        type: string
+      total_amount:
+        type: number
+    type: object
+  apihorpug_internal_features_invoice_domain.GenerationCandidate:
+    properties:
+      already_invoiced:
+        description: AlreadyInvoiced means the period is billed already; generation
+          skips it.
+        type: boolean
+      contract_id:
+        type: string
+      end_date:
+        type: string
+      ended_before_period:
+        description: |-
+          EndedBeforePeriod flags a contract still active although its end date
+          is before the period starts (the tenant stayed on without renewal).
+        type: boolean
+      has_electricity:
+        description: |-
+          HasElectricity/HasWater report whether a reading exists in the period.
+          Invoices pull meter charges from the period's readings, so a missing
+          one bills that room without the charge.
+        type: boolean
+      has_water:
+        type: boolean
+      rent_price:
+        type: number
+      room_id:
+        type: string
+      room_number:
+        type: string
+      tenant_name:
+        type: string
+    type: object
+  apihorpug_internal_features_invoice_domain.GenerationFailure:
+    properties:
+      contract_id:
+        type: string
+      error:
+        type: string
+      room_number:
+        type: string
+      tenant_name:
+        type: string
+    type: object
+  apihorpug_internal_features_invoice_domain.GenerationResult:
+    properties:
+      created:
+        items:
+          $ref: '#/definitions/apihorpug_internal_features_invoice_domain.GeneratedInvoice'
+        type: array
+      failed:
+        items:
+          $ref: '#/definitions/apihorpug_internal_features_invoice_domain.GenerationFailure'
+        type: array
+      skipped:
+        type: integer
+    type: object
   apihorpug_internal_features_invoice_domain.Invoice:
     properties:
       contract_id:
@@ -1236,6 +1314,25 @@ definitions:
   internal_features_invoice_delivery_http.createInvoiceRequest:
     properties:
       contract_id:
+        type: string
+      due_date:
+        type: string
+      issue_date:
+        type: string
+      note:
+        type: string
+      period_month:
+        type: integer
+      period_year:
+        type: integer
+    type: object
+  internal_features_invoice_delivery_http.generateInvoicesRequest:
+    properties:
+      contract_ids:
+        items:
+          type: string
+        type: array
+      dormitory_id:
         type: string
       due_date:
         type: string
@@ -2571,6 +2668,45 @@ paths:
       summary: Update a document record
       tags:
       - documents
+  /documents/{id}/file:
+    get:
+      description: Returns the bytes of a file uploaded for the document. Requires
+        access to the document's dormitory; documents that only link to an external
+        file have nothing stored and return 404.
+      parameters:
+      - description: Document ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Download a document's stored file
+      tags:
+      - documents
   /dormitories:
     get:
       description: Returns every dormitory for roles with full dormitory access, otherwise
@@ -3459,6 +3595,92 @@ paths:
       security:
       - BearerAuth: []
       summary: Send an invoice to the tenant via LINE
+      tags:
+      - invoices
+  /invoices/generate:
+    post:
+      consumes:
+      - application/json
+      description: 'Creates the period''s invoice (rent plus the period''s meter readings)
+        for each active contract in the dormitory that has none yet, or only for contract_ids
+        when given. Each invoice is created independently: the response lists those
+        created, the number skipped as already invoiced, and any that failed.'
+      parameters:
+      - description: Generation payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_features_invoice_delivery_http.generateInvoicesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apihorpug_internal_features_invoice_domain.GenerationResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Generate a period's invoices for a dormitory in one go
+      tags:
+      - invoices
+  /invoices/generate/preview:
+    get:
+      description: Lists the dormitory's active contracts that had started by the
+        end of the period, flagging those already invoiced for it, those missing an
+        electricity or water reading in the period, and those whose end date has passed.
+      parameters:
+      - description: Dormitory ID
+        in: query
+        name: dormitory_id
+        required: true
+        type: string
+      - description: Billing year
+        in: query
+        name: period_year
+        required: true
+        type: integer
+      - description: Billing month (1-12)
+        in: query
+        name: period_month
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/apihorpug_internal_features_invoice_domain.GenerationCandidate'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apihorpug_internal_http_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Preview bulk invoice generation for a dormitory and period
       tags:
       - invoices
   /menus:

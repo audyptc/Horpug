@@ -9,6 +9,7 @@ import (
 	activitylogdomain "apihorpug/internal/features/activitylog/domain"
 	activitylogusecase "apihorpug/internal/features/activitylog/usecase"
 	dormdomain "apihorpug/internal/features/dormitory/domain"
+	"apihorpug/internal/platform/promptpay"
 
 	"github.com/google/uuid"
 )
@@ -17,6 +18,7 @@ type CreateInput struct {
 	Name        string
 	Address     string
 	Phone       string
+	PromptPayID string
 	Description string
 	IsActive    bool
 	ManagerIDs  []uuid.UUID
@@ -27,6 +29,7 @@ type UpdateInput struct {
 	Name        *string
 	Address     *string
 	Phone       *string
+	PromptPayID *string
 	Description *string
 	IsActive    *bool
 	ManagerIDs  *[]uuid.UUID
@@ -164,6 +167,11 @@ func (s *Service) Create(ctx context.Context, input CreateInput, ipAddress strin
 	if input.Name == "" {
 		return dormdomain.Dormitory{}, dormdomain.ErrRequiredDormitoryData
 	}
+	promptPayID, err := promptpay.NormalizeID(input.PromptPayID)
+	if err != nil {
+		return dormdomain.Dormitory{}, dormdomain.ErrInvalidPromptPayID
+	}
+	input.PromptPayID = promptPayID
 
 	dormitory, err := s.repo.Create(ctx, input)
 	if err != nil {
@@ -189,6 +197,13 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 	if input.Phone != nil {
 		phone := strings.TrimSpace(*input.Phone)
 		input.Phone = &phone
+	}
+	if input.PromptPayID != nil {
+		promptPayID, err := promptpay.NormalizeID(*input.PromptPayID)
+		if err != nil {
+			return dormdomain.Dormitory{}, dormdomain.ErrInvalidPromptPayID
+		}
+		input.PromptPayID = &promptPayID
 	}
 	if input.Description != nil {
 		description := strings.TrimSpace(*input.Description)

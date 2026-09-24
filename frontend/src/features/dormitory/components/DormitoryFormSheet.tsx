@@ -23,6 +23,8 @@ type DormitoryFormSheetProps = {
   onAddressChange: (address: string) => void
   phone: string
   onPhoneChange: (phone: string) => void
+  promptPayId: string
+  onPromptPayIdChange: (promptPayId: string) => void
   description: string
   onDescriptionChange: (description: string) => void
   isActive: boolean
@@ -45,6 +47,8 @@ export function DormitoryFormSheet({
   onAddressChange,
   phone,
   onPhoneChange,
+  promptPayId,
+  onPromptPayIdChange,
   description,
   onDescriptionChange,
   isActive,
@@ -100,6 +104,19 @@ export function DormitoryFormSheet({
                 value={phone}
                 onChange={(event) => onPhoneChange(event.target.value)}
               />
+            </label>
+
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
+              {t('dormitoryFormPromptPayLabel')}
+              <input
+                type="text"
+                inputMode="numeric"
+                className="h-10 rounded-md border border-input bg-transparent px-3 text-sm"
+                placeholder={t('dormitoryFormPromptPayPlaceholder')}
+                value={promptPayId}
+                onChange={(event) => onPromptPayIdChange(event.target.value)}
+              />
+              <span className="text-xs font-normal text-muted-foreground">{t('dormitoryFormPromptPayHint')}</span>
             </label>
 
             <label className="flex flex-col gap-1.5 text-sm font-medium">

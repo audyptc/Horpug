@@ -479,6 +479,7 @@ func AutoMigrate(db *pgxpool.Pool) error {
 
 		`ALTER TABLE room_types ADD COLUMN IF NOT EXISTS price NUMERIC(10,2) NOT NULL DEFAULT 0`,
 
+		`ALTER TABLE dormitories ADD COLUMN IF NOT EXISTS promptpay_id VARCHAR(20) NOT NULL DEFAULT ''`,
 		`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS line_id VARCHAR(100) DEFAULT ''`,
 		`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS line_user_id VARCHAR(64) DEFAULT ''`,
 		`UPDATE tenants SET line_user_id = '' WHERE line_user_id IS NULL`,

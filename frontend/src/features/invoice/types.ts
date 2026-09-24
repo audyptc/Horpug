@@ -12,6 +12,27 @@ export type ApiInvoiceItem = {
   created_at: string
 }
 
+export type ApiInvoiceDocument = {
+  invoice: ApiInvoice
+  dormitory: {
+    id: string
+    name: string
+    address: string
+    phone: string
+    promptpay_id: string
+  }
+  payments: {
+    id: string
+    payment_date: string
+    total_amount: number
+    note: string
+    items: { payment_method: string; amount: number; reference_no: string }[]
+  }[]
+  paid_amount: number
+  outstanding: number
+  promptpay_payload?: string
+}
+
 export type ApiGenerationCandidate = {
   contract_id: string
   tenant_name: string

@@ -8,6 +8,7 @@ import {
   ChevronsRight,
   MessageCircle,
   Pencil,
+  Printer,
   Trash2,
   X,
 } from 'lucide-react'
@@ -347,6 +348,16 @@ export function InvoiceListCard({
                               }}
                             >
                               <MessageCircle />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              title={t('invoicePrint')}
+                              aria-label={t('invoicePrint')}
+                              onClick={() => window.open(`/invoices/${invoice.id}/print`, '_blank', 'noopener')}
+                            >
+                              <Printer />
                             </Button>
                             <Button
                               type="button"
