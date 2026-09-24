@@ -164,7 +164,7 @@ func (r *Repository) GetSummary(ctx context.Context, requesterID uuid.UUID, dorm
 			JOIN invoices i ON i.id = p.invoice_id
 			JOIN contracts c ON c.id = i.contract_id
 			JOIN rooms rm ON rm.id = c.room_id
-			WHERE %s AND p.payment_date >= $5::date AND p.payment_date < $6::date
+			WHERE %s AND p.status = 'active' AND p.payment_date >= $5::date AND p.payment_date < $6::date
 		`, scopeCondition), with(window.MonthStart, window.NextMonthStart)...).Scan(&stats.ReceivedThisMonth); err != nil {
 			return summary, err
 		}

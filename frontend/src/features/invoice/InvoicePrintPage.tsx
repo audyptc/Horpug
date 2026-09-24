@@ -56,8 +56,10 @@ export default function InvoicePrintPage() {
   const formatDate = (value: string) =>
     new Date(value).toLocaleDateString(dateLocale, { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
 
-  const isReceipt = doc?.invoice.status === 'paid'
-  const title = isReceipt ? t('invoicePrintReceiptTitle') : t('invoicePrintInvoiceTitle')
+  // Receipts are per payment now (see ReceiptPrintPage); this is always the
+  // invoice, marked paid once settled.
+  const isPaid = doc?.invoice.status === 'paid'
+  const title = t('invoicePrintInvoiceTitle')
   useDocumentTitle(
     doc
       ? `${title} ${doc.invoice.room_number ?? ''} ${formatPeriod(doc.invoice.period_year, doc.invoice.period_month)}`
@@ -98,13 +100,14 @@ export default function InvoicePrintPage() {
           <div className="flex flex-col gap-1 sm:text-right">
             <h2 className="text-lg font-semibold">{title}</h2>
             {isCancelled && <p className="text-sm font-semibold text-red-600">{t('invoiceStatusCancelled')}</p>}
+            {isPaid && <p className="text-sm font-semibold text-green-700">{t('invoiceStatusPaid')}</p>}
             <p className="text-sm text-gray-600">
               {t('invoiceFormPeriodLabel')}: {formatPeriod(invoice.period_year, invoice.period_month)}
             </p>
             <p className="text-sm text-gray-600">
               {t('invoiceFormIssueDateLabel')}: {formatDate(invoice.issue_date)}
             </p>
-            {!isReceipt && (
+            {!isPaid && (
               <p className="text-sm text-gray-600">
                 {t('invoiceFormDueDateLabel')}: {formatDate(invoice.due_date)}
               </p>
@@ -152,7 +155,7 @@ export default function InvoicePrintPage() {
                 <td className="pt-1 text-right text-gray-600">{formatMoney(doc.paid_amount)}</td>
               </tr>
             )}
-            {!isReceipt && !isCancelled && (
+            {!isPaid && !isCancelled && (
               <tr>
                 <td className="pt-1 text-base font-semibold">{t('invoicePrintOutstandingLabel')}</td>
                 <td className="pt-1 text-right text-base font-semibold">{formatMoney(doc.outstanding)}</td>
@@ -168,6 +171,7 @@ export default function InvoicePrintPage() {
               {doc.payments.map((payment) => (
                 <li key={payment.id} className="flex justify-between gap-4 border-b border-gray-200 py-1">
                   <span>
+                    {payment.receipt_no && `${payment.receipt_no} · `}
                     {formatDate(payment.payment_date)}
                     {payment.items.length > 0 &&
                       ` · ${payment.items
@@ -197,14 +201,6 @@ export default function InvoicePrintPage() {
 
         {invoice.note && <p className="text-sm text-gray-600">{invoice.note}</p>}
 
-        {isReceipt && (
-          <footer className="mt-8 flex justify-end text-sm">
-            <div className="flex w-56 flex-col items-center gap-1">
-              <div className="h-10 w-full border-b border-gray-400" />
-              <span className="text-gray-600">{t('invoicePrintReceivedBy')}</span>
-            </div>
-          </footer>
-        )}
       </article>
     </div>
   )

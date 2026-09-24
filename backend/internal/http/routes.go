@@ -269,7 +269,9 @@ func RegisterRoutes(app *fiber.App, db *pgxpool.Pool, secretKey string, accessTo
 	api.Get("/payments/:id", requirePermission("/payments", permissiondomain.ActionRead), paymentHandler.Get)
 	api.Post("/payments", requirePermission("/payments", permissiondomain.ActionCreate), paymentHandler.Create)
 	api.Put("/payments/:id", requirePermission("/payments", permissiondomain.ActionUpdate), paymentHandler.Update)
-	api.Delete("/payments/:id", requirePermission("/payments", permissiondomain.ActionDelete), paymentHandler.Delete)
+	api.Get("/payments/:id/receipt", requirePermission("/payments", permissiondomain.ActionRead), paymentHandler.Receipt)
+	// Payments carry receipt numbers, so they are voided, never deleted.
+	api.Post("/payments/:id/void", requirePermission("/payments", permissiondomain.ActionDelete), paymentHandler.Void)
 
 	api.Get("/expenses", requirePermission("/expenses", permissiondomain.ActionRead), expenseHandler.List)
 	api.Get("/expenses/:id", requirePermission("/expenses", permissiondomain.ActionRead), expenseHandler.Get)

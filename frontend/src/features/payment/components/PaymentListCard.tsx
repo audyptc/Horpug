@@ -1,4 +1,16 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Pencil, Trash2, X } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Ban,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Pencil,
+  Printer,
+  X,
+} from 'lucide-react'
 import { useLanguage, type TranslationKey } from '@/shared/i18n/language'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
@@ -67,7 +79,7 @@ type PaymentListCardProps = {
   deletingPaymentId: string | null
   onCreatePayment: () => void
   onEditPayment: (payment: ApiPayment) => void
-  onDeletePayment: (payment: ApiPayment) => void
+  onVoidPayment: (payment: ApiPayment) => void
 }
 
 export function PaymentListCard({
@@ -99,7 +111,7 @@ export function PaymentListCard({
   deletingPaymentId,
   onCreatePayment,
   onEditPayment,
-  onDeletePayment,
+  onVoidPayment,
 }: PaymentListCardProps) {
   const { t } = useLanguage()
 
@@ -290,14 +302,28 @@ export function PaymentListCard({
                         .map((item) => item.reference_no)
                         .filter((value) => value.trim().length > 0)
 
+                      const isVoided = payment.status === 'voided'
+
                       return (
-                        <TableRow key={payment.id}>
-                          <TableCell className="font-semibold">{payment.tenant_name || '—'}</TableCell>
+                        <TableRow key={payment.id} className={isVoided ? 'opacity-60' : undefined}>
+                          <TableCell>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-semibold">{payment.tenant_name || '—'}</span>
+                              <span className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                                {payment.receipt_no || '—'}
+                                {isVoided && (
+                                  <Badge variant="destructive" title={payment.void_reason || undefined}>
+                                    {t('paymentVoidedBadge')}
+                                  </Badge>
+                                )}
+                              </span>
+                            </div>
+                          </TableCell>
                           <TableCell className="text-muted-foreground">
                             {payment.room_number || '—'}
                             {payment.dormitory_name ? ` (${payment.dormitory_name})` : ''}
                           </TableCell>
-                          <TableCell className="text-muted-foreground">
+                          <TableCell className={isVoided ? 'text-muted-foreground line-through' : 'text-muted-foreground'}>
                             {payment.total_amount.toLocaleString()}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
@@ -321,9 +347,20 @@ export function PaymentListCard({
                                 type="button"
                                 size="icon"
                                 variant="outline"
+                                title={t('paymentPrintReceipt')}
+                                aria-label={t('paymentPrintReceipt')}
+                                onClick={() => window.open(`/payments/${payment.id}/receipt`, '_blank', 'noopener')}
+                              >
+                                <Printer />
+                              </Button>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
                                 title={t('paymentEdit')}
                                 aria-label={t('paymentEdit')}
                                 onClick={() => onEditPayment(payment)}
+                                disabled={isVoided}
                               >
                                 <Pencil />
                               </Button>
@@ -331,12 +368,12 @@ export function PaymentListCard({
                                 type="button"
                                 size="icon"
                                 variant="destructive"
-                                title={t('paymentDelete')}
-                                aria-label={t('paymentDelete')}
-                                onClick={() => onDeletePayment(payment)}
-                                disabled={deletingPaymentId === payment.id}
+                                title={t('paymentVoid')}
+                                aria-label={t('paymentVoid')}
+                                onClick={() => onVoidPayment(payment)}
+                                disabled={isVoided || deletingPaymentId === payment.id}
                               >
-                                <Trash2 />
+                                <Ban />
                               </Button>
                             </div>
                           </TableCell>

@@ -30,9 +30,9 @@ func (r *Repository) GetDocument(ctx context.Context, id, requesterID uuid.UUID)
 	}
 
 	rows, err := r.db.Query(ctx, `
-		SELECT id, payment_date, total_amount, COALESCE(note, '')
+		SELECT id, COALESCE(receipt_no, ''), payment_date, total_amount, COALESCE(note, '')
 		FROM payments
-		WHERE invoice_id = $1
+		WHERE invoice_id = $1 AND status = 'active'
 		ORDER BY payment_date ASC, created_at ASC
 	`, id)
 	if err != nil {
@@ -40,7 +40,7 @@ func (r *Repository) GetDocument(ctx context.Context, id, requesterID uuid.UUID)
 	}
 	for rows.Next() {
 		var p invoicedomain.DocumentPayment
-		if err := rows.Scan(&p.ID, &p.PaymentDate, &p.TotalAmount, &p.Note); err != nil {
+		if err := rows.Scan(&p.ID, &p.ReceiptNo, &p.PaymentDate, &p.TotalAmount, &p.Note); err != nil {
 			rows.Close()
 			return invoicedomain.Document{}, err
 		}

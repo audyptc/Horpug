@@ -94,22 +94,36 @@ export function PaymentFormSheet({
               />
             </label>
 
+            {isEditing && (
+              <p className="rounded-md bg-muted px-3 py-2 text-xs font-normal text-muted-foreground">
+                {t('paymentReceiptLockedHint')}
+              </p>
+            )}
+
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {t('paymentFormDateLabel')}
-              <DatePickerField
-                value={paymentDate}
-                onChange={onPaymentDateChange}
-                placeholder={t('paymentFormDateLabel')}
-              />
+              {isEditing ? (
+                <span className="h-10 rounded-md border border-input bg-muted/40 px-3 py-2 text-sm font-normal">
+                  {paymentDate}
+                </span>
+              ) : (
+                <DatePickerField
+                  value={paymentDate}
+                  onChange={onPaymentDateChange}
+                  placeholder={t('paymentFormDateLabel')}
+                />
+              )}
             </label>
 
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-medium">{t('paymentFormItemsLabel')}</span>
-                <Button type="button" size="sm" variant="outline" onClick={onAddItem}>
-                  <Plus />
-                  {t('paymentAddItem')}
-                </Button>
+                {!isEditing && (
+                  <Button type="button" size="sm" variant="outline" onClick={onAddItem}>
+                    <Plus />
+                    {t('paymentAddItem')}
+                  </Button>
+                )}
               </div>
 
               <div className="flex flex-col gap-3">
@@ -127,7 +141,7 @@ export function PaymentFormSheet({
                         title={t('paymentRemoveItem')}
                         aria-label={t('paymentRemoveItem')}
                         onClick={() => onRemoveItem(item.key)}
-                        disabled={items.length <= 1}
+                        disabled={isEditing || items.length <= 1}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -135,17 +149,23 @@ export function PaymentFormSheet({
 
                     <label className="flex flex-col gap-1.5 text-sm font-medium">
                       {t('paymentFormMethodLabel')}
-                      <Combobox
-                        options={PAYMENT_METHODS.map((value) => ({
-                          value,
-                          label: t(paymentMethodLabelKeys[value]),
-                        }))}
-                        value={item.paymentMethod}
-                        onChange={(value) => onItemChange(item.key, { paymentMethod: value as PaymentMethod })}
-                        placeholder={t('paymentFormMethodLabel')}
-                        searchPlaceholder={t('paymentFormMethodSearchPlaceholder')}
-                        emptyText={t('paymentFormMethodNoResults')}
-                      />
+                      {isEditing ? (
+                        <span className="h-10 rounded-md border border-input bg-muted/40 px-3 py-2 text-sm font-normal">
+                          {t(paymentMethodLabelKeys[item.paymentMethod])}
+                        </span>
+                      ) : (
+                        <Combobox
+                          options={PAYMENT_METHODS.map((value) => ({
+                            value,
+                            label: t(paymentMethodLabelKeys[value]),
+                          }))}
+                          value={item.paymentMethod}
+                          onChange={(value) => onItemChange(item.key, { paymentMethod: value as PaymentMethod })}
+                          placeholder={t('paymentFormMethodLabel')}
+                          searchPlaceholder={t('paymentFormMethodSearchPlaceholder')}
+                          emptyText={t('paymentFormMethodNoResults')}
+                        />
+                      )}
                     </label>
 
                     <label className="flex flex-col gap-1.5 text-sm font-medium">
@@ -156,6 +176,7 @@ export function PaymentFormSheet({
                         step="0.01"
                         className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-right text-sm"
                         value={item.amount}
+                        readOnly={isEditing}
                         onChange={(event) => onItemChange(item.key, { amount: event.target.value })}
                       />
                     </label>

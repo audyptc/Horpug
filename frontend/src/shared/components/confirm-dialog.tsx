@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { TriangleAlert } from 'lucide-react'
 import {
   AlertDialog,
@@ -21,6 +21,8 @@ type ConfirmDialogProps = {
   loading?: boolean
   error?: string | null
   onConfirm: () => void
+  // Extra content between the description and the buttons, e.g. a reason field.
+  children?: ReactNode
 }
 
 export function ConfirmDialog({
@@ -33,6 +35,7 @@ export function ConfirmDialog({
   loading = false,
   error = null,
   onConfirm,
+  children,
 }: ConfirmDialogProps) {
   const hasReportedError = useRef(false)
 
@@ -58,6 +61,7 @@ export function ConfirmDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {children}
         <AlertDialogFooter>
           <AlertDialogCancel asChild>
             <Button type="button" variant="outline" disabled={loading}>

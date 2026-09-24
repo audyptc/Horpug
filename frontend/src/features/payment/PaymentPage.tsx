@@ -59,6 +59,7 @@ export default function PaymentPage() {
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [confirmDeletePayment, setConfirmDeletePayment] = useState<ApiPayment | null>(null)
+  const [voidReason, setVoidReason] = useState('')
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS)
@@ -216,10 +217,13 @@ export default function PaymentPage() {
       refresh()
       setFormOpen(false)
     } catch (err) {
+      const code = extractErrorCode(err)
       setFormError(
-        extractErrorCode(err) === 'payment_exceeds_invoice'
+        code === 'payment_exceeds_invoice'
           ? t('paymentExceedsInvoice')
-          : extractErrorMessage(err, t(isEditing ? 'paymentUpdateError' : 'paymentCreateError')),
+          : code === 'receipt_issued'
+            ? t('paymentReceiptIssuedError')
+            : extractErrorMessage(err, t(isEditing ? 'paymentUpdateError' : 'paymentCreateError')),
       )
     } finally {
       setFormSaving(false)
@@ -234,14 +238,13 @@ export default function PaymentPage() {
     setDeleteError(null)
 
     try {
-      await api.delete(`/payments/${payment.id}`)
-      // Deleting the last row of the final page would otherwise strand the
-      // view on a page the server no longer has.
-      setPage((value) => (payments?.length === 1 ? Math.max(1, value - 1) : value))
+      // Payments carry receipt numbers, so they are voided (kept, marked
+      // cancelled) rather than deleted; the row stays in the list.
+      await api.post(`/payments/${payment.id}/void`, { reason: voidReason.trim() })
       refresh()
       setConfirmDeletePayment(null)
     } catch (err) {
-      setDeleteError(extractErrorMessage(err, t('paymentDeleteError')))
+      setDeleteError(extractErrorMessage(err, t('paymentVoidError')))
     } finally {
       setDeletingPaymentId(null)
     }
@@ -292,27 +295,40 @@ export default function PaymentPage() {
         deletingPaymentId={deletingPaymentId}
         onCreatePayment={openCreateForm}
         onEditPayment={openEditForm}
-        onDeletePayment={setConfirmDeletePayment}
+        onVoidPayment={(payment) => {
+          setVoidReason('')
+          setConfirmDeletePayment(payment)
+        }}
       />
 
       <ConfirmDialog
         open={confirmDeletePayment !== null}
         onOpenChange={(open) => !open && setConfirmDeletePayment(null)}
-        title={t('confirmDeleteTitle')}
+        title={t('paymentVoidTitle')}
         description={
           confirmDeletePayment
-            ? t('paymentDeleteConfirm')
+            ? t('paymentVoidConfirm')
+                .replace('{receipt}', confirmDeletePayment.receipt_no || '-')
                 .replace('{tenant}', confirmDeletePayment.tenant_name || '-')
                 .replace('{room}', confirmDeletePayment.room_number || '-')
                 .replace('{amount}', confirmDeletePayment.total_amount.toLocaleString())
             : ''
         }
-        confirmLabel={t('paymentDelete')}
+        confirmLabel={t('paymentVoid')}
         cancelLabel={t('cancel')}
         loading={deletingPaymentId === confirmDeletePayment?.id}
         error={deleteError}
         onConfirm={handleDeletePayment}
-      />
+      >
+        <label className="flex flex-col gap-1.5 text-sm font-medium">
+          {t('paymentVoidReasonLabel')}
+          <textarea
+            className="min-h-16 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-2 text-sm font-normal"
+            value={voidReason}
+            onChange={(event) => setVoidReason(event.target.value)}
+          />
+        </label>
+      </ConfirmDialog>
 
       <PaymentFormSheet
         open={formOpen}

@@ -13,4 +13,9 @@ var (
 	// ErrPaymentExceedsInvoice means the invoice's recorded payments would add
 	// up to more than its total_amount.
 	ErrPaymentExceedsInvoice = errors.New("recorded payments cannot exceed the invoice total")
+	// ErrPaymentVoided means the payment's receipt was already cancelled.
+	ErrPaymentVoided = errors.New("this payment has been voided")
+	// ErrReceiptIssued means an edit would change what the issued receipt
+	// says (date, methods or amounts); void it and record a new payment.
+	ErrReceiptIssued = errors.New("a receipt has been issued for this payment; void it and record a new one to change the date or amounts")
 )

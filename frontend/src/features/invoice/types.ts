@@ -23,6 +23,7 @@ export type ApiInvoiceDocument = {
   }
   payments: {
     id: string
+    receipt_no: string
     payment_date: string
     total_amount: number
     note: string

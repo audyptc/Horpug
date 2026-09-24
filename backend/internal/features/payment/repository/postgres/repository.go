@@ -33,6 +33,7 @@ const selectPaymentColumns = `
 	p.id, p.invoice_id, c.tenant_id, t.first_name, t.last_name,
 	c.room_id, rm.room_number, rm.dormitory_id, d.name,
 	p.total_amount, p.payment_date, p.note,
+	COALESCE(p.receipt_no, ''), p.status, p.voided_at, p.void_reason,
 	p.created_by, p.created_at,
 	COALESCE((
 		SELECT jsonb_agg(jsonb_build_object(
@@ -245,7 +246,7 @@ func (r *Repository) GetByID(ctx context.Context, id, requesterID uuid.UUID) (pa
 // its total_amount or more, marks the invoice paid. It runs in a transaction
 // so the payment row, its items and the invoice status stay consistent.
 func (r *Repository) Create(ctx context.Context, input paymentusecase.CreateInput) (paymentdomain.Payment, paymentdomain.InvoiceStatusChange, error) {
-	invoiceTotal, invoiceStatus, err := r.loadInvoiceForPayment(ctx, input.InvoiceID, input.CreatedBy)
+	invoiceTotal, invoiceStatus, dormitoryID, err := r.loadInvoiceForPayment(ctx, input.InvoiceID, input.CreatedBy)
 	if err != nil {
 		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
@@ -270,11 +271,19 @@ func (r *Repository) Create(ctx context.Context, input paymentusecase.CreateInpu
 		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
 
+	receiptYear := input.PaymentDate.Year()
+	receiptSeq, err := nextReceiptSeq(ctx, tx, dormitoryID, receiptYear)
+	if err != nil {
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
+	}
+
 	id := uuid.New()
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO payments (id, invoice_id, payment_date, total_amount, note, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`, id, input.InvoiceID, input.PaymentDate, total, input.Note, input.CreatedBy); err != nil {
+		INSERT INTO payments (id, invoice_id, payment_date, total_amount, note, created_by,
+			dormitory_id, receipt_year, receipt_seq, receipt_no)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, id, input.InvoiceID, input.PaymentDate, total, input.Note, input.CreatedBy,
+		dormitoryID, receiptYear, receiptSeq, FormatReceiptNo(receiptYear, receiptSeq)); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
 			return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, paymentdomain.ErrInvoiceNotFound
@@ -292,7 +301,7 @@ func (r *Repository) Create(ctx context.Context, input paymentusecase.CreateInpu
 	}
 
 	var totalPaid float64
-	if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(total_amount), 0) FROM payments WHERE invoice_id = $1`, input.InvoiceID).Scan(&totalPaid); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(total_amount), 0) FROM payments WHERE invoice_id = $1 AND status = 'active'`, input.InvoiceID).Scan(&totalPaid); err != nil {
 		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
 
@@ -340,11 +349,15 @@ func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, inpu
 	defer tx.Rollback(ctx)
 
 	var invoiceID uuid.UUID
-	if err := tx.QueryRow(ctx, `SELECT invoice_id FROM payments WHERE id = $1`, id).Scan(&invoiceID); err != nil {
+	var status paymentdomain.PaymentStatus
+	if err := tx.QueryRow(ctx, `SELECT invoice_id, status FROM payments WHERE id = $1 FOR UPDATE`, id).Scan(&invoiceID, &status); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, paymentdomain.ErrPaymentNotFound
 		}
 		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
+	}
+	if status == paymentdomain.PaymentStatusVoided {
+		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, paymentdomain.ErrPaymentVoided
 	}
 
 	var invoiceTotal float64
@@ -384,7 +397,7 @@ func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, inpu
 	}
 
 	var totalPaid float64
-	if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(total_amount), 0) FROM payments WHERE invoice_id = $1`, invoiceID).Scan(&totalPaid); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(total_amount), 0) FROM payments WHERE invoice_id = $1 AND status = 'active'`, invoiceID).Scan(&totalPaid); err != nil {
 		return paymentdomain.Payment{}, paymentdomain.InvoiceStatusChange{}, err
 	}
 
@@ -413,7 +426,11 @@ func (r *Repository) Update(ctx context.Context, id, requesterID uuid.UUID, inpu
 	return payment, change, err
 }
 
-func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) (paymentdomain.InvoiceStatusChange, error) {
+// Void cancels a payment's receipt instead of deleting it, so its number is
+// never reused and the cancellation stays on record. A voided payment no
+// longer counts towards the invoice, which goes back to unpaid if it drops
+// below the total.
+func (r *Repository) Void(ctx context.Context, id, requesterID uuid.UUID, reason string) (paymentdomain.InvoiceStatusChange, error) {
 	if err := r.ensurePaymentAccess(ctx, id, requesterID); err != nil {
 		return paymentdomain.InvoiceStatusChange{}, err
 	}
@@ -425,21 +442,32 @@ func (r *Repository) Delete(ctx context.Context, id, requesterID uuid.UUID) (pay
 	defer tx.Rollback(ctx)
 
 	var invoiceID uuid.UUID
-	if err := tx.QueryRow(ctx, `DELETE FROM payments WHERE id = $1 RETURNING invoice_id`, id).Scan(&invoiceID); err != nil {
+	var status paymentdomain.PaymentStatus
+	if err := tx.QueryRow(ctx, `SELECT invoice_id, status FROM payments WHERE id = $1 FOR UPDATE`, id).Scan(&invoiceID, &status); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return paymentdomain.InvoiceStatusChange{}, paymentdomain.ErrPaymentNotFound
 		}
 		return paymentdomain.InvoiceStatusChange{}, err
 	}
+	if status == paymentdomain.PaymentStatusVoided {
+		return paymentdomain.InvoiceStatusChange{}, paymentdomain.ErrPaymentVoided
+	}
 
 	var invoiceTotal float64
 	var invoiceStatus string
-	if err := tx.QueryRow(ctx, `SELECT total_amount, status FROM invoices WHERE id = $1`, invoiceID).Scan(&invoiceTotal, &invoiceStatus); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT total_amount, status FROM invoices WHERE id = $1 FOR UPDATE`, invoiceID).Scan(&invoiceTotal, &invoiceStatus); err != nil {
+		return paymentdomain.InvoiceStatusChange{}, err
+	}
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE payments SET status = 'voided', voided_at = NOW(), voided_by = $2, void_reason = $3
+		WHERE id = $1
+	`, id, requesterID, reason); err != nil {
 		return paymentdomain.InvoiceStatusChange{}, err
 	}
 
 	var totalPaid float64
-	if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(total_amount), 0) FROM payments WHERE invoice_id = $1`, invoiceID).Scan(&totalPaid); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(total_amount), 0) FROM payments WHERE invoice_id = $1 AND status = 'active'`, invoiceID).Scan(&totalPaid); err != nil {
 		return paymentdomain.InvoiceStatusChange{}, err
 	}
 
@@ -479,6 +507,10 @@ func scanPayment(row pgx.Row) (paymentdomain.Payment, error) {
 		&payment.TotalAmount,
 		&payment.PaymentDate,
 		&payment.Note,
+		&payment.ReceiptNo,
+		&payment.Status,
+		&payment.VoidedAt,
+		&payment.VoidReason,
 		&payment.CreatedBy,
 		&payment.CreatedAt,
 		&itemsRaw,
@@ -532,22 +564,28 @@ func (r *Repository) dormitoryScope(ctx context.Context, userID uuid.UUID) (full
 // contract's room, then returns the invoice's total amount and status. A nil
 // requesterID (should not normally happen, since Create always supplies one)
 // skips the dormitory-access check.
-func (r *Repository) loadInvoiceForPayment(ctx context.Context, invoiceID uuid.UUID, requesterID *uuid.UUID) (totalAmount float64, status string, err error) {
+func (r *Repository) loadInvoiceForPayment(ctx context.Context, invoiceID uuid.UUID, requesterID *uuid.UUID) (totalAmount float64, status string, dormitoryID uuid.UUID, err error) {
 	if requesterID == nil {
-		err = r.db.QueryRow(ctx, `SELECT total_amount, status FROM invoices WHERE id = $1`, invoiceID).Scan(&totalAmount, &status)
+		err = r.db.QueryRow(ctx, `
+			SELECT i.total_amount, i.status, rm.dormitory_id
+			FROM invoices i
+			JOIN contracts c ON c.id = i.contract_id
+			JOIN rooms rm ON rm.id = c.room_id
+			WHERE i.id = $1
+		`, invoiceID).Scan(&totalAmount, &status, &dormitoryID)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, "", paymentdomain.ErrInvoiceNotFound
+			return 0, "", uuid.Nil, paymentdomain.ErrInvoiceNotFound
 		}
-		return totalAmount, status, err
+		return totalAmount, status, dormitoryID, err
 	}
 
 	full, roleID, err := r.dormitoryScope(ctx, *requesterID)
 	if err != nil {
-		return 0, "", err
+		return 0, "", uuid.Nil, err
 	}
 
 	err = r.db.QueryRow(ctx, `
-		SELECT i.total_amount, i.status
+		SELECT i.total_amount, i.status, rm.dormitory_id
 		FROM invoices i
 		JOIN contracts c ON c.id = i.contract_id
 		JOIN rooms rm ON rm.id = c.room_id
@@ -557,14 +595,34 @@ func (r *Repository) loadInvoiceForPayment(ctx context.Context, invoiceID uuid.U
 		) OR EXISTS (
 			SELECT 1 FROM role_dormitories rd WHERE rd.dormitory_id = rm.dormitory_id AND rd.role_id = $4
 		))
-	`, invoiceID, full, *requesterID, roleID).Scan(&totalAmount, &status)
+	`, invoiceID, full, *requesterID, roleID).Scan(&totalAmount, &status, &dormitoryID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, "", paymentdomain.ErrInvoiceNotFound
+			return 0, "", uuid.Nil, paymentdomain.ErrInvoiceNotFound
 		}
-		return 0, "", err
+		return 0, "", uuid.Nil, err
 	}
-	return totalAmount, status, nil
+	return totalAmount, status, dormitoryID, nil
+}
+
+// nextReceiptSeq hands out the next receipt number for a dormitory and year.
+// The counter row is locked until the transaction ends, so concurrent
+// payments get distinct numbers, and a rolled-back payment gives its number
+// back, so no gaps appear.
+func nextReceiptSeq(ctx context.Context, tx pgx.Tx, dormitoryID uuid.UUID, year int) (int, error) {
+	var seq int
+	err := tx.QueryRow(ctx, `
+		INSERT INTO receipt_counters (dormitory_id, year, last_seq) VALUES ($1, $2, 1)
+		ON CONFLICT (dormitory_id, year) DO UPDATE SET last_seq = receipt_counters.last_seq + 1
+		RETURNING last_seq
+	`, dormitoryID, year).Scan(&seq)
+	return seq, err
+}
+
+// FormatReceiptNo renders a receipt number, e.g. RC2026-0001. The sequence is
+// zero-padded to four digits and simply grows past 9999.
+func FormatReceiptNo(year, seq int) string {
+	return fmt.Sprintf("RC%d-%04d", year, seq)
 }
 
 // ensurePaymentAccess confirms the payment exists and the requester may act

@@ -26,6 +26,7 @@ type DocumentPaymentItem struct {
 // DocumentPayment is a payment recorded against the invoice.
 type DocumentPayment struct {
 	ID          uuid.UUID             `json:"id"`
+	ReceiptNo   string                `json:"receipt_no"`
 	PaymentDate time.Time             `json:"payment_date"`
 	TotalAmount float64               `json:"total_amount"`
 	Note        string                `json:"note"`

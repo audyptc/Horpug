@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"strings"
 	"time"
 
@@ -89,7 +90,8 @@ type Repository interface {
 	// caused (if any), so it can be written into the activity log.
 	Create(ctx context.Context, input CreateInput) (paymentdomain.Payment, paymentdomain.InvoiceStatusChange, error)
 	Update(ctx context.Context, id, requesterID uuid.UUID, input UpdateInput) (paymentdomain.Payment, paymentdomain.InvoiceStatusChange, error)
-	Delete(ctx context.Context, id, requesterID uuid.UUID) (paymentdomain.InvoiceStatusChange, error)
+	Void(ctx context.Context, id, requesterID uuid.UUID, reason string) (paymentdomain.InvoiceStatusChange, error)
+	ReceiptRepository
 }
 
 // ActivityLogger records who created, changed or deleted a payment for the
@@ -133,7 +135,7 @@ func (s *Service) recordActivity(ctx context.Context, userID *uuid.UUID, action 
 }
 
 func paymentActivityDescription(payment paymentdomain.Payment) string {
-	return fmt.Sprintf("payment: room %s, %.2f THB", payment.RoomNumber, payment.TotalAmount)
+	return fmt.Sprintf("payment %s: room %s, %.2f THB", payment.ReceiptNo, payment.RoomNumber, payment.TotalAmount)
 }
 
 // withInvoiceStatusChange appends the invoice status flip, when there was one.
@@ -215,6 +217,12 @@ func (s *Service) Update(ctx context.Context, id, requesterID uuid.UUID, input U
 	if err != nil {
 		return paymentdomain.Payment{}, err
 	}
+	if before.Status == paymentdomain.PaymentStatusVoided {
+		return paymentdomain.Payment{}, paymentdomain.ErrPaymentVoided
+	}
+	if changesReceipt(before, input) {
+		return paymentdomain.Payment{}, paymentdomain.ErrReceiptIssued
+	}
 
 	payment, change, err := s.repo.Update(ctx, id, requesterID, input)
 	if err != nil {
@@ -250,19 +258,51 @@ func normalizeItems(items []ItemInput) error {
 	return nil
 }
 
-func (s *Service) Delete(ctx context.Context, id, requesterID uuid.UUID, ipAddress string) error {
-	// Read first: once deleted there is no room or amount left to describe.
+// changesReceipt reports whether an edit would alter what the payment's issued
+// receipt states: its date, or the method and amount of any line. The note
+// and reference numbers are bookkeeping and may still be corrected.
+func changesReceipt(before paymentdomain.Payment, input UpdateInput) bool {
+	if !sameDay(before.PaymentDate, input.PaymentDate) || len(before.Items) != len(input.Items) {
+		return true
+	}
+	for i, item := range input.Items {
+		old := before.Items[i]
+		if old.PaymentMethod != item.PaymentMethod || math.Abs(old.Amount-item.Amount) >= 0.005 {
+			return true
+		}
+	}
+	return false
+}
+
+func sameDay(a, b time.Time) bool {
+	ay, am, ad := a.UTC().Date()
+	by, bm, bd := b.UTC().Date()
+	return ay == by && am == bm && ad == bd
+}
+
+// Void cancels a payment's receipt. The payment stays on record with the
+// reason, stops counting towards its invoice, and its number is never reused.
+func (s *Service) Void(ctx context.Context, id, requesterID uuid.UUID, reason, ipAddress string) error {
+	reason = strings.TrimSpace(reason)
+
+	// Read first so the log can describe the payment being voided.
 	payment, err := s.repo.GetByID(ctx, id, requesterID)
 	if err != nil {
 		return err
 	}
+	if payment.Status == paymentdomain.PaymentStatusVoided {
+		return paymentdomain.ErrPaymentVoided
+	}
 
-	change, err := s.repo.Delete(ctx, id, requesterID)
+	change, err := s.repo.Void(ctx, id, requesterID, reason)
 	if err != nil {
 		return err
 	}
 
-	s.recordActivity(ctx, &requesterID, "DELETE", payment,
-		withInvoiceStatusChange("Deleted "+paymentActivityDescription(payment), change), ipAddress)
+	description := "Voided " + paymentActivityDescription(payment)
+	if reason != "" {
+		description += " (reason: " + reason + ")"
+	}
+	s.recordActivity(ctx, &requesterID, "VOID", payment, withInvoiceStatusChange(description, change), ipAddress)
 	return nil
 }

@@ -9,6 +9,19 @@ export type ApiPaymentItem = {
   created_at: string
 }
 
+export type ApiReceipt = {
+  payment: ApiPayment
+  dormitory: { id: string; name: string; address: string; phone: string }
+  invoice: {
+    id: string
+    period_year: number
+    period_month: number
+    total_amount: number
+    paid_amount: number
+    outstanding: number
+  }
+}
+
 export type ApiPayment = {
   id: string
   invoice_id: string
@@ -21,6 +34,10 @@ export type ApiPayment = {
   total_amount: number
   payment_date: string
   note: string
+  receipt_no: string
+  status: 'active' | 'voided'
+  voided_at?: string
+  void_reason?: string
   items: ApiPaymentItem[]
   created_by?: string
   created_at: string

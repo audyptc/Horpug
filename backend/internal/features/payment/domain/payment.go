@@ -47,6 +47,17 @@ func (c InvoiceStatusChange) Changed() bool {
 	return c.To != ""
 }
 
+type PaymentStatus string
+
+const (
+	PaymentStatusActive PaymentStatus = "active"
+	// PaymentStatusVoided marks a cancelled receipt. It is kept (and its
+	// number never reused) but no longer counts towards the invoice.
+	PaymentStatusVoided PaymentStatus = "voided"
+)
+
+// Payment.ReceiptNo is the receipt number, RC<year>-<seq>, counted per
+// dormitory and restarting each year.
 type Payment struct {
 	ID            uuid.UUID     `json:"id"`
 	InvoiceID     uuid.UUID     `json:"invoice_id"`
@@ -59,6 +70,10 @@ type Payment struct {
 	TotalAmount   float64       `json:"total_amount"`
 	PaymentDate   time.Time     `json:"payment_date"`
 	Note          string        `json:"note"`
+	ReceiptNo     string        `json:"receipt_no"`
+	Status        PaymentStatus `json:"status"`
+	VoidedAt      *time.Time    `json:"voided_at,omitempty"`
+	VoidReason    string        `json:"void_reason,omitempty"`
 	Items         []PaymentItem `json:"items"`
 	CreatedBy     *uuid.UUID    `json:"created_by,omitempty"`
 	CreatedAt     time.Time     `json:"created_at"`

@@ -405,6 +405,12 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		if errors.Is(err, paymentdomain.ErrInvoiceCancelled) {
 			return apierror.BadRequest("cannot change a payment on a cancelled invoice")
 		}
+		if errors.Is(err, paymentdomain.ErrPaymentVoided) {
+			return apierror.Conflict("this payment has been voided").WithSlug("payment_voided")
+		}
+		if errors.Is(err, paymentdomain.ErrReceiptIssued) {
+			return apierror.Conflict(paymentdomain.ErrReceiptIssued.Error()).WithSlug("receipt_issued")
+		}
 		if errors.Is(err, paymentdomain.ErrPaymentExceedsInvoice) {
 			return apierror.BadRequest("recorded payments cannot exceed the invoice total").WithSlug("payment_exceeds_invoice")
 		}
@@ -414,22 +420,36 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	return apiresponse.OK(c, payment)
 }
 
-// Delete godoc
-// @Summary Delete a payment
-// @Description Deletes a payment (and its items) and re-evaluates the invoice's paid status accordingly.
+type voidPaymentRequest struct {
+	Reason string `json:"reason"`
+}
+
+// Void godoc
+// @Summary Void (cancel) a payment's receipt
+// @Description Payments are never deleted, since each carries a receipt number. Voiding keeps the payment and its number on record with the reason, stops it counting towards the invoice, and re-evaluates the invoice's paid status.
 // @Tags payments
+// @Accept json
 // @Produce json
 // @Param id path string true "Payment ID"
+// @Param request body voidPaymentRequest false "Reason for voiding"
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} apierror.Error
 // @Failure 404 {object} apierror.Error
+// @Failure 409 {object} apierror.Error
 // @Failure 500 {object} apierror.Error
 // @Security BearerAuth
-// @Router /payments/{id} [delete]
-func (h *Handler) Delete(c fiber.Ctx) error {
+// @Router /payments/{id}/void [post]
+func (h *Handler) Void(c fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return apierror.BadRequest("invalid payment id")
+	}
+
+	var req voidPaymentRequest
+	if len(c.Body()) > 0 {
+		if err := c.Bind().Body(&req); err != nil {
+			return apierror.BadRequest("invalid request body")
+		}
 	}
 
 	requesterID, ok := middleware.UserID(c)
@@ -440,12 +460,52 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := h.usecase.Delete(ctx, id, requesterID, c.IP()); err != nil {
+	if err := h.usecase.Void(ctx, id, requesterID, req.Reason, c.IP()); err != nil {
 		if errors.Is(err, paymentdomain.ErrPaymentNotFound) {
 			return apierror.NotFound("payment not found")
 		}
-		return apierror.Internal("failed to delete payment")
+		if errors.Is(err, paymentdomain.ErrPaymentVoided) {
+			return apierror.Conflict("this payment has already been voided").WithSlug("payment_voided")
+		}
+		return apierror.Internal("failed to void payment")
 	}
 
-	return apiresponse.Message(c, "payment deleted")
+	return apiresponse.Message(c, "payment voided")
+}
+
+// Receipt godoc
+// @Summary Get a payment as a printable receipt
+// @Description Returns the payment with its receipt number and method lines, the issuing dormitory, and the invoice it pays with the amount paid so far (active payments only) and what remains.
+// @Tags payments
+// @Produce json
+// @Param id path string true "Payment ID"
+// @Success 200 {object} paymentdomain.Receipt
+// @Failure 400 {object} apierror.Error
+// @Failure 404 {object} apierror.Error
+// @Failure 500 {object} apierror.Error
+// @Security BearerAuth
+// @Router /payments/{id}/receipt [get]
+func (h *Handler) Receipt(c fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return apierror.BadRequest("invalid payment id")
+	}
+
+	requesterID, ok := middleware.UserID(c)
+	if !ok {
+		return apierror.Unauthorized("authentication required")
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Second)
+	defer cancel()
+
+	receipt, err := h.usecase.GetReceipt(ctx, id, requesterID)
+	if err != nil {
+		if errors.Is(err, paymentdomain.ErrPaymentNotFound) {
+			return apierror.NotFound("payment not found")
+		}
+		return apierror.Internal("failed to load receipt")
+	}
+
+	return apiresponse.OK(c, receipt)
 }
